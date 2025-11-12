@@ -99,6 +99,18 @@ Valkey GLIDE requires platform-specific native libraries. Add the os-maven-plugi
 </build>
 ```
 
+### Spring Boot
+
+For Spring Boot applications, use the [Spring Boot Starter](spring-boot-starter-data-valkey/) which provides auto-configuration:
+
+```xml
+<dependency>
+  <groupId>io.valkey.springframework.data</groupId>
+  <artifactId>spring-boot-starter-data-valkey</artifactId>
+  <version>${version}</version>
+</dependency>
+```
+
 ### Examples
 
 For more comprehensive examples covering templates, repositories, caching, and other Spring Data functionality, see the [examples](examples/) directory.

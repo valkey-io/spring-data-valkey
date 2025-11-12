@@ -10,7 +10,7 @@ This starter simplifies the setup and configuration of Valkey in Spring Boot app
 
 ## Features
 
-- **Multiple Client Support**: Works with multiple drviers (Valkey GLIDE, Lettuce, and Jedis)
+- **Multiple Client Support**: Works with multiple drivers (Valkey GLIDE, Lettuce, and Jedis)
 - **Connection Pooling**: Automatic connection pool configuration with Apache Commons Pool2
 - **Reactive Support**: Full reactive programming support with Spring WebFlux
 - **SSL/TLS Support**: Secure connections with SSL bundle configuration
@@ -23,9 +23,9 @@ Add the starter to your `pom.xml`:
 
 ```xml
 <dependency>
-    <groupId>org.springframework.boot</groupId>
+    <groupId>io.valkey.springframework.data</groupId>
     <artifactId>spring-boot-starter-data-valkey</artifactId>
-    <version>3.5.1</version>
+    <version>${version}</version>
 </dependency>
 ```
 
@@ -33,11 +33,15 @@ Or to your `build.gradle`:
 
 ```gradle
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-data-valkey:3.5.1'
+    implementation 'io.valkey.springframework.data:spring-boot-starter-data-valkey:${version}'
 }
 ```
 
+This starter includes `spring-data-valkey` and the Valkey GLIDE driver by default. To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
+
 ## Quick Start
+
+The starter provides zero-configuration defaults. Just add the dependency and optionally configure connection properties.
 
 ### Basic Configuration
 
