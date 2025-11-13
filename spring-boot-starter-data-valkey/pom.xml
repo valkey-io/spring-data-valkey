@@ -3,25 +3,27 @@
 
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>org.springframework.boot</groupId>
+	<groupId>io.valkey.springframework.boot</groupId>
 	<artifactId>spring-boot-starter-data-valkey</artifactId>
 	<version>3.5.1</version>
 	<packaging>jar</packaging>
 
-	<name>Spring Boot Starter for Redis</name>
-	<description>Spring Boot Starter for Redis key-value data store with Spring Data Redis</description>
-	<url>https://github.com/spring-projects/spring-boot</url>
+	<name>Spring Boot Starter for Valkey</name>
+	<description>Spring Boot Starter for Valkey key-value data store with Spring Data Valkey</description>
+	<url>https://github.com/ikolomi/spring-data-valkey</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>17</maven.compiler.release>
-		<pool.version>2.11.1</pool.version>
+
+		<spring-boot.version>3.5.1</spring-boot.version>
+		<spring-data-valkey.version>3.5.1</spring-data-valkey.version>
 		<valkey.glide.version>2.1.1</valkey.glide.version>
 		<lettuce.version>6.6.0.RELEASE</lettuce.version>
 		<jedis.version>6.0.0</jedis.version>
+		<pool.version>2.11.1</pool.version>
 		<jackson.version>2.19.1</jackson.version>
-		<spring-boot.version>3.5.1</spring-boot.version>
-		<spring-data-redis.version>3.5.1</spring-data-redis.version>
+
 		<junit.version>5.12.2</junit.version>
 		<junit-platform.version>1.12.2</junit-platform.version>
 		<assertj.version>3.27.3</assertj.version>
@@ -43,17 +45,25 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.springframework.data</groupId>
-			<artifactId>spring-data-redis</artifactId>
-			<version>${spring-data-redis.version}</version>
+			<groupId>io.valkey.springframework.data</groupId>
+			<artifactId>spring-data-valkey</artifactId>
+			<version>${spring-data-valkey.version}</version>
 		</dependency>
 
-		<!-- REDIS Drivers -->
+		<!-- Valkey Drivers -->
+
+		<dependency>
+			<groupId>io.valkey</groupId>
+			<artifactId>valkey-glide</artifactId>
+			<classifier>${os.detected.classifier}</classifier>
+			<version>${valkey.glide.version}</version>
+		</dependency>
 
 		<dependency>
 			<groupId>io.lettuce</groupId>
 			<artifactId>lettuce-core</artifactId>
 			<version>${lettuce.version}</version>
+			<optional>true</optional>
 		</dependency>
 
 		<dependency>
@@ -192,6 +202,13 @@
 	</dependencies>
 
 	<build>
+		<extensions>
+			<extension>
+				<groupId>kr.motd.maven</groupId>
+				<artifactId>os-maven-plugin</artifactId>
+				<version>1.7.1</version>
+			</extension>
+		</extensions>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
