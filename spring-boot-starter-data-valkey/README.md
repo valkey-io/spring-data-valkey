@@ -111,6 +111,10 @@ spring.data.valkey.client-type=valkeyglide
 ### Connection Pooling
 
 ```properties
+# Valkey GLIDE configuration
+spring.data.valkey.valkeyglide.shutdown-timeout=100ms
+spring.data.valkey.valkeyglide.pool-size=8
+
 # Lettuce pooling
 spring.data.valkey.lettuce.pool.enabled=true
 spring.data.valkey.lettuce.pool.max-active=8

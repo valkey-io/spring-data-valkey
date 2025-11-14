@@ -16,10 +16,10 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
-import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.Lettuce;
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.ValkeyGlide;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -31,12 +31,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ValkeyPropertiesTests {
 
 	@Test
-	void lettuceDefaultsAreConsistent() {
-		Lettuce lettuce = new ValkeyProperties().getLettuce();
-		ClusterTopologyRefreshOptions defaultClusterTopologyRefreshOptions = ClusterTopologyRefreshOptions.builder()
-			.build();
-		assertThat(lettuce.getCluster().getRefresh().isDynamicRefreshSources())
-			.isEqualTo(defaultClusterTopologyRefreshOptions.useDynamicRefreshSources());
+	void valkeyGlideDefaultsAreConsistent() {
+		ValkeyGlide valkeyGlide = new ValkeyProperties().getValkeyGlide();
+		assertThat(valkeyGlide.getShutdownTimeout()).isEqualTo(Duration.ofMillis(100));
+		assertThat(valkeyGlide.getPoolSize()).isNull();
 	}
 
 }

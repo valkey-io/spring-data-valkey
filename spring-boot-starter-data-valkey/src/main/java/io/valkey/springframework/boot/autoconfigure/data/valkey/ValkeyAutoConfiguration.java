@@ -48,7 +48,7 @@ import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 @AutoConfiguration
 @ConditionalOnClass(ValkeyOperations.class)
 @EnableConfigurationProperties(ValkeyProperties.class)
-@Import({ LettuceConnectionConfiguration.class, JedisConnectionConfiguration.class })
+@Import({ ValkeyGlideConnectionConfiguration.class, LettuceConnectionConfiguration.class, JedisConnectionConfiguration.class })
 public class ValkeyAutoConfiguration {
 
 	@Bean

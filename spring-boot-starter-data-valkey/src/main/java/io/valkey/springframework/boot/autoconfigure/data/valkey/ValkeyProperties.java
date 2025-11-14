@@ -98,6 +98,8 @@ public class ValkeyProperties {
 
 	private final Lettuce lettuce = new Lettuce();
 
+	private final ValkeyGlide valkeyGlide = new ValkeyGlide();
+
 	public int getDatabase() {
 		return this.database;
 	}
@@ -206,10 +208,19 @@ public class ValkeyProperties {
 		return this.lettuce;
 	}
 
+	public ValkeyGlide getValkeyGlide() {
+		return this.valkeyGlide;
+	}
+
 	/**
 	 * Type of Valkey client to use.
 	 */
 	public enum ClientType {
+
+		/**
+		 * Use the Valkey GLIDE client.
+		 */
+		VALKEYGLIDE,
 
 		/**
 		 * Use the Lettuce valkey client.
@@ -559,6 +570,87 @@ public class ValkeyProperties {
 			}
 
 		}
+
+	}
+
+	/**
+	 * Valkey GLIDE client properties.
+	 */
+	public static class ValkeyGlide {
+
+		// TODO: Enable cluster functionality when supported by Spring Data Valkey with Valkey GLIDE
+
+		/**
+		 * Shutdown timeout.
+		 */
+		private Duration shutdownTimeout = Duration.ofMillis(100);
+
+		/**
+		 * Pool size for connection pooling.
+		 */
+		private Integer poolSize;
+
+		// private final Cluster cluster = new Cluster();
+
+		// public Cluster getCluster() {
+		// 	return this.cluster;
+		// }
+
+		public Duration getShutdownTimeout() {
+			return this.shutdownTimeout;
+		}
+
+		public void setShutdownTimeout(Duration shutdownTimeout) {
+			this.shutdownTimeout = shutdownTimeout;
+		}
+
+		public Integer getPoolSize() {
+			return this.poolSize;
+		}
+
+		public void setPoolSize(Integer poolSize) {
+			this.poolSize = poolSize;
+		}
+
+		// public static class Cluster {
+
+		// 	private final Refresh refresh = new Refresh();
+
+		// 	public Refresh getRefresh() {
+		// 		return this.refresh;
+		// 	}
+
+		// 	public static class Refresh {
+
+		// 		private boolean dynamicRefreshSources = true;
+		// 		private Duration period;
+		// 		private boolean adaptive;
+
+		// 		public boolean isDynamicRefreshSources() {
+		// 			return this.dynamicRefreshSources;
+		// 		}
+
+		// 		public void setDynamicRefreshSources(boolean dynamicRefreshSources) {
+		// 			this.dynamicRefreshSources = dynamicRefreshSources;
+		// 		}
+
+		// 		public Duration getPeriod() {
+		// 			return this.period;
+		// 		}
+
+		// 		public void setPeriod(Duration period) {
+		// 			this.period = period;
+		// 		}
+
+		// 		public boolean isAdaptive() {
+		// 			return this.adaptive;
+		// 		}
+
+		// 		public void setAdaptive(boolean adaptive) {
+		// 			this.adaptive = adaptive;
+		// 		}
+		// 	}
+		// }
 
 	}
 

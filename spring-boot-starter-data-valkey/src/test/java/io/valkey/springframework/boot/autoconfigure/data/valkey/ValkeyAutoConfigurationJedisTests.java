@@ -35,12 +35,13 @@ import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration.JedisClientConfigurationBuilder;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
+
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Tests for {@link ValkeyAutoConfiguration} when Lettuce is not on the classpath.
+ * Tests for {@link ValkeyAutoConfiguration} when Valkey GLIDE and Lettuce are not on the classpath.
  *
  * @author Mark Paluch
  * @author Stephane Nicoll
@@ -50,7 +51,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Phillip Webb
  * @author Scott Frederick
  */
-@ClassPathExclusions("lettuce-core-*.jar")
+@ClassPathExclusions({"valkey-glide-*.jar", "lettuce-core-*.jar"})
 class ValkeyAutoConfigurationJedisTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()

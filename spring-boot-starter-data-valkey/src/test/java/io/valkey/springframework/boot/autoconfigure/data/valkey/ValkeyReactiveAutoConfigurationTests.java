@@ -33,8 +33,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ValkeyReactiveAutoConfigurationTests {
 
+	// Valkey GLIDE does not support reactive, so test with Lettuce
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class, ValkeyReactiveAutoConfiguration.class));
+		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class, ValkeyReactiveAutoConfiguration.class))
+		.withPropertyValues("spring.data.valkey.client-type:lettuce");
 
 	@Test
 	void testDefaultValkeyConfiguration() {

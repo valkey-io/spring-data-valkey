@@ -35,7 +35,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ValkeyAutoConfigurationLettuceWithoutCommonsPool2Tests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class));
+		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
+		.withPropertyValues("spring.data.valkey.client-type:lettuce");
 
 	@Test
 	void poolWithoutCommonsPool2IsDisabledByDefault() {
