@@ -82,7 +82,7 @@ class ValkeyAutoConfigurationTests {
 	void testOverrideValkeyConfiguration() {
 		this.contextRunner
 			.withPropertyValues("spring.data.valkey.host:foo", "spring.data.valkey.database:1",
-					"spring.data.valkey.lettuce.shutdown-timeout:500")
+					"spring.data.valkey.valkeyglide.shutdown-timeout:500")
 			.run((context) -> {
 				ValkeyGlideConnectionFactory cf = context.getBean(ValkeyGlideConnectionFactory.class);
 				ValkeyGlideClientConfiguration config = cf.getClientConfiguration();
@@ -257,7 +257,7 @@ class ValkeyAutoConfigurationTests {
 	// void testValkeyConfigurationWithClusterRefreshPeriod() {
 	// 	this.contextRunner
 	// 		.withPropertyValues("spring.data.valkey.cluster.nodes=127.0.0.1:27379,127.0.0.1:27380",
-	// 				"spring.data.valkey.lettuce.cluster.refresh.period=30s")
+	// 				"spring.data.valkey.valkeyglide.cluster.refresh.period=30s")
 	// 		.run(assertClientOptions(ClusterClientOptions.class,
 	// 				(options) -> assertThat(options.getTopologyRefreshOptions().getRefreshPeriod()).hasSeconds(30)));
 	// }
@@ -266,7 +266,7 @@ class ValkeyAutoConfigurationTests {
 	// void testValkeyConfigurationWithClusterAdaptiveRefresh() {
 	// 	this.contextRunner
 	// 		.withPropertyValues("spring.data.valkey.cluster.nodes=127.0.0.1:27379,127.0.0.1:27380",
-	// 				"spring.data.valkey.lettuce.cluster.refresh.adaptive=true")
+	// 				"spring.data.valkey.valkeyglide.cluster.refresh.adaptive=true")
 	// 		.run(assertClientOptions(ClusterClientOptions.class,
 	// 				(options) -> assertThat(options.getTopologyRefreshOptions().getAdaptiveRefreshTriggers())
 	// 					.isEqualTo(EnumSet.allOf(RefreshTrigger.class))));
@@ -283,7 +283,7 @@ class ValkeyAutoConfigurationTests {
 	// void testValkeyConfigurationWithClusterDynamicRefreshSourcesEnabled() {
 	// 	this.contextRunner
 	// 		.withPropertyValues("spring.data.valkey.cluster.nodes=127.0.0.1:27379,127.0.0.1:27380",
-	// 				"spring.data.valkey.lettuce.cluster.refresh.dynamic-refresh-sources=true")
+	// 				"spring.data.valkey.valkeyglide.cluster.refresh.dynamic-refresh-sources=true")
 	// 		.run(assertClientOptions(ClusterClientOptions.class,
 	// 				(options) -> assertThat(options.getTopologyRefreshOptions().useDynamicRefreshSources()).isTrue()));
 	// }
@@ -292,7 +292,7 @@ class ValkeyAutoConfigurationTests {
 	// void testValkeyConfigurationWithClusterDynamicRefreshSourcesDisabled() {
 	// 	this.contextRunner
 	// 		.withPropertyValues("spring.data.valkey.cluster.nodes=127.0.0.1:27379,127.0.0.1:27380",
-	// 				"spring.data.valkey.lettuce.cluster.refresh.dynamic-refresh-sources=false")
+	// 				"spring.data.valkey.valkeyglide.cluster.refresh.dynamic-refresh-sources=false")
 	// 		.run(assertClientOptions(ClusterClientOptions.class,
 	// 				(options) -> assertThat(options.getTopologyRefreshOptions().useDynamicRefreshSources()).isFalse()));
 	// }
@@ -301,7 +301,7 @@ class ValkeyAutoConfigurationTests {
 	// void testValkeyConfigurationWithClusterDynamicSourcesUnspecifiedUsesDefault() {
 	// 	this.contextRunner
 	// 		.withPropertyValues("spring.data.valkey.cluster.nodes=127.0.0.1:27379,127.0.0.1:27380",
-	// 				"spring.data.valkey.lettuce.cluster.refresh.dynamic-sources=")
+	// 				"spring.data.valkey.valkeyglide.cluster.refresh.dynamic-sources=")
 	// 		.run(assertClientOptions(ClusterClientOptions.class,
 	// 				(options) -> assertThat(options.getTopologyRefreshOptions().useDynamicRefreshSources()).isTrue()));
 	// }

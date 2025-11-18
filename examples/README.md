@@ -35,7 +35,7 @@ To run all examples sequentially:
 
 ```bash
 $ cd examples
-$ for module in $(ls -d */ | grep -v target | sed 's|/||'); do
+$ for module in $(ls -d */ | grep -v target | grep -v spring-boot | sed 's|/||'); do
   echo ""
   echo "====================================="
   echo "Running: $module"
@@ -59,6 +59,8 @@ done
 | **streams** | Valkey Streams for event sourcing and message queues (XADD, XREAD, consumer groups) |
 | **collections** | Valkey-backed Java collections (ValkeyList, ValkeySet, ValkeyMap) and atomic counters |
 | **scripting** | Lua script execution (EVAL, EVALSHA) for atomic operations |
+
+Note that the `spring-boot` example is standalone and has its own [README](spring-boot/README.md) with separate run instructions.
 
 ## Notes
 

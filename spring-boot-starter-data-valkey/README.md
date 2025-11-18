@@ -2,42 +2,58 @@
 
 A Spring Boot starter that provides auto-configuration for Valkey, enabling seamless integration with the high-performance Redis-compatible data store.
 
-This starter simplifies the setup and configuration of Valkey in Spring Boot applications by providing:
+This starter simplifies the setup and configuration of Valkey in Spring Boot applications by providing auto-configuration for Valkey connections and Spring Data integration.
 
-- Auto-configuration for Valkey connections
-- Spring Data integration
-- Connection pooling and management
+## Current Limitations
 
-## Features
-
-- **Multiple Client Support**: Works with multiple drivers (Valkey GLIDE, Lettuce, and Jedis)
-- **Connection Pooling**: Automatic connection pool configuration with Apache Commons Pool2
-- **Reactive Support**: Full reactive programming support with Spring WebFlux
-- **SSL/TLS Support**: Secure connections with SSL bundle configuration
-- **Cluster & Sentinel**: Support for Valkey cluster and sentinel configurations
-- **Spring Data Integration**: Repositories, templates, and reactive templates
+- Valkey GLIDE Cluster support
+- Valkey GLIDE Sentinel support
+- Valkey GLIDE connection pooling
 
 ## Installation
 
-Add the starter to your `pom.xml`:
+Add the starter and Valkey GLIDE (along with OS detector) to your `pom.xml`:
 
 ```xml
-<dependency>
-    <groupId>io.valkey.springframework.data</groupId>
-    <artifactId>spring-boot-starter-data-valkey</artifactId>
-    <version>${version}</version>
-</dependency>
+<dependencies>
+    <dependency>
+        <groupId>io.valkey.springframework.data</groupId>
+        <artifactId>spring-boot-starter-data-valkey</artifactId>
+        <version>${version}</version>
+    </dependency>
+    <dependency>
+        <groupId>io.valkey</groupId>
+        <artifactId>valkey-glide</artifactId>
+        <version>${version}</version>
+        <classifier>${os.detected.classifier}</classifier>
+    </dependency>
+</dependencies>
+
+<build>
+    <extensions>
+        <extension>
+            <groupId>kr.motd.maven</groupId>
+            <artifactId>os-maven-plugin</artifactId>
+            <version>1.7.1</version>
+        </extension>
+    </extensions>
+</build>
 ```
 
 Or to your `build.gradle`:
 
 ```gradle
+plugins {
+    id 'com.google.osdetector' version '1.7.3'
+}
+
 dependencies {
     implementation 'io.valkey.springframework.data:spring-boot-starter-data-valkey:${version}'
+    implementation 'io.valkey:valkey-glide:${version}:${osdetector.classifier}'
 }
 ```
 
-This starter includes `spring-data-valkey` and the Valkey GLIDE driver by default. To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
+Note that the Valkey GLIDE dependency must also be explicitly added due to the OS classifier (platform-specific JAR).  To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
 
 ## Quick Start
 
@@ -59,14 +75,14 @@ spring.data.valkey.database=0
 ```java
 @Service
 public class ValkeyService {
-    
+
     @Autowired
-    private ValkeyTemplate<String, Object> valkeyTemplate;
-    
+    private ValkeyTemplate<Object, Object> valkeyTemplate;
+
     public void setValue(String key, Object value) {
         valkeyTemplate.opsForValue().set(key, value);
     }
-    
+
     public Object getValue(String key) {
         return valkeyTemplate.opsForValue().get(key);
     }
@@ -80,13 +96,19 @@ public class ValkeyService {
 public class User {
     @Id
     private String id;
+
+    @Indexed
     private String name;
+
+    @Indexed
     private String email;
+
     // getters and setters
 }
 
 public interface UserRepository extends CrudRepository<User, String> {
     List<User> findByName(String name);
+    List<User> findByEmail(String email);
 }
 ```
 
@@ -111,9 +133,10 @@ spring.data.valkey.client-type=valkeyglide
 ### Connection Pooling
 
 ```properties
-# Valkey GLIDE configuration
+# Valkey GLIDE pooling
 spring.data.valkey.valkeyglide.shutdown-timeout=100ms
-spring.data.valkey.valkeyglide.pool-size=8
+# GLIDE connection pooling coming soon...
+#spring.data.valkey.valkeyglide.pool-size=8
 
 # Lettuce pooling
 spring.data.valkey.lettuce.pool.enabled=true
@@ -133,6 +156,7 @@ spring.data.valkey.jedis.pool.max-wait=-1ms
 ### Cluster Configuration
 
 ```properties
+# For Lettuce and Jedis only, GLIDE support coming soon...
 spring.data.valkey.cluster.nodes=127.0.0.1:7000,127.0.0.1:7001,127.0.0.1:7002
 spring.data.valkey.cluster.max-redirects=3
 ```
@@ -140,6 +164,7 @@ spring.data.valkey.cluster.max-redirects=3
 ### Sentinel Configuration
 
 ```properties
+# For Lettuce and Jedis only, GLIDE support coming soon...
 spring.data.valkey.sentinel.master=mymaster
 spring.data.valkey.sentinel.nodes=127.0.0.1:26379,127.0.0.1:26380,127.0.0.1:26381
 spring.data.valkey.sentinel.username=sentinel-user
@@ -163,7 +188,7 @@ spring.data.valkey.ssl.bundle=valkey-ssl
 ### Build Commands
 
 ```bash
-# Build the project (compile project, runs tests, and creates JAR)
+# Build the project (compile project, run tests, and create JAR)
 ./mvnw clean package
 
 # Run tests only

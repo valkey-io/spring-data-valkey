@@ -68,9 +68,9 @@ Add the Maven dependency:
 
 ```xml
 <dependency>
-  <groupId>io.valkey.springframework.data</groupId>
-  <artifactId>spring-data-valkey</artifactId>
-  <version>${version}</version>
+    <groupId>io.valkey.springframework.data</groupId>
+    <artifactId>spring-data-valkey</artifactId>
+    <version>${version}</version>
 </dependency>
 ```
 
@@ -78,10 +78,10 @@ Note that a dependency for the underlying driver is also needed. It is recommend
 
 ```xml
 <dependency>
-  <groupId>io.valkey</groupId>
-  <artifactId>valkey-glide</artifactId>
-  <classifier>${os.detected.classifier}</classifier>
-  <version>${version}</version>
+    <groupId>io.valkey</groupId>
+    <artifactId>valkey-glide</artifactId>
+    <classifier>${os.detected.classifier}</classifier>
+    <version>${version}</version>
 </dependency>
 ```
 
@@ -89,13 +89,13 @@ Valkey GLIDE requires platform-specific native libraries. Add the os-maven-plugi
 
 ```xml
 <build>
-  <extensions>
-    <extension>
-      <groupId>kr.motd.maven</groupId>
-      <artifactId>os-maven-plugin</artifactId>
-      <version>1.7.1</version>
-    </extension>
-  </extensions>
+    <extensions>
+        <extension>
+            <groupId>kr.motd.maven</groupId>
+            <artifactId>os-maven-plugin</artifactId>
+            <version>1.7.1</version>
+        </extension>
+    </extensions>
 </build>
 ```
 
@@ -104,11 +104,29 @@ Valkey GLIDE requires platform-specific native libraries. Add the os-maven-plugi
 For Spring Boot applications, use the [Spring Boot Starter](spring-boot-starter-data-valkey/) which provides auto-configuration:
 
 ```xml
-<dependency>
-  <groupId>io.valkey.springframework.data</groupId>
-  <artifactId>spring-boot-starter-data-valkey</artifactId>
-  <version>${version}</version>
-</dependency>
+<dependencies>
+    <dependency>
+        <groupId>io.valkey.springframework.data</groupId>
+        <artifactId>spring-boot-starter-data-valkey</artifactId>
+        <version>${version}</version>
+    </dependency>
+    <dependency>
+        <groupId>io.valkey</groupId>
+        <artifactId>valkey-glide</artifactId>
+        <version>${version}</version>
+        <classifier>${os.detected.classifier}</classifier>
+    </dependency>
+</dependencies>
+
+<build>
+    <extensions>
+        <extension>
+            <groupId>kr.motd.maven</groupId>
+            <artifactId>os-maven-plugin</artifactId>
+            <version>1.7.1</version>
+        </extension>
+    </extensions>
+</build>
 ```
 
 ### Examples
