@@ -36,7 +36,7 @@ jobs:
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
-            clean package test \
+            clean package javadoc:jar test \
             -Pnone \
             -DrunLongTests=true \
             -Dvalkey.server.version=8.1.1 \
