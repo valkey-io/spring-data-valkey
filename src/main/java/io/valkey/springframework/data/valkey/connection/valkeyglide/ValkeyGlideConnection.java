@@ -40,21 +40,16 @@ import io.valkey.springframework.data.valkey.connection.MessageListener;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
-
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 // Imports from valkey-glide library
-import glide.api.GlideClient;
 import glide.api.models.GlideString;
-import glide.api.models.Batch;
 
 /**
  * Connection to a Valkey server using Valkey-Glide client. The connection
@@ -64,22 +59,9 @@ import glide.api.models.Batch;
  */
 public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
-    // // Commands that return 1/0 but Spring Data Valkey expects boolean true/false
-    // private static final Set<String> NUMERIC_TO_BOOLEAN_COMMANDS = Set.of(
-    //     "SETNX", "MSETNX", "HSETNX", "SMOVE", "SISMEMBER", "EXPIRE", "EXPIREAT", 
-    //     "PEXPIRE", "PEXPIREAT", "PERSIST", "MOVE", "RENAMENX", "EXISTS", "HSET"
-    // );
-    
-    // // Geo commands that need special result processing
-    // private static final Set<String> GEO_COMMANDS = Set.of(
-    //     "GEOPOS", "GEOHASH", "GEODIST", "GEORADIUS", "GEORADIUSBYMEMBER", "GEOSEARCH"
-    // );
-
-    private final GlideClient client;
-    private final long timeout;
+    protected final UnifiedGlideClient unifiedClient;
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    private @Nullable Batch currentBatch;
     private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
     private final Set<byte[]> watchedKeys = new HashSet<>();
     private @Nullable Subscription subscription;
@@ -98,17 +80,16 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     private final ValkeyGlideStreamCommands streamCommands;
 
     /**
-     * Creates a new {@link ValkeyGlideConnection} with a dedicated client.
-     * Each connection owns and manages its own GlideClient instance.
+     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter.
+     * Each connection owns and manages its own client instance.
      *
-     * @param client valkey-glide client
+     * @param unifiedClient unified client adapter (standalone or cluster)
      * @param timeout command timeout in milliseconds
      */
-    public ValkeyGlideConnection(GlideClient client, long timeout) {
-        Assert.notNull(client, "Client must not be null");
+    public ValkeyGlideConnection(UnifiedGlideClient unifiedClient) {
+        Assert.notNull(unifiedClient, "UnifiedClient must not be null");
         
-        this.client = client;
-        this.timeout = timeout;
+        this.unifiedClient = unifiedClient;
         
         // Initialize command interfaces
         this.keyCommands = new ValkeyGlideKeyCommands(this);
@@ -122,27 +103,6 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         this.scriptingCommands = new ValkeyGlideScriptingCommands(this);
         this.serverCommands = new ValkeyGlideServerCommands(this);
         this.streamCommands = new ValkeyGlideStreamCommands(this);
-    }
-
-    /**
-     * Returns the native client used.
-     *
-     * @return the native client instance
-     */
-    public GlideClient getNativeClient() {
-        verifyConnectionOpen();
-        return client;
-    }
-
-    /**
-     * Synchronously executes a Valkey command and returns the future result.
-     *
-     * @param <T> The type of the command result
-     * @param future The future containing the result
-     * @return The command result
-     */
-    protected <T> T execute(CompletableFuture<T> future) {
-        return ValkeyGlideFutureUtils.get(future, timeout, new ValkeyGlideExceptionConverter());
     }
 
     /**
@@ -218,17 +178,21 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     @Override
     public void close() throws DataAccessException {
-        if (closed.compareAndSet(false, true)) {
-            try {
-                client.close();
-            } catch (Exception ex) {
-                throw new DataAccessException("Error closing Valkey-Glide connection", ex) {};
+        try {
+            if (closed.compareAndSet(false, true)) {
+                try {
+                    unifiedClient.close();
+                } catch (Exception ex) {
+                    throw new DataAccessException("Error closing Valkey-Glide connection", ex) {};
+                }
+                
+                if (subscription != null) {
+                    subscription.close();
+                    subscription = null;
+                }
             }
-            
-            if (subscription != null) {
-                subscription.close();
-                subscription = null;
-            }
+        } catch (Exception ex) {
+            throw new ValkeyGlideExceptionConverter().convert(ex);
         }
     }
 
@@ -240,17 +204,17 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     @Override
     public Object getNativeConnection() {
         verifyConnectionOpen();
-        return client;
+        return unifiedClient.getNativeClient();
     }
 
     @Override
     public boolean isQueueing() {
-        return (currentBatch != null && currentBatch.getProtobufBatch().getIsAtomic());
+        return unifiedClient.getBatchStatus() == UnifiedGlideClient.BatchStatus.Transaction;
     }
 
     @Override
     public boolean isPipelined() {
-        return (currentBatch != null && !currentBatch.getProtobufBatch().getIsAtomic());
+        return unifiedClient.getBatchStatus() == UnifiedGlideClient.BatchStatus.Pipeline;
     }
 
     @Override
@@ -259,7 +223,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 			throw new InvalidDataAccessApiUsageException("Cannot use pipelining while a transaction is active");
 		}
         if (!isPipelined()) {
-            currentBatch = new Batch(false).withBinaryOutput();
+            unifiedClient.startNewBatch(false);
         }
     }
 
@@ -270,19 +234,11 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         }
 
         try {
-            if (currentBatch.getProtobufBatch().getCommandsCount() == 0) {
+            if (unifiedClient.getBatchCount() == 0) {
                 return new ArrayList<>();
             }
 
-            Object[] results = ValkeyGlideFutureUtils.get(
-                client.exec(currentBatch, false), 
-                timeout, 
-                new ValkeyGlideExceptionConverter()
-            );
-            // We have to clear the currentBatch before processing results to allow
-            // mappers to diffrentiate between normal and pipeline/transaction mode.
-            // e.g. LUA scripts return null for FALSE, requiring special handling in the mapper
-            currentBatch = null;
+            Object[] results = unifiedClient.execBatch();
             List<Object> resultList = new ArrayList<>(results.length);
             for (int i = 0; i < results.length; i++) {
                 Object item = results[i];
@@ -299,7 +255,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         } catch (Exception ex) {
             throw new ValkeyPipelineException(ex);
         } finally {
-            currentBatch = null;
+            unifiedClient.discardBatch();
             batchCommandsConverters.clear();
         }
     }
@@ -312,7 +268,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         
         if (!isQueueing()) {
             // Create atomic batch (transaction)
-            currentBatch = new Batch(true).withBinaryOutput();
+            unifiedClient.startNewBatch(true);
         }
     }
 
@@ -323,7 +279,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         }
         
         // Clear the current batch and reset transaction state
-        currentBatch = null;
+        unifiedClient.discardBatch();
         batchCommandsConverters.clear();
     }
 
@@ -334,15 +290,11 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         }
 		
         try {
-            if (currentBatch.getProtobufBatch().getCommandsCount() == 0) {
+            if (unifiedClient.getBatchCount() == 0) {
                 return new ArrayList<>();
             }
 
-            Object[] results = ValkeyGlideFutureUtils.get(
-                client.exec(currentBatch, false), 
-                timeout, 
-                new ValkeyGlideExceptionConverter()
-            );
+            Object[] results = unifiedClient.execBatch();
             
             // Handle transaction abort cases - valkey-glide returns null for WATCH conflicts
             if (results == null) {
@@ -350,10 +302,6 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
                 return new ArrayList<>();
             }
             
-            // We have to clear the currentBatch before processing results to allow
-            // mappers to diffrentiate between normal and pipeline/transaction mode.
-            // e.g. LUA scripts return null for FALSE, requiring special handling in the mapper
-            currentBatch = null;
             List<Object> resultList = new ArrayList<>(results.length);
             for (int i = 0; i < results.length; i++) {
                 Object item = results[i];
@@ -371,183 +319,10 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         } finally {
             // Clean up transaction state
-            currentBatch = null;
+            unifiedClient.discardBatch();
             batchCommandsConverters.clear();
             // Watches are automatically cleared after EXEC
             watchedKeys.clear();
-        }
-    }
-    
-    
-    /**
-     * Convert geo command results to proper Spring Data Valkey types for pipeline/transaction mode.
-     */
-    private Object convertGeoResult(String commandName, Object result) {
-        if (result == null) {
-            return null;
-        }
-        
-        switch (commandName) {
-            case "GEOPOS":
-                return convertGeoPosResult(result);
-            case "GEOHASH":
-                return convertGeoHashResult(result);
-            case "GEODIST":
-                // GEODIST already returns Double, just return as-is
-                return result;
-            case "GEORADIUS":
-            case "GEORADIUSBYMEMBER":
-            case "GEOSEARCH":
-                return convertGeoSearchResult(result);
-            default:
-                return result;
-        }
-    }
-    
-    /**
-     * Convert GEOPOS raw result to List<Point>.
-     */
-    private Object convertGeoPosResult(Object result) {
-        if (result == null) {
-            return new ArrayList<>();
-        }
-        
-        if (result instanceof List) {
-            List<?> list = (List<?>) result;
-            List<org.springframework.data.geo.Point> pointList = new ArrayList<>(list.size());
-            for (Object item : list) {
-                if (item == null) {
-                    pointList.add(null);
-                } else if (item instanceof List) {
-                    List<?> coordinates = (List<?>) item;
-                    if (coordinates.size() >= 2) {
-                        double x = parseGeoDouble(coordinates.get(0));
-                        double y = parseGeoDouble(coordinates.get(1));
-                        pointList.add(new org.springframework.data.geo.Point(x, y));
-                    } else {
-                        pointList.add(null);
-                    }
-                } else {
-                    pointList.add(null);
-                }
-            }
-            return pointList;
-        }
-        
-        return result;
-    }
-    
-    /**
-     * Convert GEOHASH raw result to List<String>.
-     */
-    private Object convertGeoHashResult(Object result) {
-        if (result == null) {
-            return new ArrayList<>();
-        }
-        
-        if (result instanceof List) {
-            List<?> list = (List<?>) result;
-            List<String> hashList = new ArrayList<>(list.size());
-            for (Object item : list) {
-                if (item == null) {
-                    hashList.add(null);
-                } else if (item instanceof String) {
-                    hashList.add((String) item);
-                } else if (item instanceof byte[]) {
-                    hashList.add(new String((byte[]) item));
-                } else {
-                    hashList.add(item.toString());
-                }
-            }
-            return hashList;
-        }
-        
-        return result;
-    }
-    
-    /**
-     * Convert geo search results (GEORADIUS, GEORADIUSBYMEMBER, GEOSEARCH) to GeoResults.
-     */
-    private Object convertGeoSearchResult(Object result) {
-        if (result == null) {
-            return new org.springframework.data.geo.GeoResults<>(new ArrayList<>());
-        }
-        
-        if (result instanceof List) {
-            List<?> list = (List<?>) result;
-            List<org.springframework.data.geo.GeoResult<io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation<byte[]>>> geoResults = new ArrayList<>(list.size());
-            
-            for (Object item : list) {
-                if (item instanceof List) {
-                    // Complex result with member name and possibly distance/coordinates
-                    List<?> itemList = (List<?>) item;
-                    if (!itemList.isEmpty()) {
-                        // First element is always the member name
-                        byte[] memberName = convertToBytes(itemList.get(0));
-                        io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation<byte[]> location = 
-                            new io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation<>(memberName, null);
-                        
-                        // Default distance - we don't have access to the original metric here
-                        org.springframework.data.geo.Distance distance = new org.springframework.data.geo.Distance(0.0, 
-                            io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.DistanceUnit.METERS);
-                        
-                        geoResults.add(new org.springframework.data.geo.GeoResult<>(location, distance));
-                    }
-                } else {
-                    // Simple result - just member name
-                    byte[] memberName = convertToBytes(item);
-                    io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation<byte[]> location = 
-                        new io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation<>(memberName, null);
-                    org.springframework.data.geo.Distance distance = new org.springframework.data.geo.Distance(0.0, 
-                        io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.DistanceUnit.METERS);
-                    geoResults.add(new org.springframework.data.geo.GeoResult<>(location, distance));
-                }
-            }
-            
-            return new org.springframework.data.geo.GeoResults<>(geoResults);
-        }
-        
-        return result;
-    }
-    
-    /**
-     * Convert various types to byte array.
-     */
-    private byte[] convertToBytes(Object obj) {
-        if (obj instanceof byte[]) {
-            return (byte[]) obj;
-        } else if (obj instanceof String) {
-            return ((String) obj).getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        } else if (obj instanceof List) {
-            // Handle case where bytes come as List<Integer>
-            List<?> byteList = (List<?>) obj;
-            byte[] bytes = new byte[byteList.size()];
-            for (int i = 0; i < byteList.size(); i++) {
-                Object byteVal = byteList.get(i);
-                if (byteVal instanceof Number) {
-                    bytes[i] = ((Number) byteVal).byteValue();
-                } else {
-                    bytes[i] = 0;
-                }
-            }
-            return bytes;
-        } else {
-            return obj.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        }
-    }
-    
-    /**
-     * Parse a double value from various geo result formats.
-     */
-    private double parseGeoDouble(Object obj) {
-        if (obj instanceof Number) {
-            return ((Number) obj).doubleValue();
-        } else if (obj instanceof String) {
-            return Double.parseDouble((String) obj);
-        } else if (obj instanceof byte[]) {
-            return Double.parseDouble(new String((byte[]) obj));
-        } else {
-            throw new IllegalArgumentException("Cannot parse double from " + obj.getClass());
         }
     }
 
@@ -555,7 +330,8 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     public void select(int dbIndex) {
         Assert.isTrue(dbIndex >= 0, "DB index must be non-negative");
         try {
-            execute("SELECT", dbIndex);
+            byte[] dbArg = Integer.toString(dbIndex).getBytes(StandardCharsets.US_ASCII);
+            execute("SELECT", dbArg);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -696,40 +472,40 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     @SuppressWarnings("unchecked")
     @Nullable
     public <I, R> R execute(String command, ResultMapper<I, R> mapper, Object... args) {
-        verifyConnectionOpen();
+        Assert.notNull(args, "Arguments must not be null");
+        Assert.notNull(mapper, "ResultMapper must not be null");
 
-        // Convert arguments to appropriate format for Glide
-        GlideString[] glideArgs = new GlideString[args.length + 1];
-        glideArgs[0] = GlideString.of(command);
-        for (int i = 0; i < args.length; i++) {
-            if (args[i] == null) {
-                glideArgs[i + 1] = null;
-            } else if (args[i] instanceof byte[]) {
-                glideArgs[i + 1] = GlideString.of((byte[]) args[i]);
-            } else if (args[i] instanceof String) {
-                glideArgs[i + 1] = GlideString.of((String) args[i]);
-            } else {
-                glideArgs[i + 1] = GlideString.of(args[i].toString());
+        verifyConnectionOpen();
+        try {
+            // Convert arguments to appropriate format for Glide
+            GlideString[] glideArgs = new GlideString[args.length + 1];
+            glideArgs[0] = GlideString.of(command);
+            for (int i = 0; i < args.length; i++) {
+                if (args[i] == null) {
+                    glideArgs[i + 1] = null;
+                } else if (args[i] instanceof byte[]) {
+                    glideArgs[i + 1] = GlideString.of((byte[]) args[i]);
+                } else if (args[i] instanceof String) {
+                    glideArgs[i + 1] = GlideString.of((String) args[i]);
+                } else {
+                    glideArgs[i + 1] = GlideString.of(args[i].toString());
+                }
             }
+            // Handle pipeline/transaction mode - add command to batch instead of executing
+            if (isQueueing() || isPipelined()) {
+                // Store converter for later conversion
+                batchCommandsConverters.add(mapper);
+                // Add command to the current batch
+                unifiedClient.customCommand(glideArgs);
+                return null; // Return null for queued commands in transaction
+            }
+            
+            // Immediate execution mode
+            I result = (I) unifiedClient.customCommand(glideArgs);
+            return mapper.map(result);
+        } catch (Exception ex) {
+            throw new ValkeyGlideExceptionConverter().convert(ex);
         }
-        // Handle pipeline/transaction mode - add command to batch instead of executing
-        if (isQueueing() || isPipelined()) {
-            // Store converter for later conversion
-            batchCommandsConverters.add(mapper);
-            // Add command to the current batch
-            currentBatch.customCommand(glideArgs);
-            return null; // Return null for queued commands in transaction
-        }
-        
-        I result = (I) execute(client.customCommand(glideArgs));
-        return mapper.map(result);
-    }
-    
-    public Object execute(String command, Object... args) {
-        return execute(command, rawResult -> {
-            return ValkeyGlideConverters.defaultFromGlideResult(rawResult);
-        },
-        args);
     }
 
     @Override
@@ -746,15 +522,6 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
-    }
-
-    /**
-     * Returns the command timeout.
-     * 
-     * @return the command timeout in milliseconds
-     */
-    public long getTimeout() {
-        return timeout;
     }
 
     @Override

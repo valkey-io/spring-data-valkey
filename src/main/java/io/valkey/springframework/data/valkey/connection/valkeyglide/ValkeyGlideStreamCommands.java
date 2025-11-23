@@ -30,7 +30,6 @@ import io.valkey.springframework.data.valkey.connection.stream.*;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoConsumers;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoGroups;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoStream;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import glide.api.models.GlideString;
@@ -151,9 +150,6 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
             
             return connection.execute("XCLAIM",
                 (Object[] glideResult) -> {
-                    if (connection.isPipelined() || connection.isQueueing()) {
-                        return null;
-                    }
                     if (glideResult == null) {
                         return Collections.emptyList();
                     }
@@ -181,9 +177,6 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
             
             return connection.execute("XCLAIM",
                 (Map<?, ?> glideResult) -> {
-                    if (connection.isPipelined() || connection.isQueueing()) {
-                        return null;
-                    }
                     return parseByteRecords(glideResult, key, false);
                 },
                 args.toArray());
@@ -504,9 +497,6 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
 
             return connection.execute("XRANGE",
                 (Map<?, ?> glideResult) -> {
-                    if (connection.isPipelined() || connection.isQueueing()) {
-                        return null;
-                    }
                     return parseByteRecords(glideResult, key, false);
                 },
                 args.toArray());
@@ -544,12 +534,15 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
                 args.add(stream.getOffset().getOffset());
             }
 
+            // Extract stream keys for workaround to ClusterValue.of() bug
+            byte[][] streamKeys = new byte[streams.length][];
+            for (int i = 0; i < streams.length; i++) {
+                streamKeys[i] = streams[i].getKey();
+            }
+
             return connection.execute("XREAD",
                 (Object glideResult) -> {
-                    if (connection.isPipelined() || connection.isQueueing()) {
-                        return null;
-                    }
-                    return parseMultiStreamByteRecords(glideResult);
+                    return parseMultiStreamByteRecords(glideResult, streamKeys);
                 },
                 args.toArray());
         } catch (Exception ex) {
@@ -594,12 +587,15 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
                 args.add(stream.getOffset().getOffset());
             }
 
+            // Extract stream keys for workaround to ClusterValue.of() bug
+            byte[][] streamKeys = new byte[streams.length][];
+            for (int i = 0; i < streams.length; i++) {
+                streamKeys[i] = streams[i].getKey();
+            }
+
             return connection.execute("XREADGROUP",
                 (Object glideResult) -> {
-                    if (connection.isPipelined() || connection.isQueueing()) {
-                        return null;
-                    }
-                    return parseMultiStreamByteRecords(glideResult);
+                    return parseMultiStreamByteRecords(glideResult, streamKeys);
                 },
                 args.toArray());
         } catch (Exception ex) {
@@ -645,9 +641,6 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
 
             return connection.execute("XREVRANGE",
                 (Map<?, ?> glideResult) -> {
-                    if (connection.isPipelined() || connection.isQueueing()) {
-                        return null;
-                    }
                     return parseByteRecords(glideResult, key, true);
                 },
                 args.toArray());
@@ -733,6 +726,7 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
         return args;
     }
 
+    @SuppressWarnings("unchecked")
     private List<Object> convertToList(Object obj) {
         if (obj instanceof List) {
             return (List<Object>) obj;
@@ -772,8 +766,20 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
         // Sort entries by record ID timestamp to maintain correct order
         List<Map.Entry<?, ?>> sortedEntries = new ArrayList<>(result.entrySet());
         sortedEntries.sort((e1, e2) -> {
-            String id1 = ((GlideString) e1.getKey()).toString();
-            String id2 = ((GlideString) e2.getKey()).toString();
+            // WORKAROUND: ClusterValue.of() bug converts GlideString to String
+            String id1;
+            if (e1.getKey() instanceof GlideString) {
+                id1 = ((GlideString) e1.getKey()).toString();
+            } else {
+                id1 = e1.getKey().toString();
+            }
+            
+            String id2;
+            if (e2.getKey() instanceof GlideString) {
+                id2 = ((GlideString) e2.getKey()).toString();
+            } else {
+                id2 = e2.getKey().toString();
+            }
             
             // Extract timestamp part (before the dash)
             long timestamp1 = Long.parseLong(id1.split("-")[0]);
@@ -784,11 +790,22 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
 
         // Parse Valkey-Glide stream record format using converter patterns
         for (Map.Entry<?, ?> entry : sortedEntries) {
-            String recordIdString = ((GlideString) entry.getKey()).toString();
+            // WORKAROUND: ClusterValue.of() bug converts GlideString to String
+            String recordIdString;
+            Object keyObj = entry.getKey();
+            if (keyObj instanceof GlideString) {
+                recordIdString = ((GlideString) keyObj).toString();
+            } else if (keyObj instanceof String) {
+                recordIdString = (String) keyObj;
+            } else {
+                recordIdString = keyObj.toString();
+            }
+            
             Map<byte[], byte[]> fields = new HashMap<>();
             Object[] fieldsArr = (Object[]) entry.getValue();
-            for (Object item : fieldsArr) {
-                Object[] itemArr = (Object[]) item;
+            
+            for (int i = 0; i < fieldsArr.length; i++) {
+                Object[] itemArr = (Object[]) fieldsArr[i];
                 GlideString field = (GlideString) itemArr[0];
                 GlideString value = (GlideString) itemArr[1];
                 fields.put(field.getBytes(), value.getBytes());
@@ -802,7 +819,7 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
         return byteRecords;
     }
 
-    private List<ByteRecord> parseMultiStreamByteRecords(Object result) {
+    private List<ByteRecord> parseMultiStreamByteRecords(Object result, byte[][] originalStreamKeys) {
         if (result == null) {
             return new ArrayList<>();
         }
@@ -814,21 +831,34 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
             // When Valkey-Glide returns Map format: {streamKey: recordsData}
             Map<?, ?> streamsMap = (Map<?, ?>) result;
             
-            for (Map.Entry<?, ?> streamEntry : streamsMap.entrySet()) {
-                Object streamKeyObj = streamEntry.getKey();
+            // WORKAROUND: Since ClusterValue.of() bug converts GlideString keys to Strings,
+            // we cannot rely on the map keys. For single-stream case, use the original key directly.
+            if (originalStreamKeys != null && streamsMap.size() == 1 && originalStreamKeys.length == 1) {
+                // Single stream case - use the original key directly
+                Map.Entry<?, ?> streamEntry = streamsMap.entrySet().iterator().next();
                 Map<?, ?> streamRecordsObj = (Map<?, ?>) streamEntry.getValue();
-                
-                byte[] streamKey;
-                if (streamKeyObj instanceof byte[]) {
-                    streamKey = (byte[]) streamKeyObj;
-                } else if (streamKeyObj instanceof GlideString) {
-                    streamKey = ((GlideString) streamKeyObj).getBytes();
-                } else {
-                    streamKey = streamKeyObj.toString().getBytes(StandardCharsets.UTF_8);
-                }
-                
+                byte[] streamKey = originalStreamKeys[0];
                 List<ByteRecord> streamRecords = parseByteRecords(streamRecordsObj, streamKey, false);
                 allRecords.addAll(streamRecords);
+            } else {
+                // Multiple streams or fallback to old behavior
+                for (Map.Entry<?, ?> streamEntry : streamsMap.entrySet()) {
+                    Object streamKeyObj = streamEntry.getKey();
+                    Map<?, ?> streamRecordsObj = (Map<?, ?>) streamEntry.getValue();
+                    
+                    byte[] streamKey;
+                    if (streamKeyObj instanceof byte[]) {
+                        streamKey = (byte[]) streamKeyObj;
+                    } else if (streamKeyObj instanceof GlideString) {
+                        streamKey = ((GlideString) streamKeyObj).getBytes();
+                    } else {
+                        // Fallback: Convert String to UTF-8 bytes (may have issues with JDK serialization)
+                        streamKey = streamKeyObj.toString().getBytes(StandardCharsets.UTF_8);
+                    }
+                    
+                    List<ByteRecord> streamRecords = parseByteRecords(streamRecordsObj, streamKey, false);
+                    allRecords.addAll(streamRecords);
+                }
             }
         } 
         return allRecords;
@@ -896,6 +926,7 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
                         }
                     }
                 } else if (consumersObj instanceof List) {
+                    @SuppressWarnings("unchecked")
                     List<Object> consumers = (List<Object>) consumersObj;
                     
                     // Handle flat list format: [consumerName1, count1, consumerName2, count2, ...]
@@ -944,6 +975,7 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
             for (Object item : list) {
                 Object convertedItem = ValkeyGlideConverters.defaultFromGlideResult(item);
                 if (convertedItem instanceof List) {
+                    @SuppressWarnings("unchecked")
                     List<Object> messageData = (List<Object>) convertedItem;
                     if (messageData.size() >= 4) {
                         String recordId = convertResultToString(ValkeyGlideConverters.defaultFromGlideResult(messageData.get(0)));

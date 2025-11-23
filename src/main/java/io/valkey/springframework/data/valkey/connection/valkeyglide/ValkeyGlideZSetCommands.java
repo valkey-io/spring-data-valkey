@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -198,9 +198,6 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
         try {
             return connection.execute("ZRANDMEMBER",
                 (Object glideResult) -> {
-                    if (connection.isPipelined() || connection.isQueueing()) {
-                        return null;
-                    }
                     if (glideResult == null) {
                         return new ArrayList<>();
                     }
@@ -254,9 +251,6 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
         try {
             return connection.execute("ZRANDMEMBER",
                 (Object[] glideResult) -> {
-                    if (connection.isPipelined() || connection.isQueueing()) {
-                        return null;
-                    }
                     if (glideResult == null) {
                         return new ArrayList<>();
                     }
@@ -1547,12 +1541,21 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
         return bound.isInclusive() ? value : "(" + value;
     }
 
-    private String formatLexRangeBound(org.springframework.data.domain.Range.Bound<byte[]> bound, boolean isLowerBound) {
+    private String formatLexRangeBound(org.springframework.data.domain.Range.Bound<?> bound, boolean isLowerBound) {
         if (bound == null || !bound.getValue().isPresent()) {
             return isLowerBound ? "-" : "+";
         }
         
-        String value = new String(bound.getValue().get());
+        Object val = bound.getValue().get();
+        String value;
+        if (val instanceof byte[]) {
+            value = new String((byte[]) val, StandardCharsets.UTF_8);
+        } else if (val instanceof String) {
+            value = (String) val;
+        } else {
+            value = val.toString();
+        }
+        
         return bound.isInclusive() ? "[" + value : "(" + value;
     }
 
@@ -1616,7 +1619,7 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
                     args.add(options.getCount());
                 }
                 
-                Object result = connection.execute("ZSCAN", args.toArray());
+                Object result = connection.execute("ZSCAN", rawResult -> ValkeyGlideConverters.defaultFromGlideResult(rawResult), args.toArray());
                 Object converted = ValkeyGlideConverters.defaultFromGlideResult(result);
                 
                 if (converted == null) {
@@ -1689,6 +1692,7 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
         }
         
         // Helper methods for convertToList and parseScore
+        @SuppressWarnings("unchecked")
         private List<Object> convertToList(Object obj) {
             if (obj instanceof List) {
                 return (List<Object>) obj;

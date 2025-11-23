@@ -104,7 +104,7 @@ public class ValkeyGlideServerCommands implements ValkeyServerCommands {
     public void flushDb() {
         try {
             connection.execute("FLUSHDB",
-                (String glideResult) -> glideResult);
+                glideResult -> glideResult);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -116,7 +116,7 @@ public class ValkeyGlideServerCommands implements ValkeyServerCommands {
         
         try {
             connection.execute("FLUSHDB",
-                (String glideResult) -> glideResult,
+                glideResult -> glideResult,
                 option.name());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -127,7 +127,7 @@ public class ValkeyGlideServerCommands implements ValkeyServerCommands {
     public void flushAll() {
         try {
             connection.execute("FLUSHALL",
-                (String glideResult) -> glideResult);
+                glideResult -> glideResult);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -139,7 +139,7 @@ public class ValkeyGlideServerCommands implements ValkeyServerCommands {
         
         try {
             connection.execute("FLUSHALL",
-                (String glideResult) -> glideResult,
+                glideResult -> glideResult,
                 option.name());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -315,6 +315,7 @@ public class ValkeyGlideServerCommands implements ValkeyServerCommands {
      * @param obj the object to convert
      * @return the converted list
      */
+    @SuppressWarnings("unchecked")
     private List<Object> convertToList(Object obj) {
         if (obj instanceof List) {
             return (List<Object>) obj;
@@ -531,7 +532,7 @@ public class ValkeyGlideServerCommands implements ValkeyServerCommands {
             }
             
             connection.execute("MIGRATE",
-                (String glideResult) -> glideResult,
+                glideResult -> glideResult,
                 args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);

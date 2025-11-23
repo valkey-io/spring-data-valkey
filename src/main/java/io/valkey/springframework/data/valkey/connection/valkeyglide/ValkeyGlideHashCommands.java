@@ -105,11 +105,6 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         try {
             return connection.execute("HGET",
                 (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
-                // (String glideResult) -> {
-                //     System.out.println("hGet result class: " + (glideResult != null ? glideResult.getClass().getName() : "null") + ", value: " + glideResult); // --- IGNORE ---
-                //     return glideResult != null ? glideResult.getBytes() : null;
-                //     //glideResult != null ? glideResult.getBytes() : null,
-                // },
                 key,
                 field);
         } catch (Exception ex) {

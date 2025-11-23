@@ -16,20 +16,17 @@
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import java.time.Duration;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.TaskExecutor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
-import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
@@ -41,19 +38,15 @@ import org.springframework.util.StringUtils;
 // Imports for valkey-glide library
 import glide.api.GlideClient;
 import glide.api.GlideClusterClient;
+import glide.api.models.configuration.AdvancedGlideClientConfiguration;
+import glide.api.models.configuration.AdvancedGlideClusterClientConfiguration;
+import glide.api.models.configuration.BackoffStrategy;
 import glide.api.models.configuration.GlideClientConfiguration;
 import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
+import glide.api.models.configuration.ReadFrom;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.lang.reflect.Method;
 
 /**
  * Connection factory creating <a href="https://github.com/valkey-io/valkey-glide">Valkey Glide</a> based
@@ -78,41 +71,75 @@ import java.lang.reflect.Method;
 public class ValkeyGlideConnectionFactory
     implements ValkeyConnectionFactory, InitializingBean, DisposableBean, SmartLifecycle {
         
-    private final ValkeyGlideClientConfiguration clientConfiguration;
+    private final @Nullable ValkeyGlideClientConfiguration valkeyGlideConfiguration;
+    private final ValkeyConfiguration configuration;
     
     private boolean initialized = false;
     private boolean running = false;
     private boolean autoStartup = true;
     private boolean earlyStartup = true;
     private int phase = 0;
-    private final Lock initLock = new ReentrantLock();
-    
-    private @Nullable ValkeyGlideClusterTopologyProvider topologyProvider;
-    private @Nullable ValkeyGlideClusterNodeResourceProvider nodeResourceProvider;
-    private @Nullable ClusterCommandExecutor clusterCommandExecutor;
-    
-    private long timeout;
-    private @Nullable TaskExecutor executor;
 
     /**
      * Constructs a new {@link ValkeyGlideConnectionFactory} instance with default settings.
      */
     public ValkeyGlideConnectionFactory() {
-        this(DefaultValkeyGlideClientConfiguration.builder().build());
+        this(new ValkeyStandaloneConfiguration(), new DefaultValkeyGlideClientConfiguration());
+    }
+
+    public ValkeyGlideConnectionFactory(ValkeyStandaloneConfiguration standaloneConfiguration) {
+		this(standaloneConfiguration, new DefaultValkeyGlideClientConfiguration());
+	}
+
+    /**
+     * Constructs a new {@link ValkeyGlideConnectionFactory} instance with the given {@link ValkeyStandaloneConfiguration}
+     * and {@link ValkeyGlideClientConfiguration}.
+     *
+     * @param standaloneConfiguration must not be {@literal null}
+     * @param clientConfiguration must not be {@literal null}
+     * @since 3.0
+     */
+    public ValkeyGlideConnectionFactory(ValkeyStandaloneConfiguration standaloneConfiguration,
+            ValkeyGlideClientConfiguration valkeyGlideConfiguration) {
+        
+        Assert.notNull(standaloneConfiguration, "ValkeyStandaloneConfiguration must not be null!");
+        Assert.notNull(valkeyGlideConfiguration, "ValkeyGlideClientConfiguration must not be null!");
+        
+        this.configuration = standaloneConfiguration;
+        this.valkeyGlideConfiguration = valkeyGlideConfiguration;
+    }
+
+    /**
+     * Constructs a new {@link ValkeyGlideConnectionFactory} instance with the given {@link ValkeyClusterConfiguration}
+     * and {@link ValkeyGlideClusterClientConfiguration}.
+     *
+     * @param clusterConfiguration must not be {@literal null}
+     * @param clusterClientConfiguration must not be {@literal null}
+     * @since 3.0
+     */
+    public ValkeyGlideConnectionFactory(ValkeyClusterConfiguration clusterConfiguration,
+        ValkeyGlideClientConfiguration valkeyGlideConfiguration) {
+        
+        Assert.notNull(clusterConfiguration, "ValkeyClusterConfiguration must not be null!");
+        Assert.notNull(valkeyGlideConfiguration, "ValkeyGlideClientConfiguration must not be null!");
+        
+        this.configuration = clusterConfiguration;
+        this.valkeyGlideConfiguration = valkeyGlideConfiguration;
     }
 
     /**
      * Constructs a new {@link ValkeyGlideConnectionFactory} instance with the given {@link ValkeyGlideClientConfiguration}.
      *
      * @param clientConfiguration must not be {@literal null}
+     * @deprecated since 3.0, use {@link #ValkeyGlideConnectionFactory(ValkeyStandaloneConfiguration, ValkeyGlideClientConfiguration)}
+     *             or {@link #ValkeyGlideConnectionFactory(ValkeyClusterConfiguration, ValkeyGlideClusterClientConfiguration)} instead
      */
-    public ValkeyGlideConnectionFactory(ValkeyGlideClientConfiguration clientConfiguration) {
-        Assert.notNull(clientConfiguration, "ValkeyGlideClientConfiguration must not be null!");
+    @Deprecated
+    public ValkeyGlideConnectionFactory(ValkeyGlideClientConfiguration valkeyGlideConfiguration) {
+        Assert.notNull(valkeyGlideConfiguration, "ValkeyGlideClientConfiguration must not be null!");
         
-        this.clientConfiguration = clientConfiguration;
-        
-        Duration commandTimeout = clientConfiguration.getCommandTimeout();
-        this.timeout = commandTimeout != null ? commandTimeout.toMillis() : 60000;
+        this.configuration = new ValkeyStandaloneConfiguration();
+        this.valkeyGlideConfiguration = valkeyGlideConfiguration;
     }
 
     /**
@@ -123,160 +150,19 @@ public class ValkeyGlideConnectionFactory
         if (initialized) {
             return;
         }
-        
-        // initLock.lock();
-        // try {
-        //     if (initialized) {
-        //         return;
-        //     }
-            
-        //     if (clientConfiguration.isClusterAware()) {
-        //         initializeClusterClient();
-        //         initializeClusterCommandExecutor();
-        //     } else {
-        //         initializeClient();
-        //     }
-            
-        //     initialized = true;
-        //     running = true;
-        // } finally {
-        //     initLock.unlock();
-        // }
-    }
-    
-    /**
-     * Initialize the cluster command executor for Valkey cluster operations
-     */
-    private void initializeClusterCommandExecutor() {
-        TaskExecutor taskExecutor = getExecutor();
-        
-        // In the actual implementation, we would properly initialize a ClusterCommandExecutor
-        // For this prototype, we'll skip actual initialization since it would require
-        // implementing many supporting classes and interfaces
-        
-        // This is intentionally commented out as a placeholder
-        // this.clusterCommandExecutor = new ClusterCommandExecutor(
-        //         topologyProvider, nodeResourceProvider, taskExecutor);
-        
-        // For testing purposes, we'll just set a non-null value
-        // In a real implementation, this would be properly instantiated
-        this.clusterCommandExecutor = null;
-    }
-
-
-    /**
-     * Builds client options from configuration.
-     */
-    private Object buildClientOptions() {
-        // In the actual implementation, we would:
-        // return ClientOptions.builder()
-        //     .connectTimeout(clientConfiguration.getConnectTimeout())
-        //     .commandTimeout(clientConfiguration.getCommandTimeout())
-        //     .sslEnabled(clientConfiguration.isUseSsl())
-        //     .verifyPeer(clientConfiguration.isVerifyPeer())
-        //     .username(clientConfiguration.getUsername())
-        //     .password(clientConfiguration.getPassword() != null ? 
-        //         String.valueOf(clientConfiguration.getPassword()) : null)
-        //     .database(clientConfiguration.getDatabase())
-        //     .maxPoolSize(clientConfiguration.getPoolSize())
-        //     .build();
-        
-        // Using placeholder for now
-        return new Object();
-    }
-    
-    /**
-     * Builds cluster client options from configuration.
-     */
-    private Object buildClusterClientOptions() {
-        // In the actual implementation, we would:
-        // return ClusterClientOptions.builder()
-        //     .connectTimeout(clientConfiguration.getConnectTimeout())
-        //     .commandTimeout(clientConfiguration.getCommandTimeout())
-        //     .sslEnabled(clientConfiguration.isUseSsl())
-        //     .verifyPeer(clientConfiguration.isVerifyPeer())
-        //     .username(clientConfiguration.getUsername())
-        //     .password(clientConfiguration.getPassword() != null ? 
-        //         String.valueOf(clientConfiguration.getPassword()) : null)
-        //     .maxPoolSize(clientConfiguration.getPoolSize())
-        //     .build();
-        
-        // Using placeholder for now
-        return new Object();
-    }
-
-    
-    /**
-     * Creates a {@link ValkeyStandaloneConfiguration} based on this factory's settings.
-     *
-     * @return a {@link ValkeyStandaloneConfiguration} instance
-     */
-    protected ValkeyStandaloneConfiguration getStandaloneConfiguration() {
-        ValkeyStandaloneConfiguration config = new ValkeyStandaloneConfiguration();
-        // Set hostname and port
-        clientConfiguration.getHostName().ifPresent(config::setHostName);
-        config.setPort(clientConfiguration.getPort());
-        
-        // Set username if available
-        String username = getOptionalUsername();
-        if (StringUtils.hasText(username)) {
-            config.setUsername(username);
-        }
-        
-        // Set password if available
-        if (hasPassword()) {
-            config.setPassword(extractPassword());
-        }
-        
-        // Set database if non-default
-        config.setDatabase(clientConfiguration.getDatabase());
-        
-        return config;
-    }
-    
-    /**
-     * Gets the username from the client configuration.
-     * 
-     * @return the username or null if not set
-     */
-    private String getOptionalUsername() {
-        // This is a placeholder implementation since we don't have the actual
-        // method in our stub ValkeyGlideClientConfiguration
-        // In a real implementation this would return clientConfiguration.getUsername()
-        return null;
-    }
-    
-    /**
-     * Checks if the client configuration has a password.
-     * 
-     * @return true if a password is set
-     */
-    private boolean hasPassword() {
-        return clientConfiguration.getPassword() != null;
-    }
-    
-    /**
-     * Extracts the password from the client configuration.
-     * 
-     * @return the password
-     */
-    private io.valkey.springframework.data.valkey.connection.ValkeyPassword extractPassword() {
-        // In a real implementation, this would correctly extract the password
-        // For now, return a default
-        return io.valkey.springframework.data.valkey.connection.ValkeyPassword.none();
     }
 
     @Override
     public ValkeyConnection getConnection() {
         afterPropertiesSet();
         
+        // Return cluster connection when in cluster mode
         if (isClusterAware()) {
             return getClusterConnection();
         }
         
-        // Create a GlideClient for each connection and wrap it directly in a ValkeyGlideConnection
-        GlideClient client = (GlideClient) createGlideClient();
-        return new ValkeyGlideConnection(client, timeout);
+        GlideClient glideClient = createGlideClient();
+        return new ValkeyGlideConnection(new StandaloneGlideClientAdapter(glideClient));
     }
 
     @Override
@@ -284,16 +170,11 @@ public class ValkeyGlideConnectionFactory
         afterPropertiesSet();
         
         if (!isClusterAware()) {
-            throw new InvalidDataAccessResourceUsageException("Cluster is not configured!");
+            throw new InvalidDataAccessResourceUsageException("Cluster mode is not configured!");
         }
 
-        throw new UnsupportedOperationException("Cluster connections not supported with Valkey-Glide!");
-
-        // // Create a GlideClusterClient for each connection
-        // Object clusterClient = createGlideClusterClient();
-        // return new ValkeyGlideClusterConnection(clusterClient, timeout, 
-        //         topologyProvider, 
-        //         nodeResourceProvider);
+        GlideClusterClient glideClusterClient = createGlideClusterClient();
+        return new ValkeyGlideClusterConnection(new ClusterGlideClientAdapter(glideClusterClient));
     }
 
     @Override
@@ -311,64 +192,106 @@ public class ValkeyGlideConnectionFactory
      */
     @Override
     public void destroy() {
-        doDestroy();
+        initialized = false;
+        running = false;
     }
 
-    // /**
-    //  * Reset the connection, closing the shared client.
-    //  */
-    // public void resetConnection() {
-    //     doDestroy();
-    // }
-    
     /**
      * Creates a GlideClient instance for each connection.
      */
-    private Object createGlideClient() {
+    private GlideClient createGlideClient() {
         try {
-            // Build the configuration using the proper API
-            GlideClientConfiguration.GlideClientConfigurationBuilder configBuilder = 
-                GlideClientConfiguration.builder();
+            if (ValkeyConfiguration.isClusterConfiguration(configuration)) {
+                throw new IllegalStateException("Cannot create GlideClient in cluster mode");
+            }
+            // Cast to standalone configuration
+            ValkeyStandaloneConfiguration standaloneConfig = 
+                (ValkeyStandaloneConfiguration) configuration;
             
-            // Set the address
-            clientConfiguration.getHostName().ifPresent(hostname -> {
-                configBuilder.address(NodeAddress.builder()
-                    .host(hostname)
-                    .port(clientConfiguration.getPort())
-                    .build());
-            });
+            // Build GlideClientConfiguration using Glide's API
+            var configBuilder = GlideClientConfiguration.builder();
             
-            // If no hostname specified, use localhost
-            if (clientConfiguration.getHostName().isEmpty()) {
-                configBuilder.address(NodeAddress.builder()
-                    .host("localhost")
-                    .port(clientConfiguration.getPort())
-                    .build());
+            // CONNECTION PROPERTIES from driver-agnostic configuration
+            configBuilder.address(NodeAddress.builder()
+                .host(standaloneConfig.getHostName())
+                .port(standaloneConfig.getPort())
+                .build());
+            
+            // Set credentials from driver-agnostic configuration
+            ValkeyPassword password = standaloneConfig.getPassword();
+            if (!password.equals(ValkeyPassword.none())) {
+                String username = standaloneConfig.getUsername();
+                
+                if (StringUtils.hasText(username)) {
+                    // Username + password authentication
+                    configBuilder.credentials(
+                        glide.api.models.configuration.ServerCredentials.builder()
+                            .username(username)
+                            .password(String.valueOf(password.get()))
+                            .build());
+                } else {
+                    // Password-only authentication
+                    configBuilder.credentials(
+                        glide.api.models.configuration.ServerCredentials.builder()
+                            .password(String.valueOf(password.get()))
+                            .build());
+                }
             }
             
-            // Set credentials if available
-            if (hasPassword()) {
-                configBuilder.credentials(glide.api.models.configuration.ServerCredentials.builder()
-                    .password(extractPassword().toString())
-                    .build());
+            // Set database from driver-agnostic configuration
+            int database = standaloneConfig.getDatabase();
+            if (database != 0) {
+                configBuilder.databaseId(database);
             }
             
-            // Set request timeout
-            Duration timeout = clientConfiguration.getCommandTimeout();
-            if (timeout != null) {
-                configBuilder.requestTimeout((int) timeout.toMillis());
+            // DRIVER-SPECIFIC PROPERTIES from ValkeyGlideClientConfiguration
+            
+            // Request timeout
+            Duration commandTimeout = valkeyGlideConfiguration.getCommandTimeout();
+            if (commandTimeout != null) {
+                configBuilder.requestTimeout((int) commandTimeout.toMillis());
+            }
+
+            // Connection timeout
+            Duration connectionTimeout = valkeyGlideConfiguration.getConnectionTimeout();
+            if (connectionTimeout != null) {
+                var advancedConfigBuilder = AdvancedGlideClientConfiguration.builder();
+                advancedConfigBuilder.connectionTimeout((int) connectionTimeout.toMillis());
+                configBuilder.advancedConfiguration(advancedConfigBuilder.build());
             }
             
-            // Set TLS if enabled
-            if (clientConfiguration.isUseSsl()) {
+            // SSL/TLS
+            if (valkeyGlideConfiguration.isUseSsl()) {
                 configBuilder.useTLS(true);
             }
             
+            // Read from strategy
+            ReadFrom readFrom = valkeyGlideConfiguration.getReadFrom();
+            if (readFrom != null) {
+                configBuilder.readFrom(readFrom);
+            }
+            
+            // Inflight requests limit
+            Integer inflightRequestsLimit = valkeyGlideConfiguration.getInflightRequestsLimit();
+            if (inflightRequestsLimit != null) {
+                configBuilder.inflightRequestsLimit(inflightRequestsLimit);
+            }
+            
+            // Client AZ
+            String clientAZ = valkeyGlideConfiguration.getClientAZ();
+            if (clientAZ != null) {
+                configBuilder.clientAZ(clientAZ);
+            }
+            
+            // Reconnect strategy
+            BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
+            if (reconnectStrategy != null) {
+                configBuilder.reconnectStrategy(reconnectStrategy);
+            }
+            
+            // Build and create client
             GlideClientConfiguration config = configBuilder.build();
-            
-            // Create the client using the proper API
             return GlideClient.createClient(config).get();
-            
         } catch (Exception e) {
             throw new IllegalStateException("Failed to create GlideClient: " + e.getMessage(), e);
         }
@@ -377,160 +300,102 @@ public class ValkeyGlideConnectionFactory
     /**
      * Creates a GlideClusterClient instance for each connection.
      */
-    private Object createGlideClusterClient() {
+    private GlideClusterClient createGlideClusterClient() {
         try {
-            // Build the configuration using the proper API
-            GlideClusterClientConfiguration.GlideClusterClientConfigurationBuilder configBuilder = 
+            if (!ValkeyConfiguration.isClusterConfiguration(configuration)) {
+                throw new IllegalStateException("Cannot create GlideClusterClient in non-cluster mode");
+            }
+            
+            // Cast to cluster configuration
+            ValkeyClusterConfiguration clusterConfig = 
+                (ValkeyClusterConfiguration) configuration;
+            
+            // Build GlideClusterClientConfiguration using Glide's API
+            var configBuilder = 
                 GlideClusterClientConfiguration.builder();
             
-            // Set the address
-            clientConfiguration.getHostName().ifPresent(hostname -> {
+            // CONNECTION PROPERTIES from driver-agnostic configuration
+            // Add all cluster nodes
+            clusterConfig.getClusterNodes().forEach(node -> {
                 configBuilder.address(NodeAddress.builder()
-                    .host(hostname)
-                    .port(clientConfiguration.getPort())
+                    .host(node.getHost())
+                    .port(node.getPort())
                     .build());
             });
             
-            // If no hostname specified, use localhost
-            if (clientConfiguration.getHostName().isEmpty()) {
-                configBuilder.address(NodeAddress.builder()
-                    .host("localhost")
-                    .port(clientConfiguration.getPort())
-                    .build());
+            // Set credentials from driver-agnostic configuration
+            ValkeyPassword password = clusterConfig.getPassword();
+            if (!password.equals(ValkeyPassword.none())) {
+                String username = clusterConfig.getUsername();
+                
+                if (StringUtils.hasText(username)) {
+                    configBuilder.credentials(
+                        glide.api.models.configuration.ServerCredentials.builder()
+                            .username(username)
+                            .password(String.valueOf(password.get()))
+                            .build());
+                } else {
+                    configBuilder.credentials(
+                        glide.api.models.configuration.ServerCredentials.builder()
+                            .password(String.valueOf(password.get()))
+                            .build());
+                }
             }
             
-            // Set credentials if available
-            if (hasPassword()) {
-                configBuilder.credentials(glide.api.models.configuration.ServerCredentials.builder()
-                    .password(extractPassword().toString())
-                    .build());
-            }
+            // DRIVER-SPECIFIC PROPERTIES from ValkeyGlideClientConfiguration
             
-            // Set request timeout
-            Duration timeout = clientConfiguration.getCommandTimeout();
-            if (timeout != null) {
-                configBuilder.requestTimeout((int) timeout.toMillis());
+            // Request timeout
+            Duration commandTimeout = valkeyGlideConfiguration.getCommandTimeout();
+            if (commandTimeout != null) {
+                configBuilder.requestTimeout((int) commandTimeout.toMillis());
             }
-            
-            // Set TLS if enabled
-            if (clientConfiguration.isUseSsl()) {
+
+            // Connection timeout
+            Duration connectionTimeout = valkeyGlideConfiguration.getConnectionTimeout();
+            if (connectionTimeout != null) {
+                var advancedConfigBuilder = AdvancedGlideClusterClientConfiguration.builder();
+                advancedConfigBuilder.connectionTimeout((int) connectionTimeout.toMillis());
+                configBuilder.advancedConfiguration(advancedConfigBuilder.build());
+            }
+
+            // SSL/TLS
+            if (valkeyGlideConfiguration.isUseSsl()) {
                 configBuilder.useTLS(true);
             }
             
-            GlideClusterClientConfiguration config = configBuilder.build();
+            // Read from strategy
+            ReadFrom readFrom = valkeyGlideConfiguration.getReadFrom();
+            if (readFrom != null) {
+                configBuilder.readFrom(readFrom);
+            }
             
-            // Create the cluster client using the proper API
+            // Inflight requests limit
+            Integer inflightRequestsLimit = valkeyGlideConfiguration.getInflightRequestsLimit();
+            if (inflightRequestsLimit != null) {
+                configBuilder.inflightRequestsLimit(inflightRequestsLimit);
+            }
+            
+            // Client AZ
+            String clientAZ = valkeyGlideConfiguration.getClientAZ();
+            if (clientAZ != null) {
+                configBuilder.clientAZ(clientAZ);
+            }
+            
+            // Reconnect strategy
+            BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
+            if (reconnectStrategy != null) {
+                configBuilder.reconnectStrategy(reconnectStrategy);
+            }
+            
+            // Build and create cluster client
+            GlideClusterClientConfiguration config = configBuilder.build();
             return GlideClusterClient.createClient(config).get();
             
-        } catch (Exception e) {
+        } catch (InterruptedException | ExecutionException e) {
             throw new IllegalStateException("Failed to create GlideClusterClient: " + e.getMessage(), e);
         }
     }
 
-    /**
-     * Internal method to perform cleanup without circular calls.
-     */
-    private void doDestroy() {
-        
-        initialized = false;
-        running = false;
-        topologyProvider = null;
-        nodeResourceProvider = null;
-        clusterCommandExecutor = null;
-    }
-
-    /**
-     * Helper method to find the appropriate create method on the client class.
-     * 
-     * @param clientClass the client class to inspect
-     * @return the create method or null if not found
-     */
-    private Method findCreateMethod(Class<?> clientClass) {
-        // Try different parameter combinations that might match the API
-        Method[] methods = clientClass.getMethods();
-        for (Method method : methods) {
-            if (method.getName().equals("create")) {
-                return method;
-            }
-        }
-        return null;
-    }
-    
-    /**
-     * Builds a Valkey URI based on the client configuration.
-     * 
-     * @return a Valkey URI string
-     */
-    private String buildValkeyUri() {
-        StringBuilder uriBuilder = new StringBuilder();
-        uriBuilder.append("valkey://");
-        
-        // Add authentication if available
-        String username = getOptionalUsername();
-        if (StringUtils.hasText(username)) {
-            uriBuilder.append(username);
-            if (hasPassword()) {
-                uriBuilder.append(":");
-                uriBuilder.append(extractPassword().toString());
-            }
-            uriBuilder.append("@");
-        } else if (hasPassword()) {
-            uriBuilder.append(":");
-            uriBuilder.append(extractPassword().toString());
-            uriBuilder.append("@");
-        }
-        
-        // Add host and port
-        clientConfiguration.getHostName().ifPresent(uriBuilder::append);
-        uriBuilder.append(":");
-        uriBuilder.append(clientConfiguration.getPort());
-        
-        // Add database if not default
-        if (clientConfiguration.getDatabase() != 0) {
-            uriBuilder.append("/").append(clientConfiguration.getDatabase());
-        }
-        
-        return uriBuilder.toString();
-    }
-    
-    /**
-     * Gets the cluster command executor for this factory.
-     * 
-     * @return The task executor used for cluster operations
-     * @throws IllegalStateException if the factory is not in cluster mode
-     */
-    TaskExecutor getExecutorForClusterOperations() {
-        if (!isClusterAware()) {
-            throw new IllegalStateException("This factory is not in cluster mode");
-        }
-        
-        if (!isRunning()) {
-            throw new IllegalStateException("Connection factory not initialized or not running");
-        }
-        
-        return getExecutor();
-    }
-    
-    /**
-     * Sets the task executor used for executing commands in cluster mode.
-     * 
-     * @param executor the executor to use for cluster commands
-     */
-    public void setExecutor(TaskExecutor executor) {
-        this.executor = executor;
-    }
-    
-    /**
-     * Returns the configured TaskExecutor or a default SimpleAsyncTaskExecutor.
-     * 
-     * @return the TaskExecutor
-     */
-    private TaskExecutor getExecutor() {
-        return executor != null ? executor : new SimpleAsyncTaskExecutor();
-    }
-    
-    // Lifecycle implementation
-    
     /**
      * Initializes the factory, starting the client.
      */
@@ -564,45 +429,13 @@ public class ValkeyGlideConnectionFactory
      * @return true if cluster mode is enabled.
      */
     public boolean isClusterAware() {
-        return clientConfiguration.isClusterAware();
+        return ValkeyConfiguration.isClusterConfiguration(this.configuration);
     }
-    
-    /**
-     * Creates a {@link ValkeyGlideConnectionFactory} for the given {@link ValkeyStandaloneConfiguration}.
-     * 
-     * @param standaloneConfig the Valkey standalone configuration, must not be {@literal null}
-     * @return a new {@link ValkeyGlideConnectionFactory} instance
-     */
-    public static ValkeyGlideConnectionFactory createValkeyGlideConnectionFactory(ValkeyStandaloneConfiguration standaloneConfig) {
-        Assert.notNull(standaloneConfig, "ValkeyStandaloneConfiguration must not be null!");
-        
-        DefaultValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder builder = 
-                DefaultValkeyGlideClientConfiguration.builder()
-                .hostName(standaloneConfig.getHostName())
-                .port(standaloneConfig.getPort())
-                .database(standaloneConfig.getDatabase());
-        
-        // Set optional username if present
-        String username = standaloneConfig.getUsername();
-        if (StringUtils.hasText(username)) {
-            // In a real implementation, this would be:
-            // builder.username(username);
-            // But we'll skip it for the mock implementation
-        }
-        
-        // Set optional password if present
-        if (!standaloneConfig.getPassword().equals(ValkeyPassword.none())) {
-            builder.password(standaloneConfig.getPassword());
-        }
-        
-        return new ValkeyGlideConnectionFactory(builder.build());
-    }
-
     /**
      * @return The client configuration used.
      */
     public ValkeyGlideClientConfiguration getClientConfiguration() {
-        return clientConfiguration;
+        return valkeyGlideConfiguration;
     }
 
 

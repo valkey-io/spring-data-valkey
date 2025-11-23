@@ -674,6 +674,161 @@ public class ValkeyGlideConnectionStringCommandsIntegrationTests extends Abstrac
         }
     }
 
+    @Test
+    void testBitFieldWithOverflowWrap() {
+        String key = "test:string:bitfield:wrap";
+        byte[] keyBytes = key.getBytes();
+        
+        try {
+            // Test OVERFLOW WRAP behavior (default)
+            // Increment u2 (max value 3) from 0 to 3, then wrap to 0
+            BitFieldSubCommands subCommands = BitFieldSubCommands.create()
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(100).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.WRAP).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(100).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.WRAP).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(100).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.WRAP).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(100).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.WRAP).by(1);
+            
+            List<Long> results = connection.stringCommands().bitField(keyBytes, subCommands);
+            
+            assertThat(results).isNotNull();
+            assertThat(results).hasSize(4);
+            assertThat(results.get(0)).isEqualTo(1L); // 0 + 1 = 1
+            assertThat(results.get(1)).isEqualTo(2L); // 1 + 1 = 2
+            assertThat(results.get(2)).isEqualTo(3L); // 2 + 1 = 3 (max value)
+            assertThat(results.get(3)).isEqualTo(0L); // 3 + 1 wraps to 0
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    void testBitFieldWithOverflowSat() {
+        String key = "test:string:bitfield:sat";
+        byte[] keyBytes = key.getBytes();
+        
+        try {
+            // Test OVERFLOW SAT behavior (saturate at max/min)
+            // Increment u2 (max value 3) from 0 to 3, then saturate at 3
+            BitFieldSubCommands subCommands = BitFieldSubCommands.create()
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(102).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.SAT).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(102).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.SAT).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(102).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.SAT).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(102).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.SAT).by(1);
+            
+            List<Long> results = connection.stringCommands().bitField(keyBytes, subCommands);
+            
+            assertThat(results).isNotNull();
+            assertThat(results).hasSize(4);
+            assertThat(results.get(0)).isEqualTo(1L); // 0 + 1 = 1
+            assertThat(results.get(1)).isEqualTo(2L); // 1 + 1 = 2
+            assertThat(results.get(2)).isEqualTo(3L); // 2 + 1 = 3 (max value)
+            assertThat(results.get(3)).isEqualTo(3L); // 3 + 1 saturates at 3
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    void testBitFieldWithOverflowFail() {
+        String key = "test:string:bitfield:fail";
+        byte[] keyBytes = key.getBytes();
+        
+        try {
+            // Test OVERFLOW FAIL behavior (return null on overflow)
+            // Increment u2 (max value 3) from 0 to 3, then fail and return null
+            BitFieldSubCommands subCommands = BitFieldSubCommands.create()
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(102).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.FAIL).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(102).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.FAIL).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(102).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.FAIL).by(1)
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(102).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.FAIL).by(1);
+            
+            List<Long> results = connection.stringCommands().bitField(keyBytes, subCommands);
+            
+            assertThat(results).isNotNull();
+            assertThat(results).hasSize(4);
+            assertThat(results.get(0)).isEqualTo(1L); // 0 + 1 = 1
+            assertThat(results.get(1)).isEqualTo(2L); // 1 + 1 = 2
+            assertThat(results.get(2)).isEqualTo(3L); // 2 + 1 = 3 (max value)
+            assertThat(results.get(3)).isNull(); // 3 + 1 fails and returns null
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    void testBitFieldMixedOverflowModes() {
+        String key = "test:string:bitfield:mixed";
+        byte[] keyBytes = key.getBytes();
+        
+        try {
+            // Test multiple overflow modes in single command
+            // Each OVERFLOW command affects subsequent operations until next OVERFLOW
+            BitFieldSubCommands subCommands = BitFieldSubCommands.create()
+                // Set initial values
+                .set(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(100).to(3)
+                .set(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(104).to(3)
+                .set(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(108).to(3)
+                // Test WRAP overflow
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(100).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.WRAP).by(1)
+                // Test SAT overflow
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(104).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.SAT).by(1)
+                // Test FAIL overflow
+                .incr(BitFieldSubCommands.BitFieldType.unsigned(2)).valueAt(108).overflow(BitFieldSubCommands.BitFieldIncrBy.Overflow.FAIL).by(1);
+            
+            List<Long> results = connection.stringCommands().bitField(keyBytes, subCommands);
+            
+            assertThat(results).isNotNull();
+            assertThat(results).hasSize(6);
+            assertThat(results.get(0)).isEqualTo(0L); // SET returns old value (0)
+            assertThat(results.get(1)).isEqualTo(0L); // SET returns old value (0)
+            assertThat(results.get(2)).isEqualTo(0L); // SET returns old value (0)
+            assertThat(results.get(3)).isEqualTo(0L); // WRAP: 3 + 1 = 0
+            assertThat(results.get(4)).isEqualTo(3L); // SAT: 3 + 1 = 3 (saturated)
+            assertThat(results.get(5)).isNull(); // FAIL: 3 + 1 = null (overflow detected)
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    void testBitFieldWithNonZeroBasedOffset() {
+        String key = "test:string:bitfield:nonzero";
+        byte[] keyBytes = key.getBytes();
+        
+        try {
+            // Test type-based (non-zero-based) offsets using multipliedByTypeLength()
+            // Type-based offsets are prefixed with "#" in Redis and multiplied by the type width
+            // For INT_8 (8 bits = 1 byte), offset #1 means byte offset 1
+            BitFieldSubCommands subCommands = BitFieldSubCommands.create()
+                .set(BitFieldSubCommands.BitFieldType.signed(8))
+                    .valueAt(BitFieldSubCommands.Offset.offset(0L).multipliedByTypeLength()).to(100L)
+                .set(BitFieldSubCommands.BitFieldType.signed(8))
+                    .valueAt(BitFieldSubCommands.Offset.offset(1L).multipliedByTypeLength()).to(200L);
+            
+            List<Long> setResults = connection.stringCommands().bitField(keyBytes, subCommands);
+            
+            assertThat(setResults).isNotNull();
+            assertThat(setResults).hasSize(2);
+            assertThat(setResults).containsExactly(0L, 0L); // Both SET operations return old value (0)
+            
+            // Now get the values back using type-based offsets
+            BitFieldSubCommands getCommands = BitFieldSubCommands.create()
+                .get(BitFieldSubCommands.BitFieldType.signed(8))
+                    .valueAt(BitFieldSubCommands.Offset.offset(0L).multipliedByTypeLength())
+                .get(BitFieldSubCommands.BitFieldType.signed(8))
+                    .valueAt(BitFieldSubCommands.Offset.offset(1L).multipliedByTypeLength());
+            
+            List<Long> getResults = connection.stringCommands().bitField(keyBytes, getCommands);
+            
+            assertThat(getResults).isNotNull();
+            assertThat(getResults).hasSize(2);
+            assertThat(getResults.get(0)).isEqualTo(100L);
+            assertThat(getResults.get(1)).isEqualTo(-56L); // 200 as signed i8 wraps to -56
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
     // ==================== Error Handling and Edge Cases ====================
 
     @Test

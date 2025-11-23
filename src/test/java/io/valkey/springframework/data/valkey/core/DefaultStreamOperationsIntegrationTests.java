@@ -111,7 +111,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 
 		if (ValkeyDetector.isClusterAvailable()) {
 			params.addAll(AbstractOperationsTestParams
-					.testParams(ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class)));
+					.testParams(ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyCluster.class)));
 		}
 
 		return params;

@@ -17,12 +17,10 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
 import io.valkey.springframework.data.valkey.connection.ReturnType;
-import io.valkey.springframework.data.valkey.hash.ObjectHashMapper;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -63,9 +61,6 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
 
             return connection.execute("EVAL",
                 (Object glideResult) -> {
-                    if (connection.isQueueing() || (connection.isPipelined())) {
-                        return null;
-                    }
                     return convertResult(glideResult, returnType);
                 },
                 args);
@@ -89,9 +84,6 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
 
             return connection.execute("EVALSHA",
                 (Object glideResult) -> {
-                    if (connection.isQueueing() || (connection.isPipelined())) {
-                        return null;
-                    }
                     return convertResult(glideResult, returnType);
                 },
                 args);

@@ -17,8 +17,6 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -32,8 +30,6 @@ import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-
-import io.lettuce.core.RedisException;
 
 /**
  * Comprehensive low-level integration tests for {@link ValkeyGlideConnection} 
@@ -316,12 +312,6 @@ public class ValkeyGlideConnectionHashCommandsIntegrationTests extends AbstractV
             // Test hGetAll
             Map<byte[], byte[]> all = connection.hashCommands().hGetAll(keyBytes);
             assertThat(all).hasSize(3);
-
-            // for (Map.Entry<byte[], byte[]> entry : all.entrySet()) {
-            //     String keyStr = new String(entry.getKey(), StandardCharsets.UTF_8);
-            //     String valueStr = new String(entry.getValue(), StandardCharsets.UTF_8);
-            //     System.out.println("Key: " + keyStr + ", Value: " + valueStr);
-            // }
 
             // Since byte arrays are compared by reference, not content, we need to check the content differently
             boolean foundField1 = false, foundField2 = false, foundField3 = false;

@@ -18,8 +18,8 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 import java.time.Duration;
 import java.util.Optional;
 
-import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration;
-import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
+import glide.api.models.configuration.BackoffStrategy;
+import glide.api.models.configuration.ReadFrom;
 import org.springframework.lang.Nullable;
 
 /**
@@ -29,35 +29,25 @@ import org.springframework.lang.Nullable;
  * @since 2.0
  */
 public interface ValkeyGlideClientConfiguration {
-
-    /**
-     * Get the hostname used to connect to Valkey.
-     * 
-     * @return the hostname.
-     */
-    Optional<String> getHostName();
     
     /**
-     * Get the port used to connect to Valkey.
-     * 
-     * @return the port.
+     * Creates a new {@link ValkeyGlideClientConfigurationBuilder} to build {@link ValkeyGlideClientConfiguration}.
+     *
+     * @return a new {@link ValkeyGlideClientConfigurationBuilder}.
      */
-    Integer getPort();
+    static ValkeyGlideClientConfigurationBuilder builder() {
+        return new ValkeyGlideClientConfigurationBuilder();
+    }
     
     /**
-     * Get the password used to connect to Valkey.
-     * 
-     * @return the password.
+     * Creates a default {@link ValkeyGlideClientConfiguration} with default settings.
+     *
+     * @return a {@link ValkeyGlideClientConfiguration} with defaults.
      */
-    Optional<ValkeyPassword> getPassword();
+    static ValkeyGlideClientConfiguration defaultConfiguration() {
+        return builder().build();
+    }
     
-    /**
-     * Get the database index.
-     * 
-     * @return the database index.
-     */
-    int getDatabase();
-
     /**
      * Get the command timeout for Valkey-Glide client operations.
      * 
@@ -65,39 +55,168 @@ public interface ValkeyGlideClientConfiguration {
      */
     @Nullable
     Duration getCommandTimeout();
-    
-    /**
-     * Check if cluster mode is enabled.
-     * 
-     * @return {@literal true} if cluster mode is enabled.
-     */
-    boolean isClusterAware();
 
     /**
-     * Get the client name.
+     * Get the connection timeout for Valkey-Glide client operations.
      * 
-     * @return the client name, if set.
+     * @return The connection timeout duration. May be {@literal null} if not set.
      */
-    Optional<String> getClientName();
+    @Nullable
+    Duration getConnectionTimeout();
 
-    /**
-     * Get the shutdown timeout to use when closing resources.
-     * 
-     * @return the shutdown timeout.
-     */
-    Duration getShutdownTimeout();
-
-    /**
-     * Get the pool size to use.
-     * 
-     * @return the pool size, if set.
-     */
-    Optional<Integer> getPoolSize();
-    
     /**
      * Check if SSL is enabled.
      * 
      * @return {@literal true} if SSL is enabled.
      */
     boolean isUseSsl();
+    
+    /**
+     * Get the read from strategy for the client.
+     * 
+     * @return The {@link ReadFrom} strategy. May be {@literal null} if not set.
+     */
+    @Nullable
+    ReadFrom getReadFrom();
+    
+    /**
+     * Get the maximum number of concurrent in-flight requests.
+     * 
+     * @return The inflight requests limit. May be {@literal null} if not set.
+     */
+    @Nullable
+    Integer getInflightRequestsLimit();
+    
+    /**
+     * Get the client availability zone.
+     * 
+     * @return The client AZ. May be {@literal null} if not set.
+     */
+    @Nullable
+    String getClientAZ();
+    
+    /**
+     * Get the reconnection strategy.
+     * 
+     * @return The {@link BackoffStrategy}. May be {@literal null} if not set.
+     */
+    @Nullable
+    BackoffStrategy getReconnectStrategy();
+
+    /**
+     * Get client options for mode-specific configurations.
+     * Placeholder for future mode-specific extensions.
+     * 
+     * @return Optional containing client options if configured.
+     */
+    Optional<GlideClientOptions> getClientOptions();
+    
+    /**
+     * Builder for {@link ValkeyGlideClientConfiguration}.
+     */
+    class ValkeyGlideClientConfigurationBuilder {
+        
+        private @Nullable Duration commandTimeout;
+        private @Nullable Duration connectionTimeout;
+        private boolean useSsl = false;
+        private @Nullable ReadFrom readFrom;
+        private @Nullable Integer inflightRequestsLimit;
+        private @Nullable String clientAZ;
+        private @Nullable BackoffStrategy reconnectStrategy;
+        
+        ValkeyGlideClientConfigurationBuilder() {}
+        
+        /**
+         * Set the command timeout.
+         * 
+         * @param commandTimeout the command timeout duration.
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder commandTimeout(Duration commandTimeout) {
+            this.commandTimeout = commandTimeout;
+            return this;
+        }
+        
+        /**
+         * Set the connection timeout.
+         * 
+         * @param connectionTimeout the connection timeout duration.
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder connectionTimeout(Duration connectionTimeout) {
+            this.connectionTimeout = connectionTimeout;
+            return this;
+        }
+        
+        /**
+         * Enable SSL for the connection.
+         * 
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder useSsl() {
+            this.useSsl = true;
+            return this;
+        }
+        
+        /**
+         * Set the read from strategy.
+         * 
+         * @param readFrom the {@link ReadFrom} strategy.
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder readFrom(ReadFrom readFrom) {
+            this.readFrom = readFrom;
+            return this;
+        }
+        
+        /**
+         * Set the maximum number of concurrent in-flight requests.
+         * 
+         * @param inflightRequestsLimit the inflight requests limit.
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder inflightRequestsLimit(Integer inflightRequestsLimit) {
+            this.inflightRequestsLimit = inflightRequestsLimit;
+            return this;
+        }
+        
+        /**
+         * Set the client availability zone.
+         * 
+         * @param clientAZ the client AZ.
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder clientAZ(String clientAZ) {
+            this.clientAZ = clientAZ;
+            return this;
+        }
+        
+        /**
+         * Set the reconnection strategy.
+         * 
+         * @param reconnectStrategy the {@link BackoffStrategy}.
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder reconnectStrategy(BackoffStrategy reconnectStrategy) {
+            this.reconnectStrategy = reconnectStrategy;
+            return this;
+        }
+        
+        /**
+         * Build the {@link ValkeyGlideClientConfiguration}.
+         * 
+         * @return a new {@link ValkeyGlideClientConfiguration} instance.
+         */
+        public ValkeyGlideClientConfiguration build() {
+            return new DefaultValkeyGlideClientConfiguration(
+                commandTimeout, 
+                useSsl, 
+                connectionTimeout,
+                readFrom,
+                inflightRequestsLimit,
+                clientAZ,
+                reconnectStrategy
+            );
+        }
+    }
 }

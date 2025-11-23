@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -30,7 +29,6 @@ import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
 import io.valkey.springframework.data.valkey.connection.SortParameters;
 import io.valkey.springframework.data.valkey.connection.ValueEncoding;
 import io.valkey.springframework.data.valkey.core.Cursor;
-import io.valkey.springframework.data.valkey.core.KeyScanOptions;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -44,18 +42,6 @@ import glide.api.models.GlideString;
  * @since 2.0
  */
 public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
-
-    /**
-     * Helper method to convert byte array to hex string for debugging
-     */
-    private static String bytesToHex(byte[] bytes) {
-        if (bytes == null) return "null";
-        StringBuilder result = new StringBuilder();
-        for (byte b : bytes) {
-            result.append(String.format("%02x", b));
-        }
-        return result.toString();
-    }
 
     private final ValkeyGlideConnection connection;
 
@@ -674,7 +660,7 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
         
         try {
             return connection.execute("OBJECT",
-                (GlideString glideResult) -> ValkeyGlideConverters.toValueEncoding(glideResult != null ? glideResult.getBytes() : null),
+                (GlideString glideResult) -> ValkeyGlideConverters.toValueEncoding(glideResult),
                 "ENCODING", key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);

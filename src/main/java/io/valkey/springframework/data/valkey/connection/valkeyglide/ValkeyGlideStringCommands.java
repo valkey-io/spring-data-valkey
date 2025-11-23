@@ -569,28 +569,62 @@ public class ValkeyGlideStringCommands implements ValkeyStringCommands {
                     BitFieldSubCommands.BitFieldGet get = (BitFieldSubCommands.BitFieldGet) subCommand;
                     args.add("GET");
                     args.add(get.getType().asString());
-                    args.add(get.getOffset().getValue());
+                    args.add(get.getOffset().asString());
                 } else if (subCommand instanceof BitFieldSubCommands.BitFieldSet) {
                     BitFieldSubCommands.BitFieldSet set = (BitFieldSubCommands.BitFieldSet) subCommand;
                     args.add("SET");
                     args.add(set.getType().asString());
-                    args.add(set.getOffset().getValue());
+                    args.add(set.getOffset().asString());
                     args.add(set.getValue());
                 } else if (subCommand instanceof BitFieldSubCommands.BitFieldIncrBy) {
                     BitFieldSubCommands.BitFieldIncrBy incrBy = (BitFieldSubCommands.BitFieldIncrBy) subCommand;
+                    
+                    // Add OVERFLOW command if specified
+                    // The OVERFLOW command must be sent before the INCRBY/SET commands it affects
+                    if (incrBy.getOverflow() != null) {
+                        args.add("OVERFLOW");
+                        args.add(incrBy.getOverflow().name());
+                    }
+                    
                     args.add("INCRBY");
                     args.add(incrBy.getType().asString());
-                    args.add(incrBy.getOffset().getValue());
+                    args.add(incrBy.getOffset().asString());
                     args.add(incrBy.getValue());
                 }
             }
             
             return connection.execute("BITFIELD",
-                (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
+                (Object[] glideResult) -> toBitFieldLongsList(glideResult),
                 args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
+    }
+
+    /**
+     * Dedicated mapper for BITFIELD command results that handles null values.
+     * BITFIELD is unique in that it can return NULL elements in the array when
+     * OVERFLOW FAIL is used and an overflow/underflow is detected.
+     *
+     * @param glideResult The raw result from Glide
+     * @return List of Long values, with nulls preserved for failed overflow operations
+     */
+    @Nullable
+    private static List<Long> toBitFieldLongsList(@Nullable Object[] glideResult) {
+        if (glideResult == null) {
+            return null;
+        }
+        
+        List<Long> resultList = new ArrayList<>(glideResult.length);
+        for (Object item : glideResult) {
+            // Handle null (from OVERFLOW FAIL) - preserve it in the result
+            if (item == null) {
+                resultList.add(null);
+            } else {
+                resultList.add(((Number) item).longValue());
+            }
+        }
+        return resultList;
     }
 
     @Override

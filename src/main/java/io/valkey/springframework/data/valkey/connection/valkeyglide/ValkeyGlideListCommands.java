@@ -88,7 +88,7 @@ public class ValkeyGlideListCommands implements ValkeyListCommands {
             return connection.execute("LPOS",
                 (Object glideResult) -> {
                     if (glideResult == null) {
-                        return null;
+                        return new ArrayList<>();
                     }
 
                     // glideResult can be a single Long or an array of Longs

@@ -26,36 +26,50 @@ import java.util.Set;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.ClusterTestVariables;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.core.ValkeyCallback;
-import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.core.SessionCallback;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
 
 /**
- * Integration tests for {@link ValkeyGlideConnectionFactory}.
+ * Integration tests for {@link ValkeyGlideConnectionFactory} in cluster mode.
+ * 
+ * <p>These tests verify that the connection factory works correctly with a Valkey cluster,
+ * ensuring that the cluster adapter properly handles routing and result aggregation.
+ * 
+ * <p><strong>Important Notes:</strong>
+ * <ul>
+ *   <li>All test keys use hash tags (e.g., {@code {test}:key}) to ensure multi-key operations
+ *       work correctly in cluster mode by routing to the same slot.</li>
+ *   <li>Transactions ({@code MULTI/EXEC}) are not supported in cluster mode and are omitted.</li>
+ *   <li>Pipeline operations have limited support in cluster mode and are omitted.</li>
+ * </ul>
  * 
  * @author Ilya Kolomin
+ * @since 2.0
  */
+@EnabledOnValkeyClusterAvailable
 @TestInstance(Lifecycle.PER_CLASS)
-public class ValkeyGlideConnectionFactoryIntegrationTests {
+public class ValkeyGlideClusterConnectionFactoryIntegrationTests {
 
     private ValkeyGlideConnectionFactory connectionFactory;
     private ValkeyTemplate<String, String> template;
 
     @BeforeAll
     void setup() {
-        // Create a connection factory for tests
-        connectionFactory = createConnectionFactory();
+        // Create a cluster connection factory for tests
+        connectionFactory = createClusterConnectionFactory();
+        
+        // Verify we're in cluster mode
+        assertThat(connectionFactory.isClusterAware()).isTrue();
 
         // Create a template for easier testing
         template = new ValkeyTemplate<>();
@@ -65,9 +79,6 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
         template.setHashKeySerializer(StringValkeySerializer.UTF_8);
         template.setHashValueSerializer(StringValkeySerializer.UTF_8);
         template.afterPropertiesSet();
-
-        // Check if server is available and log the result
-        validateServerExistance(connectionFactory);
     }
 
     @AfterAll
@@ -77,26 +88,40 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
         }
     }
 
-    @Test
-    void testGetConnection() throws InterruptedException {
-        ValkeyConnection connection = connectionFactory.getConnection();
-        assertThat(connection).isNotNull();
-        assertThat(connection).isInstanceOf(ValkeyGlideConnection.class);
-        connection.close();
+    /**
+     * Creates a cluster connection factory for testing.
+     */
+    private ValkeyGlideConnectionFactory createClusterConnectionFactory() {
+        ValkeyClusterConfiguration clusterConfig = new ValkeyClusterConfiguration();
+        
+        // Use ClusterTestVariables for consistency with other tests
+        clusterConfig.clusterNode(ClusterTestVariables.CLUSTER_NODE_1);
+        clusterConfig.clusterNode(ClusterTestVariables.CLUSTER_NODE_2);
+        clusterConfig.clusterNode(ClusterTestVariables.CLUSTER_NODE_3);
+        clusterConfig.clusterNode(ClusterTestVariables.REPLICA_OF_NODE_1);
+        return new ValkeyGlideConnectionFactory(clusterConfig, new DefaultValkeyGlideClientConfiguration());
     }
 
     @Test
-    @EnabledOnCommand("HEXPIRE")
+    void testGetClusterConnection() {
+        ValkeyClusterConnection clusterConnection = connectionFactory.getClusterConnection();
+        assertThat(clusterConnection).isNotNull();
+        assertThat(clusterConnection).isInstanceOf(ValkeyGlideClusterConnection.class);
+        clusterConnection.close();
+    }
+
+    @Test
     void testHashOperations() {
-        String key1 = "test:hash:basic";
-        String key2 = "test:hash:putall";
-        String key3 = "test:hash:putifabsent";
-        String key4 = "test:hash:increment";
-        String key5 = "test:hash:length";
-        String key6 = "test:hash:delete";
-        String key7 = "test:hash:random";
-        String key8 = "test:hash:scan";
-        String key9 = "test:hash:expiration";
+        // Use hash tags to ensure all keys land on the same slot
+        String key1 = "{hash}:basic";
+        String key2 = "{hash}:putall";
+        String key3 = "{hash}:putifabsent";
+        String key4 = "{hash}:increment";
+        String key5 = "{hash}:length";
+        String key6 = "{hash}:delete";
+        String key7 = "{hash}:random";
+        String key8 = "{hash}:scan";
+        String key9 = "{hash}:expiration";
         
         try {
             template.opsForHash().put(key1, "field1", "value1");
@@ -242,7 +267,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
                 return null;
             });
 
-            // Test hash field expiration operations (requires Valkey/Valkey 7.4+)
+            // Test hash field expiration operations (requires Valkey 7.4+)
             if (isServerVersionAtLeast(7, 4)) {
                 template.opsForHash().putAll(key9, Map.of(
                     "expirefield1", "expirevalue1",
@@ -254,7 +279,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
                 template.execute((ValkeyCallback<List<Long>>) connection -> {
                     List<Long> result = connection.hashCommands().hExpire(key9.getBytes(), 60L, 
                         "expirefield1".getBytes(), "expirefield2".getBytes());
-                    assertThat(result).containsExactly(1L, 1L); // Both fields should have expiration set
+                    assertThat(result).containsExactly(1L, 1L);
                     return result;
                 });
 
@@ -262,25 +287,25 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
                 template.execute((ValkeyCallback<List<Long>>) connection -> {
                     List<Long> result = connection.hashCommands().hpExpire(key9.getBytes(), 60000L,
                         "expirefield1".getBytes());
-                    assertThat(result).containsExactly(1L); // Field should have expiration updated
+                    assertThat(result).containsExactly(1L);
                     return result;
                 });
 
                 // Test hExpireAt - Set expiration at specific timestamp
-                long futureTimestamp = System.currentTimeMillis() / 1000 + 120; // 2 minutes from now
+                long futureTimestamp = System.currentTimeMillis() / 1000 + 120;
                 template.execute((ValkeyCallback<List<Long>>) connection -> {
                     List<Long> result = connection.hashCommands().hExpireAt(key9.getBytes(), futureTimestamp,
                         "expirefield1".getBytes());
-                    assertThat(result).containsExactly(1L); // Field should have expiration set
+                    assertThat(result).containsExactly(1L);
                     return result;
                 });
 
                 // Test hpExpireAt - Set expiration at specific timestamp in milliseconds
-                long futureTimestampMillis = System.currentTimeMillis() + 120000; // 2 minutes from now
+                long futureTimestampMillis = System.currentTimeMillis() + 120000;
                 template.execute((ValkeyCallback<List<Long>>) connection -> {
                     List<Long> result = connection.hashCommands().hpExpireAt(key9.getBytes(), futureTimestampMillis,
                         "expirefield2".getBytes());
-                    assertThat(result).containsExactly(1L); // Field should have expiration set
+                    assertThat(result).containsExactly(1L);
                     return result;
                 });
 
@@ -289,8 +314,8 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
                     List<Long> result = connection.hashCommands().hTtl(key9.getBytes(), 
                         "expirefield1".getBytes(), "persistfield".getBytes());
                     assertThat(result).hasSize(2);
-                    assertThat(result.get(0)).isGreaterThan(0L); // expirefield1 should have TTL
-                    assertThat(result.get(1)).isEqualTo(-1L); // persistfield should have no expiration
+                    assertThat(result.get(0)).isGreaterThan(0L);
+                    assertThat(result.get(1)).isEqualTo(-1L);
                     return result;
                 });
 
@@ -298,8 +323,8 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
                     List<Long> result = connection.hashCommands().hpTtl(key9.getBytes(),
                         "expirefield1".getBytes(), "persistfield".getBytes());
                     assertThat(result).hasSize(2);
-                    assertThat(result.get(0)).isGreaterThan(0L); // expirefield1 should have TTL in milliseconds
-                    assertThat(result.get(1)).isEqualTo(-1L); // persistfield should have no expiration
+                    assertThat(result.get(0)).isGreaterThan(0L);
+                    assertThat(result.get(1)).isEqualTo(-1L);
                     return result;
                 });
 
@@ -307,7 +332,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
                 template.execute((ValkeyCallback<List<Long>>) connection -> {
                     List<Long> result = connection.hashCommands().hPersist(key9.getBytes(),
                         "expirefield1".getBytes(), "expirefield2".getBytes());
-                    assertThat(result).containsExactly(1L, 1L); // Both fields should have expiration removed
+                    assertThat(result).containsExactly(1L, 1L);
                     return result;
                 });
 
@@ -315,12 +340,12 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
                 template.execute((ValkeyCallback<List<Long>>) connection -> {
                     List<Long> result = connection.hashCommands().hTtl(key9.getBytes(),
                         "expirefield1".getBytes(), "expirefield2".getBytes());
-                    assertThat(result).containsExactly(-1L, -1L); // Both fields should have no expiration
+                    assertThat(result).containsExactly(-1L, -1L);
                     return result;
                 });
             }
         } finally {
-            // Clean up all test keys - this will execute even if an exception occurs
+            // Clean up all test keys
             template.delete(key1);
             template.delete(key2);
             template.delete(key3);
@@ -335,17 +360,17 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
 
     @Test
     void testListOperations() {
-        String key1 = "test:list:basic";
-        String key2 = "test:list:push";
-        String key3 = "test:list:range";
-        String key4 = "test:list:insert";
-        String key5 = "test:list:move";
-        String key6 = "test:list:set";
-        String key7 = "test:list:remove";
-        String key8 = "test:list:blocking";
-        String key9 = "test:list:rpoplpush";
-        String srcKey = "test:list:src";
-        String dstKey = "test:list:dst";
+        // Use hash tags to ensure all keys land on the same slot
+        String key1 = "{list}:basic";
+        String key2 = "{list}:push";
+        String key3 = "{list}:range";
+        String key4 = "{list}:insert";
+        String key5 = "{list}:move";
+        String key6 = "{list}:set";
+        String key7 = "{list}:remove";
+        String key8 = "{list}:blocking";
+        String srcKey = "{list}:src";
+        String dstKey = "{list}:dst";
 
         try {
             // Basic LPUSH/RPUSH operations
@@ -365,7 +390,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             assertThat(template.opsForList().index(key1, 2)).isEqualTo("value3");
             
             // Test convenience methods getFirst and getLast
-            String firstLastKey = "test:list:firstlast";
+            String firstLastKey = "{list}:firstlast";
             template.opsForList().rightPushAll(firstLastKey, "first", "middle", "last");
             
             String firstElement = template.opsForList().getFirst(firstLastKey);
@@ -375,7 +400,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             assertThat(lastElement).isEqualTo("last");
             
             // Test with empty list
-            String emptyKey = "test:list:empty";
+            String emptyKey = "{list}:empty";
             String firstEmpty = template.opsForList().getFirst(emptyKey);
             assertThat(firstEmpty).isNull();
             
@@ -390,7 +415,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             assertThat(template.opsForList().size(key1)).isEqualTo(1);
 
             // Test LPUSHX/RPUSHX (push only if key exists)
-            template.opsForList().leftPushIfPresent(key2, "shouldnotwork"); // key doesn't exist
+            template.opsForList().leftPushIfPresent(key2, "shouldnotwork");
             assertThat(template.opsForList().size(key2)).isEqualTo(0);
             
             template.opsForList().leftPush(key2, "initial");
@@ -400,19 +425,17 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             List<String> key2Range = template.opsForList().range(key2, 0, -1);
             assertThat(key2Range).containsExactly("shouldwork", "initial", "alsowork");
 
-            // Test LEFTPUSHALL operations (both varargs and Collection variants)
-            String leftPushAllKey = "test:list:leftpushall";
+            // Test LEFTPUSHALL operations
+            String leftPushAllKey = "{list}:leftpushall";
             
-            // Test leftPushAll with varargs
             template.opsForList().leftPushAll(leftPushAllKey, "first", "second", "third");
             List<String> leftPushAllResult1 = template.opsForList().range(leftPushAllKey, 0, -1);
-            assertThat(leftPushAllResult1).containsExactly("third", "second", "first"); // Reverse order due to left push
+            assertThat(leftPushAllResult1).containsExactly("third", "second", "first");
             
-            // Test leftPushAll with Collection
             template.delete(leftPushAllKey);
             template.opsForList().leftPushAll(leftPushAllKey, List.of("a", "b", "c"));
             List<String> leftPushAllResult2 = template.opsForList().range(leftPushAllKey, 0, -1);
-            assertThat(leftPushAllResult2).containsExactly("c", "b", "a"); // Reverse order due to left push
+            assertThat(leftPushAllResult2).containsExactly("c", "b", "a");
             
             template.delete(leftPushAllKey);
 
@@ -428,12 +451,10 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             // Test LINSERT - insert before/after pivot
             template.opsForList().rightPushAll(key4, "first", "pivot", "last");
             
-            // Insert before pivot
             template.execute((ValkeyCallback<Long>) connection -> 
                 connection.listCommands().lInsert(key4.getBytes(), 
                     ValkeyListCommands.Position.BEFORE, "pivot".getBytes(), "before_pivot".getBytes()));
             
-            // Insert after pivot
             template.execute((ValkeyCallback<Long>) connection -> 
                 connection.listCommands().lInsert(key4.getBytes(), 
                     ValkeyListCommands.Position.AFTER, "pivot".getBytes(), "after_pivot".getBytes()));
@@ -441,11 +462,10 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             List<String> insertResult = template.opsForList().range(key4, 0, -1);
             assertThat(insertResult).containsExactly("first", "before_pivot", "pivot", "after_pivot", "last");
 
-            // Test LMOVE (move element between lists) - both low-level and high-level APIs
+            // Test LMOVE (move element between lists)
             template.opsForList().rightPushAll(key5, "move1", "move2", "move3");
             String dstKey5 = key5 + "_dst";
             
-            // Test low-level lMove via connection
             template.execute((ValkeyCallback<byte[]>) connection -> 
                 connection.listCommands().lMove(key5.getBytes(), dstKey5.getBytes(), 
                     ValkeyListCommands.Direction.LEFT, ValkeyListCommands.Direction.RIGHT));
@@ -453,12 +473,11 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             assertThat(template.opsForList().range(key5, 0, -1)).containsExactly("move2", "move3");
             assertThat(template.opsForList().range(dstKey5, 0, -1)).containsExactly("move1");
             
-            // Test high-level move operations using MoveFrom/MoveTo objects
-            String moveHighKey1 = "test:list:movehigh1";
-            String moveHighKey2 = "test:list:movehigh2";
+            // Test high-level move operations
+            String moveHighKey1 = "{list}:movehigh1";
+            String moveHighKey2 = "{list}:movehigh2";
             template.opsForList().rightPushAll(moveHighKey1, "high1", "high2", "high3");
             
-            // Move from tail of moveHighKey1 to head of moveHighKey2
             String movedValue1 = template.opsForList().move(
                 io.valkey.springframework.data.valkey.core.ListOperations.MoveFrom.fromTail(moveHighKey1),
                 io.valkey.springframework.data.valkey.core.ListOperations.MoveTo.toHead(moveHighKey2)
@@ -467,7 +486,6 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             assertThat(template.opsForList().range(moveHighKey1, 0, -1)).containsExactly("high1", "high2");
             assertThat(template.opsForList().range(moveHighKey2, 0, -1)).containsExactly("high3");
             
-            // Move from head of moveHighKey1 to tail of moveHighKey2
             String movedValue2 = template.opsForList().move(
                 io.valkey.springframework.data.valkey.core.ListOperations.MoveFrom.fromHead(moveHighKey1),
                 io.valkey.springframework.data.valkey.core.ListOperations.MoveTo.toTail(moveHighKey2)
@@ -488,7 +506,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
 
             // Test LREM - remove occurrences of value
             template.opsForList().rightPushAll(key7, "remove", "keep", "remove", "keep", "remove");
-            Long removedCount = template.opsForList().remove(key7, 2, "remove"); // Remove first 2 occurrences
+            Long removedCount = template.opsForList().remove(key7, 2, "remove");
             assertThat(removedCount).isEqualTo(2L);
             
             List<String> removeResult = template.opsForList().range(key7, 0, -1);
@@ -497,19 +515,17 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             // Test LPOP/RPOP with count (Valkey 6.2+)
             template.opsForList().rightPushAll(key8, "pop1", "pop2", "pop3", "pop4", "pop5");
             
-            // Left pop multiple elements
             List<String> leftPopped = template.opsForList().leftPop(key8, 2);
-            if (leftPopped != null) { // Some Valkey versions might not support count parameter
+            if (leftPopped != null) {
                 assertThat(leftPopped).containsExactly("pop1", "pop2");
                 
-                // Right pop multiple elements
                 List<String> rightPopped = template.opsForList().rightPop(key8, 2);
                 assertThat(rightPopped).containsExactly("pop5", "pop4");
                 
                 assertThat(template.opsForList().range(key8, 0, -1)).containsExactly("pop3");
             }
 
-            // Test RPOPLPUSH - atomically move from end of one list to beginning of another
+            // Test RPOPLPUSH - atomically move from end to beginning
             template.opsForList().rightPushAll(srcKey, "src1", "src2", "src3");
             template.opsForList().rightPushAll(dstKey, "dst1");
             
@@ -520,102 +536,26 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
 
             // Test LPOS - find position of element (Valkey 6.0.6+)
             if (isServerVersionAtLeast(6, 1)) {
-                String posKey = "test:list:position";
+                String posKey = "{list}:position";
                 template.opsForList().rightPushAll(posKey, "a", "b", "c", "b", "d");
                 
-                // Find first occurrence - indexOf
                 Long firstPos = template.opsForList().indexOf(posKey, "b");
                 assertThat(firstPos).isEqualTo(1L);
                 
-                // Find last occurrence - lastIndexOf
                 Long lastPos = template.opsForList().lastIndexOf(posKey, "b");
                 assertThat(lastPos).isEqualTo(3L);
                 
-                // Test with non-existent value
                 Long notFoundPos = template.opsForList().indexOf(posKey, "z");
                 assertThat(notFoundPos).isNull();
                 
                 Long notFoundLastPos = template.opsForList().lastIndexOf(posKey, "z");
                 assertThat(notFoundLastPos).isNull();
                 
-                // Test direct connection access for multiple occurrences
                 List<Long> positions = template.execute((ValkeyCallback<List<Long>>) connection -> 
                     connection.listCommands().lPos(posKey.getBytes(), "b".getBytes(), null, 2));
                 assertThat(positions).containsExactly(1L, 3L);
                 
                 template.delete(posKey);
-            }
-
-            // Test blocking operations with very short timeout to avoid long waits
-            // BLPOP - blocking left pop
-            template.opsForList().rightPush("temp_key", "temp_value");
-            List<String> blockedPop = template.execute((ValkeyCallback<List<String>>) connection -> {
-                List<byte[]> result = connection.listCommands().bLPop(1, "temp_key".getBytes());
-                if (result != null && result.size() >= 2) {
-                    return List.of(new String(result.get(0)), new String(result.get(1)));
-                }
-                return null;
-            });
-            
-            if (blockedPop != null) {
-                assertThat(blockedPop.get(0)).isEqualTo("temp_key");
-                assertThat(blockedPop.get(1)).isEqualTo("temp_value");
-            }
-
-            // BRPOP - blocking right pop
-            template.opsForList().rightPush("temp_key2", "temp_value2");
-            List<String> blockedRightPop = template.execute((ValkeyCallback<List<String>>) connection -> {
-                List<byte[]> result = connection.listCommands().bRPop(1, "temp_key2".getBytes());
-                if (result != null && result.size() >= 2) {
-                    return List.of(new String(result.get(0)), new String(result.get(1)));
-                }
-                return null;
-            });
-            
-            if (blockedRightPop != null) {
-                assertThat(blockedRightPop.get(0)).isEqualTo("temp_key2");
-                assertThat(blockedRightPop.get(1)).isEqualTo("temp_value2");
-            }
-
-            // BRPOPLPUSH - blocking version of RPOPLPUSH
-            String blockSrc = "test:block:src";
-            String blockDst = "test:block:dst";
-            template.opsForList().rightPush(blockSrc, "block_value");
-            
-            String blockMoved = template.execute((ValkeyCallback<String>) connection -> {
-                byte[] result = connection.listCommands().bRPopLPush(1, blockSrc.getBytes(), blockDst.getBytes());
-                return result != null ? new String(result) : null;
-            });
-            
-            if (blockMoved != null) {
-                assertThat(blockMoved).isEqualTo("block_value");
-                assertThat(template.opsForList().size(blockSrc)).isEqualTo(0);
-                assertThat(template.opsForList().range(blockDst, 0, -1)).containsExactly("block_value");
-            }
-            
-            template.delete(blockSrc);
-            template.delete(blockDst);
-
-            // Test BLMOVE - blocking version of LMOVE (Valkey 6.2+)
-            if (isServerVersionAtLeast(6, 2)) {
-                String blmoveSrc = "test:blmove:src";
-                String blmoveDst = "test:blmove:dst";
-                template.opsForList().rightPush(blmoveSrc, "blmove_value");
-                
-                String blockMoveResult = template.execute((ValkeyCallback<String>) connection -> {
-                    byte[] result = connection.listCommands().bLMove(blmoveSrc.getBytes(), blmoveDst.getBytes(),
-                        ValkeyListCommands.Direction.LEFT, ValkeyListCommands.Direction.RIGHT, 1.0);
-                    return result != null ? new String(result) : null;
-                });
-                
-                if (blockMoveResult != null) {
-                    assertThat(blockMoveResult).isEqualTo("blmove_value");
-                    assertThat(template.opsForList().size(blmoveSrc)).isEqualTo(0);
-                    assertThat(template.opsForList().range(blmoveDst, 0, -1)).containsExactly("blmove_value");
-                }
-                
-                template.delete(blmoveSrc);
-                template.delete(blmoveDst);
             }
 
         } finally {
@@ -629,27 +569,25 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             template.delete(key6);
             template.delete(key7);
             template.delete(key8);
-            template.delete(key9);
             template.delete(srcKey);
             template.delete(dstKey);
-            template.delete("temp_key");
-            template.delete("temp_key2");
         }
     }
 
     @Test
     void testSetOperations() {
-        String key1 = "test:set:basic";
-        String key2 = "test:set:operations";
-        String key3 = "test:set:union";
-        String key4 = "test:set:intersection";
-        String key5 = "test:set:difference";
-        String key6 = "test:set:random";
-        String key7 = "test:set:pop";
-        String key8 = "test:set:move";
-        String key9 = "test:set:scan";
-        String key10 = "test:set:scanhigh";
-        String destKey = "test:set:dest";
+        // Use hash tags to ensure all keys land on the same slot
+        String key1 = "{set}:basic";
+        String key2 = "{set}:operations";
+        String key3 = "{set}:union";
+        String key4 = "{set}:intersection";
+        String key5 = "{set}:difference";
+        String key6 = "{set}:random";
+        String key7 = "{set}:pop";
+        String key8 = "{set}:move";
+        String key9 = "{set}:scan";
+        String key10 = "{set}:scanhigh";
+        String destKey = "{set}:dest";
 
         try {
             // Basic SADD operations
@@ -688,7 +626,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             assertThat(template.opsForSet().size(key1)).isEqualTo(2);
 
             Long remResult2 = template.opsForSet().remove(key1, "value1", "nonexistent");
-            assertThat(remResult2).isEqualTo(1L); // Only value1 was actually removed
+            assertThat(remResult2).isEqualTo(1L);
             assertThat(template.opsForSet().size(key1)).isEqualTo(1);
 
             // Set up sets for set operations
@@ -736,7 +674,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             assertThat(template.opsForSet().members(destKey)).containsExactlyInAnyOrder("c");
             template.delete(destKey);
 
-            // SDIFF - Difference of sets (elements in first set but not in others)
+            // SDIFF - Difference of sets
             Set<String> diffResult = template.opsForSet().difference(key2, key3);
             assertThat(diffResult).containsExactlyInAnyOrder("a");
 
@@ -763,13 +701,13 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             String randomMember = template.opsForSet().randomMember(key6);
             assertThat(randomMember).isIn("rand1", "rand2", "rand3", "rand4", "rand5");
 
-            // SRANDMEMBER with count (positive - distinct elements)
+            // SRANDMEMBER with count
             List<String> randomMembers = template.opsForSet().randomMembers(key6, 3);
             assertThat(randomMembers).hasSize(3);
             assertThat(randomMembers).allMatch(member -> 
                 List.of("rand1", "rand2", "rand3", "rand4", "rand5").contains(member));
             
-            // SRANDMEMBER with negative count (allow duplicates)
+            // SRANDMEMBER with negative count
             Set<String> randomDistinct = template.opsForSet().distinctRandomMembers(key6, 3);
             assertThat(randomDistinct).hasSizeLessThanOrEqualTo(3);
             assertThat(randomDistinct).allMatch(member -> 
@@ -783,9 +721,9 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             assertThat(poppedMember).isIn("pop1", "pop2", "pop3", "pop4");
             assertThat(template.opsForSet().size(key7)).isEqualTo(3);
 
-            // SPOP with count (Valkey 3.2+)
+            // SPOP with count
             List<String> poppedMembers = template.opsForSet().pop(key7, 2);
-            if (poppedMembers != null) { // Some versions might not support count parameter
+            if (poppedMembers != null) {
                 assertThat(poppedMembers).hasSize(2);
                 assertThat(template.opsForSet().size(key7)).isEqualTo(1);
             }
@@ -805,10 +743,9 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             
             template.delete(moveDestKey);
 
-            // SSCAN operation (using ValkeyCallback for direct access to connection)
+            // SSCAN operation
             template.opsForSet().add(key9, "scan1", "scan2", "scan3", "scan4", "scan5");
             
-            // Test sScan using connection directly
             template.execute((ValkeyCallback<Void>) connection -> {
                 try (var cursor = connection.setCommands().sScan(key9.getBytes(), 
                         io.valkey.springframework.data.valkey.core.ScanOptions.scanOptions().count(10).build())) {
@@ -855,24 +792,24 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
 
     @Test
     void testStringOperations() {
-        // Basic SET/GET operations
-        String key1 = "test:string:basic";
-        String key2 = "test:string:expire";
-        String key3 = "test:string:setnx";
-        String key4 = "test:string:getset";
-        String multi1Key = "test:string:multi1";
-        String multi2Key = "test:string:multi2";
-        String multi3Key = "test:string:multi3";
-        String msetnx1Key = "test:string:msetnx1";
-        String msetnx2Key = "test:string:msetnx2";
-        String counterKey = "test:string:counter";
-        String floatCounterKey = "test:string:floatcounter";
-        String appendKey = "test:string:append";
-        String setRangeKey = "test:string:setrange";
-        String bitKey = "test:string:bits";
-        String bitKey1 = "test:string:bit1";
-        String bitKey2 = "test:string:bit2";
-        String bitDestKey = "test:string:bitop";
+        // Use hash tags to ensure all keys land on the same slot for multi-key operations
+        String key1 = "{string}:basic";
+        String key2 = "{string}:expire";
+        String key3 = "{string}:setnx";
+        String key4 = "{string}:getset";
+        String multi1Key = "{string}:multi1";
+        String multi2Key = "{string}:multi2";
+        String multi3Key = "{string}:multi3";
+        String msetnx1Key = "{string}:msetnx1";
+        String msetnx2Key = "{string}:msetnx2";
+        String counterKey = "{string}:counter";
+        String floatCounterKey = "{string}:floatcounter";
+        String appendKey = "{string}:append";
+        String setRangeKey = "{string}:setrange";
+        String bitKey = "{string}:bits";
+        String bitKey1 = "{string}:bit1";
+        String bitKey2 = "{string}:bit2";
+        String bitDestKey = "{string}:bitop";
         
         try {
             String value1 = "Hello, valkey-glide!";
@@ -913,7 +850,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
                 multi1Key, multi2Key, multi3Key));
             assertThat(multiRetrieved).containsExactly("value1", "value2", "value3");
          
-            // MSETNX operation (set multiple if none exist)
+            // MSETNX operation
             Map<String, String> msetnxValues = Map.of(
                 msetnx1Key, "msetnx_value1",
                 msetnx2Key, "msetnx_value2"
@@ -937,7 +874,7 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             Long decrResult2 = template.opsForValue().decrement(counterKey, 3L);
             assertThat(decrResult2).isEqualTo(12L);
             
-            // Floating point increment operations (using separate key to avoid DECR issues)
+            // Floating point increment
             template.opsForValue().set(floatCounterKey, "10");
             Double incFloatResult = template.opsForValue().increment(floatCounterKey, 2.5);
             assertThat(incFloatResult).isEqualTo(12.5);
@@ -945,35 +882,33 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             // APPEND operation
             template.opsForValue().set(appendKey, "Hello");
             Integer appendResult = template.opsForValue().append(appendKey, " World!");
-            assertThat(appendResult).isEqualTo(12); // Length of "Hello World!"
+            assertThat(appendResult).isEqualTo(12);
             assertThat(template.opsForValue().get(appendKey)).isEqualTo("Hello World!");
 
             // STRING LENGTH operation
             Long strlenResult = template.opsForValue().size(appendKey);
             assertThat(strlenResult).isEqualTo(12L);
 
-            // GETRANGE operation (substring)
+            // GETRANGE operation
             String rangeResult = template.opsForValue().get(appendKey, 0, 4);
             assertThat(rangeResult).isEqualTo("Hello");
             
             // SETRANGE operation
             template.opsForValue().set(appendKey, "Hello World!", 6);
-            // This would set from position 6, but let's test a simpler case
             template.opsForValue().set(setRangeKey, "Hello");
             template.opsForValue().set(setRangeKey, " Valkey", 5);
             assertThat(template.opsForValue().get(setRangeKey)).startsWith("Hello");
             
-            // BIT operations (using ValkeyTemplate's execute for direct access to connection)
-            template.opsForValue().set(bitKey, "a"); // 'a' = 01100001 in binary
+            // BIT operations
+            template.opsForValue().set(bitKey, "a");
             
-            // Use connection directly for bit operations
             Boolean getBitResult = template.execute((ValkeyCallback<Boolean>) connection -> 
                 connection.stringCommands().getBit(bitKey.getBytes(), 1));
-            assertThat(getBitResult).isTrue(); // Second bit of 'a' is 1
+            assertThat(getBitResult).isTrue();
             
             Boolean setBitResult = template.execute((ValkeyCallback<Boolean>) connection -> 
                 connection.stringCommands().setBit(bitKey.getBytes(), 0, true));
-            assertThat(setBitResult).isFalse(); // Original first bit was 0
+            assertThat(setBitResult).isFalse();
             
             Long bitCountResult = template.execute((ValkeyCallback<Long>) connection -> 
                 connection.stringCommands().bitCount(bitKey.getBytes()));
@@ -986,9 +921,9 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
             Long bitOpResult = template.execute((ValkeyCallback<Long>) connection -> 
                 connection.stringCommands().bitOp(ValkeyStringCommands.BitOperation.AND, 
                     bitDestKey.getBytes(), bitKey1.getBytes(), bitKey2.getBytes()));
-            assertThat(bitOpResult).isEqualTo(1L); // Result length
+            assertThat(bitOpResult).isEqualTo(1L);
         } finally {
-            // Clean up all test keys - this will execute even if an exception occurs
+            // Clean up all test keys
             template.delete(key1);
             template.delete(key2);
             template.delete(key3);
@@ -1009,106 +944,44 @@ public class ValkeyGlideConnectionFactoryIntegrationTests {
         }
     }
 
-    @Test
-    void testTransactional() {
-        String key1 = "test:tx:key1";
-        String key2 = "test:tx:key2";
-
-        template.opsForValue().set(key1, "initial1");
-        template.opsForValue().set(key2, "initial2");
-
-        // Using SessionCallback for transactions
-        template.execute(new SessionCallback<Object>() {
-            @SuppressWarnings({ "unchecked", "rawtypes" })
-            public Object execute(ValkeyOperations operations) {
-                operations.multi();
-                
-                operations.opsForValue().set(key1, "updated1");
-                operations.opsForValue().set(key2, "updated2");
-                
-                return operations.exec();
-            }
-        });
-
-        assertThat(template.opsForValue().get(key1)).isEqualTo("updated1");
-        assertThat(template.opsForValue().get(key2)).isEqualTo("updated2");
-        
-        template.delete(key1);
-        template.delete(key2);
-    }
-
     /**
-     * Creates a connection factory for testing.
+     * Note: Transactions (MULTI/EXEC) are NOT supported in cluster mode.
+     * This test is intentionally omitted as cluster mode does not support transactions
+     * that span multiple keys, and even single-key transactions have limited support.
      */
-    private ValkeyGlideConnectionFactory createConnectionFactory() {
-        ValkeyStandaloneConfiguration config = new ValkeyStandaloneConfiguration();
-        config.setHostName(getValkeyHost());
-        config.setPort(getValkeyPort());
-        return new ValkeyGlideConnectionFactory(config);
-    }
-
-    /**
-     * Validates that the Valkey server exists and is accessible.
-     */
-    private void validateServerExistance(ValkeyConnectionFactory factory) {
-        try (ValkeyConnection connection = factory.getConnection()) {
-            assertThat(connection.ping()).isEqualTo("PONG");
-        }
-    }
-
-    /**
-     * Gets the Valkey host from environment or uses default.
-     */
-    private String getValkeyHost() {
-        return System.getProperty("valkey.host", "localhost");
-    }
-
-    /**
-     * Gets the Valkey port from environment or uses default.
-     */
-    private int getValkeyPort() {
-        return Integer.parseInt(System.getProperty("valkey.port", "6379"));
-    }
 
     /**
      * Checks if the server version is at least the specified major.minor version.
-     * Uses the INFO server command to get server version information.
      */
     private boolean isServerVersionAtLeast(int majorVersion, int minorVersion) {
         return template.execute((ValkeyCallback<Boolean>) connection -> {
-                // Execute INFO server command
-                Properties serverInfo = connection.serverCommands().info("server");
-                // Check for valkey_version or redis_version
-                String versionString = serverInfo.getProperty("valkey_version",
-                        serverInfo.getProperty("redis_version"));
-                
-                // If valkey_version is not found, try server_version (for Valkey)
-                if (versionString == null) {
-                    versionString = serverInfo.getProperty("server_version");
-                }
-                
-                if (versionString == null) {
-                    return false;
-                }
-                
-                // Parse version string (e.g., "7.4.0" or "8.0.1")
-                String[] versionParts = versionString.split("\\.");
-                if (versionParts.length < 2) {
-                    return false;
-                }
-                
-                int serverMajor = Integer.parseInt(versionParts[0]);
-                int serverMinor = Integer.parseInt(versionParts[1]);
-                
-                // Compare versions
-                if (serverMajor > majorVersion) {
-                    return true;
-                } else if (serverMajor == majorVersion) {
-                    return serverMinor >= minorVersion;
-                } else {
-                    return false;
-                }
+            Properties serverInfo = connection.serverCommands().info("server");
+            String versionString = serverInfo.getProperty("valkey_version",
+                    serverInfo.getProperty("redis_version"));
+            
+            if (versionString == null) {
+                versionString = serverInfo.getProperty("server_version");
             }
-        );
+            
+            if (versionString == null) {
+                return false;
+            }
+            
+            String[] versionParts = versionString.split("\\.");
+            if (versionParts.length < 2) {
+                return false;
+            }
+            
+            int serverMajor = Integer.parseInt(versionParts[0]);
+            int serverMinor = Integer.parseInt(versionParts[1]);
+            
+            if (serverMajor > majorVersion) {
+                return true;
+            } else if (serverMajor == majorVersion) {
+                return serverMinor >= minorVersion;
+            } else {
+                return false;
+            }
+        });
     }
 }

@@ -17,14 +17,13 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import org.springframework.lang.Nullable;
 
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
 import java.util.Collection;
 import java.util.HashMap;
@@ -398,7 +397,6 @@ public abstract class ValkeyGlideConverters {
         return new HashSet<>();
     }
 
-    @SuppressWarnings("unchecked")
     @Nullable
     public static List<Map.Entry<byte[], byte[]>> toMapEntriesList(@Nullable Object glideResult) {
         if (glideResult == null) {
@@ -543,7 +541,6 @@ public abstract class ValkeyGlideConverters {
         return resultMap;
     }
 
-    @SuppressWarnings("unchecked")
     @Nullable
     public static Map.Entry<byte[],  byte[]> toBytesMapEntry(@Nullable Object glideResult) {
         if (glideResult == null) {
@@ -612,79 +609,53 @@ public abstract class ValkeyGlideConverters {
      * @return The corresponding ValueEncoding
      */
     @Nullable
-    public static ValueEncoding toValueEncoding(@Nullable Object result) {
-        if (result == null) {
+    public static ValueEncoding toValueEncoding(@Nullable GlideString glideResult) {
+        if (glideResult == null) {
             return ValueEncoding.ValkeyValueEncoding.VACANT;
         }
-        
-        if (result instanceof String) {
-            String encoding = (String) result;
-            switch (encoding.toLowerCase()) {
-                case "raw":
-                    return ValueEncoding.ValkeyValueEncoding.RAW;
-                case "int":
-                    return ValueEncoding.ValkeyValueEncoding.INT;
-                case "hashtable":
-                    return ValueEncoding.ValkeyValueEncoding.HASHTABLE;
-                case "zipmap":
-                case "linkedlist":
-                    return ValueEncoding.ValkeyValueEncoding.LINKEDLIST;
-                case "ziplist":
-                case "listpack":
-                    return ValueEncoding.ValkeyValueEncoding.ZIPLIST;
-                case "intset":
-                    return ValueEncoding.ValkeyValueEncoding.INTSET;
-                case "skiplist":
-                    return ValueEncoding.ValkeyValueEncoding.SKIPLIST;
-                case "embstr":
-                case "quicklist":
-                case "stream":
-                    return ValueEncoding.ValkeyValueEncoding.RAW;
-                default:
-                    return ValueEncoding.ValkeyValueEncoding.VACANT;
-            }
+
+        switch (glideResult.toString()) {
+            case "raw":
+                return ValueEncoding.ValkeyValueEncoding.RAW;
+            case "int":
+                return ValueEncoding.ValkeyValueEncoding.INT;
+            case "hashtable":
+                return ValueEncoding.ValkeyValueEncoding.HASHTABLE;
+            case "zipmap":
+            case "linkedlist":
+                return ValueEncoding.ValkeyValueEncoding.LINKEDLIST;
+            case "ziplist":
+            case "listpack":
+                return ValueEncoding.ValkeyValueEncoding.ZIPLIST;
+            case "intset":
+                return ValueEncoding.ValkeyValueEncoding.INTSET;
+            case "skiplist":
+                return ValueEncoding.ValkeyValueEncoding.SKIPLIST;
+            case "embstr":
+            case "quicklist":
+            case "stream":
+                return ValueEncoding.ValkeyValueEncoding.RAW;
+            default:
+                return ValueEncoding.ValkeyValueEncoding.VACANT;
         }
-        
-        return ValueEncoding.ValkeyValueEncoding.VACANT;
     }
 
-    // @Nullable
-    // public static Set<byte[]> cast(@Nullable Object[] glideResult) {
-    //     if (glideResult == null) {
-    //         return null;
-    //     }
-
-    //     Set<byte[]> resultSet = new HashSet<>(glideResult.length);
-    //     for (Object item : glideResult) {
-    //         GlideString glideString = (GlideString) item;
-    //         resultSet.add(glideString != null ? glideString.getBytes() : null);
-    //     }
-    //     return resultSet;
-    // }
-
-    // @Nullable
-    // public static List<byte[]> cast(@Nullable Object[] glideResult) {
-    //     if (glideResult == null) {
-    //         return null;
-    //     }
-    //     List<byte[]> convertedList = new ArrayList<>(result.length);
-    //     for (Object item : glideResult) {
-    //         GlideString glideString = (GlideString) item;
-    //         convertedList.add(glideString != null ? glideString.getBytes() : null);
-    //     }
-    //     return convertedList;
-    // }
-
-    static public void printUpmostClassName(Object obj) {
-        if (obj == null) {
-            System.out.println("Object is null");
-            return;
-        }
-        Class<?> clazz = obj.getClass();
-        while (clazz.getSuperclass() != null) {
-            clazz = clazz.getSuperclass();
-        }
-        System.out.println("Upmost class name: " + clazz.getName());
+    /**
+     * Parses the TIME command response into a Long value in the specified TimeUnit.
+     * 
+     * @param result the result from the TIME command (Object[] from Glide)
+     * @param timeUnit the desired time unit
+     * @return the time in the specified unit
+     */
+    public static Long parseTimeResponse(Object[] result, TimeUnit timeUnit) {
+        
+        // TIME returns [GlideString seconds, GlideString microseconds] as Object[]
+        Long seconds = Long.parseLong(((GlideString) result[0]).getString());
+        Long microseconds = Long.parseLong(((GlideString) result[1]).getString());
+        
+        // Convert to milliseconds first
+        long milliseconds = seconds * 1000 + microseconds / 1000;
+        
+        return timeUnit.convert(milliseconds, TimeUnit.MILLISECONDS);
     }
-
 }

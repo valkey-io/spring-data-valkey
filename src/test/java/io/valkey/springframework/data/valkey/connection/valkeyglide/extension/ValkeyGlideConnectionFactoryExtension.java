@@ -31,7 +31,6 @@ import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
-import io.valkey.springframework.data.valkey.connection.valkeyglide.DefaultValkeyGlideClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
@@ -57,17 +56,13 @@ public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver 
 	private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace
 			.create(ValkeyGlideConnectionFactoryExtension.class);
 
+	private static final ValkeyGlideClientConfiguration CLIENT_CONFIGURATION = ValkeyGlideClientConfiguration.builder()
+			.build();
+
 	private static final NewableLazy<ValkeyGlideConnectionFactory> STANDALONE = NewableLazy.of(() -> {
 
-		ValkeyStandaloneConfiguration standaloneConfig = SettingsUtils.standaloneConfiguration();
-		ValkeyGlideClientConfiguration configuration = DefaultValkeyGlideClientConfiguration.builder()
-				.hostName(standaloneConfig.getHostName())
-				.port(standaloneConfig.getPort())
-				.database(standaloneConfig.getDatabase())
-				.password(standaloneConfig.getPassword())
-				.build();
-
-		ManagedValkeyGlideConnectionFactory factory = new ManagedValkeyGlideConnectionFactory(configuration);
+		ManagedValkeyGlideConnectionFactory factory = new ManagedValkeyGlideConnectionFactory(
+				SettingsUtils.standaloneConfiguration(), CLIENT_CONFIGURATION);
 
 		factory.afterPropertiesSet();
 		factory.start();
@@ -78,15 +73,8 @@ public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver 
 
 	private static final NewableLazy<ValkeyGlideConnectionFactory> CLUSTER = NewableLazy.of(() -> {
 
-		ValkeyClusterConfiguration clusterConfig = SettingsUtils.clusterConfiguration();
-		ValkeyGlideClientConfiguration configuration = DefaultValkeyGlideClientConfiguration.builder()
-				.hostName(clusterConfig.getClusterNodes().iterator().next().getHost())
-				.port(clusterConfig.getClusterNodes().iterator().next().getPort())
-				.useCluster()
-				.password(clusterConfig.getPassword())
-				.build();
-
-		ManagedValkeyGlideConnectionFactory factory = new ManagedValkeyGlideConnectionFactory(configuration);
+		ManagedValkeyGlideConnectionFactory factory = new ManagedValkeyGlideConnectionFactory(
+				SettingsUtils.clusterConfiguration(), CLIENT_CONFIGURATION);
 
 		factory.afterPropertiesSet();
 		factory.start();
@@ -202,8 +190,14 @@ public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver 
 
 		private volatile boolean mayClose;
 
-		ManagedValkeyGlideConnectionFactory(ValkeyGlideClientConfiguration clientConfiguration) {
-			super(clientConfiguration);
+		ManagedValkeyGlideConnectionFactory(ValkeyStandaloneConfiguration standaloneConfig,
+				ValkeyGlideClientConfiguration clientConfig) {
+			super(standaloneConfig, clientConfig);
+		}
+
+		ManagedValkeyGlideConnectionFactory(ValkeyClusterConfiguration clusterConfig,
+				ValkeyGlideClientConfiguration clientConfig) {
+			super(clusterConfig, clientConfig);
 		}
 
 		@Override

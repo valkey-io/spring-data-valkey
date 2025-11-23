@@ -27,12 +27,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 
 /**
  * Abstract base class for Valkey Glide integration tests that provides common setup, 
@@ -54,19 +56,18 @@ import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfigur
  * @since 2.0
  */
 @TestInstance(Lifecycle.PER_CLASS)
+@ExtendWith(ValkeyGlideConnectionFactoryExtension.class)
 public abstract class AbstractValkeyGlideIntegrationTests {
 
     protected static final Logger logger = LoggerFactory.getLogger(AbstractValkeyGlideIntegrationTests.class);
 
-    protected ValkeyGlideConnectionFactory connectionFactory;
+    protected ValkeyConnectionFactory connectionFactory;
     protected ValkeyConnection connection;
 
     @BeforeAll
-    void setUpAll() {
+     void setUpAll(@ValkeyStanalone ValkeyConnectionFactory connectionFactory) {
         // Create connection factory
-        connectionFactory = createConnectionFactory();
-        
-        // Check if server is available
+        this.connectionFactory = connectionFactory;
         validateServerExistance(connectionFactory);
     }
 
@@ -89,24 +90,9 @@ public abstract class AbstractValkeyGlideIntegrationTests {
 
     @AfterAll
     void tearDownAll() {
-        if (connectionFactory != null) {
-            connectionFactory.destroy();
-        }
     }
 
     // ==================== Helper Methods ====================
-
-    /**
-     * Creates a ValkeyGlideConnectionFactory configured with the test Valkey server settings.
-     * 
-     * @return configured connection factory
-     */
-    protected ValkeyGlideConnectionFactory createConnectionFactory() {
-        ValkeyStandaloneConfiguration config = new ValkeyStandaloneConfiguration();
-        config.setHostName(getValkeyHost());
-        config.setPort(getValkeyPort());
-        return ValkeyGlideConnectionFactory.createValkeyGlideConnectionFactory(config);
-    }
 
     /**
      * Validates that the Valkey server is available by attempting to ping it.

@@ -24,7 +24,6 @@ import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.connection.ReturnType;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
-import org.springframework.util.DigestUtils;
 
 /**
  * Comprehensive low-level integration tests for {@link ValkeyGlideConnection} 

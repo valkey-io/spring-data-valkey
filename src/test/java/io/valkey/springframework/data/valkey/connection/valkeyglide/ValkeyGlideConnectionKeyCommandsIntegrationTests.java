@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 import static org.assertj.core.api.Assertions.*;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
