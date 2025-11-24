@@ -16,11 +16,13 @@
 package example.cluster;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyNode;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Example demonstrating Spring Data Valkey with a Valkey cluster.
@@ -31,10 +33,13 @@ public class ClusterExample {
 
 		// Configure cluster nodes (matches Makefile cluster configuration)
 		ValkeyClusterConfiguration clusterConfig = new ValkeyClusterConfiguration();
-		clusterConfig.clusterNode("127.0.0.1", 7379);
-		clusterConfig.clusterNode("127.0.0.1", 7380);
-		clusterConfig.clusterNode("127.0.0.1", 7381);
-		clusterConfig.clusterNode("127.0.0.1", 7382);
+		List<ValkeyNode> nodes = Arrays.asList(
+				new ValkeyNode("127.0.0.1", 7379),
+				new ValkeyNode("127.0.0.1", 7380),
+				new ValkeyNode("127.0.0.1", 7381),
+				new ValkeyNode("127.0.0.1", 7382)
+		);
+		clusterConfig.setClusterNodes(nodes);
 
 		ValkeyGlideConnectionFactory connectionFactory = new ValkeyGlideConnectionFactory(
 				clusterConfig, ValkeyGlideClientConfiguration.defaultConfiguration());
