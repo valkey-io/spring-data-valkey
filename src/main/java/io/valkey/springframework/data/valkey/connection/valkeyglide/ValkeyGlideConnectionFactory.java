@@ -28,6 +28,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
+import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import org.springframework.lang.Nullable;
@@ -436,6 +437,38 @@ public class ValkeyGlideConnectionFactory
      */
     public ValkeyGlideClientConfiguration getClientConfiguration() {
         return valkeyGlideConfiguration;
+    }
+
+    /**
+     * @return the {@link ValkeyStandaloneConfiguration}, may be {@literal null}.
+     * @since 3.0
+     */
+    @Nullable
+    public ValkeyStandaloneConfiguration getStandaloneConfiguration() {
+        return configuration instanceof ValkeyStandaloneConfiguration 
+            ? (ValkeyStandaloneConfiguration) configuration 
+            : null;
+    }
+
+    /**
+     * @return the {@link ValkeyClusterConfiguration}, may be {@literal null}.
+     * @since 3.0
+     */
+    @Nullable
+    public ValkeyClusterConfiguration getClusterConfiguration() {
+        return configuration instanceof ValkeyClusterConfiguration 
+            ? (ValkeyClusterConfiguration) configuration 
+            : null;
+    }
+
+    /**
+     * @return the {@link ValkeySentinelConfiguration}, may be {@literal null}.
+     * @since 3.0
+     * @throws UnsupportedOperationException as Sentinel connections are not supported with Valkey-Glide.
+     */
+    @Nullable
+    public ValkeySentinelConfiguration getSentinelConfiguration() {
+        throw new UnsupportedOperationException("Sentinel connections not supported with Valkey-Glide!");
     }
 
 
