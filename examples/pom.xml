@@ -14,6 +14,7 @@
 
 	<modules>
 		<module>cache</module>
+		<module>cluster</module>
 		<module>collections</module>
 		<module>operations</module>
 		<module>pipeline</module>
