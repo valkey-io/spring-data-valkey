@@ -92,6 +92,12 @@
 							<mainClass>performance.ThreadedDirectClientPerformanceTest</mainClass>
 						</configuration>
 					</execution>
+					<execution>
+						<id>load-test</id>
+						<configuration>
+							<mainClass>performance.TemplateLoadTest</mainClass>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 		</plugins>

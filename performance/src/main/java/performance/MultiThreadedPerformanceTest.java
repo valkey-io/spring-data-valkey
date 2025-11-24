@@ -129,7 +129,7 @@ public class MultiThreadedPerformanceTest {
 			IntStream.range(0, THREADS).forEach(i -> executorService.submit(task));
 
 			executorService.shutdown();
-			boolean finished = executorService.awaitTermination(30, TimeUnit.SECONDS);
+			executorService.awaitTermination(10, TimeUnit.SECONDS);
 			long duration = System.currentTimeMillis() - startTime;
 
 			printResult("SET", duration, setOperations.get(), setFailures.get());
