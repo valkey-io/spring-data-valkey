@@ -52,7 +52,7 @@ import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
  * - Various argument combinations and edge cases
  * - Error handling and validation
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionGeoCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

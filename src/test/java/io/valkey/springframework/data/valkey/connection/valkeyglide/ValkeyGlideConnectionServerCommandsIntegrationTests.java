@@ -45,7 +45,7 @@ import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
  * - Server control (shutdown) - tested with caution
  * - Error handling and validation
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionServerCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

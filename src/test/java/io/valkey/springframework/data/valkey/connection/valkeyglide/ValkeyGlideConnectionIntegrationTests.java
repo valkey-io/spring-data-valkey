@@ -52,7 +52,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyPipelineException;
  * compliance, with particular emphasis on pipeline functionality which mirrors
  * the comprehensive transaction testing approach used in ValkeyGlideConnectionTxCommandsIntegrationTests.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionIntegrationTests extends AbstractValkeyGlideIntegrationTests {

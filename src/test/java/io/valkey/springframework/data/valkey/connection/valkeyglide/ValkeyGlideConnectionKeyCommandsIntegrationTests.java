@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 import static org.assertj.core.api.Assertions.*;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +42,7 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersi
  * - Pipeline mode: Commands return null, results collected in closePipeline() 
  * - Transaction mode: Commands return null, results collected in exec()
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionKeyCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

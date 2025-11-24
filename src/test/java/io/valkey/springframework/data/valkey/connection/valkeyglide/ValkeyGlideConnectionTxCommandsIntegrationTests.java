@@ -49,7 +49,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
  * exclusively on validating transaction semantics and ValkeyTxCommands interface
  * compliance.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionTxCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

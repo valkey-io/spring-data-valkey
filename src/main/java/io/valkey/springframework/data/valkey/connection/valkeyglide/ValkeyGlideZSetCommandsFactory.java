@@ -20,7 +20,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands;
 /**
  * Factory for ValkeyGlideZSetCommands.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideZSetCommandsFactory {

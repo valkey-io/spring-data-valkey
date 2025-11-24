@@ -26,7 +26,7 @@ import java.util.concurrent.TimeoutException;
 /**
  * Utility methods for working with Valkey-Glide CompletableFuture objects.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public abstract class ValkeyGlideFutureUtils {

@@ -52,7 +52,7 @@ import io.valkey.springframework.data.valkey.core.ScanOptions;
  * - Scanning operations (zScan)
  * - Error handling and edge cases
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionZSetCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

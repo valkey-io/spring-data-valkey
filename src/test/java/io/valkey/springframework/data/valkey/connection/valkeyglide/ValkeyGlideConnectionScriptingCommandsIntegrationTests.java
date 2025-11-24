@@ -24,7 +24,6 @@ import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.connection.ReturnType;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
-import org.springframework.util.DigestUtils;
 
 /**
  * Comprehensive low-level integration tests for {@link ValkeyGlideConnection} 
@@ -43,7 +42,7 @@ import org.springframework.util.DigestUtils;
  * - Pipeline mode: Commands return null, results collected in closePipeline()
  * - Transaction mode: Commands return null, results collected in exec()
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionScriptingCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

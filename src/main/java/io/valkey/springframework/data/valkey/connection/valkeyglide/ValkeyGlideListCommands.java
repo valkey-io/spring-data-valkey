@@ -27,7 +27,7 @@ import glide.api.models.GlideString;
 /**
  * Implementation of {@link ValkeyListCommands} for Valkey-Glide.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideListCommands implements ValkeyListCommands {
@@ -88,7 +88,7 @@ public class ValkeyGlideListCommands implements ValkeyListCommands {
             return connection.execute("LPOS",
                 (Object glideResult) -> {
                     if (glideResult == null) {
-                        return null;
+                        return new ArrayList<>();
                     }
 
                     // glideResult can be a single Long or an array of Longs
