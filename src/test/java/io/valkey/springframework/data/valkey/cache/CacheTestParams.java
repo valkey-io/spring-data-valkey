@@ -88,11 +88,10 @@ class CacheTestParams {
 					.add(lettuceClusterConnectionFactory);
 
 			// Valkey-Glide Cluster
-			LogFactory.getLog(CacheTestParams.class).warn("Skipping Cluster Mode for Valkey-Glide driver - enable when cluster support is implemented");
-			// ValkeyGlideConnectionFactory valkeyGlideClusterConnectionFactory = ValkeyGlideConnectionFactoryExtension
-			// 		.getConnectionFactory(ValkeyCluster.class);
-			// factoryList
-			// 		.add(valkeyGlideClusterConnectionFactory);
+			ValkeyGlideConnectionFactory valkeyGlideClusterConnectionFactory = ValkeyGlideConnectionFactoryExtension
+					.getConnectionFactory(ValkeyCluster.class);
+			factoryList
+					.add(valkeyGlideClusterConnectionFactory);
 		}
 
 		return factoryList;

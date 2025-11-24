@@ -21,7 +21,7 @@ import org.springframework.util.Assert;
 /**
  * Utility methods for Valkey-Glide connection implementation.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public abstract class ValkeyGlideUtils {

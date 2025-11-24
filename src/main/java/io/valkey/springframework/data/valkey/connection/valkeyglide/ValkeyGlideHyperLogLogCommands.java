@@ -22,7 +22,7 @@ import org.springframework.util.Assert;
 /**
  * Implementation of {@link ValkeyHyperLogLogCommands} for Valkey-Glide.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideHyperLogLogCommands implements ValkeyHyperLogLogCommands {

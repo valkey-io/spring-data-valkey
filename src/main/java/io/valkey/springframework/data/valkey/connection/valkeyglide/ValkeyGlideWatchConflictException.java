@@ -22,7 +22,7 @@ import org.springframework.dao.DataAccessException;
  * This exception is used to signal that a watched key was modified between
  * the WATCH command and the EXEC command, causing the transaction to be aborted.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideWatchConflictException extends DataAccessException {

@@ -30,7 +30,7 @@ import org.springframework.util.Assert;
 /**
  * Implementation of {@link Subscription} using valkey-glide.
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideSubscription implements Subscription {

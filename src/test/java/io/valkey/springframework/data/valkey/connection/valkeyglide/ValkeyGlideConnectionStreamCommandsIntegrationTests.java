@@ -54,7 +54,7 @@ import io.valkey.springframework.data.valkey.ValkeySystemException;
  * - Stream information: xInfo, xInfoGroups, xInfoConsumers
  * - Error handling and edge cases
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionStreamCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

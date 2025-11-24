@@ -36,7 +36,7 @@ import org.springframework.dao.DataAccessException;
  * - Pipeline mode: Commands return null, results collected in closePipeline()
  * - Transaction mode: Commands return null, results collected in exec()
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionHyperLogLogCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

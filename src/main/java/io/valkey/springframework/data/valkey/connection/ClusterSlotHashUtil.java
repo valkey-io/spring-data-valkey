@@ -187,4 +187,29 @@ public abstract class ClusterSlotHashUtil {
 
 		return crc & 0xFFFF;
 	}
+
+	/**
+	 * Generates a key that will map to the specified cluster slot.
+	 * This method iterates through key patterns until it finds one that matches the target slot.
+	 *
+	 * @param targetSlot the target slot number (0-16383)
+	 * @return a key string that will hash to the specified slot
+	 * @throws IllegalArgumentException if slot is not in valid range [0, 16383]
+	 */
+	public static String getKeyForSlot(int targetSlot) {
+
+		Assert.isTrue(targetSlot >= 0 && targetSlot < SLOT_COUNT,
+				() -> "Target slot must be between 0 and " + (SLOT_COUNT - 1) + ", got: " + targetSlot);
+
+		// Try simple numeric keys first
+		for (int i = 0; i < Integer.MAX_VALUE; i++) {
+			String key = "{slot" + i + "}:key";
+			if (calculateSlot(key) == targetSlot) {
+				return key;
+			}
+		}
+
+		// Fallback (should never reach here in practice)
+		throw new IllegalStateException("Failed to generate key for slot " + targetSlot);
+	}
 }

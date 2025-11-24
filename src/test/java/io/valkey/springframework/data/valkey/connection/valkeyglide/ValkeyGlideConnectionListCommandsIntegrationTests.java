@@ -42,7 +42,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyListCommands.Posit
  * - Blocking operations (bLPop, bRPop)
  * - Pop and push operations (rPopLPush, bRPopLPush)
  *
- * @author Ilya Kolomin
+ * @author Ilia Kolominsky
  * @since 2.0
  */
 public class ValkeyGlideConnectionListCommandsIntegrationTests extends AbstractValkeyGlideIntegrationTests {

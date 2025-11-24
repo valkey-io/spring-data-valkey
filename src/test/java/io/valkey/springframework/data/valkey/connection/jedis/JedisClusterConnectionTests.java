@@ -1642,7 +1642,7 @@ public class JedisClusterConnectionTests implements ClusterConnectionTests {
 	}
 
 	@Test // DATAREDIS-315
-	public void pTtlShouldReturValueCorrectly() {
+	public void pTtlShouldReturnValueCorrectly() {
 
 		nativeConnection.set(KEY_1, VALUE_1);
 		nativeConnection.expire(KEY_1, 5);

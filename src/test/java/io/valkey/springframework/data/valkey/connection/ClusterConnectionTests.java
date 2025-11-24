@@ -392,7 +392,7 @@ public interface ClusterConnectionTests {
 	void pSetExShouldSetValueCorrectly();
 
 	// DATAREDIS-315
-	void pTtlShouldReturValueCorrectly();
+	void pTtlShouldReturnValueCorrectly();
 
 	// DATAREDIS-315
 	void pTtlShouldReturnMinusOneWhenKeyDoesNotHaveExpirationSet();
