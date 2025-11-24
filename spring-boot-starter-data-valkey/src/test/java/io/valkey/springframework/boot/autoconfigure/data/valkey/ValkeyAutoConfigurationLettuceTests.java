@@ -53,7 +53,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.util.StringUtils;
 
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfigurationTests.ConnectionDetailsSentinelConfiguration;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.Pool;
 import io.valkey.springframework.boot.testsupport.classpath.ClassPathExclusions;
 import io.valkey.springframework.boot.testsupport.classpath.resources.WithPackageResources;
@@ -106,7 +105,7 @@ class ValkeyAutoConfigurationLettuceTests {
 				assertThat(getUserName(cf)).isNull();
 				assertThat(cf.getPassword()).isNull();
 				assertThat(cf.isUseSsl()).isFalse();
-				assertThat(cf.getShutdownTimeout()).isEqualTo(500);				
+				assertThat(cf.getShutdownTimeout()).isEqualTo(500);
 			});
 	}
 
@@ -332,7 +331,7 @@ class ValkeyAutoConfigurationLettuceTests {
 			});
 	}
 
-@Test
+	@Test
 	void testValkeyConfigurationWithSentinel() {
 		List<String> sentinels = Arrays.asList("127.0.0.1:26379", "127.0.0.1:26380");
 		this.contextRunner
@@ -437,7 +436,7 @@ class ValkeyAutoConfigurationLettuceTests {
 						"Invalid Valkey URL 'valkey-sentinel://username:password@127.0.0.1:26379,127.0.0.1:26380/mymaster'"));
 	}
 
-@Test
+	@Test
 	void testValkeyConfigurationWithCluster() {
 		List<String> clusterNodes = Arrays.asList("127.0.0.1:27379", "127.0.0.1:27380", "[::1]:27381");
 		this.contextRunner
@@ -540,7 +539,7 @@ class ValkeyAutoConfigurationLettuceTests {
 					(options) -> assertThat(options.getTopologyRefreshOptions().useDynamicRefreshSources()).isTrue()));
 	}
 
-@Test
+	@Test
 	void usesSentinelFromCustomConnectionDetails() {
 		this.contextRunner.withUserConfiguration(ConnectionDetailsSentinelConfiguration.class).run((context) -> {
 			assertThat(context).hasSingleBean(ValkeyConnectionDetails.class)
@@ -688,6 +687,60 @@ class ValkeyAutoConfigurationLettuceTests {
 						@Override
 						public int getPort() {
 							return 6379;
+						}
+
+					};
+				}
+
+			};
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ConnectionDetailsSentinelConfiguration {
+
+		@Bean
+		ValkeyConnectionDetails valkeyConnectionDetails() {
+			return new ValkeyConnectionDetails() {
+
+				@Override
+				public String getUsername() {
+					return "user-1";
+				}
+
+				@Override
+				public String getPassword() {
+					return "password-1";
+				}
+
+				@Override
+				public Sentinel getSentinel() {
+					return new Sentinel() {
+
+						@Override
+						public int getDatabase() {
+							return 1;
+						}
+
+						@Override
+						public String getMaster() {
+							return "master.valkey.example.com";
+						}
+
+						@Override
+						public List<Node> getNodes() {
+							return List.of(new Node("node-1", 12345));
+						}
+
+						@Override
+						public String getUsername() {
+							return "sentinel-1";
+						}
+
+						@Override
+						public String getPassword() {
+							return "secret-1";
 						}
 
 					};

@@ -16,7 +16,6 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
-import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.ValkeyGlide;
@@ -33,8 +32,11 @@ class ValkeyPropertiesTests {
 	@Test
 	void valkeyGlideDefaultsAreConsistent() {
 		ValkeyGlide valkeyGlide = new ValkeyProperties().getValkeyGlide();
-		assertThat(valkeyGlide.getShutdownTimeout()).isEqualTo(Duration.ofMillis(100));
-		assertThat(valkeyGlide.getPoolSize()).isNull();
+		assertThat(valkeyGlide.getConnectionTimeout()).isNull();
+		assertThat(valkeyGlide.getReadFrom()).isNull();
+		assertThat(valkeyGlide.getInflightRequestsLimit()).isNull();
+		assertThat(valkeyGlide.getClientAZ()).isNull();
+		assertThat(valkeyGlide.getCluster()).isNotNull();
 	}
 
 }

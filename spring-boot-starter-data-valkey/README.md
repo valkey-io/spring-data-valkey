@@ -6,7 +6,6 @@ This starter simplifies the setup and configuration of Valkey in Spring Boot app
 
 ## Current Limitations
 
-- Valkey GLIDE Cluster support
 - Valkey GLIDE Sentinel support
 - Valkey GLIDE connection pooling
 
@@ -133,10 +132,7 @@ spring.data.valkey.client-type=valkeyglide
 ### Connection Pooling
 
 ```properties
-# Valkey GLIDE pooling
-spring.data.valkey.valkeyglide.shutdown-timeout=100ms
-# GLIDE connection pooling coming soon...
-#spring.data.valkey.valkeyglide.pool-size=8
+# Valkey GLIDE does not support pooling at this time
 
 # Lettuce pooling
 spring.data.valkey.lettuce.pool.enabled=true
@@ -156,15 +152,20 @@ spring.data.valkey.jedis.pool.max-wait=-1ms
 ### Cluster Configuration
 
 ```properties
-# For Lettuce and Jedis only, GLIDE support coming soon...
+# Generic cluster settings
 spring.data.valkey.cluster.nodes=127.0.0.1:7000,127.0.0.1:7001,127.0.0.1:7002
 spring.data.valkey.cluster.max-redirects=3
+
+# Valkey GLIDE cluster settings
+spring.data.valkey.valkeyglide.cluster.refresh.adaptive=true
+spring.data.valkey.valkeyglide.cluster.refresh.period=30s
+spring.data.valkey.valkeyglide.cluster.refresh.dynamic-refresh-sources=true
 ```
 
 ### Sentinel Configuration
 
 ```properties
-# For Lettuce and Jedis only, GLIDE support coming soon...
+# For Lettuce and Jedis only, GLIDE does not support Sentinel at this time
 spring.data.valkey.sentinel.master=mymaster
 spring.data.valkey.sentinel.nodes=127.0.0.1:26379,127.0.0.1:26380,127.0.0.1:26381
 spring.data.valkey.sentinel.username=sentinel-user
@@ -176,6 +177,16 @@ spring.data.valkey.sentinel.password=sentinel-password
 ```properties
 spring.data.valkey.ssl.enabled=true
 spring.data.valkey.ssl.bundle=valkey-ssl
+```
+
+### Advanced Configuration
+
+```properties
+# Valkey GLIDE advanced settings
+spring.data.valkey.valkeyglide.connection-timeout=2000ms
+spring.data.valkey.valkeyglide.read-from=PRIMARY
+spring.data.valkey.valkeyglide.inflight-requests-limit=250
+spring.data.valkey.valkeyglide.client-az=us-west-2a
 ```
 
 ## Building from Source

@@ -189,11 +189,17 @@ public class ValkeyGlideConnectionFactory
     }
 
     /**
-     * Initialize the factory by pre-creating a pool of client instances.
+     * Initialize the factory by pre-creating a pool of client instances if early startup is enabled.
      */
     @Override
     public void afterPropertiesSet() {
         if (initialized) {
+            return;
+        }
+        
+        // Skip eager initialization if early startup is disabled (useful for Spring Boot testing)
+        if (!earlyStartup) {
+            initialized = true;
             return;
         }
         

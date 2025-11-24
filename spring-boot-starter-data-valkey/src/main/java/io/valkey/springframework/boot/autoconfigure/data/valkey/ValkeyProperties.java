@@ -575,82 +575,109 @@ public class ValkeyProperties {
 
 	/**
 	 * Valkey GLIDE client properties.
+	 *
+	 * <p>Note: BackoffStrategy (reconnect strategy) is not supported via properties.
+	 * Use a ValkeyGlideClientConfigurationBuilderCustomizer bean for advanced configuration.
 	 */
 	public static class ValkeyGlide {
 
-		// TODO: Enable cluster functionality when supported by Spring Data Valkey with Valkey GLIDE
+		/**
+		 * Connection timeout for establishing connections.
+		 */
+		private Duration connectionTimeout;
 
 		/**
-		 * Shutdown timeout.
+		 * Read from strategy for cluster mode.
 		 */
-		private Duration shutdownTimeout = Duration.ofMillis(100);
+		private String readFrom;
 
 		/**
-		 * Pool size for connection pooling.
+		 * Maximum number of concurrent in-flight requests.
 		 */
-		private Integer poolSize;
+		private Integer inflightRequestsLimit;
 
-		// private final Cluster cluster = new Cluster();
+		/**
+		 * Client availability zone.
+		 */
+		private String clientAZ;
 
-		// public Cluster getCluster() {
-		// 	return this.cluster;
-		// }
+		private final Cluster cluster = new Cluster();
 
-		public Duration getShutdownTimeout() {
-			return this.shutdownTimeout;
+		public Duration getConnectionTimeout() {
+			return this.connectionTimeout;
 		}
 
-		public void setShutdownTimeout(Duration shutdownTimeout) {
-			this.shutdownTimeout = shutdownTimeout;
+		public void setConnectionTimeout(Duration connectionTimeout) {
+			this.connectionTimeout = connectionTimeout;
 		}
 
-		public Integer getPoolSize() {
-			return this.poolSize;
+		public String getReadFrom() {
+			return this.readFrom;
 		}
 
-		public void setPoolSize(Integer poolSize) {
-			this.poolSize = poolSize;
+		public void setReadFrom(String readFrom) {
+			this.readFrom = readFrom;
 		}
 
-		// public static class Cluster {
+		public Integer getInflightRequestsLimit() {
+			return this.inflightRequestsLimit;
+		}
 
-		// 	private final Refresh refresh = new Refresh();
+		public void setInflightRequestsLimit(Integer inflightRequestsLimit) {
+			this.inflightRequestsLimit = inflightRequestsLimit;
+		}
 
-		// 	public Refresh getRefresh() {
-		// 		return this.refresh;
-		// 	}
+		public String getClientAZ() {
+			return this.clientAZ;
+		}
 
-		// 	public static class Refresh {
+		public void setClientAZ(String clientAZ) {
+			this.clientAZ = clientAZ;
+		}
 
-		// 		private boolean dynamicRefreshSources = true;
-		// 		private Duration period;
-		// 		private boolean adaptive;
+		public Cluster getCluster() {
+			return this.cluster;
+		}
 
-		// 		public boolean isDynamicRefreshSources() {
-		// 			return this.dynamicRefreshSources;
-		// 		}
+		public static class Cluster {
 
-		// 		public void setDynamicRefreshSources(boolean dynamicRefreshSources) {
-		// 			this.dynamicRefreshSources = dynamicRefreshSources;
-		// 		}
+			private final Refresh refresh = new Refresh();
 
-		// 		public Duration getPeriod() {
-		// 			return this.period;
-		// 		}
+			public Refresh getRefresh() {
+				return this.refresh;
+			}
 
-		// 		public void setPeriod(Duration period) {
-		// 			this.period = period;
-		// 		}
+			public static class Refresh {
 
-		// 		public boolean isAdaptive() {
-		// 			return this.adaptive;
-		// 		}
+				private boolean dynamicRefreshSources = true;
+				private Duration period;
+				private boolean adaptive;
 
-		// 		public void setAdaptive(boolean adaptive) {
-		// 			this.adaptive = adaptive;
-		// 		}
-		// 	}
-		// }
+				public boolean isDynamicRefreshSources() {
+					return this.dynamicRefreshSources;
+				}
+
+				public void setDynamicRefreshSources(boolean dynamicRefreshSources) {
+					this.dynamicRefreshSources = dynamicRefreshSources;
+				}
+
+				public Duration getPeriod() {
+					return this.period;
+				}
+
+				public void setPeriod(Duration period) {
+					this.period = period;
+				}
+
+				public boolean isAdaptive() {
+					return this.adaptive;
+				}
+
+				public void setAdaptive(boolean adaptive) {
+					this.adaptive = adaptive;
+				}
+			}
+		}
 
 	}
 

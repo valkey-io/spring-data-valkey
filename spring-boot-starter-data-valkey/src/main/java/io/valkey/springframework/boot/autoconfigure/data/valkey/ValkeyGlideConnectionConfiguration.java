@@ -16,20 +16,18 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
+import glide.api.models.configuration.ReadFrom;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnThreading;
-import org.springframework.boot.autoconfigure.thread.Threading;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.util.StringUtils;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
-import io.valkey.springframework.data.valkey.connection.valkeyglide.DefaultValkeyGlideClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 
@@ -43,8 +41,6 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
 @ConditionalOnProperty(name = "spring.data.valkey.client-type", havingValue = "valkeyglide", matchIfMissing = true)
 class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 
-	// TODO: Enable cluster and sentinel functionality when supported by Spring Data Valkey with Valkey GLIDE
-
 	ValkeyGlideConnectionConfiguration(ValkeyProperties properties,
 			ValkeyConnectionDetails connectionDetails,
 			ObjectProvider<ValkeyStandaloneConfiguration> standaloneConfigurationProvider,
@@ -55,60 +51,86 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(ValkeyConnectionFactory.class)
-	@ConditionalOnThreading(Threading.PLATFORM)
+	// @ConditionalOnThreading(Threading.PLATFORM)
 	ValkeyGlideConnectionFactory valkeyConnectionFactory(
 			ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
 		return createValkeyConnectionFactory(builderCustomizers);
 	}
 
-	@Bean
-	@ConditionalOnMissingBean(ValkeyConnectionFactory.class)
-	@ConditionalOnThreading(Threading.VIRTUAL)
-	ValkeyGlideConnectionFactory valkeyConnectionFactoryVirtualThreads(
-			ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
-		ValkeyGlideConnectionFactory factory = createValkeyConnectionFactory(builderCustomizers);
-		SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("valkey-");
-		executor.setVirtualThreads(true);
-		factory.setExecutor(executor);
-		return factory;
-	}
+	// TODO: Uncomment when ValkeyGlideConnectionFactory supports setExecutor() (see also ConditionalOnThreading for valkeyConnectionFactory)
+	// @Bean
+	// @ConditionalOnMissingBean(ValkeyConnectionFactory.class)
+	// @ConditionalOnThreading(Threading.VIRTUAL)
+	// ValkeyGlideConnectionFactory valkeyConnectionFactoryVirtualThreads(
+	// 		ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
+	// 	ValkeyGlideConnectionFactory factory = createValkeyConnectionFactory(builderCustomizers);
+	// 	SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("valkey-");
+	// 	executor.setVirtualThreads(true);
+	// 	factory.setExecutor(executor);
+	// 	return factory;
+	// }
 
 	private ValkeyGlideConnectionFactory createValkeyConnectionFactory(
 			ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
 		ValkeyGlideClientConfiguration clientConfiguration = getValkeyGlideClientConfiguration(builderCustomizers);
-		return switch (this.mode) {
-			case STANDALONE -> new ValkeyGlideConnectionFactory(clientConfiguration);
-			// case CLUSTER -> new ValkeyGlideConnectionFactory(getClusterConfiguration(), clientConfiguration);
-			// case SENTINEL -> new ValkeyGlideConnectionFactory(getSentinelConfig(), clientConfiguration);
-			default -> new ValkeyGlideConnectionFactory(clientConfiguration);
+		ValkeyGlideConnectionFactory factory = switch (this.mode) {
+			case STANDALONE -> new ValkeyGlideConnectionFactory(getStandaloneConfig(), clientConfiguration);
+			case CLUSTER -> new ValkeyGlideConnectionFactory(getClusterConfiguration(), clientConfiguration);
+			case SENTINEL -> new ValkeyGlideConnectionFactory(getSentinelConfig(), clientConfiguration);
+			default -> new ValkeyGlideConnectionFactory(getStandaloneConfig(), clientConfiguration);
 		};
+
+		// Disable early startup for Spring Boot to avoid connection attempts during bean creation
+		factory.setEarlyStartup(false);
+		return factory;
 	}
 
 	private ValkeyGlideClientConfiguration getValkeyGlideClientConfiguration(
 			ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
-		DefaultValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder builder = DefaultValkeyGlideClientConfiguration
+		ValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder builder = ValkeyGlideClientConfiguration
 				.builder();
 
 		if (getProperties().getTimeout() != null) {
 			builder.commandTimeout(getProperties().getTimeout());
 		}
-		if (getProperties().getClientName() != null) {
-			builder.clientName(getProperties().getClientName());
-		}
 		if (getProperties().getSsl().isEnabled() || getSslBundle() != null) {
 			builder.useSsl();
 		}
+		if (StringUtils.hasText(getProperties().getUrl())) {
+			customizeConfigurationFromUrl(builder);
+		}
 
 		ValkeyProperties.ValkeyGlide valkeyGlideProperties = getProperties().getValkeyGlide();
-		if (valkeyGlideProperties.getShutdownTimeout() != null) {
-			builder.shutdownTimeout(valkeyGlideProperties.getShutdownTimeout());
+		if (valkeyGlideProperties.getConnectionTimeout() != null) {
+			builder.connectionTimeout(valkeyGlideProperties.getConnectionTimeout());
 		}
-		if (valkeyGlideProperties.getPoolSize() != null) {
-			builder.poolSize(valkeyGlideProperties.getPoolSize());
+		String readFrom = valkeyGlideProperties.getReadFrom();
+		if (StringUtils.hasText(readFrom)) {
+			builder.readFrom(getReadFrom(readFrom));
+		}
+		if (valkeyGlideProperties.getInflightRequestsLimit() != null) {
+			builder.inflightRequestsLimit(valkeyGlideProperties.getInflightRequestsLimit());
+		}
+		if (valkeyGlideProperties.getClientAZ() != null) {
+			builder.clientAZ(valkeyGlideProperties.getClientAZ());
 		}
 
 		builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 		return builder.build();
+	}
+
+	private void customizeConfigurationFromUrl(ValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder builder) {
+		if (urlUsesSsl()) {
+			builder.useSsl();
+		}
+	}
+
+	private ReadFrom getReadFrom(String readFrom) {
+		try {
+			return ReadFrom.valueOf(readFrom.toUpperCase());
+		} catch (IllegalArgumentException ex) {
+			throw new IllegalArgumentException("Invalid readFrom value: " + readFrom, ex);
+		}
 	}
 
 }
