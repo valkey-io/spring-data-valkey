@@ -16,6 +16,7 @@
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import java.time.Duration;
+import java.util.concurrent.ExecutionException;
 
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -46,8 +47,6 @@ import glide.api.models.configuration.GlideClientConfiguration;
 import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
 import glide.api.models.configuration.ReadFrom;
-
-import java.util.concurrent.ExecutionException;
 
 /**
  * Connection factory creating <a href="https://github.com/valkey-io/valkey-glide">Valkey Glide</a> based
@@ -111,8 +110,18 @@ public class ValkeyGlideConnectionFactory
     }
 
     /**
+     * Constructs a new {@link ValkeyGlideConnectionFactory} instance with the given {@link ValkeyClusterConfiguration}.
+     *
+     * @param clusterConfiguration must not be {@literal null}
+     * @since 3.0
+     */
+    public ValkeyGlideConnectionFactory(ValkeyClusterConfiguration clusterConfiguration) {
+        this(clusterConfiguration, new DefaultValkeyGlideClientConfiguration());
+    }
+
+    /**
      * Constructs a new {@link ValkeyGlideConnectionFactory} instance with the given {@link ValkeyClusterConfiguration}
-     * and {@link ValkeyGlideClusterClientConfiguration}.
+     * and {@link ValkeyGlideClientConfiguration}.
      *
      * @param clusterConfiguration must not be {@literal null}
      * @param clusterClientConfiguration must not be {@literal null}
@@ -126,6 +135,31 @@ public class ValkeyGlideConnectionFactory
         
         this.configuration = clusterConfiguration;
         this.valkeyGlideConfiguration = valkeyGlideConfiguration;
+    }
+
+    /**
+     * Constructs a new {@link ValkeyGlideConnectionFactory} instance using the given {@link ValkeySentinelConfiguration}.
+     *
+     * @param sentinelConfiguration must not be {@literal null}.
+     * @throws UnsupportedOperationException as Sentinel connections are not supported with Valkey-Glide.
+     * @since 3.0
+     */
+    public ValkeyGlideConnectionFactory(ValkeySentinelConfiguration sentinelConfiguration) {
+        throw new UnsupportedOperationException("Sentinel connections not supported with Valkey-Glide!");
+    }
+
+    /**
+     * Constructs a new {@link ValkeyGlideConnectionFactory} instance using the given {@link ValkeySentinelConfiguration} and
+     * {@link ValkeyGlideClientConfiguration}.
+     *
+     * @param sentinelConfiguration must not be {@literal null}.
+     * @param clientConfiguration must not be {@literal null}.
+     * @throws UnsupportedOperationException as Sentinel connections are not supported with Valkey-Glide.
+     * @since 3.0
+     */
+    public ValkeyGlideConnectionFactory(ValkeySentinelConfiguration sentinelConfiguration,
+            ValkeyGlideClientConfiguration clientConfiguration) {
+        throw new UnsupportedOperationException("Sentinel connections not supported with Valkey-Glide!");
     }
 
     /**
@@ -471,6 +505,62 @@ public class ValkeyGlideConnectionFactory
         throw new UnsupportedOperationException("Sentinel connections not supported with Valkey-Glide!");
     }
 
+    /**
+     * Returns the current host.
+     *
+     * @return the host.
+     */
+    public String getHostName() {
+        return ValkeyConfiguration.getHostOrElse(configuration, () -> "localhost");
+    }
+
+    /**
+     * Returns the current port.
+     *
+     * @return the port.
+     */
+    public int getPort() {
+        return ValkeyConfiguration.getPortOrElse(configuration, () -> 6379);
+    }
+
+    /**
+     * Returns the index of the database.
+     *
+     * @return the database index.
+     */
+    public int getDatabase() {
+        return ValkeyConfiguration.getDatabaseOrElse(configuration, () -> 0);
+    }
+
+    /**
+     * Returns the client name.
+     *
+     * @return the client name or {@literal null} if not set.
+     */
+    @Nullable
+    public String getClientName() {
+        // Valkey Glide supports client names via CLIENT GETNAME command but not in configuration
+        return null;
+    }
+
+	/**
+	 * Returns the password used for authenticating with the Valkey server.
+	 *
+	 * @return password for authentication or {@literal null} if not set.
+	 */
+	@Nullable
+	public String getPassword() {
+		return getValkeyPassword().map(String::new).orElse(null);
+	}
+
+    @Nullable
+    private String getValkeyUsername() {
+        return ValkeyConfiguration.getUsernameOrElse(configuration, () -> null);
+    }
+
+    private ValkeyPassword getValkeyPassword() {
+        return ValkeyConfiguration.getPasswordOrElse(configuration, () -> ValkeyPassword.none());
+    }
 
     /**
      * @return whether this lifecycle component should get started automatically by the container
