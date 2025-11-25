@@ -30,9 +30,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>17</maven.compiler.release>
 		<spring-data-valkey.version>3.5.1</spring-data-valkey.version>
-		<spring-framework.version>6.2.1</spring-framework.version>
 		<valkey-glide.version>2.1.1</valkey-glide.version>
-		<jackson.version>2.15.2</jackson.version>
 		<slf4j.version>2.0.9</slf4j.version>
 	</properties>
 
@@ -40,41 +38,20 @@
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-simple</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.valkey.springframework.data</groupId>
+			<artifactId>spring-data-valkey</artifactId>
+			<version>${spring-data-valkey.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.valkey</groupId>
+			<artifactId>valkey-glide</artifactId>
+			<classifier>${os.detected.classifier}</classifier>
+			<version>${valkey-glide.version}</version>
 		</dependency>
 	</dependencies>
-
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>org.springframework</groupId>
-				<artifactId>spring-framework-bom</artifactId>
-				<version>${spring-framework.version}</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-			<dependency>
-				<groupId>io.valkey.springframework.data</groupId>
-				<artifactId>spring-data-valkey</artifactId>
-				<version>${spring-data-valkey.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.valkey</groupId>
-				<artifactId>valkey-glide</artifactId>
-				<classifier>${os.detected.classifier}</classifier>
-				<version>${valkey-glide.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>com.fasterxml.jackson.core</groupId>
-				<artifactId>jackson-databind</artifactId>
-				<version>${jackson.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.slf4j</groupId>
-				<artifactId>slf4j-simple</artifactId>
-				<version>${slf4j.version}</version>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 
 	<build>
 		<extensions>

@@ -22,14 +22,13 @@ Each example can be run independently using Maven, from the examples root direct
 
 ```bash
 $ cd examples
-$ ../mvnw compile exec:java -pl <example-name>
+$ ../mvnw -q compile exec:java -pl <example-name>
 ```
 
-Or the specific example directory:
-
+For example:
 ```bash
 $ cd examples/<example-name>
-$ ../../mvnw compile exec:java
+$ ../../mvnw -q compile exec:java
 ```
 
 To run all examples sequentially:
@@ -64,5 +63,6 @@ done
 ## Notes
 
 - All examples use Valkey GLIDE as the connection driver (Lettuce and Jedis are also supported)
+- All examples reference a parent examples POM which specifies any common depedencies (spring-data-valkey, valkey-glide, etc)
 - Most examples create resources directly in `main()` for simplicity; see `cache` and `repositories` for Spring `@Configuration` examples
 - Each example cleans up any data it creates in the datastore

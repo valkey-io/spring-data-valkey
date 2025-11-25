@@ -15,17 +15,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.valkey.springframework.data</groupId>
-            <artifactId>spring-data-valkey</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.valkey</groupId>
-            <artifactId>valkey-glide</artifactId>
-            <classifier>${os.detected.classifier}</classifier>
-        </dependency>
-        <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
+            <version>6.2.1</version>
         </dependency>
     </dependencies>
 

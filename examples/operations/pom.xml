@@ -13,18 +13,6 @@
 	<artifactId>spring-data-valkey-example-operations</artifactId>
 	<name>Spring Data Valkey - Operations Example</name>
 
-	<dependencies>
-		<dependency>
-			<groupId>io.valkey.springframework.data</groupId>
-			<artifactId>spring-data-valkey</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.valkey</groupId>
-			<artifactId>valkey-glide</artifactId>
-			<classifier>${os.detected.classifier}</classifier>
-		</dependency>
-	</dependencies>
-
 	<build>
 		<plugins>
 			<plugin>

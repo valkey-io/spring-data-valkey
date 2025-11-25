@@ -15,17 +15,9 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>io.valkey.springframework.data</groupId>
-			<artifactId>spring-data-valkey</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.valkey</groupId>
-			<artifactId>valkey-glide</artifactId>
-			<classifier>${os.detected.classifier}</classifier>
-		</dependency>
-		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
+			<version>2.15.2</version>
 		</dependency>
 	</dependencies>
 
