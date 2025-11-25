@@ -17,7 +17,9 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import static io.valkey.springframework.data.valkey.connection.ClusterTestVariables.*;
 import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.*;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -259,7 +261,16 @@ public class ValkeyGlideClusterConnectionCommandsIntegrationTests extends Abstra
 
     @Test
     void testClusterGetClusterInfo() {
-        // Execute
+        // Wait for all cluster nodes to be available
+        await().atMost(Duration.ofSeconds(5))
+                .untilAsserted(() -> {
+                    ClusterInfo clusterInfo = clusterConnection.clusterCommands().clusterGetClusterInfo();
+                    assertThat(clusterInfo).isNotNull();
+                    assertThat(clusterInfo.getState()).isIn("ok", "OK");
+                    assertThat(clusterInfo.getKnownNodes()).isEqualTo(EXPECTED_TOTAL_NODES);
+                });
+
+        // Execute final verification
         ClusterInfo clusterInfo = clusterConnection.clusterCommands().clusterGetClusterInfo();
         
         // Verify

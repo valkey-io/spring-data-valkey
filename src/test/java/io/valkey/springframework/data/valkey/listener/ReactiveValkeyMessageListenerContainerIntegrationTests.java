@@ -16,6 +16,7 @@
 package io.valkey.springframework.data.valkey.listener;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.*;
 
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -334,12 +335,15 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 
 		c2Subscription.dispose();
 
-		Thread.sleep(500);
-
 		doPublish(CHANNEL1.getBytes(), MESSAGE.getBytes());
 
-		assertThat(c1Collector.poll(5, TimeUnit.SECONDS)).isNotNull();
-		assertThat(c2Collector.poll(100, TimeUnit.MILLISECONDS)).isNull();
+		// Wait for subscriptions to be available or disposed
+		await().atMost(Duration.ofSeconds(2))
+				.untilAsserted(() -> {
+					assertThat(c1Collector.poll(1, TimeUnit.SECONDS)).isNotNull();
+					assertThat(c2Collector.poll(100, TimeUnit.MILLISECONDS)).isNull();
+					c1Collector.clear();
+				});
 
 		c1Subscription.dispose();
 

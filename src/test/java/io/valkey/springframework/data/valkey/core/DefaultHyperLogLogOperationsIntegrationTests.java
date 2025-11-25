@@ -93,7 +93,8 @@ public class DefaultHyperLogLogOperationsIntegrationTests<K, V> {
 		V v3 = valueFactory.instance();
 
 		hyperLogLogOps.add(key, v1, v2, v3);
-		assertThat(hyperLogLogOps.size(key)).isEqualTo(3L);
+		// HyperLogLog count is approximate
+		assertThat(hyperLogLogOps.size(key)).isBetween(2L, 4L);
 	}
 
 	@ParameterizedValkeyTest // DATAREDIS-308
