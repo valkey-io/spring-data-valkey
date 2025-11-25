@@ -51,20 +51,20 @@ public class ClusterSlotHashUtilsTests {
 	void localCalculationShouldMatchServers() {
 
 		ConnectionPool pool = cluster.getClusterNodes().values().iterator().next();
-		Jedis jedis = new Jedis(pool.getResource());
 
-		for (int i = 0; i < 100; i++) {
+		// Use try-with-resources to ensure connection is properly closed
+		try (Jedis jedis = new Jedis(pool.getResource())) {
+			for (int i = 0; i < 100; i++) {
 
-			String key = randomString();
-			int slot = ClusterSlotHashUtil.calculateSlot(key);
-			Long serverSlot = jedis.clusterKeySlot(key);
+				String key = randomString();
+				int slot = ClusterSlotHashUtil.calculateSlot(key);
+				Long serverSlot = jedis.clusterKeySlot(key);
 
-			assertThat(slot)
-					.describedAs("Expected slot for key '%s' to be %s but server calculated %s", key, slot, serverSlot)
-					.isEqualTo(serverSlot.intValue());
+				assertThat(slot)
+						.describedAs("Expected slot for key '%s' to be %s but server calculated %s", key, slot, serverSlot)
+						.isEqualTo(serverSlot.intValue());
+			}
 		}
-
-		jedis.close();
 	}
 
 	@Test
