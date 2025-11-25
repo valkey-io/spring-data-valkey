@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>io.valkey.springframework.data</groupId>
 		<artifactId>spring-data-valkey-examples</artifactId>
-		<version>3.5.1</version>
+		<version>1.0.0</version>
 	</parent>
 
 	<artifactId>spring-data-valkey-example-repositories</artifactId>
