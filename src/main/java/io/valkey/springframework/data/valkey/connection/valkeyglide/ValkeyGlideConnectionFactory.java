@@ -544,6 +544,15 @@ public class ValkeyGlideConnectionFactory
     }
 
 	/**
+	 * Returns whether to use SSL.
+	 *
+	 * @return use of SSL.
+	 */
+	public boolean isUseSsl() {
+		return valkeyGlideConfiguration.isUseSsl();
+	}
+
+	/**
 	 * Returns the password used for authenticating with the Valkey server.
 	 *
 	 * @return password for authentication or {@literal null} if not set.
