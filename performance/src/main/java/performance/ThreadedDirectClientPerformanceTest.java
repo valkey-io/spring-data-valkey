@@ -83,7 +83,7 @@ public class ThreadedDirectClientPerformanceTest {
 					executorService.submit(setTask);
 				}
 				executorService.shutdown();
-				executorService.awaitTermination(2, TimeUnit.MINUTES);
+				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long setTime = System.nanoTime() - start;
 				printResult("SET", setTime);
 
@@ -105,7 +105,7 @@ public class ThreadedDirectClientPerformanceTest {
 					executorService.submit(getTask);
 				}
 				executorService.shutdown();
-				executorService.awaitTermination(2, TimeUnit.MINUTES);
+				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long getTime = System.nanoTime() - start;
 				printResult("GET", getTime);
 
@@ -127,7 +127,7 @@ public class ThreadedDirectClientPerformanceTest {
 					executorService.submit(deleteTask);
 				}
 				executorService.shutdown();
-				executorService.awaitTermination(2, TimeUnit.MINUTES);
+				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long deleteTime = System.nanoTime() - start;
 				printResult("DELETE", deleteTime);
 			} finally {
@@ -163,7 +163,7 @@ public class ThreadedDirectClientPerformanceTest {
 					executorService.submit(setTask);
 				}
 				executorService.shutdown();
-				executorService.awaitTermination(2, TimeUnit.MINUTES);
+				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long setTime = System.nanoTime() - start;
 				printResult("SET", setTime);
 
@@ -185,7 +185,7 @@ public class ThreadedDirectClientPerformanceTest {
 					executorService.submit(getTask);
 				}
 				executorService.shutdown();
-				executorService.awaitTermination(2, TimeUnit.MINUTES);
+				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long getTime = System.nanoTime() - start;
 				printResult("GET", getTime);
 
@@ -207,7 +207,7 @@ public class ThreadedDirectClientPerformanceTest {
 					executorService.submit(deleteTask);
 				}
 				executorService.shutdown();
-				executorService.awaitTermination(2, TimeUnit.MINUTES);
+				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long deleteTime = System.nanoTime() - start;
 				printResult("DELETE", deleteTime);
 			} finally {
@@ -244,7 +244,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.submit(setTask);
 			}
 			executorService.shutdown();
-			executorService.awaitTermination(2, TimeUnit.MINUTES);
+			executorService.awaitTermination(10, TimeUnit.SECONDS);
 			long setTime = System.nanoTime() - start;
 			printResult("SET", setTime);
 
@@ -268,7 +268,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.submit(getTask);
 			}
 			executorService.shutdown();
-			executorService.awaitTermination(2, TimeUnit.MINUTES);
+			executorService.awaitTermination(10, TimeUnit.SECONDS);
 			long getTime = System.nanoTime() - start;
 			printResult("GET", getTime);
 
@@ -292,7 +292,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.submit(deleteTask);
 			}
 			executorService.shutdown();
-			executorService.awaitTermination(2, TimeUnit.MINUTES);
+			executorService.awaitTermination(10, TimeUnit.SECONDS);
 			long deleteTime = System.nanoTime() - start;
 			printResult("DELETE", deleteTime);
 		} finally {

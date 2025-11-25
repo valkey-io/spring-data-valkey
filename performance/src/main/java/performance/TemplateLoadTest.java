@@ -79,7 +79,6 @@ public class TemplateLoadTest {
 
         AtomicInteger setOperations = new AtomicInteger(0);
         AtomicInteger getOperations = new AtomicInteger(0);
-        AtomicInteger errors = new AtomicInteger(0);
 
         try {
             Runnable task = () -> IntStream.range(0, operations).forEach(i -> {
@@ -91,7 +90,6 @@ public class TemplateLoadTest {
                     valkeyTemplate.opsForValue().set(key, value);
                     setOperations.incrementAndGet();
                 } catch (Exception e) {
-                    errors.incrementAndGet();
                     System.err.println("SET error: " + e.getMessage());
                 }
 
@@ -103,7 +101,6 @@ public class TemplateLoadTest {
                         System.err.println("Data mismatch! Expected: " + value + ", Got: " + result);
                     }
                 } catch (Exception e) {
-                    errors.incrementAndGet();
                     System.err.println("GET error: " + e.getMessage());
                 }
             });
@@ -111,22 +108,20 @@ public class TemplateLoadTest {
             IntStream.range(0, threads).forEach(i -> executorService.submit(task));
 
             executorService.shutdown();
-            boolean finished = executorService.awaitTermination(60, TimeUnit.SECONDS);
+            executorService.awaitTermination(10, TimeUnit.SECONDS);
 
             long duration = System.currentTimeMillis() - startTime;
             int totalActual = setOperations.get() + getOperations.get();
             int dropped = totalExpected - totalActual;
 
-            System.out.println("Completed: " + finished);
-            System.out.println("Duration: " + duration + "ms");
+            System.out.println("Duration: " + String.format("%.2f ms", (double) duration));
             System.out.println("Expected operations: " + totalExpected);
             System.out.println("SET operations: " + setOperations.get());
             System.out.println("GET operations: " + getOperations.get());
             System.out.println("Total operations: " + totalActual);
             System.out.println("Dropped operations: " + dropped);
             System.out.println("Success rate: " + String.format("%.2f%%", (totalActual * 100.0 / totalExpected)));
-            System.out.println("Errors: " + errors.get());
-            System.out.println("Operations per second: " + (totalActual * 1000.0 / duration));
+            System.out.println("Operations per second: " + String.format("%,d", (long) (totalActual * 1000.0 / duration)));
         } finally {
             executorService.shutdown();
         }

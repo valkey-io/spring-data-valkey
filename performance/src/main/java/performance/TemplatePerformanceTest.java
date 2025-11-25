@@ -89,8 +89,9 @@ public class TemplatePerformanceTest {
 		printResult("DELETE", deleteTime);
 	}
 
-	private static void printResult(String operation, long duration) {
+	private static void printResult(String operation, long durationNanos) {
+		long durationMs = durationNanos / 1_000_000;
 		System.out.printf("%s:    %,d ops/sec (%.2f ms total)%n", 
-			operation, (long) (OPERATIONS / (duration / 1_000_000_000.0)), duration / 1_000_000.0);
+			operation, (long) (OPERATIONS * 1000.0 / durationMs), durationMs / 1.0);
 	}
 }
