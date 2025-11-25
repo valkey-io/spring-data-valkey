@@ -337,13 +337,13 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 
 		doPublish(CHANNEL1.getBytes(), MESSAGE.getBytes());
 
-		// Wait for subscriptions to be available or disposed
+		// Wait for active subscription to receive message
 		await().atMost(Duration.ofSeconds(5))
-				.untilAsserted(() -> {
-					assertThat(c1Collector.poll(1, TimeUnit.SECONDS)).isNotNull();
-					assertThat(c2Collector.poll(100, TimeUnit.MILLISECONDS)).isNull();
-					c1Collector.clear();
-				});
+				.untilAsserted(() -> assertThat(c1Collector.poll(100, TimeUnit.MILLISECONDS)).isNotNull());
+
+		// Wait for disposed subscription to stop receiving messages
+		await().atMost(Duration.ofSeconds(5))
+				.untilAsserted(() -> assertThat(c2Collector.poll(100, TimeUnit.MILLISECONDS)).isNull());
 
 		c1Subscription.dispose();
 
