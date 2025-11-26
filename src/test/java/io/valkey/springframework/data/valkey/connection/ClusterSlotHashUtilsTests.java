@@ -52,7 +52,7 @@ public class ClusterSlotHashUtilsTests {
 
 		ConnectionPool pool = cluster.getClusterNodes().values().iterator().next();
 
-		// Use try-with-resources to ensure connection is properly closed
+		// Use try-with-resources to ensure connection is gracefully closed
 		try (Jedis jedis = new Jedis(pool.getResource())) {
 			for (int i = 0; i < 100; i++) {
 
