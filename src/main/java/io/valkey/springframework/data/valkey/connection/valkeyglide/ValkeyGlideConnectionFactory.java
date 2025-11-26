@@ -48,6 +48,10 @@ import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
 import glide.api.models.configuration.ReadFrom;
 
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
+
 /**
  * Connection factory creating <a href="https://github.com/valkey-io/valkey-glide">Valkey Glide</a> based
  * connections. This is the central class for connecting to Valkey using Valkey-Glide.
@@ -73,6 +77,11 @@ public class ValkeyGlideConnectionFactory
         
     private final @Nullable ValkeyGlideClientConfiguration valkeyGlideConfiguration;
     private final ValkeyConfiguration configuration;
+    
+    // Connection pools for client reuse
+    private final BlockingQueue<GlideClient> clientPool = new LinkedBlockingQueue<>();
+    private final BlockingQueue<GlideClusterClient> clusterClientPool = new LinkedBlockingQueue<>();
+    private final int poolSize = 10; // Default pool size
     
     private boolean initialized = false;
     private boolean running = false;
@@ -178,13 +187,26 @@ public class ValkeyGlideConnectionFactory
     }
 
     /**
-     * Initialize the shared client if not already initialized.
+     * Initialize the factory by pre-creating a pool of client instances.
      */
     @Override
     public void afterPropertiesSet() {
         if (initialized) {
             return;
         }
+        
+        // Pre-create pool of clients based on configuration mode
+        if (isClusterAware()) {
+            for (int i = 0; i < poolSize; i++) {
+                clusterClientPool.offer(createGlideClusterClient());
+            }
+        } else {
+            for (int i = 0; i < poolSize; i++) {
+                clientPool.offer(createGlideClient());
+            }
+        }
+        
+        initialized = true;
     }
 
     @Override
@@ -196,8 +218,18 @@ public class ValkeyGlideConnectionFactory
             return getClusterConnection();
         }
         
-        GlideClient glideClient = createGlideClient();
-        return new ValkeyGlideConnection(new StandaloneGlideClientAdapter(glideClient));
+        // Get client from pool (or create new if pool is empty)
+        GlideClient client = clientPool.poll();
+        if (client == null) {
+            System.err.println("Creating new GlideClient");
+            client = createGlideClient();
+        }
+        else {
+            //System.err.println("Reusing pooled GlideClient");
+        }
+        
+        // Return a new connection wrapper around the pooled client
+        return new ValkeyGlideConnection(new StandaloneGlideClientAdapter(client), this);
     }
 
     @Override
@@ -208,8 +240,14 @@ public class ValkeyGlideConnectionFactory
             throw new InvalidDataAccessResourceUsageException("Cluster mode is not configured!");
         }
 
-        GlideClusterClient glideClusterClient = createGlideClusterClient();
-        return new ValkeyGlideClusterConnection(new ClusterGlideClientAdapter(glideClusterClient));
+        // Get cluster client from pool (or create new if pool is empty)
+        GlideClusterClient client = clusterClientPool.poll();
+        if (client == null) {
+            client = createGlideClusterClient();
+        }
+        
+        // Return a new connection wrapper around the pooled cluster client
+        return new ValkeyGlideClusterConnection(new ClusterGlideClientAdapter(client), this);
     }
 
     @Override
@@ -223,10 +261,71 @@ public class ValkeyGlideConnectionFactory
     }
 
     /**
-     * Shut down the client when this factory is destroyed.
+     * Release a standalone client back to the pool.
+     * 
+     * @param client the client to release
+     */
+    void releaseClient(GlideClient client) {
+        if (client == null) {
+            return;
+        }
+        
+        // Return to pool if under max size, otherwise close it
+        if (!clientPool.offer(client)) {
+            try {
+                client.close();
+            } catch (Exception ex) {
+                // Log but don't throw during cleanup
+            }
+        }
+    }
+    
+    /**
+     * Release a cluster client back to the pool.
+     * 
+     * @param client the cluster client to release
+     */
+    void releaseClusterClient(GlideClusterClient client) {
+        if (client == null) {
+            return;
+        }
+        
+        // Return to pool if under max size, otherwise close it
+        if (!clusterClientPool.offer(client)) {
+            try {
+                client.close();
+            } catch (Exception ex) {
+                // Log but don't throw during cleanup
+            }
+        }
+    }
+
+    /**
+     * Shut down the factory when this factory is destroyed.
+     * Closes all pooled client instances.
      */
     @Override
     public void destroy() {
+        // Close all pooled standalone clients
+        GlideClient client;
+        while ((client = clientPool.poll()) != null) {
+            try {
+                client.close();
+            } catch (Exception ex) {
+                // Log but don't throw during cleanup
+            }
+        }
+        
+        // Close all pooled cluster clients
+        GlideClusterClient clusterClient;
+        while ((clusterClient = clusterClientPool.poll()) != null) {
+            try {
+                clusterClient.close();
+            } catch (Exception ex) {
+                // Log but don't throw during cleanup
+            }
+        }
+        
         initialized = false;
         running = false;
     }
@@ -432,7 +531,7 @@ public class ValkeyGlideConnectionFactory
     }
 
     /**
-     * Initializes the factory, starting the client.
+     * Initializes the factory, starting it.
      */
     @Override
     public void start() {
@@ -443,7 +542,7 @@ public class ValkeyGlideConnectionFactory
     }
     
     /**
-     * Stops the client.
+     * Stops the factory.
      */
     @Override
     public void stop() {

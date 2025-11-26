@@ -46,10 +46,13 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 // Imports from valkey-glide library
+import glide.api.GlideClient;
 import glide.api.models.GlideString;
+//import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
 
 /**
  * Connection to a Valkey server using Valkey-Glide client. The connection
@@ -60,11 +63,12 @@ import glide.api.models.GlideString;
 public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     protected final UnifiedGlideClient unifiedClient;
-    private final AtomicBoolean closed = new AtomicBoolean(false);
+    protected final @Nullable ValkeyGlideConnectionFactory factory;
+    protected final AtomicBoolean closed = new AtomicBoolean(false);
 
     private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
     private final Set<byte[]> watchedKeys = new HashSet<>();
-    private @Nullable Subscription subscription;
+    protected @Nullable Subscription subscription;
 
     // Command interfaces
     private final ValkeyGlideKeyCommands keyCommands;
@@ -84,12 +88,13 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
      * Each connection owns and manages its own client instance.
      *
      * @param unifiedClient unified client adapter (standalone or cluster)
-     * @param timeout command timeout in milliseconds
+     * @param factory the connection factory (optional, for pooling support)
      */
-    public ValkeyGlideConnection(UnifiedGlideClient unifiedClient) {
+    public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, @Nullable ValkeyGlideConnectionFactory factory) {
         Assert.notNull(unifiedClient, "UnifiedClient must not be null");
         
         this.unifiedClient = unifiedClient;
+        this.factory = factory;
         
         // Initialize command interfaces
         this.keyCommands = new ValkeyGlideKeyCommands(this);
@@ -180,11 +185,11 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     public void close() throws DataAccessException {
         try {
             if (closed.compareAndSet(false, true)) {
-                try {
-                    unifiedClient.close();
-                } catch (Exception ex) {
-                    throw new DataAccessException("Error closing Valkey-Glide connection", ex) {};
-                }
+                // Clean up server-side connection state before returning to pool
+                cleanupConnectionState();
+                
+                // Return client to pool instead of closing it
+                factory.releaseClient((GlideClient) unifiedClient.getNativeClient());
                 
                 if (subscription != null) {
                     subscription.close();
@@ -193,6 +198,37 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
+        }
+    }
+    
+    /**
+     * Cleans up server-side connection state before returning client to pool.
+     * This ensures the next connection gets a clean client without stale state.
+     */
+    protected void cleanupConnectionState() {
+        // Dont use RESET - we will destroy a configured state
+        // Use valkey-glide native pipe to selectively clear the state on the backends,
+        // adapter and connection object does not matter - they are being destroyed
+        // some state cannot be cleared (like stats) but this is acceptable if pooling to be used
+
+        GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
+
+        @SuppressWarnings("unchecked")
+        Callable<Void>[] actions = new Callable[] {
+//                () -> nativeClient.customCommand(new String[]{"DISCARD"}).get(),
+                () -> nativeClient.customCommand(new String[]{"UNWATCH"}).get(),
+                // () -> nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}).get(),
+                // () -> nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}).get(),
+                // () -> nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}).get()
+            };
+
+        for (Callable<Void> action : actions) {
+            try {
+                action.call();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+            }
         }
     }
 
