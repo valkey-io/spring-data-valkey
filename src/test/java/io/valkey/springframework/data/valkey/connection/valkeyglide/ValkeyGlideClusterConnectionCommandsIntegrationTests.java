@@ -17,9 +17,7 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import static io.valkey.springframework.data.valkey.connection.ClusterTestVariables.*;
 import static org.assertj.core.api.Assertions.*;
-import static org.awaitility.Awaitility.*;
 
-import java.time.Duration;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -260,28 +258,27 @@ public class ValkeyGlideClusterConnectionCommandsIntegrationTests extends Abstra
     }
 
     @Test
-    void testClusterGetClusterInfo() {
-        // Wait for all cluster nodes to be available
-        await().atMost(Duration.ofSeconds(5))
-                .untilAsserted(() -> {
-                    // Execute
-                    ClusterInfo clusterInfo = clusterConnection.clusterCommands().clusterGetClusterInfo();
-
-                    // Verify
-                    assertThat(clusterInfo).isNotNull();
-                    assertThat(clusterInfo.getState()).isNotNull();
-
-                    // Verify cluster is operational
-                    assertThat(clusterInfo.getState()).isIn("ok", "OK");
-
-                    // Verify all slots are assigned
-                    assertThat(clusterInfo.getSlotsAssigned()).isEqualTo(16384);
-                    assertThat(clusterInfo.getSlotsOk()).isEqualTo(16384);
-                    assertThat(clusterInfo.getSlotsFail()).isEqualTo(0);
-
-                    // Verify node count
-                    assertThat(clusterInfo.getKnownNodes()).isEqualTo(EXPECTED_TOTAL_NODES);
-                });
+    void testClusterGetClusterInfo() throws InterruptedException {
+        // Wait for cluster gossip to stabilize node count
+        Thread.sleep(1000);
+        
+        // Execute
+        ClusterInfo clusterInfo = clusterConnection.clusterCommands().clusterGetClusterInfo();
+        
+        // Verify
+        assertThat(clusterInfo).isNotNull();
+        assertThat(clusterInfo.getState()).isNotNull();
+        
+        // Verify cluster is operational
+        assertThat(clusterInfo.getState()).isIn("ok", "OK");
+        
+        // Verify all slots are assigned
+        assertThat(clusterInfo.getSlotsAssigned()).isEqualTo(16384);
+        assertThat(clusterInfo.getSlotsOk()).isEqualTo(16384);
+        assertThat(clusterInfo.getSlotsFail()).isEqualTo(0);
+        
+        // Verify node count
+        assertThat(clusterInfo.getKnownNodes()).isEqualTo(EXPECTED_TOTAL_NODES);
     }
 
     // ==================== Slot & Key Routing Commands ====================
