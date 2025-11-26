@@ -189,12 +189,67 @@ spring.data.valkey.valkeyglide.inflight-requests-limit=250
 spring.data.valkey.valkeyglide.client-az=us-west-2a
 ```
 
+## Testcontainers Support
+
+Use `@ServiceConnection` for automatic test configuration:
+
+```java
+@SpringBootTest
+@Testcontainers
+class MyIntegrationTest {
+
+    @Container
+    @ServiceConnection
+    static GenericContainer<?> valkey = new GenericContainer<>("valkey/valkey:latest")
+        .withExposedPorts(6379);
+
+    @Autowired
+    private ValkeyTemplate<String, String> valkeyTemplate;
+
+    @Test
+    void test() {
+        valkeyTemplate.opsForValue().set("key", "value");
+        assertThat(valkeyTemplate.opsForValue().get("key")).isEqualTo("value");
+    }
+}
+```
+
+## Docker Compose Support
+
+Spring Boot automatically detects and starts Valkey from `compose.yml`:
+
+```java
+@SpringBootTest
+class MyIntegrationTest {
+
+    @Autowired
+    private ValkeyTemplate<String, String> valkeyTemplate;
+
+    @Test
+    void test() {
+        valkeyTemplate.opsForValue().set("key", "value");
+        assertThat(valkeyTemplate.opsForValue().get("key")).isEqualTo("value");
+    }
+}
+```
+
+With a `compose.yml` in your project root:
+
+```yml
+services:
+  valkey:
+    image: 'valkey/valkey:latest'
+    ports:
+      - '6379:6379'
+```
+
 ## Building from Source
 
 ### Prerequisites
 
 - JDK 17 or higher
 - Maven 3.9 or higher (or use included wrapper)
+- Docker (for integration tests)
 
 ### Build Commands
 
