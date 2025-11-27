@@ -763,7 +763,7 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
 
         List<ByteRecord> byteRecords = new ArrayList<>(result.size());
         
-        // Sort entries by record ID timestamp to maintain correct order
+        // Sort entries by record ID (timestamp-sequence) to maintain correct order
         List<Map.Entry<?, ?>> sortedEntries = new ArrayList<>(result.entrySet());
         sortedEntries.sort((e1, e2) -> {
             // WORKAROUND: ClusterValue.of() bug converts GlideString to String
@@ -781,10 +781,22 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
                 id2 = e2.getKey().toString();
             }
             
-            // Extract timestamp part (before the dash)
-            long timestamp1 = Long.parseLong(id1.split("-")[0]);
-            long timestamp2 = Long.parseLong(id2.split("-")[0]);
+            // Compare full record IDs: "timestamp-sequence"
+            String[] parts1 = id1.split("-");
+            String[] parts2 = id2.split("-");
+            
+            long timestamp1 = Long.parseLong(parts1[0]);
+            long timestamp2 = Long.parseLong(parts2[0]);
+            
             int comparison = Long.compare(timestamp1, timestamp2);
+            
+            // If timestamps are equal, compare sequence numbers
+            if (comparison == 0 && parts1.length > 1 && parts2.length > 1) {
+                long seq1 = Long.parseLong(parts1[1]);
+                long seq2 = Long.parseLong(parts2[1]);
+                comparison = Long.compare(seq1, seq2);
+            }
+            
             return reverseOrder ? -comparison : comparison;
         });
 

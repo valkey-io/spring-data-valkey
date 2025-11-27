@@ -104,6 +104,13 @@ public interface ValkeyGlideClientConfiguration {
     BackoffStrategy getReconnectStrategy();
 
     /**
+     * Get the maximum pool size for client pooling.
+     * 
+     * @return The maximum pool size. Default is 8.
+     */
+    int getMaxPoolSize();
+
+    /**
      * Get client options for mode-specific configurations.
      * Placeholder for future mode-specific extensions.
      * 
@@ -123,6 +130,7 @@ public interface ValkeyGlideClientConfiguration {
         private @Nullable Integer inflightRequestsLimit;
         private @Nullable String clientAZ;
         private @Nullable BackoffStrategy reconnectStrategy;
+        private int maxPoolSize = 8; // Default pool size
         
         ValkeyGlideClientConfigurationBuilder() {}
         
@@ -203,6 +211,17 @@ public interface ValkeyGlideClientConfiguration {
         }
         
         /**
+         * Set the maximum pool size for client pooling.
+         * 
+         * @param maxPoolSize the maximum number of clients in the pool.
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder maxPoolSize(int maxPoolSize) {
+            this.maxPoolSize = maxPoolSize;
+            return this;
+        }
+        
+        /**
          * Build the {@link ValkeyGlideClientConfiguration}.
          * 
          * @return a new {@link ValkeyGlideClientConfiguration} instance.
@@ -215,7 +234,8 @@ public interface ValkeyGlideClientConfiguration {
                 readFrom,
                 inflightRequestsLimit,
                 clientAZ,
-                reconnectStrategy
+                reconnectStrategy,
+                maxPoolSize
             );
         }
     }
