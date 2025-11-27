@@ -30,7 +30,7 @@ import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
 /**
- * Multi-threaded performance test.
+ * Multi-threaded performance test for ValkeyTemplate operations across different clients.
  */
 public class MultiThreadedPerformanceTest {
 
@@ -45,7 +45,7 @@ public class MultiThreadedPerformanceTest {
 		System.out.println("Client: " + clientType);
 		System.out.println("Threads: " + THREADS);
 		System.out.println("Operations per thread: " + OPERATIONS_PER_THREAD);
-		System.out.println("Total expected operations: " + TOTAL_OPERATIONS);
+		System.out.println("Total operations: " + TOTAL_OPERATIONS);
 		System.out.println("----------------------------------------");
 
 		ValkeyConnectionFactory factory = createConnectionFactory(clientType);

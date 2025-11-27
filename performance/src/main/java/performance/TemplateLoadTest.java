@@ -44,7 +44,7 @@ public class TemplateLoadTest {
         System.out.println("Client: " + client);
         System.out.println("Threads: " + threads);
         System.out.println("Operations per thread: " + operations);
-        System.out.println("Total expected operations: " + totalExpected);
+        System.out.println("Total operations: " + totalExpected);
         System.out.println("----------------------------------------");
 
         ValkeyConnectionFactory factory = createConnectionFactory(client);
@@ -71,7 +71,7 @@ public class TemplateLoadTest {
     }
 
     private static void runLoadTest(ValkeyConnectionFactory factory, int threads, 
-                                   int operations, int totalExpected) throws InterruptedException {
+            int operations, int totalExpected) throws InterruptedException {
         long startTime = System.currentTimeMillis();
 
         ExecutorService executorService = Executors.newFixedThreadPool(threads);

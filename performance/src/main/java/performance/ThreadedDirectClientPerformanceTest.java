@@ -28,9 +28,10 @@ import redis.clients.jedis.Jedis;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Multi-Threaded direct client performance test.
+ * Multi-threaded direct client performance test across multiple threads.
  */
 public class ThreadedDirectClientPerformanceTest {
 
@@ -64,6 +65,9 @@ public class ThreadedDirectClientPerformanceTest {
 		
 		try (GlideClient client = GlideClient.createClient(config).get()) {
 			ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
+			AtomicInteger setSuccess = new AtomicInteger(0);
+			AtomicInteger getSuccess = new AtomicInteger(0);
+			AtomicInteger deleteSuccess = new AtomicInteger(0);
 			
 			try {
 				// SET operations
@@ -73,6 +77,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							client.set(GlideString.of(KEY_PREFIX + id), GlideString.of("value" + id)).get();
+							setSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -85,7 +90,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.shutdown();
 				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long setTime = System.nanoTime() - start;
-				printResult("SET", setTime);
+				printResult("SET", setTime, setSuccess.get());
 
 				// GET operations
 				executorService = Executors.newFixedThreadPool(THREADS);
@@ -95,6 +100,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							client.get(GlideString.of(KEY_PREFIX + id)).get();
+							getSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -107,7 +113,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.shutdown();
 				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long getTime = System.nanoTime() - start;
-				printResult("GET", getTime);
+				printResult("GET", getTime, getSuccess.get());
 
 				// DELETE operations
 				executorService = Executors.newFixedThreadPool(THREADS);
@@ -117,6 +123,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							client.del(new GlideString[]{GlideString.of(KEY_PREFIX + id)}).get();
+							deleteSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -129,7 +136,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.shutdown();
 				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long deleteTime = System.nanoTime() - start;
-				printResult("DELETE", deleteTime);
+				printResult("DELETE", deleteTime, deleteSuccess.get());
 			} finally {
 				if (!executorService.isShutdown()) {
 					executorService.shutdown();
@@ -144,6 +151,9 @@ public class ThreadedDirectClientPerformanceTest {
 		try (StatefulRedisConnection<String, String> connection = client.connect()) {
 			RedisCommands<String, String> commands = connection.sync();
 			ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
+			AtomicInteger setSuccess = new AtomicInteger(0);
+			AtomicInteger getSuccess = new AtomicInteger(0);
+			AtomicInteger deleteSuccess = new AtomicInteger(0);
 			
 			try {
 				// SET operations
@@ -153,6 +163,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							commands.set(KEY_PREFIX + id, "value" + id);
+							setSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -165,7 +176,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.shutdown();
 				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long setTime = System.nanoTime() - start;
-				printResult("SET", setTime);
+				printResult("SET", setTime, setSuccess.get());
 
 				// GET operations
 				executorService = Executors.newFixedThreadPool(THREADS);
@@ -175,6 +186,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							commands.get(KEY_PREFIX + id);
+							getSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -187,7 +199,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.shutdown();
 				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long getTime = System.nanoTime() - start;
-				printResult("GET", getTime);
+				printResult("GET", getTime, getSuccess.get());
 
 				// DELETE operations
 				executorService = Executors.newFixedThreadPool(THREADS);
@@ -197,6 +209,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							commands.del(KEY_PREFIX + id);
+							deleteSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -209,7 +222,7 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.shutdown();
 				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long deleteTime = System.nanoTime() - start;
-				printResult("DELETE", deleteTime);
+				printResult("DELETE", deleteTime, deleteSuccess.get());
 			} finally {
 				if (!executorService.isShutdown()) {
 					executorService.shutdown();
@@ -221,8 +234,11 @@ public class ThreadedDirectClientPerformanceTest {
 	}
 
 	private static void testJedis() throws Exception {
-		// Note: Jedis connections are not thread-safe, so we need one per thread
+		// Jedis connections are not thread-safe, so we need one per thread
 		ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
+		AtomicInteger setSuccess = new AtomicInteger(0);
+		AtomicInteger getSuccess = new AtomicInteger(0);
+		AtomicInteger deleteSuccess = new AtomicInteger(0);
 		
 		try {
 			// SET operations
@@ -233,6 +249,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							jedis.set(KEY_PREFIX + id, "value" + id);
+							setSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -246,7 +263,7 @@ public class ThreadedDirectClientPerformanceTest {
 			executorService.shutdown();
 			executorService.awaitTermination(10, TimeUnit.SECONDS);
 			long setTime = System.nanoTime() - start;
-			printResult("SET", setTime);
+			printResult("SET", setTime, setSuccess.get());
 
 			// GET operations
 			executorService = Executors.newFixedThreadPool(THREADS);
@@ -257,6 +274,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							jedis.get(KEY_PREFIX + id);
+							getSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -270,7 +288,7 @@ public class ThreadedDirectClientPerformanceTest {
 			executorService.shutdown();
 			executorService.awaitTermination(10, TimeUnit.SECONDS);
 			long getTime = System.nanoTime() - start;
-			printResult("GET", getTime);
+			printResult("GET", getTime, getSuccess.get());
 
 			// DELETE operations
 			executorService = Executors.newFixedThreadPool(THREADS);
@@ -281,6 +299,7 @@ public class ThreadedDirectClientPerformanceTest {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							jedis.del(KEY_PREFIX + id);
+							deleteSuccess.incrementAndGet();
 						} catch (Exception e) {
 							// Ignore
 						}
@@ -294,7 +313,7 @@ public class ThreadedDirectClientPerformanceTest {
 			executorService.shutdown();
 			executorService.awaitTermination(10, TimeUnit.SECONDS);
 			long deleteTime = System.nanoTime() - start;
-			printResult("DELETE", deleteTime);
+			printResult("DELETE", deleteTime, deleteSuccess.get());
 		} finally {
 			if (!executorService.isShutdown()) {
 				executorService.shutdown();
@@ -302,8 +321,9 @@ public class ThreadedDirectClientPerformanceTest {
 		}
 	}
 
-	private static void printResult(String operation, long duration) {
-		System.out.printf("%s:    %,d ops/sec (%.2f ms total)%n", 
-			operation, (long) (TOTAL_OPERATIONS / (duration / 1_000_000_000.0)), duration / 1_000_000.0);
+	private static void printResult(String operation, long duration, int successful) {
+		System.out.printf("%s:    %,d ops/sec (%.2f ms total), %.1f%% successful%n",
+			operation, (long) (TOTAL_OPERATIONS / (duration / 1_000_000_000.0)), duration / 1_000_000.0,
+			(successful * 100.0 / TOTAL_OPERATIONS));
 	}
 }
