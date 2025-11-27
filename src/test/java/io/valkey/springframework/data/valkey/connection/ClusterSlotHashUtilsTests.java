@@ -51,20 +51,26 @@ public class ClusterSlotHashUtilsTests {
 	void localCalculationShouldMatchServers() {
 
 		ConnectionPool pool = cluster.getClusterNodes().values().iterator().next();
+		Jedis jedis = new Jedis(pool.getResource());
 
-		// Use try-with-resources to ensure connection is gracefully closed
-		try (Jedis jedis = new Jedis(pool.getResource())) {
-			for (int i = 0; i < 100; i++) {
+		for (int i = 0; i < 100; i++) {
 
-				String key = randomString();
-				int slot = ClusterSlotHashUtil.calculateSlot(key);
-				Long serverSlot = jedis.clusterKeySlot(key);
+			String key = randomString();
+			int slot = ClusterSlotHashUtil.calculateSlot(key);
 
-				assertThat(slot)
-						.describedAs("Expected slot for key '%s' to be %s but server calculated %s", key, slot, serverSlot)
-						.isEqualTo(serverSlot.intValue());
+			// Guard against closed connection
+			if (!jedis.isConnected()) {
+				jedis.connect();
 			}
+
+			Long serverSlot = jedis.clusterKeySlot(key);
+
+			assertThat(slot)
+					.describedAs("Expected slot for key '%s' to be %s but server calculated %s", key, slot, serverSlot)
+					.isEqualTo(serverSlot.intValue());
 		}
+
+		jedis.close();
 	}
 
 	@Test
@@ -86,6 +92,11 @@ public class ClusterSlotHashUtilsTests {
 			assertThat(slot2)
 				.describedAs("Expected slot for prefixed keys '%s' and '%s' to be %s but was  %s.", key1, key2, slot1, slot2)
 				.isEqualTo(slot1);
+
+			// Guard against closed connection
+			if (!jedis.isConnected()) {
+				jedis.connect();
+			}
 
 			Long serverSlot1 = jedis.clusterKeySlot(key1);
 			Long serverSlot2 = jedis.clusterKeySlot(key2);
