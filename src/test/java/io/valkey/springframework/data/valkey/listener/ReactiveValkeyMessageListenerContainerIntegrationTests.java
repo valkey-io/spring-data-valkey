@@ -334,8 +334,13 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 
 		c2Subscription.dispose();
 
-		// Wait for subscription to dispose before sending messsage
-		Thread.sleep(1000);
+		Thread.sleep(500);
+		
+		// Clear any remaining messages after disposal (which is async)
+		int drainCount = 0;
+		while (c2Collector.poll() != null && drainCount++ < 100) {
+			// Drain with safety limit
+		}
 
 		doPublish(CHANNEL1.getBytes(), MESSAGE.getBytes());
 
