@@ -116,6 +116,17 @@ $ ./mvnw clean install
 
 If you want to build with the regular `mvn` command, you will need [Maven v3.8.0 or above](https://maven.apache.org/run-maven/index.html).
 
+## Generating a Release
+
+In order to generate a new release, create and push a tag to the main branch.  This will build and test the project and add the artifacts to a draft release.  Verify the release and then publish it.
+
+For example:
+
+```bash
+$ git tag v1.0
+$ git push origin v1.0
+```
+
 ## Migration from Spring Data Redis
 
 If you're migrating from Spring Data Redis, see the [Migration Guide](MIGRATION.md) for detailed instructions on updating package names, class names, and configuration.

@@ -299,7 +299,7 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
 
     @Override
     public void close() throws ExecutionException {
-        glideClusterClient.close();
+        // The native client might be pooled - dont close
     }
 
     @Override

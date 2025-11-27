@@ -1,5 +1,4 @@
 name: CI
-description: Continuous Integration for Spring Data Valkey
 
 on:
   push:
@@ -74,7 +73,7 @@ jobs:
       - name: Cache Maven dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.m2/repository
+          path: ~/.m2/spring-data-valkey
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
@@ -98,7 +97,7 @@ jobs:
         run: |
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
-            -Dmaven.repo.local=$HOME/.m2/spring-data-redis \
+            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             test -Pnone \
             -DrunLongTests=true \
             -Dvalkey.server.version=${{ matrix.version }} \
@@ -127,7 +126,7 @@ jobs:
       - name: Cache Maven dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.m2/repository
+          path: ~/.m2/spring-data-valkey
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
@@ -153,7 +152,7 @@ jobs:
         run: |
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
-            -Dmaven.repo.local=$HOME/.m2/spring-data-redis \
+            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             test -Pruntimehints \
             -DrunLongTests=false \
             -U -B

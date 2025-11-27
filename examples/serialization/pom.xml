@@ -7,7 +7,7 @@
 	<parent>
 		<groupId>io.valkey.springframework.data</groupId>
 		<artifactId>spring-data-valkey-examples</artifactId>
-		<version>3.5.1</version>
+		<version>1.0.0</version>
 	</parent>
 
 	<artifactId>spring-data-valkey-example-serialization</artifactId>
@@ -15,17 +15,9 @@
 
 	<dependencies>
 		<dependency>
-			<groupId>io.valkey.springframework.data</groupId>
-			<artifactId>spring-data-valkey</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.valkey</groupId>
-			<artifactId>valkey-glide</artifactId>
-			<classifier>${os.detected.classifier}</classifier>
-		</dependency>
-		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
+			<version>2.15.2</version>
 		</dependency>
 	</dependencies>
 

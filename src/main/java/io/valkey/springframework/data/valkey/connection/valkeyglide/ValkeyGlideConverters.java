@@ -59,7 +59,7 @@ public abstract class ValkeyGlideConverters {
          * a strongly typed value of type {@code R}.
          *
          * @param item The raw driver result, typically a low-level
-         *                     representation like Number, byte[], or List<Object>.
+         *                     representation like Number, byte[], or {@code List<Object>}.
          * @return The mapped, higher-level type I.
          */
         R map(I item);
@@ -265,9 +265,9 @@ public abstract class ValkeyGlideConverters {
     }
 
     /**
-     * Convert result to Set<byte[]>.
+     * Convert result to {@code Set<byte[]>}.
      *
-     * @param result The command result
+     * @param glideResult The command result
      * @return Set of byte arrays
      */
     @Nullable
@@ -419,9 +419,9 @@ public abstract class ValkeyGlideConverters {
     }
 
     /**
-     * Convert result to List<byte[]>.
+     * Convert result to {@code List<byte[]>}.
      *
-     * @param result The command result
+     * @param glideResult The command result
      * @return List of byte arrays
      */
     @Nullable

@@ -36,8 +36,6 @@ import io.valkey.springframework.data.valkey.core.ScanOptions;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
-import kotlin.reflect.jvm.internal.ReflectProperties.Val;
-
 import glide.api.models.GlideString;
 
 /**
