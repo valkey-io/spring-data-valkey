@@ -59,7 +59,7 @@ class StandaloneGlideClientAdapter implements UnifiedGlideClient {
 
     @Override
     public void close() throws ExecutionException {
-        glideClient.close();
+        // The native client might be pooled - dont close
     }
 
     @Override

@@ -10,8 +10,8 @@
 		<version>1.0.0</version>
 	</parent>
 
-	<artifactId>spring-data-valkey-example-quickstart</artifactId>
-	<name>Spring Data Valkey - Quickstart Example</name>
+	<artifactId>spring-data-valkey-example-cluster</artifactId>
+	<name>Spring Data Valkey - Cluster Example</name>
 
 	<build>
 		<plugins>
@@ -19,7 +19,7 @@
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>exec-maven-plugin</artifactId>
 				<configuration>
-					<mainClass>example.quickstart.QuickstartExample</mainClass>
+					<mainClass>example.cluster.ClusterExample</mainClass>
 				</configuration>
 			</plugin>
 		</plugins>

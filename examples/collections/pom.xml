@@ -7,23 +7,11 @@
 	<parent>
 		<groupId>io.valkey.springframework.data</groupId>
 		<artifactId>spring-data-valkey-examples</artifactId>
-		<version>3.5.1</version>
+		<version>1.0.0</version>
 	</parent>
 
 	<artifactId>spring-data-valkey-example-collections</artifactId>
 	<name>Spring Data Valkey - Collections Example</name>
-
-	<dependencies>
-		<dependency>
-			<groupId>io.valkey.springframework.data</groupId>
-			<artifactId>spring-data-valkey</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>io.valkey</groupId>
-			<artifactId>valkey-glide</artifactId>
-			<classifier>${os.detected.classifier}</classifier>
-		</dependency>
-	</dependencies>
 
 	<build>
 		<plugins>

@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -39,6 +40,7 @@ import glide.api.models.GlideString;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
+import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.connection.ClusterInfo;
 import io.valkey.springframework.data.valkey.connection.ClusterTopology;
 import io.valkey.springframework.data.valkey.connection.ClusterTopologyProvider;
@@ -81,11 +83,15 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
     private final ValkeyGlideClusterSetCommands clusterSetCommands;
 
     public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter) {
-        this(clusterAdapter, Duration.ofMillis(100));
+        this(clusterAdapter, null, Duration.ofMillis(100));
     }
 
-    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, Duration cacheTimeout) {
-        super(clusterAdapter);
+    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, @Nullable ValkeyGlideConnectionFactory factory) {
+        this(clusterAdapter, factory, Duration.ofMillis(100));
+    }
+
+    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, @Nullable ValkeyGlideConnectionFactory factory, Duration cacheTimeout) {
+        super(clusterAdapter, factory);
         Assert.notNull(cacheTimeout, "CacheTimeout must not be null!");
         
         this.clusterAdapter = clusterAdapter;
@@ -99,6 +105,38 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
 
     public ClusterGlideClientAdapter getClusterAdapter() {
         return clusterAdapter;
+    }
+
+    /**
+     * Cleans up server-side connection state before returning client to pool.
+     * This ensures the next connection gets a clean client without stale state.
+     */
+    @Override
+    protected void cleanupConnectionState() {
+        // Dont use RESET - we will destroy the configured state
+        // Use valkey-glide native pipe to selectively clear the state on the backends,
+        // adapter and connection object do not matter - they are being destroyed
+        // some state cannot be cleared (like stats) but this is acceptable if pooling to be used
+
+        GlideClusterClient nativeClient = (GlideClusterClient) unifiedClient.getNativeClient();
+
+        @SuppressWarnings("unchecked")
+        Callable<Void>[] actions = new Callable[] {
+                () -> nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES).get(),
+                // TODO: Uncomment when dynamic pubsub is implemented
+                // () -> nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get(),
+                // () -> nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get(),
+                // () -> nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get()
+            };
+
+        for (Callable<Void> action : actions) {
+            try {
+                action.call();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+            }
+        }
     }
 
     @Override
