@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>io.valkey.springframework.data</groupId>
+	<artifactId>spring-data-valkey-performance</artifactId>
+	<version>1.0.0</version>
+	<packaging>pom</packaging>
+
+	<name>Spring Data Valkey - Performance Tests</name>
+	<description>Performance benchmarks for Spring Data Valkey operations across different clients</description>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.release>17</maven.compiler.release>
+		<spring-data-valkey.version>3.5.1</spring-data-valkey.version>
+		<valkey-glide.version>2.1.1</valkey-glide.version>
+		<lettuce.version>6.4.0.RELEASE</lettuce.version>
+		<jedis.version>5.2.0</jedis.version>
+		<slf4j.version>2.0.9</slf4j.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>io.valkey.springframework.data</groupId>
+			<artifactId>spring-data-valkey</artifactId>
+			<version>${spring-data-valkey.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.valkey</groupId>
+			<artifactId>valkey-glide</artifactId>
+			<version>${valkey-glide.version}</version>
+			<classifier>${os.detected.classifier}</classifier>
+		</dependency>
+		<dependency>
+			<groupId>io.lettuce</groupId>
+			<artifactId>lettuce-core</artifactId>
+			<version>${lettuce.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+			<version>${jedis.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-simple</artifactId>
+			<version>${slf4j.version}</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<extensions>
+			<extension>
+				<groupId>kr.motd.maven</groupId>
+				<artifactId>os-maven-plugin</artifactId>
+				<version>1.7.1</version>
+			</extension>
+		</extensions>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.11.0</version>
+				<configuration>
+					<release>${maven.compiler.release}</release>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.1.0</version>
+				<configuration>
+					<mainClass>performance.TemplatePerformanceTest</mainClass>
+					<cleanupDaemonThreads>false</cleanupDaemonThreads>
+				</configuration>
+				<executions>
+					<execution>
+						<id>threaded-test</id>
+						<configuration>
+							<mainClass>performance.MultiThreadedPerformanceTest</mainClass>
+						</configuration>
+					</execution>
+					<execution>
+						<id>direct-test</id>
+						<configuration>
+							<mainClass>performance.DirectClientPerformanceTest</mainClass>
+						</configuration>
+					</execution>
+					<execution>
+						<id>threaded-direct-test</id>
+						<configuration>
+							<mainClass>performance.ThreadedDirectClientPerformanceTest</mainClass>
+						</configuration>
+					</execution>
+					<execution>
+						<id>load-test</id>
+						<configuration>
+							<mainClass>performance.TemplateLoadTest</mainClass>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>
