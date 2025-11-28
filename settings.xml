@@ -1,9 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0
                       https://maven.apache.org/xsd/settings-1.0.0.xsd">
 
 	<servers>
+		<!-- OSSRH (Maven Central) -->
+		<server>
+			<id>ossrh</id>
+			<username>${env.OSSRH_USERNAME}</username>
+			<password>${env.OSSRH_PASSWORD}</password>
+		</server>
+		
+		<!-- Spring Artifactory -->
 		<server>
 			<id>spring-plugins-release</id>
 			<username>${env.ARTIFACTORY_USR}</username>
@@ -25,5 +34,19 @@
 			<password>${env.ARTIFACTORY_PSW}</password>
 		</server>
 	</servers>
+
+	<profiles>
+		<profile>
+			<id>ossrh</id>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<properties>
+				<gpg.executable>gpg</gpg.executable>
+				<gpg.keyname>${env.GPG_KEYNAME}</gpg.keyname>
+				<gpg.passphrase>${env.GPG_PASSPHRASE}</gpg.passphrase>
+			</properties>
+		</profile>
+	</profiles>
 
 </settings>
