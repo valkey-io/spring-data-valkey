@@ -5,7 +5,7 @@
 
 	<groupId>io.valkey.springframework.data</groupId>
 	<artifactId>spring-data-valkey</artifactId>
-	<version>3.5.1</version>
+	<version>0.1.0</version>
 
 	<name>Spring Data Valkey</name>
 	<description>Spring Data module for Valkey</description>
@@ -32,14 +32,14 @@
 	</properties>
 
 	<scm>
-		<connection>scm:git:https://github.com/ikolomi/spring-data-valkey.git</connection>
-		<developerConnection>scm:git:git@github.com:ikolomi/spring-data-valkey.git</developerConnection>
-		<url>https://github.com/ikolomi/spring-data-valkey</url>
+		<connection>scm:git:https://github.com/valkey-io/spring-data-valkey.git</connection>
+		<developerConnection>scm:git:git@github.com:valkey-io/spring-data-valkey.git</developerConnection>
+		<url>https://github.com/valkey-io/spring-data-valkey</url>
 	</scm>
 
 	<issueManagement>
 		<system>GitHub</system>
-		<url>https://github.com/ikolomi/spring-data-valkey/issues</url>
+		<url>https://github.com/valkey-io/spring-data-valkey/issues</url>
 	</issueManagement>
 
 	<dependencyManagement>

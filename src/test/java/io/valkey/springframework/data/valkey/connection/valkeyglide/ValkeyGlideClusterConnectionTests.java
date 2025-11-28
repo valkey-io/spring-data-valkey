@@ -1687,7 +1687,7 @@ public class ValkeyGlideClusterConnectionTests implements ClusterConnectionTests
 			nativeConnection.set(KEY_2, VALUE_2).get();
 
 			// TODO: Validate keys and values when SCAN across cluster nodes is supported
-			// https://github.com/ikolomi/spring-data-valkey/issues/21
+			// https://github.com/valkey-io/spring-data-valkey/issues/21
 			assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
 					.isThrownBy(() -> clusterConnection.scan(ScanOptions.NONE));
 

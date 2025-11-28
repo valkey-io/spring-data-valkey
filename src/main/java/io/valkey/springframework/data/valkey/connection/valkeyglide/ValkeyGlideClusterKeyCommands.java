@@ -52,7 +52,7 @@ public class ValkeyGlideClusterKeyCommands extends ValkeyGlideKeyCommands {
 
     @Override
     public Cursor<byte[]> scan(ScanOptions options) {
-        // TODO: https://github.com/ikolomi/spring-data-valkey/issues/21
+        // TODO: https://github.com/valkey-io/spring-data-valkey/issues/21
 		throw new InvalidDataAccessApiUsageException("Scan is not supported across multiple nodes within a cluster");
     }
 

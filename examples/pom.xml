@@ -29,7 +29,7 @@
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.release>17</maven.compiler.release>
-		<spring-data-valkey.version>3.5.1</spring-data-valkey.version>
+		<spring-data-valkey.version>0.1.0</spring-data-valkey.version>
 		<valkey-glide.version>2.1.1</valkey-glide.version>
 		<slf4j.version>2.0.9</slf4j.version>
 	</properties>
