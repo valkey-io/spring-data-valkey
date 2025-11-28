@@ -13,7 +13,7 @@ This module is purpose-built to provide the best possible experience when using 
 * Exception translation to Spring's portable Data Access exception hierarchy for driver exceptions.
 * `ValkeyTemplate` that provides a high level abstraction for performing various Valkey operations, exception translation and serialization support.
 * Pubsub support (such as a MessageListenerContainer for message-driven POJOs). Available with Jedis and Lettuce, with Valkey GLIDE support WIP for version 1.0.0.
-* Valkey Sentinel and Valkey Cluster support. Available with Jedis and Lettuce, with Valkey GLIDE support planned in the future
+* Valkey Sentinel and Valkey Cluster support. Available with Jedis and Lettuce, with Valkey GLIDE support planned in the future.
 * Reactive API using Lettuce.
 * JDK, String, JSON and Spring Object/XML mapping serializers.
 * JDK Collection implementations on top of Valkey.
