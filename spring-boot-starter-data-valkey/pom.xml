@@ -5,7 +5,7 @@
 
 	<groupId>io.valkey.springframework.boot</groupId>
 	<artifactId>spring-boot-starter-data-valkey</artifactId>
-	<version>3.5.1</version>
+	<version>0.1.0</version>
 	<packaging>jar</packaging>
 
 	<name>Spring Boot Starter for Valkey</name>
@@ -17,7 +17,7 @@
 		<maven.compiler.release>17</maven.compiler.release>
 
 		<spring-boot.version>3.5.1</spring-boot.version>
-		<spring-data-valkey.version>3.5.1</spring-data-valkey.version>
+		<spring-data-valkey.version>0.1.0</spring-data-valkey.version>
 		<valkey.glide.version>2.1.1</valkey.glide.version>
 		<lettuce.version>6.6.0.RELEASE</lettuce.version>
 		<jedis.version>6.0.0</jedis.version>
