@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration;
@@ -147,6 +149,15 @@ class ValkeyAutoConfigurationTests {
 				assertThat(getUserName(cf)).isEqualTo("user");
 				assertThat(cf.getPassword()).isEqualTo(":pass:word");
 			});
+	}
+
+	@Test
+	void testValkeyConfigurationWithCustomPoolSettings() {
+		this.contextRunner.withPropertyValues("spring.data.valkey.valkeyglide.max-pool-size=16").run((context) -> {
+			ValkeyGlideConnectionFactory cf = context.getBean(ValkeyGlideConnectionFactory.class);
+			ValkeyGlideClientConfiguration config = cf.getClientConfiguration();
+			assertThat(config.getMaxPoolSize()).isEqualTo(16);
+		});
 	}
 
 	@Test
@@ -371,25 +382,22 @@ class ValkeyAutoConfigurationTests {
 			});
 	}
 
-	// TODO: Uncomment when ValkeyGlideConnectionFactory supports setExecutor()
-	// @Test
-	// void shouldUsePlatformThreadsByDefault() {
-	// 	this.contextRunner.run((context) -> {
-	// 		ValkeyGlideConnectionFactory factory = context.getBean(ValkeyGlideConnectionFactory.class);
-	// 		assertThat(factory).extracting("executor").isNull();
-	// 	});
-	// }
+	@Test
+	void shouldUsePlatformThreadsByDefault() {
+		this.contextRunner.run((context) -> {
+			ValkeyGlideConnectionFactory factory = context.getBean(ValkeyGlideConnectionFactory.class);
+			assertThat(factory).extracting("executor").isNull();
+		});
+	}
 
-	// @Test
-	// @EnabledForJreRange(min = JRE.JAVA_21)
-	// void shouldUseVirtualThreadsIfEnabled() {
-	// 	this.contextRunner.withPropertyValues("spring.threads.virtual.enabled=true").run((context) -> {
-	// 		ValkeyGlideConnectionFactory factory = context.getBean(ValkeyGlideConnectionFactory.class);
-	// 		assertThat(factory).extracting("executor")
-	// 			.satisfies((executor) -> SimpleAsyncTaskExecutorAssert.assertThat((SimpleAsyncTaskExecutor) executor)
-	// 				.usesVirtualThreads());
-	// 	});
-	// }
+	@Test
+	@EnabledForJreRange(min = JRE.JAVA_21)
+	void shouldUseVirtualThreadsIfEnabled() {
+		this.contextRunner.withPropertyValues("spring.threads.virtual.enabled=true").run((context) -> {
+			ValkeyGlideConnectionFactory factory = context.getBean(ValkeyGlideConnectionFactory.class);
+			assertThat(factory).extracting("executor").isNotNull();
+		});
+	}
 
 	private ContextConsumer<AssertableApplicationContext> assertClientOptions(
 			Consumer<ValkeyGlideClientConfiguration> configConsumer) {

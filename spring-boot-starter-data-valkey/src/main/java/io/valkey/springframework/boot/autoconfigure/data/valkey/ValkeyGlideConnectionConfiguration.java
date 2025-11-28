@@ -21,8 +21,11 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.thread.Threading;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnThreading;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.util.StringUtils;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -51,24 +54,23 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(ValkeyConnectionFactory.class)
-	// @ConditionalOnThreading(Threading.PLATFORM)
+	@ConditionalOnThreading(Threading.PLATFORM)
 	ValkeyGlideConnectionFactory valkeyConnectionFactory(
 			ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
 		return createValkeyConnectionFactory(builderCustomizers);
 	}
 
-	// TODO: Uncomment when ValkeyGlideConnectionFactory supports setExecutor() (see also ConditionalOnThreading for valkeyConnectionFactory)
-	// @Bean
-	// @ConditionalOnMissingBean(ValkeyConnectionFactory.class)
-	// @ConditionalOnThreading(Threading.VIRTUAL)
-	// ValkeyGlideConnectionFactory valkeyConnectionFactoryVirtualThreads(
-	// 		ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
-	// 	ValkeyGlideConnectionFactory factory = createValkeyConnectionFactory(builderCustomizers);
-	// 	SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("valkey-");
-	// 	executor.setVirtualThreads(true);
-	// 	factory.setExecutor(executor);
-	// 	return factory;
-	// }
+	@Bean
+	@ConditionalOnMissingBean(ValkeyConnectionFactory.class)
+	@ConditionalOnThreading(Threading.VIRTUAL)
+	ValkeyGlideConnectionFactory valkeyConnectionFactoryVirtualThreads(
+			ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
+		ValkeyGlideConnectionFactory factory = createValkeyConnectionFactory(builderCustomizers);
+		SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("valkey-");
+		executor.setVirtualThreads(true);
+		factory.setExecutor(executor);
+		return factory;
+	}
 
 	private ValkeyGlideConnectionFactory createValkeyConnectionFactory(
 			ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
@@ -113,6 +115,9 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 		}
 		if (valkeyGlideProperties.getClientAZ() != null) {
 			builder.clientAZ(valkeyGlideProperties.getClientAZ());
+		}
+		if (valkeyGlideProperties.getMaxPoolSize() != null) {
+			builder.maxPoolSize(valkeyGlideProperties.getMaxPoolSize());
 		}
 
 		builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));

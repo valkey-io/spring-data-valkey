@@ -601,6 +601,11 @@ public class ValkeyProperties {
 		 */
 		private String clientAZ;
 
+		/**
+		 * Maximum number of connections in the pool.
+		 */
+		private Integer maxPoolSize = 8;
+
 		private final Cluster cluster = new Cluster();
 
 		public Duration getConnectionTimeout() {
@@ -633,6 +638,14 @@ public class ValkeyProperties {
 
 		public void setClientAZ(String clientAZ) {
 			this.clientAZ = clientAZ;
+		}
+
+		public Integer getMaxPoolSize() {
+			return this.maxPoolSize;
+		}
+
+		public void setMaxPoolSize(Integer maxPoolSize) {
+			this.maxPoolSize = maxPoolSize;
 		}
 
 		public Cluster getCluster() {

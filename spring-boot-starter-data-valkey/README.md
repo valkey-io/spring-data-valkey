@@ -7,7 +7,6 @@ This starter simplifies the setup and configuration of Valkey in Spring Boot app
 ## Current Limitations
 
 - Valkey GLIDE Sentinel support
-- Valkey GLIDE connection pooling
 
 ## Installation
 
@@ -132,7 +131,8 @@ spring.data.valkey.client-type=valkeyglide
 ### Connection Pooling
 
 ```properties
-# Valkey GLIDE does not support pooling at this time
+# Valkey GLIDE pooling
+spring.data.valkey.valkeyglide.max-pool-size=8
 
 # Lettuce pooling
 spring.data.valkey.lettuce.pool.enabled=true

@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutionException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
@@ -81,6 +82,8 @@ public class ValkeyGlideConnectionFactory
     
     // Connection pools for client reuse
     private final BlockingQueue<Object> clientPool;
+    
+    private @Nullable AsyncTaskExecutor executor;
     
     private boolean initialized = false;
     private boolean running = false;
@@ -555,6 +558,17 @@ public class ValkeyGlideConnectionFactory
     @Nullable
     public ValkeySentinelConfiguration getSentinelConfiguration() {
         throw new UnsupportedOperationException("Sentinel connections not supported with Valkey-Glide!");
+    }
+
+    /**
+     * Set the {@link AsyncTaskExecutor} to use for asynchronous command execution.
+     *
+     * @param executor {@link AsyncTaskExecutor executor} used to execute commands asynchronously.
+     * @since 3.2
+     */
+    public void setExecutor(AsyncTaskExecutor executor) {
+        Assert.notNull(executor, "AsyncTaskExecutor must not be null");
+        this.executor = executor;
     }
 
     /**
