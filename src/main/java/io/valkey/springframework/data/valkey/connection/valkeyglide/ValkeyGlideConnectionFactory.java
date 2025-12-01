@@ -605,7 +605,7 @@ public class ValkeyGlideConnectionFactory
      */
     @Nullable
     public String getClientName() {
-        // Valkey Glide supports client names via CLIENT GETNAME command but not in configuration
+        // Valkey Glide supports client names via CLIENT SETNAME/GETNAME command but not in configuration
         return null;
     }
 

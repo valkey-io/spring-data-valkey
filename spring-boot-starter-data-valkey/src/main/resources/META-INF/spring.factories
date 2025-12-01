@@ -5,3 +5,7 @@ io.valkey.springframework.boot.docker.compose.service.connection.valkey.ValkeyDo
 # Testcontainers Connection Details Factories
 org.springframework.boot.autoconfigure.service.connection.ConnectionDetailsFactory=\
 io.valkey.springframework.boot.testcontainers.service.connection.valkey.ValkeyContainerConnectionDetailsFactory
+
+# Cache Meter Binder Providers
+org.springframework.boot.actuate.metrics.cache.CacheMeterBinderProvider=\
+io.valkey.springframework.boot.actuate.metrics.cache.ValkeyCacheMeterBinderProvider

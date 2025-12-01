@@ -4,9 +4,22 @@ A Spring Boot starter that provides auto-configuration for Valkey, enabling seam
 
 This starter simplifies the setup and configuration of Valkey in Spring Boot applications by providing auto-configuration for Valkey connections and Spring Data integration.
 
-## Current Limitations
+The project is a fork of Spring Boot Starter Data Redis 3.5.1 (part of the [Spring Boot](https://github.com/spring-projects/spring-boot) repository).
 
-- Valkey GLIDE Sentinel support
+## Features
+
+* Auto-configuration for Valkey connections with zero-configuration defaults.
+* Support for multiple Valkey drivers ([Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core), and [Jedis](https://github.com/redis/jedis)).
+* Connection pooling configuration for all supported clients.
+* Valkey Cluster auto-configuration and support.
+* Valkey Sentinel configuration support (Lettuce and Jedis only).
+* SSL/TLS connection support with Spring Boot SSL bundles.
+* Spring Boot Actuator health indicators for Valkey connections.
+* Testcontainers integration with `@ServiceConnection` annotation.
+* Docker Compose support for automatic service detection and startup.
+* Configuration properties with IDE auto-completion support.
+
+For the full list of Spring Data features see [Spring Data Valkey](../).
 
 ## Installation
 
@@ -15,7 +28,7 @@ Add the starter and Valkey GLIDE (along with OS detector) to your `pom.xml`:
 ```xml
 <dependencies>
     <dependency>
-        <groupId>io.valkey.springframework.data</groupId>
+        <groupId>io.valkey.springframework.boot</groupId>
         <artifactId>spring-boot-starter-data-valkey</artifactId>
         <version>${version}</version>
     </dependency>
@@ -46,16 +59,16 @@ plugins {
 }
 
 dependencies {
-    implementation 'io.valkey.springframework.data:spring-boot-starter-data-valkey:${version}'
+    implementation 'io.valkey.springframework.boot:spring-boot-starter-data-valkey:${version}'
     implementation 'io.valkey:valkey-glide:${version}:${osdetector.classifier}'
 }
 ```
 
 Note that the Valkey GLIDE dependency must also be explicitly added due to the OS classifier (platform-specific JAR).  To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
 
-## Quick Start
+## Getting Started
 
-The starter provides zero-configuration defaults. Just add the dependency and optionally configure connection properties.
+The starter provides zero-configuration defaults. Just add the dependency (see above) and optionally configure connection properties.
 
 ### Basic Configuration
 
@@ -123,6 +136,7 @@ spring.data.valkey.password=your-password
 spring.data.valkey.database=0
 spring.data.valkey.timeout=2000ms
 spring.data.valkey.connect-timeout=2000ms
+spring.data.valkey.client-name=my-app-name  # Lettuce and Jedis only
 
 # Client type (valkeyglide, lettuce, or jedis)
 spring.data.valkey.client-type=valkeyglide
@@ -165,7 +179,7 @@ spring.data.valkey.valkeyglide.cluster.refresh.dynamic-refresh-sources=true
 ### Sentinel Configuration
 
 ```properties
-# For Lettuce and Jedis only, GLIDE does not support Sentinel at this time
+# Lettuce and Jedis only - GLIDE does not support Sentinel at this time
 spring.data.valkey.sentinel.master=mymaster
 spring.data.valkey.sentinel.nodes=127.0.0.1:26379,127.0.0.1:26380,127.0.0.1:26381
 spring.data.valkey.sentinel.username=sentinel-user
@@ -188,6 +202,52 @@ spring.data.valkey.valkeyglide.read-from=PRIMARY
 spring.data.valkey.valkeyglide.inflight-requests-limit=250
 spring.data.valkey.valkeyglide.client-az=us-west-2a
 ```
+
+## Actuator Support
+
+Spring Boot Actuator integration provides health indicators and metrics for Valkey connections.
+
+### Health Indicators
+
+Add Actuator dependency and enable health endpoints:
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-actuator</artifactId>
+</dependency>
+```
+
+Configure health endpoints in `application.properties`:
+
+```properties
+management.endpoints.web.exposure.include=health,metrics
+management.health.valkey.enabled=true
+```
+
+Access health information at `/actuator/health/valkey`:
+
+```json
+{
+  "status": "UP",
+  "details": {
+    "version": "8.0.1",
+    "cluster_size": 3,
+    "slots_up": 16384,
+    "slots_fail": 0
+  }
+}
+```
+
+### Metrics
+
+Valkey metrics are automatically collected when Micrometer is present:
+
+- **Connection metrics** - Pool size, active connections
+- **Command metrics** - Latency, success/failure rates (Lettuce only)
+- **Cache metrics** - Hits, misses, puts, removals
+
+View metrics at `/actuator/metrics/valkey.*` or integrate with monitoring systems like Prometheus.
 
 ## Testcontainers Support
 
@@ -233,7 +293,7 @@ class MyIntegrationTest {
 }
 ```
 
-With a `compose.yml` in your project root:
+With a `compose.yml` in your project root (`composeFile` attribute can also specify a different filename/location):
 
 ```yml
 services:
@@ -248,20 +308,17 @@ services:
 ### Prerequisites
 
 - JDK 17 or higher
-- Maven 3.9 or higher (or use included wrapper)
-- Docker (for integration tests)
+- Maven 3.9.9 or higher
+- Docker (for container tests)
 
 ### Build Commands
 
+See instructions on starting a Valkey server using the `Makefile` in the root [README](../README.md#building-from-source).  The standalone and cluster instances started by the Makefile are used in the unit tests.
+
+Then build the starter:
+
 ```bash
-# Build the project (compile project, run tests, and create JAR)
-./mvnw clean package
-
-# Run tests only
-./mvnw test
-
-# Build without tests
-./mvnw clean package -DskipTests
+$ ../mvnw clean install
 ```
 
 ## License

@@ -168,16 +168,16 @@ class ValkeyAutoConfigurationTests {
 		});
 	}
 
-	@Test
-	void testValkeyConfigurationWithClientName() {
-		this.contextRunner.withPropertyValues("spring.data.valkey.host:foo", "spring.data.valkey.client-name:spring-boot")
-			.run((context) -> {
-				ValkeyGlideConnectionFactory cf = context.getBean(ValkeyGlideConnectionFactory.class);
-				assertThat(cf.getHostName()).isEqualTo("foo");
-				// GLIDE cannot get clientname through config
-				// assertThat(cf.getClientName()).isEqualTo("spring-boot");
-			});
-	}
+	// TODO: Uncomment when GLIDE supports client names
+	// @Test
+	// void testValkeyConfigurationWithClientName() {
+	// 	this.contextRunner.withPropertyValues("spring.data.valkey.host:foo", "spring.data.valkey.client-name:spring-boot")
+	// 		.run((context) -> {
+	// 			ValkeyGlideConnectionFactory cf = context.getBean(ValkeyGlideConnectionFactory.class);
+	// 			assertThat(cf.getHostName()).isEqualTo("foo");
+	// 			assertThat(cf.getClientName()).isEqualTo("spring-boot");
+	// 		});
+	// }
 
 	@Test
 	void connectionFactoryWithJedisClientType() {

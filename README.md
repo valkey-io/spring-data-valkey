@@ -106,7 +106,7 @@ For Spring Boot applications, use the [Spring Boot Starter](spring-boot-starter-
 ```xml
 <dependencies>
     <dependency>
-        <groupId>io.valkey.springframework.data</groupId>
+        <groupId>io.valkey.springframework.boot</groupId>
         <artifactId>spring-boot-starter-data-valkey</artifactId>
         <version>${version}</version>
     </dependency>

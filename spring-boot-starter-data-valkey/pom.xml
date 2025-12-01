@@ -10,7 +10,7 @@
 
 	<name>Spring Boot Starter for Valkey</name>
 	<description>Spring Boot Starter for Valkey key-value data store with Spring Data Valkey</description>
-	<url>https://github.com/ikolomi/spring-data-valkey</url>
+	<url>https://github.com/valkey-io/spring-data-valkey</url>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -23,6 +23,7 @@
 		<jedis.version>6.0.0</jedis.version>
 		<pool.version>2.11.1</pool.version>
 		<jackson.version>2.19.1</jackson.version>
+		<micrometer.version>1.14.2</micrometer.version>
 
 		<junit.version>5.12.2</junit.version>
 		<junit-platform.version>1.12.2</junit-platform.version>
@@ -82,7 +83,7 @@
 			<optional>true</optional>
 		</dependency>
 
-		<!--Mapper -->
+		<!-- Mapper -->
 
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
@@ -104,6 +105,29 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-testcontainers</artifactId>
 			<version>${spring-boot.version}</version>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Actuator -->
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-actuator</artifactId>
+			<version>${spring-boot.version}</version>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-actuator-autoconfigure</artifactId>
+			<version>${spring-boot.version}</version>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-core</artifactId>
+			<version>${micrometer.version}</version>
 			<optional>true</optional>
 		</dependency>
 
@@ -155,6 +179,13 @@
 			<groupId>org.junit.platform</groupId>
 			<artifactId>junit-platform-launcher</artifactId>
 			<version>${junit-platform.version}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>io.projectreactor</groupId>
+			<artifactId>reactor-test</artifactId>
+			<version>3.7.1</version>
 			<scope>test</scope>
 		</dependency>
 

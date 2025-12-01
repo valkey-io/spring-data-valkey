@@ -27,8 +27,6 @@ import java.util.Optional;
 
 /**
  * Spring Boot example demonstrating Valkey Starter with both template and repository usage.
- *
- * @author Spring Data Valkey Team
  */
 @SpringBootApplication
 @EnableValkeyRepositories

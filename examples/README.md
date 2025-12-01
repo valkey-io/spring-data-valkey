@@ -51,6 +51,7 @@ done
 | **quickstart** | Basic ValkeyTemplate usage for simple key-value operations |
 | **operations** | Comprehensive examples of all Valkey data structures (List, Set, Hash, ZSet, Geo, Stream, HyperLogLog) |
 | **cluster** | Valkey cluster configuration and operations with hash tags for proper key routing |
+| **spring-boot** | Example of using Valkey Spring Boot starter to bootstrap use of Spring Data Valkey |
 | **cache** | Spring Cache abstraction with Valkey backend (@Cacheable, TTL configuration) |
 | **repositories** | Spring Data repository abstraction with @ValkeyHash entities and custom finder methods |
 | **serialization** | Different serialization strategies (String, JSON, JDK) for storing objects |
@@ -60,7 +61,7 @@ done
 | **collections** | Valkey-backed Java collections (ValkeyList, ValkeySet, ValkeyMap) and atomic counters |
 | **scripting** | Lua script execution (EVAL, EVALSHA) for atomic operations |
 
-Note that the `spring-boot` example is standalone and has its own [README](spring-boot/README.md) with separate run instructions.
+Note that the `spring-boot` example is standalone and has its own [README](spring-boot/) with separate run instructions.
 
 ## Notes
 
