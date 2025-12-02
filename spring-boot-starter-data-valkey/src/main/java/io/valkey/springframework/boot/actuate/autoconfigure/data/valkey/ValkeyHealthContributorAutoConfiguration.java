@@ -41,7 +41,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
  * @since 2.1.0
  */
 @AutoConfiguration(after = { ValkeyAutoConfiguration.class, ValkeyReactiveHealthContributorAutoConfiguration.class })
-@ConditionalOnClass(ValkeyConnectionFactory.class)
+@ConditionalOnClass({ ValkeyConnectionFactory.class, HealthContributor.class })
 @ConditionalOnBean(ValkeyConnectionFactory.class)
 @ConditionalOnEnabledHealthIndicator("valkey")
 public class ValkeyHealthContributorAutoConfiguration

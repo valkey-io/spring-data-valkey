@@ -21,6 +21,7 @@ import reactor.core.publisher.Flux;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.actuate.autoconfigure.health.CompositeReactiveHealthContributorConfiguration;
 import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
+import org.springframework.boot.actuate.health.HealthContributor;
 import org.springframework.boot.actuate.health.ReactiveHealthContributor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -44,7 +45,7 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
  * @since 2.1.0
  */
 @AutoConfiguration(after = ValkeyReactiveAutoConfiguration.class)
-@ConditionalOnClass({ ReactiveValkeyConnectionFactory.class, Flux.class })
+@ConditionalOnClass({ ReactiveValkeyConnectionFactory.class, Flux.class, HealthContributor.class })
 @ConditionalOnBean(ReactiveValkeyConnectionFactory.class)
 @ConditionalOnEnabledHealthIndicator("valkey")
 public class ValkeyReactiveHealthContributorAutoConfiguration extends
