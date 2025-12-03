@@ -320,7 +320,3 @@ Then build the starter:
 ```bash
 $ ../mvnw clean install
 ```
-
-## License
-
-The Spring Boot Valkey Starter is Open Source software released under the Apache 2.0 license.
