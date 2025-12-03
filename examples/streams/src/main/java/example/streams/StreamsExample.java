@@ -82,7 +82,6 @@ public class StreamsExample {
 
 			// Read new entries (XREAD) - non-blocking
 			System.out.println("\nReading new events after " + id2 + ":");
-			@SuppressWarnings("unchecked")
 			List<MapRecord<String, Object, Object>> newRecords = template.opsForStream()
 				.read(StreamOffset.create(streamKey, ReadOffset.from(id2.getValue())));
 			newRecords.forEach(record -> {
@@ -101,7 +100,6 @@ public class StreamsExample {
 
 			// Read from consumer group (XREADGROUP)
 			System.out.println("\nReading as consumer 'worker-1' from group:");
-			@SuppressWarnings("unchecked")
 			List<MapRecord<String, Object, Object>> groupRecords = template.opsForStream()
 				.read(Consumer.from(groupName, "worker-1"),
 					StreamOffset.create(streamKey, ReadOffset.lastConsumed()));

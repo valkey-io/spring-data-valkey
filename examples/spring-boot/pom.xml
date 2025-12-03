@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>io.valkey.springframework.data</groupId>
+	<artifactId>spring-data-valkey-example-spring-boot</artifactId>
+	<version>1.0.0</version>
+	<name>Spring Data Valkey - Spring Boot Example</name>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>17</maven.compiler.source>
+		<maven.compiler.target>17</maven.compiler.target>
+		<spring-boot.version>3.5.1</spring-boot.version>
+		<spring-boot-starter-data-valkey.version>0.1.0</spring-boot-starter-data-valkey.version>
+		<valkey-glide.version>2.1.1</valkey-glide.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+			<version>${spring-boot.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.valkey.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-valkey</artifactId>
+			<version>${spring-boot-starter-data-valkey.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.valkey</groupId>
+			<artifactId>valkey-glide</artifactId>
+			<version>${valkey-glide.version}</version>
+			<classifier>${os.detected.classifier}</classifier>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<extensions>
+			<extension>
+				<groupId>kr.motd.maven</groupId>
+				<artifactId>os-maven-plugin</artifactId>
+				<version>1.7.1</version>
+			</extension>
+		</extensions>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>3.1.0</version>
+				<configuration>
+					<mainClass>example.springboot.SpringBootExample</mainClass>
+					<cleanupDaemonThreads>false</cleanupDaemonThreads>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+</project>

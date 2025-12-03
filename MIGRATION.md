@@ -13,21 +13,16 @@ Spring Data Valkey is a fork of Spring Data Redis that has been rebranded to wor
 Update your `pom.xml`:
 
 ```xml
-<!-- Before (Spring Data Redis with Lettuce) -->
+<!-- Before -->
 <dependency>
-    <groupId>org.springframework.data</groupId>
-    <artifactId>spring-data-redis</artifactId>
-    <version>${version}</version>
-</dependency>
-<dependency>
-    <groupId>io.lettuce</groupId>
-    <artifactId>lettuce-core</artifactId>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
 </dependency>
 
-<!-- After (Spring Data Valkey with Valkey GLIDE - recommended) -->
+<!-- After -->
 <dependency>
-    <groupId>io.valkey.springframework.data</groupId>
-    <artifactId>spring-data-valkey</artifactId>
+    <groupId>io.valkey.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-valkey</artifactId>
     <version>${version}</version>
 </dependency>
 <dependency>
@@ -46,25 +41,24 @@ Valkey GLIDE requires platform-specific native libraries. Add the os-maven-plugi
         <extension>
             <groupId>kr.motd.maven</groupId>
             <artifactId>os-maven-plugin</artifactId>
-            <version>${version}</version>
+            <version>1.7.1</version>
         </extension>
     </extensions>
 </build>
 ```
 
-Note: You can continue using Lettuce or Jedis if preferred, but Valkey GLIDE is recommended for optimal performance and full Valkey support.
+Note: You can continue using Lettuce or Jedis if preferred by setting `spring.data.valkey.client-type=lettuce` or `spring.data.valkey.client-type=jedis`.
 
 ### Gradle
 
 Update your `build.gradle`:
 
 ```groovy
-// Before (Spring Data Redis with Lettuce)
-implementation 'org.springframework.data:spring-data-redis:${version}'
-implementation 'io.lettuce:lettuce-core'
+// Before
+implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
-// After (Spring Data Valkey with Valkey GLIDE - recommended)
-implementation 'io.valkey.springframework.data:spring-data-valkey:${version}'
+// After
+implementation 'io.valkey.springframework.boot:spring-boot-starter-data-valkey:${version}'
 implementation "io.valkey:valkey-glide:${version}:${osdetector.classifier}"
 ```
 
@@ -72,7 +66,7 @@ Add the osdetector plugin to resolve `${osdetector.classifier}`:
 
 ```groovy
 plugins {
-    id 'com.google.osdetector' version '${version}'
+    id 'com.google.osdetector' version '1.7.3'
 }
 ```
 
@@ -142,6 +136,18 @@ The following is a list of the more common classes, it is not exhaustive.
 
 Note: Jedis and Lettuce are external driver libraries. Their package names (e.g., `redis.clients.jedis`) and class names (e.g., `RedisURI`, `RedisClient`) should not be changed during migration.
 
+#### Spring Boot Classes
+
+| Spring Data Redis | Spring Data Valkey |
+|-------------------|-------------------|
+| `RedisAutoConfiguration` | `ValkeyAutoConfiguration` |
+| `RedisReactiveAutoConfiguration` | `ValkeyReactiveAutoConfiguration` |
+| `RedisRepositoriesAutoConfiguration` | `ValkeyRepositoriesAutoConfiguration` |
+| `RedisHealthIndicator` | `ValkeyHealthIndicator` |
+| `RedisReactiveHealthIndicator` | `ValkeyReactiveHealthIndicator` |
+| `RedisCacheConfiguration` | `ValkeyCacheConfiguration` |
+| `RedisProperties` | `ValkeyProperties` |
+
 #### Repository Classes
 
 | Spring Data Redis | Spring Data Valkey |
@@ -180,6 +186,13 @@ Note: Jedis and Lettuce are external driver libraries. Their package names (e.g.
 |-------------------|-------------------|
 | `RedisScript` | `ValkeyScript` |
 | `DefaultRedisScript` | `DefaultValkeyScript` |
+
+#### Spring Boot Test Classes
+
+| Spring Data Redis | Spring Data Valkey |
+|-------------------|-------------------|
+| `RedisTestConfiguration` | `ValkeyTestConfiguration` |
+| `@AutoConfigureDataRedis` | `@AutoConfigureDataValkey` |
 
 #### Migrating to Valkey GLIDE
 
@@ -245,62 +258,66 @@ public class ValkeyConfig {
 
 ### Spring Boot Configuration
 
-Since a Spring Boot starter is not yet available, add a custom configuration:
-
-```java
-@Configuration
-@EnableValkeyRepositories
-public class ValkeyConfig {
-
-    @Value("${spring.valkey.host:localhost}")
-    private String host;
-
-    @Value("${spring.valkey.port:6379}")
-    private int port;
-
-    @Value("${spring.valkey.database:0}")
-    private int database;
-
-    @Value("${spring.valkey.password:#{null}}")
-    private String password;
-
-    @Bean
-    public ValkeyConnectionFactory valkeyConnectionFactory() {
-        ValkeyStandaloneConfiguration config = new ValkeyStandaloneConfiguration(host, port);
-        config.setDatabase(database);
-        if (password != null) {
-            config.setPassword(ValkeyPassword.of(password));
-        }
-        return ValkeyGlideConnectionFactory.createValkeyGlideConnectionFactory(config);
-    }
-
-    @Bean
-    public StringValkeyTemplate valkeyTemplate(ValkeyConnectionFactory factory) {
-        return new StringValkeyTemplate(factory);
-    }
-}
-```
-
-The configuration above reads from these properties in your `application.properties` or `application.yml`:
+The Spring Boot starter provides auto-configuration. Update your `application.properties`:
 
 ```properties
 # Before
-spring.redis.host=localhost
-spring.redis.port=6379
+spring.data.redis.host=localhost
+spring.data.redis.port=6379
+spring.data.redis.password=your-password
 
 # After
-spring.valkey.host=localhost
-spring.valkey.port=6379
+spring.data.valkey.host=localhost
+spring.data.valkey.port=6379
+spring.data.valkey.password=your-password
+
+# Optional: Choose client (default is GLIDE)
+spring.data.valkey.client-type=valkeyglide  # or lettuce, jedis
+```
+
+## Testing Changes
+
+### Testcontainers
+
+Update your test configuration to use Valkey containers:
+
+```java
+// Before
+@SpringBootTest
+@Testcontainers
+class MyTest {
+
+    @Container
+    @ServiceConnection
+    static RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:7"));
+
+    @Autowired
+    private RedisTemplate<String, String> redisTemplate;
+}
+
+// After
+@SpringBootTest
+@Testcontainers
+class MyTest {
+
+    @Container
+    @ServiceConnection(name = "redis") // Required for GenericContainer to be detected as a Redis service
+    static GenericContainer<?> valkey = new GenericContainer<>(DockerImageName.parse("valkey/valkey:8"))
+            .withExposedPorts(6379);
+
+    @Autowired
+    private ValkeyTemplate<String, String> valkeyTemplate;
+}
 ```
 
 ## Migration Checklist
 
-- [ ] Update Maven/Gradle dependencies
+- [ ] Update Maven/Gradle dependencies to use Spring Boot starter and Valkey GLIDE
 - [ ] Update all package imports from `org.springframework.data.redis` to `io.valkey.springframework.data.valkey`
 - [ ] Rename all `*Redis*` classes to `*Valkey*`
 - [ ] Update annotations (`@EnableRedisRepositories` → `@EnableValkeyRepositories`, `@RedisHash` → `@ValkeyHash`)
 - [ ] Update bean names in code and configuration (e.g., `redisTemplate` to `valkeyTemplate`)
-- [ ] Update Spring Boot properties from `spring.redis.*` to `spring.valkey.*`
+- [ ] Update Spring Boot properties from `spring.data.redis.*` to `spring.data.valkey.*`
 
 ## Compatibility Notes
 
@@ -313,10 +330,12 @@ spring.valkey.port=6379
 While updating dependencies and adding new configurations must be done manually, the renaming of packages and classes can be automated with a script. Here's an example using `sed`:
 
 ```bash
-$ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -name "*.yml" \) -exec sed -i \
+$ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -name "*.yml" -o -name "*.xml" -o -name "*.gradle" \) -exec sed -i \
   `# Packages` \
   -e 's/org\.springframework\.data\.redis\./io.valkey.springframework.data.valkey./g' \
+  -e 's/org\.springframework\.boot\.redis\./io.valkey.springframework.boot.valkey./g' \
   `# Classes` \
+  -e 's/AutoConfigureDataRedis/AutoConfigureDataValkey/g' \
   -e 's/DefaultRedisScript/DefaultValkeyScript/g' \
   -e 's/EnableRedisRepositories/EnableValkeyRepositories/g' \
   -e 's/GenericJacksonJsonRedisSerializer/GenericJacksonJsonValkeySerializer/g' \
@@ -326,6 +345,7 @@ $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -nam
   -e 's/ReactiveRedisOperations/ReactiveValkeyOperations/g' \
   -e 's/ReactiveRedisTemplate/ReactiveValkeyTemplate/g' \
   -e 's/ReactiveStringRedisTemplate/ReactiveStringValkeyTemplate/g' \
+  -e 's/RedisAutoConfiguration/ValkeyAutoConfiguration/g' \
   -e 's/RedisCacheConfiguration/ValkeyCacheConfiguration/g' \
   -e 's/RedisCacheManager/ValkeyCacheManager/g' \
   -e 's/RedisCacheWriter/ValkeyCacheWriter/g' \
@@ -336,11 +356,16 @@ $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -nam
   -e 's/RedisConnectionFactory/ValkeyConnectionFactory/g' \
   -e 's/RedisGeoCommands/ValkeyGeoCommands/g' \
   -e 's/RedisHash/ValkeyHash/g' \
+  -e 's/RedisHealthIndicator/ValkeyHealthIndicator/g' \
   -e 's/RedisMessageListenerContainer/ValkeyMessageListenerContainer/g' \
   -e 's/RedisNode/ValkeyNode/g' \
   -e 's/RedisOperations/ValkeyOperations/g' \
   -e 's/RedisPassword/ValkeyPassword/g' \
+  -e 's/RedisProperties/ValkeyProperties/g' \
+  -e 's/RedisReactiveAutoConfiguration/ValkeyReactiveAutoConfiguration/g' \
+  -e 's/RedisReactiveHealthIndicator/ValkeyReactiveHealthIndicator/g' \
   -e 's/RedisRepository/ValkeyRepository/g' \
+  -e 's/RedisRepositoriesAutoConfiguration/ValkeyRepositoriesAutoConfiguration/g' \
   -e 's/RedisScript/ValkeyScript/g' \
   -e 's/RedisSentinelConfiguration/ValkeySentinelConfiguration/g' \
   -e 's/RedisSerializationContext/ValkeySerializationContext/g' \
@@ -349,6 +374,7 @@ $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -nam
   -e 's/RedisStandaloneConfiguration/ValkeyStandaloneConfiguration/g' \
   -e 's/RedisSystemException/ValkeySystemException/g' \
   -e 's/RedisTemplate\b/ValkeyTemplate/g' \
+  -e 's/RedisTestConfiguration/ValkeyTestConfiguration/g' \
   -e 's/StringRedisSerializer/StringValkeySerializer/g' \
   -e 's/StringRedisTemplate\b/StringValkeyTemplate/g' \
   `# Variables` \
@@ -357,7 +383,8 @@ $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -nam
   -e 's/"redisTemplate"/"valkeyTemplate"/g' \
   -e 's/"stringRedisTemplate"/"stringValkeyTemplate"/g' \
   `# Properties` \
-  -e 's/spring\.redis\./spring.valkey./g' \
+  -e 's/spring\.data\.redis\./spring.data.valkey./g' \
+  -e 's/spring\.redis\./spring.data.valkey./g' \
   {} \;
 ```
 
