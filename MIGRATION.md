@@ -6,9 +6,13 @@ This guide helps you migrate from Spring Data Redis to Spring Data Valkey.
 
 Spring Data Valkey is a fork of Spring Data Redis that has been rebranded to work with [Valkey](https://valkey.io/), an open source high-performance key/value datastore that is fully compatible with Redis. The migration primarily involves updating package names, class names, and configuration properties from Redis to Valkey. Spring Data Valkey also adds support for [Valkey GLIDE](https://github.com/valkey-io/valkey-glide), a high-performance client library that is now the recommended default driver alongside existing Lettuce and Jedis support.
 
-## Dependency Changes
+Migration paths for both Spring Boot and vanilla Spring Data Valkey are shown below.
 
-### Maven
+## Dependencies
+
+### Spring Boot
+
+#### Maven
 
 Update your `pom.xml`:
 
@@ -49,7 +53,7 @@ Valkey GLIDE requires platform-specific native libraries. Add the os-maven-plugi
 
 Note: You can continue using Lettuce or Jedis if preferred by setting `spring.data.valkey.client-type=lettuce` or `spring.data.valkey.client-type=jedis`.
 
-### Gradle
+#### Gradle
 
 Update your `build.gradle`:
 
@@ -70,14 +74,56 @@ plugins {
 }
 ```
 
+### Vanilla Spring
+
+#### Maven
+
+Update your `pom.xml`:
+
+```xml
+<!-- Before -->
+<dependency>
+    <groupId>org.springframework.data</groupId>
+    <artifactId>spring-data-redis</artifactId>
+    <version>${version}</version>
+</dependency>
+
+<!-- After -->
+<dependency>
+    <groupId>io.valkey.springframework.data</groupId>
+    <artifactId>spring-data-valkey</artifactId>
+    <version>${version}</version>
+</dependency>
+<dependency>
+    <groupId>io.valkey</groupId>
+    <artifactId>valkey-glide</artifactId>
+    <classifier>${os.detected.classifier}</classifier>
+    <version>${version}</version>
+</dependency>
+```
+
+#### Gradle
+
+Update your `build.gradle`:
+
+```groovy
+// Before
+implementation 'org.springframework.data:spring-data-redis:${version}'
+
+// After
+implementation 'io.valkey.springframework.data:spring-data-valkey:${version}'
+implementation "io.valkey:valkey-glide:${version}:${osdetector.classifier}"
+```
+
 ## Package Name Changes
 
-All packages have been renamed from `org.springframework.data.redis` to `io.valkey.springframework.data.valkey`.
+All packages have been renamed from `org.springframework.data.redis` to `io.valkey.springframework.data.valkey` or `org.springframework.boot.autoconfigure.data.redis` to `io.valkey.springframework.boot.autoconfigure.data.valkey`.
 
 ### Pattern
 
 ```
 org.springframework.data.redis.*  →  io.valkey.springframework.data.valkey.*
+org.springframework.boot.autoconfigure.data.redis.*  →  io.valkey.springframework.boot.autoconfigure.data.valkey.*
 ```
 
 ### Examples
@@ -193,6 +239,7 @@ Note: Jedis and Lettuce are external driver libraries. Their package names (e.g.
 |-------------------|-------------------|
 | `RedisTestConfiguration` | `ValkeyTestConfiguration` |
 | `@AutoConfigureDataRedis` | `@AutoConfigureDataValkey` |
+| `@DataRedisTest` | `@DataValkeyTest` |
 
 #### Migrating to Valkey GLIDE
 
@@ -312,18 +359,22 @@ class MyTest {
 
 ## Migration Checklist
 
-- [ ] Update Maven/Gradle dependencies to use Spring Boot starter and Valkey GLIDE
-- [ ] Update all package imports from `org.springframework.data.redis` to `io.valkey.springframework.data.valkey`
-- [ ] Rename all `*Redis*` classes to `*Valkey*`
-- [ ] Update annotations (`@EnableRedisRepositories` → `@EnableValkeyRepositories`, `@RedisHash` → `@ValkeyHash`)
-- [ ] Update bean names in code and configuration (e.g., `redisTemplate` to `valkeyTemplate`)
-- [ ] Update Spring Boot properties from `spring.data.redis.*` to `spring.data.valkey.*`
+**Spring Boot:**
+- [ ] Update dependencies to Valkey Spring Boot starter
+- [ ] Update imports: `org.springframework.data.redis.*` → `io.valkey.springframework.data.valkey.*`
+- [ ] Update imports: `org.springframework.boot.autoconfigure.data.redis.*` → `io.valkey.springframework.boot.autoconfigure.data.valkey.*`
+- [ ] Rename classes: `*Redis*` → `*Valkey*`
+- [ ] Update annotations: `@EnableRedisRepositories` → `@EnableValkeyRepositories`
+- [ ] Update bean names: `redisTemplate` → `valkeyTemplate`
+- [ ] Update properties: `spring.data.redis.*` → `spring.data.valkey.*`
 
-## Compatibility Notes
-
-- Valkey is fully compatible with Redis features, protocols, and commands
-- Existing Redis servers can be used with Spring Data Valkey without changes
-- Valkey GLIDE is the recommended driver for new applications
+**Vanilla Spring:**
+- [ ] Update dependencies to Spring Data Valkey
+- [ ] Update imports: `org.springframework.data.redis.*` → `io.valkey.springframework.data.valkey.*`
+- [ ] Rename classes: `*Redis*` → `*Valkey*`
+- [ ] Update annotations: `@EnableRedisRepositories` → `@EnableValkeyRepositories`
+- [ ] Update bean names: `redisTemplate` → `valkeyTemplate`
+- [ ] Update configuration classes
 
 ## Automated Migration Script
 
@@ -333,19 +384,20 @@ While updating dependencies and adding new configurations must be done manually,
 $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -name "*.yml" -o -name "*.xml" -o -name "*.gradle" \) -exec sed -i \
   `# Packages` \
   -e 's/org\.springframework\.data\.redis\./io.valkey.springframework.data.valkey./g' \
-  -e 's/org\.springframework\.boot\.redis\./io.valkey.springframework.boot.valkey./g' \
+  -e 's/org\.springframework\.boot\.autoconfigure\.data\.redis\./io.valkey.springframework.boot.autoconfigure.data.valkey./g' \
   `# Classes` \
   -e 's/AutoConfigureDataRedis/AutoConfigureDataValkey/g' \
   -e 's/DefaultRedisScript/DefaultValkeyScript/g' \
   -e 's/EnableRedisRepositories/EnableValkeyRepositories/g' \
   -e 's/GenericJacksonJsonRedisSerializer/GenericJacksonJsonValkeySerializer/g' \
-  -e 's/JacksonJsonRedisSerializer/JacksonJsonValkeySerializer/g' \
+  -e 's/Jackson2JsonRedisSerializer/Jackson2JsonValkeySerializer/g' \
   -e 's/ReactiveRedisConnection/ReactiveValkeyConnection/g' \
   -e 's/ReactiveRedisConnectionFactory/ReactiveValkeyConnectionFactory/g' \
   -e 's/ReactiveRedisOperations/ReactiveValkeyOperations/g' \
   -e 's/ReactiveRedisTemplate/ReactiveValkeyTemplate/g' \
   -e 's/ReactiveStringRedisTemplate/ReactiveStringValkeyTemplate/g' \
   -e 's/RedisAutoConfiguration/ValkeyAutoConfiguration/g' \
+  -e 's/RedisCache/ValkeyCache/g' \
   -e 's/RedisCacheConfiguration/ValkeyCacheConfiguration/g' \
   -e 's/RedisCacheManager/ValkeyCacheManager/g' \
   -e 's/RedisCacheWriter/ValkeyCacheWriter/g' \
@@ -354,6 +406,7 @@ $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -nam
   -e 's/RedisClusterNode/ValkeyClusterNode/g' \
   -e 's/RedisConnection/ValkeyConnection/g' \
   -e 's/RedisConnectionFactory/ValkeyConnectionFactory/g' \
+  -e 's/RedisConnectionFailureException/ValkeyConnectionFailureException/g' \
   -e 's/RedisGeoCommands/ValkeyGeoCommands/g' \
   -e 's/RedisHash/ValkeyHash/g' \
   -e 's/RedisHealthIndicator/ValkeyHealthIndicator/g' \

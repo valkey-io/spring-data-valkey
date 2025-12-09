@@ -64,7 +64,7 @@ dependencies {
 }
 ```
 
-Note that the Valkey GLIDE dependency must also be explicitly added due to the OS classifier (platform-specific JAR).  To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
+Note: The Valkey GLIDE dependency must also be explicitly added due to the OS classifier (platform-specific JAR).  To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
 
 ## Getting Started
 
@@ -268,6 +268,18 @@ class MyValkeyTest {
     }
 }
 ```
+
+To use `@DataValkeyTest`, add the starter with `test` scope:
+
+```xml
+<dependency>
+    <groupId>io.valkey.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-valkey</artifactId>
+    <scope>test</scope>
+</dependency>
+```
+
+You can add the starter both with and without `test` scope to get both production and test features.
 
 ### Testcontainers Support
 

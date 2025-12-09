@@ -26,7 +26,26 @@ This module is purpose-built to provide the best possible experience when using 
 
 ## Getting Started
 
-Here is a quick teaser of an application using Spring Data Valkey in Java:
+### Spring Boot
+
+For Spring Boot applications, use the [Spring Boot Starter](spring-boot-starter-data-valkey/):
+
+```java
+@Service
+public class Example {
+
+    @Autowired
+    private StringValkeyTemplate valkeyTemplate;
+
+    public void addLink(String userId, URL url) {
+        valkeyTemplate.opsForList().leftPush(userId, url.toExternalForm());
+    }
+}
+```
+
+### Vanilla Spring
+
+For non-Spring Boot applications, manually configure Spring Data Valkey:
 
 ```java
 public class Example {
@@ -62,46 +81,11 @@ class ApplicationConfig {
 }
 ```
 
-### Maven configuration
+### Maven Configuration
 
-Add the Maven dependency:
+#### Spring Boot
 
-```xml
-<dependency>
-    <groupId>io.valkey.springframework.data</groupId>
-    <artifactId>spring-data-valkey</artifactId>
-    <version>${version}</version>
-</dependency>
-```
-
-Note that a dependency for the underlying driver is also needed. It is recommended to use Valkey GLIDE:
-
-```xml
-<dependency>
-    <groupId>io.valkey</groupId>
-    <artifactId>valkey-glide</artifactId>
-    <classifier>${os.detected.classifier}</classifier>
-    <version>${version}</version>
-</dependency>
-```
-
-Valkey GLIDE requires platform-specific native libraries. Add the os-maven-plugin to resolve `${os.detected.classifier}`:
-
-```xml
-<build>
-    <extensions>
-        <extension>
-            <groupId>kr.motd.maven</groupId>
-            <artifactId>os-maven-plugin</artifactId>
-            <version>1.7.1</version>
-        </extension>
-    </extensions>
-</build>
-```
-
-### Spring Boot
-
-For Spring Boot applications, use the [Spring Boot Starter](spring-boot-starter-data-valkey/) which provides auto-configuration:
+Add the starter and Valkey GLIDE dependencies:
 
 ```xml
 <dependencies>
@@ -117,7 +101,31 @@ For Spring Boot applications, use the [Spring Boot Starter](spring-boot-starter-
         <classifier>${os.detected.classifier}</classifier>
     </dependency>
 </dependencies>
+```
 
+#### Vanilla Spring
+
+Add the Maven dependency:
+
+```xml
+<dependency>
+    <groupId>io.valkey.springframework.data</groupId>
+    <artifactId>spring-data-valkey</artifactId>
+    <version>${version}</version>
+</dependency>
+<dependency>
+    <groupId>io.valkey</groupId>
+    <artifactId>valkey-glide</artifactId>
+    <classifier>${os.detected.classifier}</classifier>
+    <version>${version}</version>
+</dependency>
+```
+
+#### Platform Dependencies
+
+Because GLIDE has platform-specific native libraries, add the os-maven-plugin to resolve `${os.detected.classifier}`:
+
+```xml
 <build>
     <extensions>
         <extension>
@@ -128,6 +136,8 @@ For Spring Boot applications, use the [Spring Boot Starter](spring-boot-starter-
     </extensions>
 </build>
 ```
+
+This applies to both Spring Boot and Vanilla Spring configurations above.
 
 ### Examples
 
