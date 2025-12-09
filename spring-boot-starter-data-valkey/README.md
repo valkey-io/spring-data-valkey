@@ -249,7 +249,27 @@ Valkey metrics are automatically collected when Micrometer is present:
 
 View metrics at `/actuator/metrics/valkey.*` or integrate with monitoring systems like Prometheus.
 
-## Testcontainers Support
+## Testing
+
+### @DataValkeyTest
+
+The starter provides `@DataValkeyTest` annotation for focused testing of Valkey components:
+
+```java
+@DataValkeyTest
+class MyValkeyTest {
+
+    @Autowired
+    private ValkeyConnectionFactory connectionFactory;
+
+    @Test
+    void contextLoads() {
+        assertThat(connectionFactory).isNotNull();
+    }
+}
+```
+
+### Testcontainers Support
 
 Use `@ServiceConnection` for automatic test configuration:
 
@@ -274,7 +294,7 @@ class MyIntegrationTest {
 }
 ```
 
-## Docker Compose Support
+### Docker Compose Support
 
 Spring Boot automatically detects and starts Valkey from `compose.yml`:
 

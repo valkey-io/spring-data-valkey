@@ -42,7 +42,7 @@ class ValkeyCacheMetricsTests {
 		assertThat(cacheMetrics).isNotNull();
 	}
 
-	// The original tests are not run as they require a full cahce implementation (i.e. spring-boot-starter-cache-valkey)
+	// The original tests are not run as they require a full cache implementation (i.e. spring-boot-starter-cache-valkey)
 
 	/*
 	@Testcontainers(disabledWithoutDocker = true)
