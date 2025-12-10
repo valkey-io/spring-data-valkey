@@ -48,6 +48,7 @@ class DataValkeyTestIntegrationTests {
 
 	@Container
 	@ServiceConnection
+	@SuppressWarnings("resource")
 	static final GenericContainer<?> valkey = new GenericContainer<>("valkey/valkey:latest")
 		.withExposedPorts(6379);
 

@@ -15,9 +15,14 @@
  */
 package example.operations;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
+
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.data.geo.Point;
 
 import java.util.Arrays;
@@ -25,60 +30,67 @@ import java.util.Arrays;
 /**
  * Example demonstrating various Valkey data structure operations.
  */
+@Configuration
 public class OperationsExample {
+
+	@Bean
+	public ValkeyConnectionFactory valkeyConnectionFactory() {
+		return new ValkeyGlideConnectionFactory();
+	}
+
+	@Bean
+	public ValkeyTemplate<String, String> valkeyTemplate(ValkeyConnectionFactory factory) {
+		ValkeyTemplate<String, String> template = new ValkeyTemplate<>();
+		template.setConnectionFactory(factory);
+		template.setDefaultSerializer(StringValkeySerializer.UTF_8);
+		return template;
+	}
 
 	public static void main(String[] args) {
 
-		ValkeyGlideConnectionFactory connectionFactory = new ValkeyGlideConnectionFactory();
-		connectionFactory.afterPropertiesSet();
+		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(OperationsExample.class);
+		ValkeyTemplate<String, String> template = context.getBean(ValkeyTemplate.class);
 
-		try {
-			ValkeyTemplate<String, String> template = new ValkeyTemplate<>();
-			template.setConnectionFactory(connectionFactory);
-			template.setDefaultSerializer(StringValkeySerializer.UTF_8);
-			template.afterPropertiesSet();
+		// List operations
+		template.opsForList().rightPush("mylist", "one");
+		template.opsForList().rightPush("mylist", "two");
+		template.opsForList().rightPush("mylist", "three");
+		System.out.println("List: " + template.opsForList().range("mylist", 0, -1));
 
-			// List operations
-			template.opsForList().rightPush("mylist", "one");
-			template.opsForList().rightPush("mylist", "two");
-			template.opsForList().rightPush("mylist", "three");
-			System.out.println("List: " + template.opsForList().range("mylist", 0, -1));
+		// Set operations
+		template.opsForSet().add("myset", "banana", "apple", "cherry");
+		System.out.println("\nSet: " + template.opsForSet().members("myset"));
 
-			// Set operations
-			template.opsForSet().add("myset", "banana", "apple", "cherry");
-			System.out.println("\nSet: " + template.opsForSet().members("myset"));
+		// Hash operations
+		template.opsForHash().put("myhash", "field1", "value1");
+		template.opsForHash().put("myhash", "field2", "value2");
+		System.out.println("\nHash: " + template.opsForHash().entries("myhash"));
 
-			// Hash operations
-			template.opsForHash().put("myhash", "field1", "value1");
-			template.opsForHash().put("myhash", "field2", "value2");
-			System.out.println("\nHash: " + template.opsForHash().entries("myhash"));
+		// Sorted Set operations (added in random order, automatically sorted by score)
+		template.opsForZSet().add("leaderboard", "player2", 175.0);
+		template.opsForZSet().add("leaderboard", "player1", 100.0);
+		template.opsForZSet().add("leaderboard", "player3", 250.0);
+		System.out.println("\nLeaderboard (sorted by score): " + template.opsForZSet().range("leaderboard", 0, -1));
 
-			// Sorted Set operations (added in random order, automatically sorted by score)
-			template.opsForZSet().add("leaderboard", "player2", 175.0);
-			template.opsForZSet().add("leaderboard", "player1", 100.0);
-			template.opsForZSet().add("leaderboard", "player3", 250.0);
-			System.out.println("\nLeaderboard (sorted by score): " + template.opsForZSet().range("leaderboard", 0, -1));
+		// Geo operations
+		template.opsForGeo().add("locations", new Point(-122.27652, 37.805186), "San Francisco");
+		template.opsForGeo().add("locations", new Point(-118.24368, 34.05223), "Los Angeles");
+		System.out.println("\nLocations: " + template.opsForGeo().position("locations", "San Francisco"));
 
-			// Geo operations
-			template.opsForGeo().add("locations", new Point(-122.27652, 37.805186), "San Francisco");
-			template.opsForGeo().add("locations", new Point(-118.24368, 34.05223), "Los Angeles");
-			System.out.println("\nLocations: " + template.opsForGeo().position("locations", "San Francisco"));
+		// HyperLogLog operations
+		template.opsForHyperLogLog().add("visitors", "user1", "user2", "user3");
+		template.opsForHyperLogLog().add("visitors", "user2", "user4"); // user2 counted once
+		Long uniqueCount = template.opsForHyperLogLog().size("visitors");
+		System.out.println("\nUnique visitors (approximate): " + uniqueCount);
 
-			// HyperLogLog operations
-			template.opsForHyperLogLog().add("visitors", "user1", "user2", "user3");
-			template.opsForHyperLogLog().add("visitors", "user2", "user4"); // user2 counted once
-			Long uniqueCount = template.opsForHyperLogLog().size("visitors");
-			System.out.println("\nUnique visitors (approximate): " + uniqueCount);
+		// Stream operations
+		template.opsForStream().add("mystream", java.util.Map.of("sensor", "temperature", "value", "23.5"));
+		template.opsForStream().add("mystream", java.util.Map.of("sensor", "humidity", "value", "65"));
+		System.out.println("\nStream length: " + template.opsForStream().size("mystream"));
 
-			// Stream operations
-			template.opsForStream().add("mystream", java.util.Map.of("sensor", "temperature", "value", "23.5"));
-			template.opsForStream().add("mystream", java.util.Map.of("sensor", "humidity", "value", "65"));
-			System.out.println("\nStream length: " + template.opsForStream().size("mystream"));
+		// Cleanup
+		template.delete(Arrays.asList("mylist", "myset", "myhash", "leaderboard", "locations", "visitors", "mystream"));
 
-			// Cleanup
-			template.delete(Arrays.asList("mylist", "myset", "myhash", "leaderboard", "locations", "visitors", "mystream"));
-		} finally {
-			connectionFactory.destroy();
-		}
+		context.close();
 	}
 }

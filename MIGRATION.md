@@ -387,6 +387,7 @@ $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -nam
   -e 's/org\.springframework\.boot\.autoconfigure\.data\.redis\./io.valkey.springframework.boot.autoconfigure.data.valkey./g' \
   `# Classes` \
   -e 's/AutoConfigureDataRedis/AutoConfigureDataValkey/g' \
+  -e 's/DataRedisTest/DataValkeyTest/g' \
   -e 's/DefaultRedisScript/DefaultValkeyScript/g' \
   -e 's/EnableRedisRepositories/EnableValkeyRepositories/g' \
   -e 's/GenericJacksonJsonRedisSerializer/GenericJacksonJsonValkeySerializer/g' \

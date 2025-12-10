@@ -67,5 +67,5 @@ Note that the `spring-boot` example is standalone and has its own [README](sprin
 
 - All examples use Valkey GLIDE as the connection driver (Lettuce and Jedis are also supported)
 - All examples reference a parent examples POM which specifies any common depedencies (spring-data-valkey, valkey-glide, etc)
-- Most examples create resources directly in `main()` for simplicity; see `cache` and `repositories` for Spring `@Configuration` examples
+- Many examples create resources directly in `main()` for simplicity; see `quickstart` and `operations` for inline `@Configuration` examples, or `cache` and `repositories` for separate `@Configuration` class examples
 - Each example cleans up any data it creates in the datastore

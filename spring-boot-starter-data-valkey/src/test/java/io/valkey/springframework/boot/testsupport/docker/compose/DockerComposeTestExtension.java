@@ -42,14 +42,12 @@ public class DockerComposeTestExtension implements ParameterResolver {
 		Method testMethod = extensionContext.getRequiredTestMethod();
 		DockerComposeTest annotation = testMethod.getAnnotation(DockerComposeTest.class);
 
-		// Start Valkey container (simplified approach)
 		@SuppressWarnings("resource")
 		GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(annotation.image()))
 				.withExposedPorts(6379);
 
 		container.start();
 
-		// Create connection details
 		return new SimpleValkeyConnectionDetails(container.getHost(), container.getMappedPort(6379));
 	}
 
