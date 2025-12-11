@@ -35,6 +35,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link ValkeyContainerConnectionDetailsFactory}.
+ *
+ * @author Andy Wilkinson
  */
 @SpringJUnitConfig
 @Testcontainers(disabledWithoutDocker = true)
@@ -43,7 +45,7 @@ class ValkeyContainerConnectionDetailsFactoryTests {
 	@Container
 	@ServiceConnection
 	@SuppressWarnings("resource")
-	static final GenericContainer<?> valkey = new GenericContainer<>(DockerImageName.parse("valkey/valkey:8.0.1"))
+	static final GenericContainer<?> valkey = new GenericContainer<>(DockerImageName.parse("valkey/valkey:8.1.1"))
 			.withExposedPorts(6379);
 
 	@Autowired(required = false)

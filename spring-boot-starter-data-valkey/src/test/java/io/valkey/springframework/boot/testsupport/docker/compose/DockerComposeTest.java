@@ -27,6 +27,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 /**
  * Annotation that can be used on a test method to run Docker Compose and inject
  * connection details.
+ *
+ * @author Andy Wilkinson
+ * @author Moritz Halbritter
  */
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

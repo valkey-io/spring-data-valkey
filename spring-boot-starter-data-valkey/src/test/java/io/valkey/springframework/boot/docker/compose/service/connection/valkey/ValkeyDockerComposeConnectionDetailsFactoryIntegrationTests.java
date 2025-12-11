@@ -25,6 +25,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test for {@link ValkeyDockerComposeConnectionDetailsFactory}.
+ *
+ * @author Moritz Halbritter
+ * @author Andy Wilkinson
+ * @author Phillip Webb
+ * @author Scott Frederick
+ * @author Eddú Meléndez
  */
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true", disabledReason = "Requires Docker")
 class ValkeyDockerComposeConnectionDetailsFactoryIntegrationTests {

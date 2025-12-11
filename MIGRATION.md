@@ -8,7 +8,7 @@ Spring Data Valkey is a fork of Spring Data Redis that has been rebranded to wor
 
 Migration paths for both Spring Boot and vanilla Spring Data Valkey are shown below.
 
-## Dependencies
+## Dependency Changes
 
 ### Spring Boot
 
@@ -117,13 +117,13 @@ implementation "io.valkey:valkey-glide:${version}:${osdetector.classifier}"
 
 ## Package Name Changes
 
-All packages have been renamed from `org.springframework.data.redis` to `io.valkey.springframework.data.valkey` or `org.springframework.boot.autoconfigure.data.redis` to `io.valkey.springframework.boot.autoconfigure.data.valkey`.
+All packages have been renamed from `org.springframework.data.redis` to `io.valkey.springframework.data.valkey` and Spring Boot Redis packages to their Valkey equivalents.
 
 ### Pattern
 
 ```
 org.springframework.data.redis.*  →  io.valkey.springframework.data.valkey.*
-org.springframework.boot.autoconfigure.data.redis.*  →  io.valkey.springframework.boot.autoconfigure.data.valkey.*
+org.springframework.boot.*.redis.*  →  io.valkey.springframework.boot.*.valkey.*
 ```
 
 ### Examples
@@ -384,7 +384,7 @@ While updating dependencies and adding new configurations must be done manually,
 $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -name "*.yml" -o -name "*.xml" -o -name "*.gradle" \) -exec sed -i \
   `# Packages` \
   -e 's/org\.springframework\.data\.redis\./io.valkey.springframework.data.valkey./g' \
-  -e 's/org\.springframework\.boot\.autoconfigure\.data\.redis\./io.valkey.springframework.boot.autoconfigure.data.valkey./g' \
+  -e 's/org\.springframework\.boot\.\(.*\)redis\./io.valkey.springframework.boot.\1valkey./g' \
   `# Classes` \
   -e 's/AutoConfigureDataRedis/AutoConfigureDataValkey/g' \
   -e 's/DataRedisTest/DataValkeyTest/g' \

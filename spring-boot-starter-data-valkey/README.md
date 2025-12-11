@@ -8,13 +8,14 @@ The project is a fork of Spring Boot Starter Data Redis 3.5.1 (part of the [Spri
 
 ## Features
 
-* Auto-configuration for Valkey connections with zero-configuration defaults.
+* Complete auto-configuration for Valkey connections, templates, repositories, and caching with zero-configuration defaults.
 * Support for multiple Valkey drivers ([Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core), and [Jedis](https://github.com/redis/jedis)).
 * Connection pooling configuration for all supported clients.
 * Valkey Cluster auto-configuration and support.
 * Valkey Sentinel configuration support (Lettuce and Jedis only).
 * SSL/TLS connection support with Spring Boot SSL bundles.
-* Spring Boot Actuator health indicators for Valkey connections.
+* Spring Boot Actuator health indicators and metrics for Valkey connections.
+* `@DataValkeyTest` slice test annotation for focused Valkey testing.
 * Testcontainers integration with `@ServiceConnection` annotation.
 * Docker Compose support for automatic service detection and startup.
 * Configuration properties with IDE auto-completion support.

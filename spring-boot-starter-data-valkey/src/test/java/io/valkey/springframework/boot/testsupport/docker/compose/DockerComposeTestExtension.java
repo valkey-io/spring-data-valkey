@@ -28,6 +28,9 @@ import org.testcontainers.utility.DockerImageName;
 
 /**
  * JUnit extension for {@link DockerComposeTest}.
+ *
+ * @author Andy Wilkinson
+ * @author Moritz Halbritter
  */
 public class DockerComposeTestExtension implements ParameterResolver {
 

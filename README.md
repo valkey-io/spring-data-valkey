@@ -48,20 +48,13 @@ public class Example {
 For non-Spring Boot applications, manually configure Spring Data Valkey:
 
 ```java
+@Service
 public class Example {
 
-    // inject the actual template
     @Autowired
     private StringValkeyTemplate valkeyTemplate;
 
-    // inject the template as ListOperations
-    // can also inject as Value, Set, ZSet, and HashOperations
-    @Resource(name="valkeyTemplate")
-    private ListOperations<String, String> listOps;
-
     public void addLink(String userId, URL url) {
-        listOps.leftPush(userId, url.toExternalForm());
-        // or use template directly
         valkeyTemplate.boundListOps(userId).leftPush(url.toExternalForm());
     }
 }
