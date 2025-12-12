@@ -35,6 +35,46 @@
 		<maven-resolver-provider.version>3.9.10</maven-resolver-provider.version>
 	</properties>
 
+	<scm>
+		<connection>scm:git:https://github.com/valkey-io/spring-data-valkey.git</connection>
+		<developerConnection>scm:git:git@github.com:valkey-io/spring-data-valkey.git</developerConnection>
+		<url>https://github.com/valkey-io/spring-data-valkey</url>
+	</scm>
+
+	<issueManagement>
+		<system>GitHub</system>
+		<url>https://github.com/valkey-io/spring-data-valkey/issues</url>
+	</issueManagement>
+
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>https://www.apache.org/licenses/LICENSE-2.0</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>valkey-io</id>
+			<name>Valkey Community</name>
+			<url>https://github.com/valkey-io</url>
+			<organization>Valkey</organization>
+			<organizationUrl>https://valkey.io</organizationUrl>
+		</developer>
+	</developers>
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://central.sonatype.com/repository/maven-snapshots/</url>
+		</snapshotRepository>
+		<repository>
+			<id>ossrh</id>
+			<url>https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement>
+
 	<dependencies>
 
 		<!-- Spring -->
@@ -259,17 +299,14 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<version>3.5.2</version>
 				<configuration>
+					<!-- Retain stack traces -->
+					<argLine>-XX:-OmitStackTraceInFastThrow</argLine>
+					<useSystemClassLoader>false</useSystemClassLoader>
 					<includes>
 						<include>**/*Tests.java</include>
 						<include>**/*Test.java</include>
 					</includes>
 				</configuration>
-			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.4.2</version>
 			</plugin>
 
 			<plugin>
@@ -284,6 +321,50 @@
 						</goals>
 					</execution>
 				</executions>
+			</plugin>
+
+			<!-- Javadoc plugin -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-javadoc-plugin</artifactId>
+				<version>3.10.1</version>
+				<executions>
+					<execution>
+						<id>attach-javadocs</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- GPG plugin for signing -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-gpg-plugin</artifactId>
+				<version>3.1.0</version>
+				<executions>
+					<execution>
+						<id>sign-artifacts</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
+			<!-- Nexus Staging Plugin -->
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.6.13</version>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrh</serverId>
+					<nexusUrl>https://ossrh-staging-api.central.sonatype.com/</nexusUrl>
+					<autoReleaseAfterClose>false</autoReleaseAfterClose>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
