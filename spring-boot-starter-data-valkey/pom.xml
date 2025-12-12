@@ -3,6 +3,12 @@
 
 	<modelVersion>4.0.0</modelVersion>
 
+	<parent>
+		<groupId>io.valkey.springframework</groupId>
+		<artifactId>spring-data-valkey-parent</artifactId>
+		<version>0.1.0</version>
+	</parent>
+
 	<groupId>io.valkey.springframework.boot</groupId>
 	<artifactId>spring-boot-starter-data-valkey</artifactId>
 	<version>0.1.0</version>

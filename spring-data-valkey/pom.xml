@@ -1,46 +1,97 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>io.valkey.springframework</groupId>
-	<artifactId>spring-data-valkey-parent</artifactId>
-	<version>0.1.0</version>
-	<packaging>pom</packaging>
+	<parent>
+		<groupId>io.valkey.springframework</groupId>
+		<artifactId>spring-data-valkey-parent</artifactId>
+		<version>0.1.0</version>
+	</parent>
 
-	<name>Spring Data Valkey Parent</name>
+	<groupId>io.valkey.springframework.data</groupId>
+	<artifactId>spring-data-valkey</artifactId>
+	<version>0.1.0</version>
+
+	<name>Spring Data Valkey</name>
+	<description>Spring Data module for Valkey</description>
+	<url>https://github.com/valkey-io/spring-data-valkey</url>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
-		<mockito>5.14.2</mockito>
-		<cdi>4.1.0</cdi>
-		<webbeans>4.0.3</webbeans>
-		<kotlin-coroutines>1.9.0</kotlin-coroutines>
-		<mockk>1.13.13</mockk>
-		<awaitility>4.2.2</awaitility>
+		<springdata.keyvalue>3.5.1</springdata.keyvalue>
+		<springdata.commons>3.5.1</springdata.commons>
+		<beanutils>1.9.4</beanutils>
+		<xstream>1.4.21</xstream>
+		<pool>2.11.1</pool>
+		<valkey.glide>2.1.1</valkey.glide>
+		<lettuce>6.6.0.RELEASE</lettuce>
+		<jedis>6.0.0</jedis>
+		<multithreadedtc>1.01</multithreadedtc>
+		<netty>4.1.121.Final</netty>
+		<java-module-name>io.valkey.springframework.data.valkey</java-module-name>
 	</properties>
+
+	<scm>
+		<connection>scm:git:https://github.com/valkey-io/spring-data-valkey.git</connection>
+		<developerConnection>scm:git:git@github.com:valkey-io/spring-data-valkey.git</developerConnection>
+		<url>https://github.com/valkey-io/spring-data-valkey</url>
+	</scm>
+
+	<issueManagement>
+		<system>GitHub</system>
+		<url>https://github.com/valkey-io/spring-data-valkey/issues</url>
+	</issueManagement>
+
+	<licenses>
+		<license>
+			<name>Apache License, Version 2.0</name>
+			<url>https://www.apache.org/licenses/LICENSE-2.0</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<developers>
+		<developer>
+			<id>valkey-io</id>
+			<name>Valkey Community</name>
+			<url>https://github.com/valkey-io</url>
+			<organization>Valkey</organization>
+			<organizationUrl>https://valkey.io</organizationUrl>
+		</developer>
+	</developers>
+
+	<distributionManagement>
+		<snapshotRepository>
+			<id>ossrh</id>
+			<url>https://central.sonatype.com/repository/maven-snapshots/</url>
+		</snapshotRepository>
+		<repository>
+			<id>ossrh</id>
+			<url>https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/</url>
+		</repository>
+	</distributionManagement>
 
 	<dependencyManagement>
 		<dependencies>
+
 			<dependency>
-				<groupId>org.springframework.data.build</groupId>
-				<artifactId>spring-data-parent</artifactId>
-				<version>3.5.1</version>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-pool2</artifactId>
+				<version>${pool}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>io.netty</groupId>
+				<artifactId>netty-bom</artifactId>
+				<version>${netty}</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
+
 		</dependencies>
 	</dependencyManagement>
 
-	<modules>
-		<module>spring-data-valkey</module>
-		<module>spring-boot-starter-data-valkey</module>
-		<module>examples</module>
-		<module>performance</module>
-	</modules>
+	<dependencies>
 
 		<!-- Spring -->
 
@@ -255,6 +306,19 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-junit-jupiter</artifactId>
+			<version>${mockito}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
 			<groupId>org.awaitility</groupId>
 			<artifactId>awaitility</artifactId>
 			<version>${awaitility}</version>
@@ -324,6 +388,20 @@
 				<artifactId>maven-assembly-plugin</artifactId>
 			</plugin>
 
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.3.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+
 			<!-- Javadoc plugin -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
@@ -356,6 +434,19 @@
 						</goals>
 					</execution>
 				</executions>
+			</plugin>
+
+			<!-- Nexus Staging Plugin -->
+			<plugin>
+				<groupId>org.sonatype.plugins</groupId>
+				<artifactId>nexus-staging-maven-plugin</artifactId>
+				<version>1.6.13</version>
+				<extensions>true</extensions>
+				<configuration>
+					<serverId>ossrh</serverId>
+					<nexusUrl>https://ossrh-staging-api.central.sonatype.com/</nexusUrl>
+					<autoReleaseAfterClose>false</autoReleaseAfterClose>
+				</configuration>
 			</plugin>
 
 		</plugins>
