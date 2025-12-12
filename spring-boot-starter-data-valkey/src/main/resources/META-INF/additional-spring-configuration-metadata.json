@@ -1,0 +1,84 @@
+{
+  "properties": [
+    {
+      "name": "spring.data.valkey.repositories.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable Valkey repositories.",
+      "defaultValue": true
+    },
+    {
+      "name": "spring.data.valkey.ssl",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "replacement": "spring.data.valkey.ssl.enabled",
+        "level": "error"
+      }
+    }
+  ],
+  "hints": [
+    {
+      "name": "spring.data.valkey.lettuce.read-from",
+      "values": [
+        {
+          "value": "any",
+          "description": "Read from any node."
+        },
+        {
+          "value": "any-replica",
+          "description": "Read from any replica node."
+        },
+        {
+          "value": "lowest-latency",
+          "description": "Read from the node with the lowest latency during topology discovery."
+        },
+        {
+          "value": "regex:",
+          "description": "Read from any node that has ValkeyURI matching with the given pattern."
+        },
+        {
+          "value": "replica",
+          "description": "Read from the replica only."
+        },
+        {
+          "value": "replica-preferred",
+          "description": "Read preferred from replica and fall back to upstream if no replica is available."
+        },
+        {
+          "value": "subnet:",
+          "description": "Read from any node in the subnets."
+        },
+        {
+          "value": "upstream",
+          "description": "Read from the upstream only."
+        },
+        {
+          "value": "upstream-preferred",
+          "description": "Read preferred from the upstream and fall back to a replica if the upstream is not available."
+        }
+      ],
+      "providers": [
+        {
+          "name": "any"
+        }
+      ]
+    },
+    {
+      "name": "spring.data.valkey.valkeyglide.read-from",
+      "values": [
+        {
+          "value": "PRIMARY",
+          "description": "Read from primary nodes only."
+        },
+        {
+          "value": "PREFER_REPLICA",
+          "description": "Prefer reading from replica nodes, fall back to primary if unavailable."
+        }
+      ],
+      "providers": [
+        {
+          "name": "any"
+        }
+      ]
+    }
+  ]
+}

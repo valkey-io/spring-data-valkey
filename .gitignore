@@ -15,6 +15,7 @@ build
 .vscode/
 out
 work
+appendonlydir
 *.rdb
 *.aof
 build/

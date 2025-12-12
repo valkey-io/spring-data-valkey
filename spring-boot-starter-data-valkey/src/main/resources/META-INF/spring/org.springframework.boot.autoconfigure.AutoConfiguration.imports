@@ -1,0 +1,9 @@
+org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration
+org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
+org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration
+io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration
+io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyReactiveAutoConfiguration
+io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyRepositoriesAutoConfiguration
+io.valkey.springframework.boot.actuate.autoconfigure.data.valkey.ValkeyHealthContributorAutoConfiguration
+io.valkey.springframework.boot.actuate.autoconfigure.data.valkey.ValkeyReactiveHealthContributorAutoConfiguration
+io.valkey.springframework.boot.actuate.autoconfigure.metrics.valkey.ValkeyLettuceMetricsAutoConfiguration

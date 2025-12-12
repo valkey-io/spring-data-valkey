@@ -21,6 +21,7 @@ import java.util.concurrent.ExecutionException;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
@@ -81,6 +82,8 @@ public class ValkeyGlideConnectionFactory
     
     // Connection pools for client reuse
     private final BlockingQueue<Object> clientPool;
+    
+    private @Nullable AsyncTaskExecutor executor;
     
     private boolean initialized = false;
     private boolean running = false;
@@ -189,11 +192,17 @@ public class ValkeyGlideConnectionFactory
     }
 
     /**
-     * Initialize the factory by pre-creating a pool of client instances.
+     * Initialize the factory by pre-creating a pool of client instances if early startup is enabled.
      */
     @Override
     public void afterPropertiesSet() {
         if (initialized) {
+            return;
+        }
+        
+        // Skip eager initialization if early startup is disabled (useful for Spring Boot testing)
+        if (!earlyStartup) {
+            initialized = true;
             return;
         }
         
@@ -552,6 +561,17 @@ public class ValkeyGlideConnectionFactory
     }
 
     /**
+     * Set the {@link AsyncTaskExecutor} to use for asynchronous command execution.
+     *
+     * @param executor {@link AsyncTaskExecutor executor} used to execute commands asynchronously.
+     * @since 3.2
+     */
+    public void setExecutor(AsyncTaskExecutor executor) {
+        Assert.notNull(executor, "AsyncTaskExecutor must not be null");
+        this.executor = executor;
+    }
+
+    /**
      * Returns the current host.
      *
      * @return the host.
@@ -585,7 +605,7 @@ public class ValkeyGlideConnectionFactory
      */
     @Nullable
     public String getClientName() {
-        // Valkey Glide supports client names via CLIENT GETNAME command but not in configuration
+        // Valkey Glide supports client names via CLIENT SETNAME/GETNAME command but not in configuration
         return null;
     }
 

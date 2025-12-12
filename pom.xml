@@ -9,7 +9,7 @@
 
 	<name>Spring Data Valkey</name>
 	<description>Spring Data module for Valkey</description>
-	<url>https://spring.io/projects/spring-data-valkey</url>
+	<url>https://github.com/valkey-io/spring-data-valkey</url>
 
 	<parent>
 		<groupId>org.springframework.data.build</groupId>
