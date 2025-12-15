@@ -33,18 +33,37 @@ jobs:
 
       - name: Test and build release artifacts
         run: |
+          # Install Spring Data Valkey (used by starter)
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
-            clean package javadoc:jar test \
+            install -DskipTests \
+            -Dgpg.skip=true \
+            -B
+
+          # Test Spring Data Valkey
+          ./mvnw -s settings.xml \
+            -Ddevelocity.storage.directory=$HOME/.develocity-root \
+            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
+            package javadoc:jar test \
             -Pnone \
             -DrunLongTests=true \
             -Dvalkey.server.version=8.1.1 \
+            -U -B
+
+          # Test Spring Boot starter
+          cd spring-boot-starter-data-valkey
+          ../mvnw -s ../settings.xml \
+            -Ddevelocity.storage.directory=$HOME/.develocity-root \
+            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
+            package javadoc:jar test \
             -U -B
 
       - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          files: target/*.jar
+          files: |
+            target/*.jar
+            spring-boot-starter-data-valkey/target/*.jar
           generate_release_notes: true
