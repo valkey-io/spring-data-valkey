@@ -19,15 +19,8 @@
 	<description>Performance benchmarks for Spring Data Valkey operations across different clients</description>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.release>17</maven.compiler.release>
 		<maven.deploy.skip>true</maven.deploy.skip>
 		<maven.install.skip>true</maven.install.skip>
-		<spring-data-valkey.version>0.1.0</spring-data-valkey.version>
-		<valkey-glide.version>2.1.1</valkey-glide.version>
-		<lettuce.version>6.4.0.RELEASE</lettuce.version>
-		<jedis.version>5.2.0</jedis.version>
-		<slf4j.version>2.0.9</slf4j.version>
 	</properties>
 
 	<dependencies>

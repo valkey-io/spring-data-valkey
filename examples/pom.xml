@@ -33,13 +33,8 @@
 	</modules>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.release>17</maven.compiler.release>
 		<maven.deploy.skip>true</maven.deploy.skip>
 		<maven.install.skip>true</maven.install.skip>
-		<spring-data-valkey.version>0.1.0</spring-data-valkey.version>
-		<valkey-glide.version>2.1.1</valkey-glide.version>
-		<slf4j.version>2.0.9</slf4j.version>
 	</properties>
 
 	<dependencies>

@@ -9,15 +9,6 @@
 	<version>0.1.0</version>
 	<name>Spring Data Valkey - Spring Boot Example</name>
 
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
-		<spring-boot.version>3.5.1</spring-boot.version>
-		<spring-boot-starter-data-valkey.version>0.1.0</spring-boot-starter-data-valkey.version>
-		<valkey-glide.version>2.1.1</valkey-glide.version>
-	</properties>
-
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
