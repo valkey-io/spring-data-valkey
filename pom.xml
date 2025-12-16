@@ -16,10 +16,6 @@
 		<maven.compiler.release>17</maven.compiler.release>
 		<maven.compiler.parameters>true</maven.compiler.parameters>
 
-		<!-- Spring Data Valkey versions -->
-		<spring-data-valkey.version>0.1.0</spring-data-valkey.version>
-		<spring-boot-starter-data-valkey.version>0.1.0</spring-boot-starter-data-valkey.version>
-
 		<!-- Spring versions -->
 		<spring-boot.version>3.5.1</spring-boot.version>
 		<springdata.parent.version>3.5.1</springdata.parent.version>
@@ -81,12 +77,12 @@
 			<dependency>
 				<groupId>io.valkey.springframework.data</groupId>
 				<artifactId>spring-data-valkey</artifactId>
-				<version>${spring-data-valkey.version}</version>
+				<version>${project.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>io.valkey.springframework.boot</groupId>
 				<artifactId>spring-boot-starter-data-valkey</artifactId>
-				<version>${spring-boot-starter-data-valkey.version}</version>
+				<version>${project.version}</version>
 			</dependency>
 
 			<!-- Valkey/Redis clients -->
@@ -156,16 +152,6 @@
 				<groupId>ch.qos.logback</groupId>
 				<artifactId>logback-classic</artifactId>
 				<version>${logback.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.netty</groupId>
-				<artifactId>netty-transport-native-epoll</artifactId>
-				<version>${netty.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>io.netty</groupId>
-				<artifactId>netty-transport-native-kqueue</artifactId>
-				<version>${netty.version}</version>
 			</dependency>
 
 			<!-- Test dependencies -->

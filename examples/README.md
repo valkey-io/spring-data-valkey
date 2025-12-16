@@ -31,19 +31,6 @@ $ cd examples/<example-name>
 $ ../../mvnw -q compile exec:java
 ```
 
-To run all examples sequentially:
-
-```bash
-$ cd examples
-$ for module in $(ls -d */ | grep -v target | grep -v spring-boot | sed 's|/||'); do
-  echo ""
-  echo "====================================="
-  echo "Running: $module"
-  echo "====================================="
-  ../mvnw -q compile exec:java -pl $module
-done
-```
-
 ## Available Examples
 
 | Example | Description |
@@ -60,8 +47,6 @@ done
 | **streams** | Valkey Streams for event sourcing and message queues (XADD, XREAD, consumer groups) |
 | **collections** | Valkey-backed Java collections (ValkeyList, ValkeySet, ValkeyMap) and atomic counters |
 | **scripting** | Lua script execution (EVAL, EVALSHA) for atomic operations |
-
-Note that the `spring-boot` example is standalone and has its own [README](spring-boot/) with separate run instructions.
 
 ## Notes
 

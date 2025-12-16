@@ -90,8 +90,8 @@ Add the starter and Valkey GLIDE dependencies:
     <dependency>
         <groupId>io.valkey</groupId>
         <artifactId>valkey-glide</artifactId>
-        <version>${version}</version>
         <classifier>${os.detected.classifier}</classifier>
+        <version>${version}</version>
     </dependency>
 </dependencies>
 ```

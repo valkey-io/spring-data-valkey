@@ -12,7 +12,6 @@
 
 	<groupId>io.valkey.springframework</groupId>
 	<artifactId>spring-data-valkey-performance</artifactId>
-	<version>0.1.0</version>
 	<packaging>jar</packaging>
 
 	<name>Spring Data Valkey - Performance Tests</name>
@@ -27,7 +26,7 @@
 		<dependency>
 			<groupId>io.valkey.springframework.data</groupId>
 			<artifactId>spring-data-valkey</artifactId>
-			<version>${spring-data-valkey.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.valkey</groupId>

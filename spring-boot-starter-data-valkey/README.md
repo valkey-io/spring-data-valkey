@@ -36,8 +36,8 @@ Add the starter and Valkey GLIDE (along with OS detector) to your `pom.xml`:
     <dependency>
         <groupId>io.valkey</groupId>
         <artifactId>valkey-glide</artifactId>
-        <version>${version}</version>
         <classifier>${os.detected.classifier}</classifier>
+        <version>${version}</version>
     </dependency>
 </dependencies>
 

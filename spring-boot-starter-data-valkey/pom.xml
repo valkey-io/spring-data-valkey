@@ -11,7 +11,6 @@
 
 	<groupId>io.valkey.springframework.boot</groupId>
 	<artifactId>spring-boot-starter-data-valkey</artifactId>
-	<version>0.1.0</version>
 	<packaging>jar</packaging>
 
 	<name>Spring Boot Starter for Valkey</name>
@@ -75,7 +74,7 @@
 		<dependency>
 			<groupId>io.valkey.springframework.data</groupId>
 			<artifactId>spring-data-valkey</artifactId>
-			<version>${spring-data-valkey.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 
 		<!-- Valkey Drivers -->

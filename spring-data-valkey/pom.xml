@@ -11,7 +11,6 @@
 
 	<groupId>io.valkey.springframework.data</groupId>
 	<artifactId>spring-data-valkey</artifactId>
-	<version>0.1.0</version>
 
 	<name>Spring Data Valkey</name>
 	<description>Spring Data module for Valkey</description>
@@ -126,20 +125,6 @@
 			<classifier>${os.detected.classifier}</classifier>
 			<version>${valkey-glide.version}</version>
 			<optional>true</optional>
-		</dependency>
-
-		<dependency>
-			<groupId>io.netty</groupId>
-			<artifactId>netty-transport-native-epoll</artifactId>
-			<classifier>linux-x86_64</classifier>
-			<scope>test</scope>
-		</dependency>
-
-		<dependency>
-			<groupId>io.netty</groupId>
-			<artifactId>netty-transport-native-kqueue</artifactId>
-			<classifier>osx-x86_64</classifier>
-			<scope>test</scope>
 		</dependency>
 
 		<!-- reactive -->
