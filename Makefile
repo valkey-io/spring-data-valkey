@@ -18,6 +18,8 @@ GH_ORG?=valkey-io
 SPRING_PROFILE?=ci
 SHELL=/bin/bash -euo pipefail
 
+.PHONY: examples performance test all-tests clean
+
 #######
 # Valkey
 #######
@@ -209,3 +211,23 @@ all-tests:
 	$(MAKE) stop
 	$(MAKE) clean
 
+# Run all Spring Data Valkey examples
+examples:
+	$(MAKE) start
+	sleep 1
+	@for example_dir in examples/*/; do \
+		example=$$(basename "$$example_dir"); \
+		echo "=== Running $$example example ==="; \
+		./mvnw -q exec:java -pl examples/$$example -Dexec.mainClass="example.$$example.$${example^}Example" || (echo "$$example example failed"; exit 1); \
+		echo ""; \
+	done
+	$(MAKE) stop
+	$(MAKE) clean
+
+# Run default performance test (TemplatePerformanceTest) with GLIDE
+performance:
+	$(MAKE) start
+	sleep 1
+	./mvnw -q exec:java -pl performance -Dclient=valkeyglide
+	$(MAKE) stop
+	$(MAKE) clean

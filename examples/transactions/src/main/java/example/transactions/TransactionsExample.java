@@ -42,6 +42,7 @@ public class TransactionsExample {
 
 			// Basic transaction using SessionCallback
 			List<Object> results = template.execute(new SessionCallback<List<Object>>() {
+				@SuppressWarnings({"unchecked", "rawtypes"})
 				@Override
 				public List<Object> execute(ValkeyOperations operations) {
 					operations.multi();
@@ -61,6 +62,7 @@ public class TransactionsExample {
 			while (!success && attempts < 3) {
 				attempts++;
 				List<Object> watchResults = template.execute(new SessionCallback<List<Object>>() {
+					@SuppressWarnings({"unchecked", "rawtypes"})
 					@Override
 					public List<Object> execute(ValkeyOperations operations) {
 						// Watch key BEFORE reading

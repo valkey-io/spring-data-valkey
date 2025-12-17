@@ -49,6 +49,7 @@ public class OperationsExample {
 	public static void main(String[] args) {
 
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(OperationsExample.class);
+		@SuppressWarnings("unchecked")
 		ValkeyTemplate<String, String> template = context.getBean(ValkeyTemplate.class);
 
 		// List operations
