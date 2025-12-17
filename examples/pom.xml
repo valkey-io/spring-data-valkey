@@ -81,6 +81,14 @@
 					<configuration>
 						<cleanupDaemonThreads>false</cleanupDaemonThreads>
 					</configuration>
+					<executions>
+						<execution>
+							<id>default-cli</id>
+							<configuration>
+								<mainClass>${exec.mainClass}</mainClass>
+							</configuration>
+						</execution>
+					</executions>
 				</plugin>
 			</plugins>
 		</pluginManagement>

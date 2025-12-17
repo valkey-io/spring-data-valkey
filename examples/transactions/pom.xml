@@ -13,6 +13,10 @@
 	<artifactId>spring-data-valkey-example-transactions</artifactId>
 	<name>Spring Data Valkey - Transactions Example</name>
 
+	<properties>
+		<exec.mainClass>example.transactions.TransactionsExample</exec.mainClass>
+	</properties>
+
 	<build>
 		<plugins>
 			<plugin>

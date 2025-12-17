@@ -218,7 +218,7 @@ examples:
 	@for example_dir in examples/*/; do \
 		example=$$(basename "$$example_dir"); \
 		echo "=== Running $$example example ==="; \
-		./mvnw -q exec:java -pl examples/$$example -Dexec.mainClass="example.$$example.$${example^}Example" || (echo "$$example example failed"; exit 1); \
+		./mvnw -q exec:java -pl examples/$$example || (echo "$$example example failed"; exit 1); \
 		echo ""; \
 	done
 	$(MAKE) stop

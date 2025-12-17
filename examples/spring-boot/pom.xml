@@ -13,6 +13,10 @@
 	<artifactId>spring-data-valkey-example-spring-boot</artifactId>
 	<name>Spring Data Valkey - Spring Boot Example</name>
 
+	<properties>
+		<exec.mainClass>example.springboot.SpringBootExample</exec.mainClass>
+	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

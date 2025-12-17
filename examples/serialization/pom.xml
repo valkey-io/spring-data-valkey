@@ -13,6 +13,10 @@
 	<artifactId>spring-data-valkey-example-serialization</artifactId>
 	<name>Spring Data Valkey - Serialization Example</name>
 
+	<properties>
+		<exec.mainClass>example.serialization.SerializationExample</exec.mainClass>
+	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>

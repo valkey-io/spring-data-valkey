@@ -13,6 +13,10 @@
 	<artifactId>spring-data-valkey-example-collections</artifactId>
 	<name>Spring Data Valkey - Collections Example</name>
 
+	<properties>
+		<exec.mainClass>example.collections.CollectionsExample</exec.mainClass>
+	</properties>
+
 	<build>
 		<plugins>
 			<plugin>

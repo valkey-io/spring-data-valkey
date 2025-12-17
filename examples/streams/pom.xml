@@ -13,6 +13,10 @@
 	<artifactId>spring-data-valkey-example-streams</artifactId>
 	<name>Spring Data Valkey - Streams Example</name>
 
+	<properties>
+		<exec.mainClass>example.streams.StreamsExample</exec.mainClass>
+	</properties>
+
 	<build>
 		<plugins>
 			<plugin>

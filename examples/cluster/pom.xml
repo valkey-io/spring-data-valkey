@@ -13,6 +13,10 @@
 	<artifactId>spring-data-valkey-example-cluster</artifactId>
 	<name>Spring Data Valkey - Cluster Example</name>
 
+	<properties>
+		<exec.mainClass>example.cluster.ClusterExample</exec.mainClass>
+	</properties>
+
 	<build>
 		<plugins>
 			<plugin>

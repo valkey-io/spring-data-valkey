@@ -13,6 +13,10 @@
 	<artifactId>spring-data-valkey-example-scripting</artifactId>
 	<name>Spring Data Valkey - Scripting Example</name>
 
+	<properties>
+		<exec.mainClass>example.scripting.ScriptingExample</exec.mainClass>
+	</properties>
+
 	<build>
 		<plugins>
 			<plugin>

@@ -13,6 +13,10 @@
 	<artifactId>spring-data-valkey-example-pipeline</artifactId>
 	<name>Spring Data Valkey - Pipeline Example</name>
 
+	<properties>
+		<exec.mainClass>example.pipeline.PipelineExample</exec.mainClass>
+	</properties>
+
 	<build>
 		<plugins>
 			<plugin>
