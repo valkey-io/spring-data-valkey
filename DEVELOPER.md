@@ -6,17 +6,17 @@ This guide provides comprehensive information for developers working on Spring D
 
 Spring Data Valkey is organized as a multi-module Maven project:
 
-* **`spring-data-valkey/`** - Core Spring Data Valkey library
-* **`spring-boot-starter-data-valkey/`** - Spring Boot starter for auto-configuration
-* **`examples/`** - Example applications demonstrating various Spring Data features
-* **`performance/`** - Performance testing and benchmarking tools
+* **[`spring-data-valkey`](spring-data-valkey/)** - Core Spring Data Valkey library
+* **[`spring-boot-starter-data-valkey`](spring-boot-starter-data-valkey/)** - Spring Boot starter for auto-configuration
+* **[`examples`](examples/)** - Example applications demonstrating various Spring Data features
+* **[`performance`](performance/)** - Performance testing and benchmarking tools
 
 ## Prerequisites
 
 * **JDK 17 or above** - Required for compilation and runtime
 * **make** - For managing Valkey test infrastructure
 * **Maven v3.8.0 or above** - If using `mvn` command (or use included `./mvnw`)
-* **Docker** (optional) - For containerized Valkey instances
+* **Docker** (optional) - For testcontainers/Docker tests
 
 ## Getting Started
 
@@ -28,21 +28,33 @@ $ cd spring-data-valkey
 $ ./mvnw clean install
 ```
 
-## Start Valkey Server
+## Test Infrastructure
 
-Spring Data Valkey can be easily built with the [maven wrapper](https://github.com/takari/maven-wrapper). You also need JDK 17 or above and `make`. The local build environment is managed within a `Makefile` to download, build and spin up Valkey in various configurations (Standalone, Sentinel, Cluster, etc.)
+The project uses a `Makefile` to manage Valkey test infrastructure, automatically downloading and starting Valkey instances in various configurations (Standalone, Sentinel, Cluster).
+
+### Full Test Run
+
+Run full build with test infrastructure:
 
 ```bash
 $ make test
 ```
 
-The preceding command runs a full build and test. You can use `make start`, `make stop`, and `make clean` commands to control the environment yourself. This is useful if you want to avoid constant server restarts. Once all Valkey instances have been started, you can either run tests in your IDE or the full Maven build:
+### Manual Control
+
+For development, you can control the test environment manually:
+
+```bash
+$ make start    # Start all Valkey instances
+$ make stop     # Stop all instances  
+$ make clean    # Clean up containers and data
+```
+
+Once instances are running, execute tests from your IDE or run the Maven build:
 
 ```bash
 $ ./mvnw clean install
 ```
-
-If you want to build with the regular `mvn` command, you will need [Maven v3.8.0 or above](https://maven.apache.org/run-maven/index.html).
 
 ## Building the Project
 
@@ -93,7 +105,7 @@ For detailed information about all available examples and their specific feature
 # Default performance test with infrastructure management
 $ make performance
 
-# Test with different clients
+# Test with different clients against existing Valkey instance
 $ ./mvnw -q exec:java -pl performance -Dclient=valkeyglide
 $ ./mvnw -q exec:java -pl performance -Dclient=lettuce
 ```
@@ -122,9 +134,10 @@ For non-Spring Boot applications, configure logging via `logback.xml` in your cl
 
 ```xml
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d %5p %40.40c:%4L - %m%n</pattern>
         </encoder>
     </appender>
 
@@ -137,8 +150,9 @@ For non-Spring Boot applications, configure logging via `logback.xml` in your cl
     <logger name="redis.clients.jedis" level="DEBUG"/>
 
     <root level="INFO">
-        <appender-ref ref="STDOUT"/>
+        <appender-ref ref="console"/>
     </root>
+
 </configuration>
 ```
 
@@ -146,26 +160,13 @@ For non-Spring Boot applications, configure logging via `logback.xml` in your cl
 
 ### Version Management
 
-Versions are managed in the parent POM:
+Versions are managed in the parent POM and inherited by all modules automatically.
 
-```xml
-<version>${version}</version>
-```
+When preparing a new release, update the version in these files:
 
-All modules inherit this version automatically.
-
-When preparing a new release, update the following files (example shows `0.1.0` to `1.0.0`):
-
-```bash
-# 1. Update root project version
-$ sed -i 's/<version>0\.1\.0<\/version>/<version>1.0.0<\/version>/' pom.xml
-
-# 2. Update all parent version references in child modules
-$ find . -name "pom.xml" -not -path "./pom.xml" -exec sed -i 's/<version>0\.1\.0<\/version>/<version>1.0.0<\/version>/' {} \;
-
-# 3. Update notice file
-$ sed -i 's/Spring Data Valkey 0\.1\.0/Spring Data Valkey 1.0.0/' spring-data-valkey/src/main/resources/notice.txt
-```
+* **`pom.xml`** - Root project version (`<version>` element)
+* **`**/pom.xml`** - All child modules' parent version references (`<parent><version>` element)
+* **`spring-data-valkey/src/main/resources/notice.txt`** - Version in notice text
 
 Note: Child modules must explicitly specify parent versions - Maven requires this for proper dependency resolution.
 
@@ -176,8 +177,8 @@ In order to generate a new release, create and push a tag to the main branch. Th
 For example:
 
 ```bash
-$ git tag v1.0
-$ git push origin v1.0
+$ git tag v1.0.0
+$ git push origin v1.0.0
 ```
 
 ## Additional Resources

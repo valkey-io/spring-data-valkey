@@ -1,12 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+
+    <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d %5p %40.40c:%4L - %m%n</pattern>
         </encoder>
     </appender>
-    
-    <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
+
+    <logger name="io.valkey.springframework.data" level="error" />
+
+    <root level="warn">
+        <appender-ref ref="console" />
     </root>
+
 </configuration>
