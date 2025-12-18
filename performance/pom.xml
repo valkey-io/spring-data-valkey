@@ -31,8 +31,8 @@
 		<dependency>
 			<groupId>io.valkey</groupId>
 			<artifactId>valkey-glide</artifactId>
-			<version>${valkey-glide.version}</version>
 			<classifier>${os.detected.classifier}</classifier>
+			<version>${valkey-glide.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.lettuce</groupId>

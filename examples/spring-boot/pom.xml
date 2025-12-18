@@ -26,12 +26,6 @@
 			<groupId>io.valkey.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-valkey</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>io.valkey</groupId>
-			<artifactId>valkey-glide</artifactId>
-			<classifier>${os.detected.classifier}</classifier>
-			<version>${valkey-glide.version}</version>
-		</dependency>
 	</dependencies>
 
 	<build>
