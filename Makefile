@@ -15,7 +15,6 @@
 VERSION?=8.1.1
 PROJECT?=valkey
 GH_ORG?=valkey-io
-SPRING_PROFILE?=ci
 SHELL=/bin/bash -euo pipefail
 
 .PHONY: examples performance test all-tests clean
@@ -200,14 +199,14 @@ stop: server-stop sentinel-stop cluster-stop
 test:
 	$(MAKE) start
 	sleep 1
-	./mvnw clean test -U -P$(SPRING_PROFILE) || (echo "maven failed $$?"; exit 1)
+	./mvnw clean test -U || (echo "maven failed $$?"; exit 1)
 	$(MAKE) stop
 	$(MAKE) clean
 
 all-tests:
 	$(MAKE) start
 	sleep 1
-	./mvnw clean test -U -DrunLongTests=true -P$(SPRING_PROFILE) || (echo "maven failed $$?"; exit 1)
+	./mvnw clean test -U -DrunLongTests=true || (echo "maven failed $$?"; exit 1)
 	$(MAKE) stop
 	$(MAKE) clean
 

@@ -14,7 +14,7 @@ See instructions on starting a Valkey server in the [Developer Guide](../DEVELOP
 
 ## Running Tests
 
-All commands below assume you're in the `performance/` directory. To run from the project root, use `./mvnw -pl performance` instead of `../mvnw`.
+All commands below assume you're in the `performance/` directory. To run from the project root, use `./mvnw -q compile exec:java[@<test-name>] -pl performance [<parameters>]` instead of `../mvnw`.  Replace `<test-name>` and `<parameters>` from options listed below.
 
 ### Template Performance Test
 

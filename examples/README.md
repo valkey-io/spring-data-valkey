@@ -21,7 +21,7 @@ Run any example from this directory:
 $ ../mvnw -q compile exec:java -pl quickstart
 ```
 
-Replace `quickstart` with any example name below. To run from project root, use `./mvnw -pl examples/<example-name>`. To run from a specific example directory, use `../../mvnw -q compile exec:java`.
+Replace `quickstart` with any example name below. To run from project root, use `./mvnw -q compile exec:java -pl examples/<example-name>`. To run from a specific example directory, use `../../mvnw -q compile exec:java`.
 
 ## Available Examples
 
