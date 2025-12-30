@@ -222,11 +222,17 @@ public interface ValkeyGlideClientConfiguration {
          * OpenTelemetry once per JVM.
          */
         public ValkeyGlideClientConfigurationBuilder useOpenTelemetry(
-        @Nullable String tracesEndpoint,
-        @Nullable String metricsEndpoint,
-        @Nullable Integer samplePercentage,
-        @Nullable Long flushIntervalMs
+                @Nullable ValkeyGlideOpenTelemetry telemetry
         ) {
+            if (telemetry == null) {
+                return this;
+            }
+
+            String tracesEndpoint = telemetry.tracesEndpoint();
+            String metricsEndpoint = telemetry.metricsEndpoint();
+            Integer samplePercentage = telemetry.samplePercentage();
+            Long flushIntervalMs = telemetry.flushIntervalMs();
+
             boolean hasTraces = tracesEndpoint != null && !tracesEndpoint.isBlank();
             boolean hasMetrics = metricsEndpoint != null && !metricsEndpoint.isBlank();
 
@@ -245,6 +251,7 @@ public interface ValkeyGlideClientConfiguration {
 
                     otelBuilder.traces(tracesBuilder.build());
                 }
+
                 if (hasMetrics) {
                     otelBuilder.metrics(
                             MetricsConfig.builder()
@@ -252,11 +259,14 @@ public interface ValkeyGlideClientConfiguration {
                                     .build()
                     );
                 }
+
                 if (flushIntervalMs != null) {
                     otelBuilder.flushIntervalMs(flushIntervalMs);
                 }
+
                 OpenTelemetry.init(otelBuilder.build());
             }
+
             return this;
         }
 
