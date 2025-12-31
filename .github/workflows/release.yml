@@ -31,17 +31,8 @@ jobs:
         run: |
           make start PROJECT=valkey VERSION=8.1.1 GH_ORG=valkey-io
 
-      - name: Test and build release artifacts
+      - name: Test and package Spring Data Valkey
         run: |
-          # Install Spring Data Valkey (used by starter)
-          ./mvnw -s settings.xml \
-            -Ddevelocity.storage.directory=$HOME/.develocity-root \
-            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
-            install -DskipTests \
-            -Dgpg.skip=true \
-            -B
-
-          # Test Spring Data Valkey
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
@@ -51,7 +42,17 @@ jobs:
             -Dvalkey.server.version=8.1.1 \
             -U -B
 
-          # Test Spring Boot starter
+      - name: Install Spring Data Valkey
+        run: |
+          ./mvnw -s settings.xml \
+            -Ddevelocity.storage.directory=$HOME/.develocity-root \
+            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
+            install -DskipTests \
+            -Dgpg.skip=true \
+            -B
+
+      - name: Test and package Spring Boot Starter
+        run: |
           cd spring-boot-starter-data-valkey
           ../mvnw -s ../settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
