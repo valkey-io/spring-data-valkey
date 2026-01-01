@@ -22,6 +22,12 @@ import glide.api.models.configuration.BackoffStrategy;
 import glide.api.models.configuration.ReadFrom;
 import org.springframework.lang.Nullable;
 
+import glide.api.OpenTelemetry;
+import glide.api.OpenTelemetry.MetricsConfig;
+import glide.api.OpenTelemetry.OpenTelemetryConfig;
+import glide.api.OpenTelemetry.TracesConfig;
+
+
 /**
  * Configuration interface for Valkey-Glide client settings.
  *
@@ -209,7 +215,59 @@ public interface ValkeyGlideClientConfiguration {
             this.reconnectStrategy = reconnectStrategy;
             return this;
         }
-        
+
+        /**
+         * Initialize GLIDE OpenTelemetry with OTLP endpoints.
+         *
+         * If at least one endpoint (traces or metrics) is provided, this will initialize
+         * OpenTelemetry once per JVM.
+         */
+        public ValkeyGlideClientConfigurationBuilder useOpenTelemetry(
+            @Nullable String tracesEndpoint,
+            @Nullable String metricsEndpoint,
+            @Nullable Integer samplePercentage,
+            @Nullable Long flushIntervalMs
+            ) {
+
+            boolean hasTraces = tracesEndpoint != null && !tracesEndpoint.isBlank();
+            boolean hasMetrics = metricsEndpoint != null && !metricsEndpoint.isBlank();
+
+            if (!hasTraces && !hasMetrics){
+                 throw new IllegalArgumentException(
+                    "OpenTelemetryConfig requires at least one of tracesEndpoint or metricsEndpoint"
+                );
+            }
+
+                OpenTelemetryConfig.Builder otelBuilder = OpenTelemetryConfig.builder();
+
+                if (hasTraces) {
+                    TracesConfig.Builder tracesBuilder =
+                            TracesConfig.builder().endpoint(tracesEndpoint);
+
+                    if (samplePercentage != null) {
+                        tracesBuilder.samplePercentage(samplePercentage);
+                    }
+
+                    otelBuilder.traces(tracesBuilder.build());
+                }
+
+                if (hasMetrics) {
+                    otelBuilder.metrics(
+                            MetricsConfig.builder()
+                                    .endpoint(metricsEndpoint)
+                                    .build()
+                    );
+                }
+
+                if (flushIntervalMs != null) {
+                    otelBuilder.flushIntervalMs(flushIntervalMs);
+                }
+
+                OpenTelemetry.init(otelBuilder.build());
+            return this;
+        }
+
+
         /**
          * Set the maximum pool size for client pooling.
          * 
