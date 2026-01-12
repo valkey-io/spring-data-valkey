@@ -120,6 +120,7 @@ jobs:
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             test \
             -U -B
+
   ci-runtimehints-tests:
     needs: generate-test-matrices
     runs-on: ubuntu-latest

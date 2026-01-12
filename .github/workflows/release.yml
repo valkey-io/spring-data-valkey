@@ -59,6 +59,7 @@ jobs:
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             package javadoc:jar test \
             -U -B
+
       - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
