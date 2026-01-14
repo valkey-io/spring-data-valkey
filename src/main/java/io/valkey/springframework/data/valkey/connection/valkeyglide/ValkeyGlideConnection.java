@@ -66,7 +66,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
-    private final Set<byte[]> watchedKeys = new HashSet<>();
+    protected final Set<byte[]> watchedKeys = new HashSet<>();
     private @Nullable Subscription subscription;
 
     // Command interfaces
@@ -191,6 +191,8 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
                     subscription.close();
                     subscription = null;
                 }
+                // Reset closed flag so connection can be reused
+                closed.set(false);
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -202,30 +204,25 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
      * This ensures the next connection gets a clean client without stale state.
      */
     protected void cleanupConnectionState() {
-        // Dont use RESET - we will destroy the configured state
-        // Use valkey-glide native pipe to selectively clear the state on the backends,
-        // adapter and connection object do not matter - they are being destroyed
-        // some state cannot be cleared (like stats) but this is acceptable if pooling to be used
-
-        GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
-
-        @SuppressWarnings("unchecked")
-        Callable<Void>[] actions = new Callable[] {
-                () -> nativeClient.customCommand(new String[]{"UNWATCH"}).get(),
-                // TODO: Uncomment when dynamic pubsub is implemented
-                // () -> nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}).get(),
-                // () -> nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}).get(),
-                // () -> nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}).get()
-            };
-
-        for (Callable<Void> action : actions) {
+        // Only send UNWATCH if keys were actually watched
+        if (!watchedKeys.isEmpty()) {
+            GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
             try {
-                action.call();
+                nativeClient.customCommand(new String[]{"UNWATCH"}).get();
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
+                // Ignore cleanup errors
             }
+            watchedKeys.clear();
         }
+        
+        // TODO: Add similar checks for pubsub when implemented
+        // if (hasActiveSubscriptions) {
+        //     nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}).get();
+        //     nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}).get();
+        //     nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}).get();
+        // }
     }
 
     @Override
