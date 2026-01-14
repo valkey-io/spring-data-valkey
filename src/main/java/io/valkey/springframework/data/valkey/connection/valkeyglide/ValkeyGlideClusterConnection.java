@@ -113,30 +113,25 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
      */
     @Override
     protected void cleanupConnectionState() {
-        // Dont use RESET - we will destroy the configured state
-        // Use valkey-glide native pipe to selectively clear the state on the backends,
-        // adapter and connection object do not matter - they are being destroyed
-        // some state cannot be cleared (like stats) but this is acceptable if pooling to be used
-
-        GlideClusterClient nativeClient = (GlideClusterClient) unifiedClient.getNativeClient();
-
-        @SuppressWarnings("unchecked")
-        Callable<Void>[] actions = new Callable[] {
-                () -> nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // TODO: Uncomment when dynamic pubsub is implemented
-                // () -> nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // () -> nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // () -> nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get()
-            };
-
-        for (Callable<Void> action : actions) {
+        // Only send UNWATCH if keys were actually watched
+        if (!watchedKeys.isEmpty()) {
+            GlideClusterClient nativeClient = (GlideClusterClient) unifiedClient.getNativeClient();
             try {
-                action.call();
+                nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES).get();
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
+                // Ignore cleanup errors
             }
+            watchedKeys.clear();
         }
+        
+        // TODO: Add similar checks for pubsub when implemented
+        // if (hasActiveSubscriptions) {
+        //     nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get();
+        //     nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get();
+        //     nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get();
+        // }
     }
 
     @Override
