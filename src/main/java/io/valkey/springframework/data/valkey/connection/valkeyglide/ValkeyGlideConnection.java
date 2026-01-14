@@ -191,8 +191,6 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
                     subscription.close();
                     subscription = null;
                 }
-                // Reset closed flag so connection can be reused
-                closed.set(false);
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
