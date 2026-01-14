@@ -23,6 +23,7 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 		<maven.compiler.release>17</maven.compiler.release>
 		<maven.compiler.parameters>true</maven.compiler.parameters>
+		<maven.deploy.skip>true</maven.deploy.skip>
 
 		<!-- Spring versions -->
 		<spring-boot.version>3.5.1</spring-boot.version>
