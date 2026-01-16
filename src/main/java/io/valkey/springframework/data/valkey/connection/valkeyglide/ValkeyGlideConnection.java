@@ -66,7 +66,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
-    protected final Set<byte[]> watchedKeys = new HashSet<>();
+    private final Set<byte[]> watchedKeys = new HashSet<>();
     private @Nullable Subscription subscription;
 
     // Command interfaces
