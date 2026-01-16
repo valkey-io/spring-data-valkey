@@ -108,35 +108,26 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
     }
 
     /**
-     * Cleans up server-side connection state before returning client to pool.
-     * This ensures the next connection gets a clean client without stale state.
+     * Cleans up server-side connection state asynchronously before returning client to pool.
+     * Sends UNWATCH command without blocking, then returns connection to pool in background.
      */
     @Override
-    protected void cleanupConnectionState() {
-        // Dont use RESET - we will destroy the configured state
-        // Use valkey-glide native pipe to selectively clear the state on the backends,
-        // adapter and connection object do not matter - they are being destroyed
-        // some state cannot be cleared (like stats) but this is acceptable if pooling to be used
-
+    protected void cleanupConnectionStateAsync() {
         GlideClusterClient nativeClient = (GlideClusterClient) unifiedClient.getNativeClient();
-
-        @SuppressWarnings("unchecked")
-        Callable<Void>[] actions = new Callable[] {
-                () -> nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // TODO: Uncomment when dynamic pubsub is implemented
-                // () -> nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // () -> nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // () -> nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get()
-            };
-
-        for (Callable<Void> action : actions) {
-            try {
-                action.call();
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-            }
-        }
+        
+        // Send UNWATCH asynchronously to all nodes and return connection to pool when done
+        nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES)
+            .whenComplete((result, error) -> {
+                // Return client to pool after cleanup completes
+                if (factory != null) {
+                    factory.releaseClient(nativeClient);
+                }
+                
+                // Log errors but don't throw - cleanup is best-effort
+                if (error != null) {
+                    // Silently ignore cleanup errors
+                }
+            });
     }
 
     @Override
