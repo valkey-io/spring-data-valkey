@@ -336,6 +336,10 @@ services:
       - '6379:6379'
 ```
 
+## Virtual Threads / AsyncTaskExecutor
+
+Valkey GLIDE provides async operations via CompletableFuture and does not require an external thread pool configuration.  As a result, if `spring.task.execution.pool.virtual-threads.enabled` is enabled when using GLIDE, a warning is logged and the configuration option is ignored.
+
 ## Building from Source
 
 ### Prerequisites
