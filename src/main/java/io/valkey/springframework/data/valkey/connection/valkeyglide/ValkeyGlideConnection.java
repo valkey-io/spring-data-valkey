@@ -184,13 +184,12 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     public void close() throws DataAccessException {
         try {
             if (closed.compareAndSet(false, true)) {
-                cleanupConnectionState();
-                // Return client to pool instead of closing it
-                factory.releaseClient(unifiedClient.getNativeClient());
                 if (subscription != null) {
                     subscription.close();
                     subscription = null;
                 }
+                // Cleanup asynchronously and return connection to pool when done
+                cleanupConnectionStateAsync();
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -198,29 +197,23 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     }
     
     /**
-     * Cleans up server-side connection state before returning client to pool.
-     * This ensures the next connection gets a clean client without stale state.
+     * Cleans up server-side connection state asynchronously before returning client to pool.
+     * Sends UNWATCH command without blocking, then returns connection to pool in background.
      */
-    protected void cleanupConnectionState() {
-        // Only send UNWATCH if keys were actually watched
-        if (!watchedKeys.isEmpty()) {
-            GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
-            try {
-                nativeClient.customCommand(new String[]{"UNWATCH"}).get();
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                // Ignore cleanup errors
-            }
-            watchedKeys.clear();
-        }
+    protected void cleanupConnectionStateAsync() {
+        GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
         
-        // TODO: Add similar checks for pubsub when implemented
-        // if (hasActiveSubscriptions) {
-        //     nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}).get();
-        //     nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}).get();
-        //     nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}).get();
-        // }
+        // Send UNWATCH asynchronously and return connection to pool when done
+        nativeClient.customCommand(new String[]{"UNWATCH"})
+            .whenComplete((result, error) -> {
+                // Return client to pool after cleanup completes
+                factory.releaseClient(nativeClient);
+                
+                // Log errors but don't throw - cleanup is best-effort
+                if (error != null) {
+                    // Silently ignore cleanup errors
+                }
+            });
     }
 
     @Override

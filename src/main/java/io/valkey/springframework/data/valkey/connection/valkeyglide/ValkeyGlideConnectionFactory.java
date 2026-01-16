@@ -18,6 +18,7 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 
+import glide.api.BaseClient;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
@@ -81,7 +82,7 @@ public class ValkeyGlideConnectionFactory
     private final ValkeyConfiguration configuration;
     
     // Connection pools for client reuse
-    private final BlockingQueue<Object> clientPool;
+    private final BlockingQueue<BaseClient> clientPool;
     
     private @Nullable AsyncTaskExecutor executor;
     
@@ -272,7 +273,7 @@ public class ValkeyGlideConnectionFactory
      * 
      * @param client the client to release
      */
-    void releaseClient(Object client) {
+    void releaseClient(BaseClient client) {
         clientPool.offer(client);
     }
 

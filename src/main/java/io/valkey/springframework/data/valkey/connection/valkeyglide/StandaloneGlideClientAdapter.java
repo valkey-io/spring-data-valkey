@@ -53,7 +53,7 @@ class StandaloneGlideClientAdapter implements UnifiedGlideClient {
     }
 
     @Override
-    public Object getNativeClient() {
+    public GlideClient getNativeClient() {
         return glideClient;
     }
 

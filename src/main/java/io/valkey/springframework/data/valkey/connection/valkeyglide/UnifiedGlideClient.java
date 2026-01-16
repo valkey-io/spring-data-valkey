@@ -17,6 +17,7 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import java.util.concurrent.ExecutionException;
 
+import glide.api.BaseClient;
 import glide.api.models.GlideString;
 
 /**
@@ -39,5 +40,5 @@ interface UnifiedGlideClient extends AutoCloseable {
     Object[] execBatch() throws InterruptedException, ExecutionException;
     void discardBatch();
     Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException;
-    Object getNativeClient();
+    BaseClient getNativeClient();
 }

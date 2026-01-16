@@ -108,30 +108,26 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
     }
 
     /**
-     * Cleans up server-side connection state before returning client to pool.
-     * This ensures the next connection gets a clean client without stale state.
+     * Cleans up server-side connection state asynchronously before returning client to pool.
+     * Sends UNWATCH command without blocking, then returns connection to pool in background.
      */
     @Override
-    protected void cleanupConnectionState() {
-        // Only send UNWATCH if keys were actually watched
-        if (!watchedKeys.isEmpty()) {
-            GlideClusterClient nativeClient = (GlideClusterClient) unifiedClient.getNativeClient();
-            try {
-                nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES).get();
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-                // Ignore cleanup errors
-            }
-            watchedKeys.clear();
-        }
+    protected void cleanupConnectionStateAsync() {
+        GlideClusterClient nativeClient = (GlideClusterClient) unifiedClient.getNativeClient();
         
-        // TODO: Add similar checks for pubsub when implemented
-        // if (hasActiveSubscriptions) {
-        //     nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get();
-        //     nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get();
-        //     nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get();
-        // }
+        // Send UNWATCH asynchronously to all nodes and return connection to pool when done
+        nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES)
+            .whenComplete((result, error) -> {
+                // Return client to pool after cleanup completes
+                if (factory != null) {
+                    factory.releaseClient(nativeClient);
+                }
+                
+                // Log errors but don't throw - cleanup is best-effort
+                if (error != null) {
+                    // Silently ignore cleanup errors
+                }
+            });
     }
 
     @Override

@@ -293,7 +293,7 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
     }
 
     @Override
-    public Object getNativeClient() {
+    public GlideClusterClient getNativeClient() {
         return glideClusterClient;
     }
 
