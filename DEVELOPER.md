@@ -162,17 +162,28 @@ For non-Spring Boot applications, configure logging via `logback.xml` in your cl
 
 Versions are managed in the parent POM and inherited by all modules automatically.
 
-When preparing a new release, update the version in these files:
+When preparing a new release, use the Maven Versions Plugin to update all module versions.
 
+For example:
+
+```bash
+$ mvn versions:set -DnewVersion=1.0.0
+$ mvn versions:commit
+
+# Revert instead of commit if necessary
+$ mvn versions:revert
+```
+
+This automatically updates:
 * **`pom.xml`** - Root project version (`<version>` element)
 * **`**/pom.xml`** - All child modules' parent version references (`<parent><version>` element)
-* **`spring-data-valkey/src/main/resources/notice.txt`** - Version in notice text
 
-Note: Child modules must explicitly specify parent versions - Maven requires this for proper dependency resolution.
+Manual update of the version is still required in these files:
+* **`spring-data-valkey/src/main/resources/notice.txt`** - Version in notice text
 
 ### Generating a Release
 
-In order to generate a new release, create and push a tag to the main branch. This will build and test the project and add the artifacts to a draft release. Verify the release and then publish it.
+In order to generate a new release, create and push a tag to the main branch. GitHub will build and test the project and add the artifacts to a draft release. Verify the release and then publish it in GitHub.
 
 For example:
 
