@@ -32,6 +32,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration.OpenTelemetryForGlide;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -49,6 +50,10 @@ import glide.api.models.configuration.GlideClientConfiguration;
 import glide.api.models.configuration.GlideClusterClientConfiguration;
 import glide.api.models.configuration.NodeAddress;
 import glide.api.models.configuration.ReadFrom;
+import glide.api.OpenTelemetry;
+import glide.api.OpenTelemetry.MetricsConfig;
+import glide.api.OpenTelemetry.OpenTelemetryConfig;
+import glide.api.OpenTelemetry.TracesConfig;
 import glide.api.models.configuration.StandaloneSubscriptionConfiguration;
 import glide.api.models.configuration.ClusterSubscriptionConfiguration;
 
@@ -59,6 +64,7 @@ import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Connection factory creating <a href="https://github.com/valkey-io/valkey-glide">Valkey Glide</a> based
@@ -96,6 +102,9 @@ public class ValkeyGlideConnectionFactory
     private boolean autoStartup = true;
     private boolean earlyStartup = true;
     private int phase = 0;
+    private static final AtomicBoolean OTEL_INITIALIZED = new AtomicBoolean(false);
+    private static @Nullable OpenTelemetryForGlide OTEL_INITIALIZED_CONFIG;
+    private static final Object OTEL_LOCK = new Object();
 
     /**
      * Maps native Glide clients ({@link GlideClient} or {@link GlideClusterClient}) to their
@@ -315,6 +324,70 @@ public class ValkeyGlideConnectionFactory
         running = false;
     }
 
+    private boolean sameOtelConfig(@Nullable OpenTelemetryForGlide a, @Nullable OpenTelemetryForGlide b) {
+        return java.util.Objects.equals(a, b);
+    }
+
+    private void useOpenTelemetry(OpenTelemetryForGlide openTelemetryForGlide) {
+        Assert.notNull(openTelemetryForGlide, "OpenTelemetryForGlide must not be null");
+
+        String tracesEndpoint = openTelemetryForGlide.tracesEndpoint();
+        String metricsEndpoint = openTelemetryForGlide.metricsEndpoint();
+        Integer samplePercentage = openTelemetryForGlide.samplePercentage();
+        Long flushIntervalMs = openTelemetryForGlide.flushIntervalMs();
+
+        boolean hasTraces = tracesEndpoint != null && !tracesEndpoint.isBlank();
+        boolean hasMetrics = metricsEndpoint != null && !metricsEndpoint.isBlank();
+
+        if (!hasTraces && !hasMetrics){
+                throw new IllegalArgumentException(
+                "OpenTelemetryForGlide requires at least one of tracesEndpoint or metricsEndpoint"
+            );
+        }
+        synchronized (OTEL_LOCK) {
+            if (OTEL_INITIALIZED.getAndSet(true)) {
+                if (sameOtelConfig(OTEL_INITIALIZED_CONFIG, openTelemetryForGlide)) {
+                    return; // Already initialized with the same config
+                }
+
+                throw new IllegalStateException(
+                    "OpenTelemetry is already initialized with a different configuration. "
+                        + "existing=" + OTEL_INITIALIZED_CONFIG
+                        + ", requested=" + openTelemetryForGlide
+                );
+            }
+
+            OpenTelemetryConfig.Builder otelBuilder = OpenTelemetryConfig.builder();
+
+            if (hasTraces) {
+                TracesConfig.Builder tracesBuilder =
+                    TracesConfig.builder().endpoint(tracesEndpoint);
+
+                if (samplePercentage != null) {
+                    tracesBuilder.samplePercentage(samplePercentage);
+                }
+
+                otelBuilder.traces(tracesBuilder.build());
+            }
+
+            if (hasMetrics) {
+                otelBuilder.metrics(
+                    MetricsConfig.builder()
+                        .endpoint(metricsEndpoint)
+                        .build()
+                );
+            }
+
+            if (flushIntervalMs != null) {
+                otelBuilder.flushIntervalMs(flushIntervalMs);
+            }
+            System.out.println("Initializing OpenTelemetry for Valkey-Glide with config: " + openTelemetryForGlide);
+
+            OTEL_INITIALIZED_CONFIG = openTelemetryForGlide;
+            OpenTelemetry.init(otelBuilder.build());
+        }
+    }
+
     /**
      * Creates a GlideClient instance for each connection.
      */
@@ -406,6 +479,12 @@ public class ValkeyGlideConnectionFactory
             BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
             if (reconnectStrategy != null) {
                 configBuilder.reconnectStrategy(reconnectStrategy);
+            }
+
+            // OpenTelemetry
+            OpenTelemetryForGlide openTelemetryForGlide = valkeyGlideConfiguration.getOpenTelemetryForGlide();
+            if (openTelemetryForGlide != null){
+                this.useOpenTelemetry(openTelemetryForGlide);
             }
 
             // Pubsub listener 
@@ -520,6 +599,12 @@ public class ValkeyGlideConnectionFactory
             BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
             if (reconnectStrategy != null) {
                 configBuilder.reconnectStrategy(reconnectStrategy);
+            }
+
+           // OpenTelemetry
+            OpenTelemetryForGlide openTelemetryForGlide = valkeyGlideConfiguration.getOpenTelemetryForGlide();
+            if (openTelemetryForGlide != null){
+                this.useOpenTelemetry(openTelemetryForGlide);
             }
             
 

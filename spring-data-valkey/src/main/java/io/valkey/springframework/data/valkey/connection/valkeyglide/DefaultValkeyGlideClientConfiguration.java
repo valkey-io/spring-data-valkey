@@ -37,9 +37,10 @@ public class DefaultValkeyGlideClientConfiguration implements ValkeyGlideClientC
     private final @Nullable String clientAZ;
     private final @Nullable BackoffStrategy reconnectStrategy;
     private final int maxPoolSize;
+    private final @Nullable OpenTelemetryForGlide openTelemetryForGlide;
 
     DefaultValkeyGlideClientConfiguration() {
-        this(null, false, null, null, null, null, null, 8);
+        this(null, false, null, null, null, null, null, 8, null);
     }
 
     public DefaultValkeyGlideClientConfiguration(
@@ -50,7 +51,8 @@ public class DefaultValkeyGlideClientConfiguration implements ValkeyGlideClientC
             @Nullable Integer inflightRequestsLimit,
             @Nullable String clientAZ,
             @Nullable BackoffStrategy reconnectStrategy,
-            int maxPoolSize) {
+            int maxPoolSize, 
+            @Nullable OpenTelemetryForGlide openTelemetryForGlide) {
         this.commandTimeout = commandTimeout;
         this.useSsl = useSsl;
         this.connectionTimeout = connectionTimeout;
@@ -59,6 +61,7 @@ public class DefaultValkeyGlideClientConfiguration implements ValkeyGlideClientC
         this.clientAZ = clientAZ;
         this.reconnectStrategy = reconnectStrategy;
         this.maxPoolSize = maxPoolSize;
+        this.openTelemetryForGlide = openTelemetryForGlide;
     }
 
     @Nullable
@@ -105,6 +108,12 @@ public class DefaultValkeyGlideClientConfiguration implements ValkeyGlideClientC
     @Override
     public int getMaxPoolSize() {
         return maxPoolSize;
+    }
+
+    @Nullable
+    @Override
+    public OpenTelemetryForGlide getOpenTelemetryForGlide() {
+        return openTelemetryForGlide;
     }
 
     @Override
