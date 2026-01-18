@@ -237,11 +237,6 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         @SuppressWarnings("unchecked")
         Callable<Void>[] actions = new Callable[] {
                 () -> nativeClient.customCommand(new String[]{"UNWATCH"}).get(),
-                // This is defensive -  subscriptions were already supposed to be 
-                // cleaned during subscription.close()
-                () -> nativeClient.customCommand(new String[]{"UNSUBSCRIBE_BLOCKING"}).get(),
-                () -> nativeClient.customCommand(new String[]{"PUNSUBSCRIBE_BLOCKING"}).get(),
-                () -> nativeClient.customCommand(new String[]{"SUNSUBSCRIBE_BLOCKING"}).get()
             };
 
         for (Callable<Void> action : actions) {
