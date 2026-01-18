@@ -20,7 +20,6 @@ import glide.api.models.GlideString;
 
 import io.valkey.springframework.data.valkey.connection.DefaultMessage;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
-import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 
 /**
  * A delegating pub/sub listener that is configured at client creation time,
@@ -29,8 +28,6 @@ import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 class DelegatingPubSubListener {
     
     private volatile MessageListener messageListener;
-    private volatile SubscriptionListener subscriptionListener = 
-        SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER;
     
     /**
      * Called by Glide when a pub/sub message arrives.
@@ -64,9 +61,6 @@ class DelegatingPubSubListener {
         this.messageListener = null;
     }
     
-    SubscriptionListener getSubscriptionListener() {
-        return subscriptionListener;
-    }
     
     boolean hasListener() {
         return messageListener != null;

@@ -97,6 +97,21 @@ public class ValkeyGlideConnectionFactory
     private boolean earlyStartup = true;
     private int phase = 0;
 
+    /**
+     * Maps native Glide clients ({@link GlideClient} or {@link GlideClusterClient}) to their
+     * associated {@link DelegatingPubSubListener}.
+     * 
+     * <p>This mapping is necessary because Glide requires pub/sub callbacks to be configured
+     * at client creation time, before any subscriptions exist. When a client is created and
+     * added to the pool, we also create a {@link DelegatingPubSubListener} and register it
+     * as the client's pub/sub callback. The actual {@link MessageListener} is set on the
+     * {@link DelegatingPubSubListener} later when {@code subscribe()} is called.
+     * 
+     * <p>When a connection is obtained from the pool, we look up the corresponding
+     * {@link DelegatingPubSubListener} for that client and pass it to the
+     * {@link ValkeyGlideConnection}, which can then configure it with the user's
+     * {@link MessageListener} during subscription.
+     */
     private final Map<Object, DelegatingPubSubListener> clientListenerMap = new ConcurrentHashMap<>();
 
     /**

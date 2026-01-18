@@ -110,19 +110,11 @@ class ValkeyGlideSubscription extends AbstractSubscription {
         
         // Unsubscribe from SPECIFIC channels we subscribed to, not ALL
         if (channelsToNotify.length > 0) {
-            try {
-                sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
-            } catch (Exception e) {
-                // ignore during close
-            }
+            sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
         }
         
         if (patternsToNotify.length > 0) {
-            try {
-                sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
-            } catch (Exception e) {
-                // ignore during close
-            }
+            sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
         }
         
         // Notify subscription callbacks
@@ -137,24 +129,24 @@ class ValkeyGlideSubscription extends AbstractSubscription {
     /**
      * Send a pub/sub command directly to the client using GlideString.
      */
-    private void sendPubsubCommand(String command, byte[]... args) {
-        GlideString[] glideArgs = new GlideString[args.length + 2];
+    private void sendPubsubCommand(String command, byte[]... channels) {
+        GlideString[] cmd = new GlideString[channels.length + 2];
 
         int i = 0;
-        glideArgs[i++] = GlideString.of(command);
-        for (byte[] arg : args) {
-            glideArgs[i++] = GlideString.of(arg);
+        cmd[i++] = GlideString.of(command);
+        for (byte[] channel : channels) {
+            cmd[i++] = GlideString.of(channel);
         }
 
         // Always append timeout = 0
-        glideArgs[i] = GlideString.of("0");
+        cmd[i] = GlideString.of("0");
 
         try {
-            client.customCommand(glideArgs);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new ValkeyGlideExceptionConverter().convert(e);
+            client.customCommand(cmd);
         } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             throw new ValkeyGlideExceptionConverter().convert(e);
         }
     }

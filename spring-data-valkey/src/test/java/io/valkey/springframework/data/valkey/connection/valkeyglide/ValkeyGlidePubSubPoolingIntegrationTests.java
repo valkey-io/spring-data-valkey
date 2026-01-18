@@ -24,7 +24,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
@@ -60,12 +59,15 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
     private static final Logger logger = LoggerFactory.getLogger(ValkeyGlidePubSubPoolingIntegrationTests.class);
 
     private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(2);
+    private static final long TERMINATION_TIMEOUT_SECONDS = 10;
 
     private final boolean useCluster;
 
-    private ValkeyGlideConnectionFactory connectionFactory;
+    // Shared publisher factory - created in setUp, destroyed in tearDown
     private ValkeyGlideConnectionFactory publisherFactory;
-    private Semaphore connectionLimiter;
+
+    // Test-specific factories - tests manage their own lifecycle
+    private final List<ValkeyGlideConnectionFactory> testFactories = new ArrayList<>();
 
     public ValkeyGlidePubSubPoolingIntegrationTests(boolean useCluster) {
         this.useCluster = useCluster;
@@ -91,20 +93,27 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
 
     @BeforeEach
     void setUp() {
-        // Default setup with pool size 3 - individual tests can recreate with different sizes
-        connectionFactory = createConnectionFactory(3);
         publisherFactory = createConnectionFactory(2);
-        connectionLimiter = new Semaphore(3);
-
-        try (ValkeyConnection conn = connectionFactory.getConnection()) {
-            assertThat(conn.ping()).isEqualTo("PONG");
-        }
     }
 
     @AfterEach
     void tearDown() {
-        destroyFactory(connectionFactory);
+        // Clean up all test-created factories
+        for (ValkeyGlideConnectionFactory factory : testFactories) {
+            destroyFactory(factory);
+        }
+        testFactories.clear();
+
         destroyFactory(publisherFactory);
+    }
+
+    /**
+     * Creates a connection factory with the specified pool size and registers it for cleanup.
+     */
+    private ValkeyGlideConnectionFactory createTestFactory(int poolSize) {
+        ValkeyGlideConnectionFactory factory = createConnectionFactory(poolSize);
+        testFactories.add(factory);
+        return factory;
     }
 
     private ValkeyGlideConnectionFactory createConnectionFactory(int poolSize) {
@@ -126,7 +135,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         return factory;
     }
 
-    private void destroyFactory(ValkeyGlideConnectionFactory factory) {
+    private void destroyFactory(@Nullable ValkeyGlideConnectionFactory factory) {
         if (factory != null) {
             try {
                 factory.destroy();
@@ -142,24 +151,14 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         }
     }
 
-    /**
-     * Recreates factories with pool size 1 for tests that require guaranteed client reuse.
-     */
-    private void setupSingleClientPool() {
-        destroyFactory(connectionFactory);
-        destroyFactory(publisherFactory);
-
-        connectionFactory = createConnectionFactory(1);
-        publisherFactory = createConnectionFactory(1);
-        connectionLimiter = new Semaphore(1);
-    }
+    interface CompositeListener extends MessageListener, SubscriptionListener {}
 
     // ==================== Single Client Pool Tests ====================
     // These tests use pool size 1 to guarantee client reuse
 
     @ParameterizedValkeyTest
     void sameClientShouldNotReceiveMessagesFromPreviousSubscription() throws Exception {
-        setupSingleClientPool();
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
         String channel1 = "test:pool:prev:ch1";
         String channel2 = "test:pool:prev:ch2";
@@ -200,7 +199,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
 
     @ParameterizedValkeyTest
     void rapidSubscribeUnsubscribeCyclesOnSameClient() throws Exception {
-        setupSingleClientPool();
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
         String channelBase = "test:pool:rapid";
         int cycles = 10;
@@ -230,7 +229,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
 
     @ParameterizedValkeyTest
     void subscriptionCallbacksWithCompositeListener() throws Exception {
-        setupSingleClientPool();
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
         String channel = "test:pool:callbacks";
         Object firstClient = null;
@@ -280,7 +279,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
 
     @ParameterizedValkeyTest
     void partialUnsubscribeThenReuseClient() throws Exception {
-        setupSingleClientPool();
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
         String channel1 = "test:pool:partial:ch1";
         String channel2 = "test:pool:partial:ch2";
@@ -326,7 +325,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
 
     @ParameterizedValkeyTest
     void clientStateShouldBeCleanAfterNoOpConnection() throws Exception {
-        setupSingleClientPool();
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
         String channel = "test:pool:noop";
 
@@ -351,7 +350,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
 
     @ParameterizedValkeyTest
     void mixedChannelAndPatternSubscriptionsOnSameConnection() throws Exception {
-        setupSingleClientPool();
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
         String channel = "test:pool:mixed:exact";
         String patternBase = "test:pool:mixed:pattern";
@@ -410,12 +409,15 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
 
     @ParameterizedValkeyTest
     void concurrentThreadsReceiveOnlyTheirOwnMessages() throws Exception {
+        int poolSize = 3;
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
+        Semaphore connectionLimiter = new Semaphore(poolSize);
+
         int threadCount = 6;
         int iterationsPerThread = 10;
         String channelBase = "test:concurrent:isolation";
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch allDone = new CountDownLatch(threadCount);
         AtomicInteger errorCount = new AtomicInteger(0);
 
         for (int t = 0; t < threadCount; t++) {
@@ -449,25 +451,26 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
                 } catch (Exception e) {
                     logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
                     errorCount.incrementAndGet();
-                } finally {
-                    allDone.countDown();
                 }
             });
         }
 
-        assertThat(allDone.await(60, TimeUnit.SECONDS)).isTrue();
         executor.shutdown();
+        assertThat(executor.awaitTermination(TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         assertThat(errorCount.get()).isZero();
     }
 
     @ParameterizedValkeyTest
     void concurrentPatternSubscriptions() throws Exception {
+        int poolSize = 3;
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
+        Semaphore connectionLimiter = new Semaphore(poolSize);
+
         int threadCount = 4;
         int iterationsPerThread = 8;
         String patternBase = "test:concurrent:pattern";
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch allDone = new CountDownLatch(threadCount);
         AtomicInteger errorCount = new AtomicInteger(0);
 
         for (int t = 0; t < threadCount; t++) {
@@ -502,25 +505,26 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
                 } catch (Exception e) {
                     logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
                     errorCount.incrementAndGet();
-                } finally {
-                    allDone.countDown();
                 }
             });
         }
 
-        assertThat(allDone.await(60, TimeUnit.SECONDS)).isTrue();
         executor.shutdown();
+        assertThat(executor.awaitTermination(TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         assertThat(errorCount.get()).isZero();
     }
 
     @ParameterizedValkeyTest
     void rapidConcurrentSubscribeUnsubscribeCycles() throws Exception {
+        int poolSize = 3;
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
+        Semaphore connectionLimiter = new Semaphore(poolSize);
+
         int threadCount = 5;
         int cyclesPerThread = 20;
         String channelBase = "test:concurrent:rapid";
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch allDone = new CountDownLatch(threadCount);
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger errorCount = new AtomicInteger(0);
 
@@ -556,26 +560,27 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
                 } catch (Exception e) {
                     logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
                     errorCount.incrementAndGet();
-                } finally {
-                    allDone.countDown();
                 }
             });
         }
 
-        assertThat(allDone.await(120, TimeUnit.SECONDS)).isTrue();
         executor.shutdown();
+        assertThat(executor.awaitTermination(2 * TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         assertThat(errorCount.get()).isZero();
         assertThat(successCount.get()).isEqualTo(threadCount * cyclesPerThread);
     }
 
     @ParameterizedValkeyTest
     void concurrentMixedChannelAndPatternSubscriptions() throws Exception {
+        int poolSize = 3;
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
+        Semaphore connectionLimiter = new Semaphore(poolSize);
+
         int threadCount = 4;
         int iterationsPerThread = 5;
         String base = "test:concurrent:mixed";
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch allDone = new CountDownLatch(threadCount);
         AtomicInteger errorCount = new AtomicInteger(0);
 
         for (int t = 0; t < threadCount; t++) {
@@ -625,25 +630,26 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
                 } catch (Exception e) {
                     logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
                     errorCount.incrementAndGet();
-                } finally {
-                    allDone.countDown();
                 }
             });
         }
 
-        assertThat(allDone.await(60, TimeUnit.SECONDS)).isTrue();
         executor.shutdown();
+        assertThat(executor.awaitTermination(TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         assertThat(errorCount.get()).isZero();
     }
 
     @ParameterizedValkeyTest
     void highThroughputMessaging() throws Exception {
+        int poolSize = 3;
+        ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
+        Semaphore connectionLimiter = new Semaphore(poolSize);
+
         int threadCount = 4;
         int messagesPerThread = 50;
         String channelBase = "test:concurrent:highthroughput";
 
         ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-        CountDownLatch allDone = new CountDownLatch(threadCount);
         AtomicInteger errorCount = new AtomicInteger(0);
 
         for (int t = 0; t < threadCount; t++) {
@@ -680,16 +686,12 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
                 } catch (Exception e) {
                     logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
                     errorCount.incrementAndGet();
-                } finally {
-                    allDone.countDown();
                 }
             });
         }
 
-        assertThat(allDone.await(60, TimeUnit.SECONDS)).isTrue();
         executor.shutdown();
+        assertThat(executor.awaitTermination(TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
         assertThat(errorCount.get()).isZero();
     }
-
-    interface CompositeListener extends MessageListener, SubscriptionListener {}
 }

@@ -125,7 +125,6 @@ public class PubSubTestParams {
 		return parameters;
 	}
 
-
 	private static boolean clusterAvailable() {
 		return ValkeyDetector.isClusterAvailable();
 	}

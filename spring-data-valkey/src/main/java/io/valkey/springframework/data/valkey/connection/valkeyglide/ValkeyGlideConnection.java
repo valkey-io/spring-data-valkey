@@ -63,7 +63,12 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     protected final UnifiedGlideClient unifiedClient;
     protected final @Nullable ValkeyGlideConnectionFactory factory;
-    protected final @Nullable DelegatingPubSubListener pubSubListener;
+    /**
+     * Bridges Glide's callback mechanism (configured at client creation) with Spring's
+     * {@link MessageListener} (provided at subscribe time). The user's listener is set
+     * on this delegate when {@code subscribe()} is called, and cleared on connection close.
+     */
+    protected final @Nullable DelegatingPubSubListener delegatingListener;
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
@@ -95,20 +100,20 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     }
 
     /**
-     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter and pub/sub listener.
+     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter and delegating pub/sub listener.
      *
      * @param unifiedClient unified client adapter (standalone or cluster)
      * @param factory the connection factory (optional, for pooling support)
-     * @param pubSubListener the delegating pub/sub listener for callback-based message delivery
+     * @param delegatingListener the delegating pub/sub listener for callback-based message delivery
      */
     public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, 
             @Nullable ValkeyGlideConnectionFactory factory,
-            @Nullable DelegatingPubSubListener pubSubListener) {
+            @Nullable DelegatingPubSubListener delegatingListener) {
         Assert.notNull(unifiedClient, "UnifiedClient must not be null");
         
         this.unifiedClient = unifiedClient;
         this.factory = factory;
-        this.pubSubListener = pubSubListener;
+        this.delegatingListener = delegatingListener;
         
         // Initialize command interfaces
         this.keyCommands = new ValkeyGlideKeyCommands(this);
@@ -208,8 +213,8 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
                 
                 cleanupConnectionState();
 
-                if (pubSubListener != null) {
-                    pubSubListener.clearListener();
+                if (delegatingListener != null) {
+                    delegatingListener.clearListener();
                 }
                 
                 // Return client to pool
@@ -452,22 +457,22 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
 		}
 
-        if (pubSubListener == null) {
+        if (delegatingListener == null) {
             throw new InvalidDataAccessApiUsageException(
                     "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
         }
 
         try {
-            pubSubListener.setListener(listener);
+            delegatingListener.setListener(listener);
             
             ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
-                    listener, unifiedClient, pubSubListener);
+                    listener, unifiedClient, delegatingListener);
             this.subscription = glideSubscription;
             glideSubscription.subscribe(channels);
             
         } catch (Exception ex) {
-            if (pubSubListener != null) {
-                pubSubListener.clearListener();
+            if (delegatingListener != null) {
+                delegatingListener.clearListener();
             }
             this.subscription = null;
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -489,22 +494,22 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
 		}
         
-        if (pubSubListener == null) {
+        if (delegatingListener == null) {
             throw new InvalidDataAccessApiUsageException(
                     "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
         }
 
         try {
-            pubSubListener.setListener(listener);
+            delegatingListener.setListener(listener);
             
             ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
-                    listener, unifiedClient, pubSubListener);
+                    listener, unifiedClient, delegatingListener);
             this.subscription = glideSubscription;
             glideSubscription.pSubscribe(patterns);
             
         } catch (Exception ex) {
-            if (pubSubListener != null) {
-                pubSubListener.clearListener();
+            if (delegatingListener != null) {
+                delegatingListener.clearListener();
             }
             this.subscription = null;
             throw new ValkeyGlideExceptionConverter().convert(ex);
