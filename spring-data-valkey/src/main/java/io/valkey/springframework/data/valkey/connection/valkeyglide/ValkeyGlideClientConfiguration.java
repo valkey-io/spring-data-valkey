@@ -111,13 +111,48 @@ public interface ValkeyGlideClientConfiguration {
     int getMaxPoolSize();
 
     /**
+     * Get OpenTelemetry configuration for Valkey-Glide client.
+     * 
+     * @return The {@link OpenTelemetryForGlide} configuration. May be {@literal null} if not set.
+     */
+    @Nullable
+    OpenTelemetryForGlide getOpenTelemetryForGlide();
+
+    /**
      * Get client options for mode-specific configurations.
      * Placeholder for future mode-specific extensions.
      * 
      * @return Optional containing client options if configured.
      */
     Optional<GlideClientOptions> getClientOptions();
-    
+    /**
+     * Record representing OpenTelemetry configuration for Valkey-Glide client.
+     *
+     * @param tracesEndpoint     the OTLP endpoint for traces, or {@code null} if not set.
+     * @param metricsEndpoint    the OTLP endpoint for metrics, or {@code null} if not set.
+     * @param samplePercentage   the sampling percentage for traces, or {@code null} if not set.
+     * @param flushIntervalMs    the flush interval in milliseconds, or {@code null} if not set.
+     */
+    public record OpenTelemetryForGlide(
+            @Nullable String tracesEndpoint,
+            @Nullable String metricsEndpoint,
+            @Nullable Integer samplePercentage,
+            @Nullable Long flushIntervalMs
+    ) {
+
+        /**
+         * Default OpenTelemetry configuration for Valkey-Glide.
+         */
+        public static OpenTelemetryForGlide defaults() {
+            return new OpenTelemetryForGlide(
+                    "http://localhost:4318/v1/traces",
+                    "http://localhost:4318/v1/metrics",
+                    1,
+                    5000L
+            );
+        }
+    }
+
     /**
      * Builder for {@link ValkeyGlideClientConfiguration}.
      */
@@ -131,6 +166,8 @@ public interface ValkeyGlideClientConfiguration {
         private @Nullable String clientAZ;
         private @Nullable BackoffStrategy reconnectStrategy;
         private int maxPoolSize = 8; // Default pool size
+        private @Nullable OpenTelemetryForGlide openTelemetryForGlide;
+        
         
         ValkeyGlideClientConfigurationBuilder() {}
         
@@ -209,7 +246,20 @@ public interface ValkeyGlideClientConfiguration {
             this.reconnectStrategy = reconnectStrategy;
             return this;
         }
-        
+
+        /**
+         * Initialize GLIDE OpenTelemetry with OTLP endpoints.
+         *
+         * If at least one endpoint (traces or metrics) is provided, this will initialize
+         * OpenTelemetry once per JVM.
+         */
+        public ValkeyGlideClientConfigurationBuilder useOpenTelemetry(
+            OpenTelemetryForGlide openTelemetryForGlide
+        ) {
+            this.openTelemetryForGlide = openTelemetryForGlide;
+            return this;
+        }
+
         /**
          * Set the maximum pool size for client pooling.
          * 
@@ -235,7 +285,8 @@ public interface ValkeyGlideClientConfiguration {
                 inflightRequestsLimit,
                 clientAZ,
                 reconnectStrategy,
-                maxPoolSize
+                maxPoolSize,
+                openTelemetryForGlide
             );
         }
     }

@@ -120,6 +120,19 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 			builder.maxPoolSize(valkeyGlideProperties.getMaxPoolSize());
 		}
 
+		// Apply OpenTelemetry configuration if enabled
+		ValkeyProperties.ValkeyGlide.OpenTelemetry otelProperties = valkeyGlideProperties.getOpenTelemetry();
+		if (otelProperties != null && otelProperties.isEnabled()) {
+			ValkeyGlideClientConfiguration.OpenTelemetryForGlide otelConfig =
+				new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
+					otelProperties.getTracesEndpoint(),
+					otelProperties.getMetricsEndpoint(),
+					otelProperties.getSamplePercentage(),
+					otelProperties.getFlushIntervalMs()
+				);
+			builder.useOpenTelemetry(otelConfig);
+		}
+
 		builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 		return builder.build();
 	}

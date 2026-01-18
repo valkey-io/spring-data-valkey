@@ -21,6 +21,7 @@
 		<module>cache</module>
 		<module>cluster</module>
 		<module>collections</module>
+		<module>telemetry</module>
 		<module>operations</module>
 		<module>pipeline</module>
 		<module>quickstart</module>
