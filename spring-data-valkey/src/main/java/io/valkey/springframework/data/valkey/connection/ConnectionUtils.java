@@ -17,6 +17,7 @@ package io.valkey.springframework.data.valkey.connection;
 
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 
 /**
  * Utilities for examining a {@link ValkeyConnection}
@@ -27,7 +28,8 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectio
 public abstract class ConnectionUtils {
 
 	public static boolean isAsync(ValkeyConnectionFactory connectionFactory) {
-		return (connectionFactory instanceof LettuceConnectionFactory);
+		return connectionFactory instanceof LettuceConnectionFactory
+			|| connectionFactory instanceof ValkeyGlideConnectionFactory;
 	}
 
 	public static boolean isLettuce(ValkeyConnectionFactory connectionFactory) {

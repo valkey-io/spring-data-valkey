@@ -83,15 +83,31 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
     private final ValkeyGlideClusterSetCommands clusterSetCommands;
 
     public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter) {
-        this(clusterAdapter, null, Duration.ofMillis(100));
+        this(clusterAdapter, null, Duration.ofMillis(100), null);
     }
 
-    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, @Nullable ValkeyGlideConnectionFactory factory) {
-        this(clusterAdapter, factory, Duration.ofMillis(100));
+    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, 
+            @Nullable ValkeyGlideConnectionFactory factory) {
+        this(clusterAdapter, factory, Duration.ofMillis(100), null);
     }
 
-    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, @Nullable ValkeyGlideConnectionFactory factory, Duration cacheTimeout) {
-        super(clusterAdapter, factory);
+    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, 
+            @Nullable ValkeyGlideConnectionFactory factory,
+            @Nullable DelegatingPubSubListener pubSubListener) {
+        this(clusterAdapter, factory, Duration.ofMillis(100), pubSubListener);
+    }
+
+    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, 
+            @Nullable ValkeyGlideConnectionFactory factory, 
+            Duration cacheTimeout) {
+        this(clusterAdapter, factory, cacheTimeout, null);
+    }
+
+    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, 
+            @Nullable ValkeyGlideConnectionFactory factory,
+            Duration cacheTimeout,
+            @Nullable DelegatingPubSubListener pubSubListener) {
+        super(clusterAdapter, factory, pubSubListener);
         Assert.notNull(cacheTimeout, "CacheTimeout must not be null!");
         
         this.clusterAdapter = clusterAdapter;
@@ -123,10 +139,6 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
         @SuppressWarnings("unchecked")
         Callable<Void>[] actions = new Callable[] {
                 () -> nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // TODO: Uncomment when dynamic pubsub is implemented
-                // () -> nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // () -> nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-                // () -> nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}, SimpleMultiNodeRoute.ALL_NODES).get()
             };
 
         for (Callable<Void> action : actions) {

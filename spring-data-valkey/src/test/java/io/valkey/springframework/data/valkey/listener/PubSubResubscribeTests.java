@@ -39,6 +39,8 @@ import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFac
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAdapter;
@@ -98,6 +100,20 @@ public class PubSubResubscribeTests {
 					.getConnectionFactory(ValkeyCluster.class);
 
 			factories.add(lettuceClusterConnFactory);
+		}
+
+
+		// Valkey-GLIDE
+		ValkeyGlideConnectionFactory glideConnFactory = ValkeyGlideConnectionFactoryExtension
+				.getConnectionFactory(ValkeyStanalone.class);
+
+		factories.add(glideConnFactory);
+	
+		if (clusterAvailable()) {
+		    ValkeyGlideConnectionFactory glideClusterConnFactory = ValkeyGlideConnectionFactoryExtension
+		            .getConnectionFactory(ValkeyCluster.class);
+
+			factories.add(glideClusterConnFactory);
 		}
 
 		return factories.stream().map(factory -> new Object[] { factory }).collect(Collectors.toList());
@@ -234,13 +250,15 @@ public class PubSubResubscribeTests {
 		return ValkeyDetector.isClusterAvailable();
 	}
 
-	private static boolean isClusterAware(ValkeyConnectionFactory connectionFactory) {
+    private static boolean isClusterAware(ValkeyConnectionFactory connectionFactory) {
 
-		if (connectionFactory instanceof LettuceConnectionFactory lettuceConnectionFactory) {
-			return lettuceConnectionFactory.isClusterAware();
-		} else if (connectionFactory instanceof JedisConnectionFactory jedisConnectionFactory) {
-			return jedisConnectionFactory.isValkeyClusterAware();
-		}
-		return false;
-	}
+        if (connectionFactory instanceof LettuceConnectionFactory lettuceConnectionFactory) {
+            return lettuceConnectionFactory.isClusterAware();
+        } else if (connectionFactory instanceof JedisConnectionFactory jedisConnectionFactory) {
+            return jedisConnectionFactory.isValkeyClusterAware();
+        } else if (connectionFactory instanceof ValkeyGlideConnectionFactory glideConnectionFactory) {
+            return glideConnectionFactory.isClusterAware();
+        }
+        return false;
+    }
 }

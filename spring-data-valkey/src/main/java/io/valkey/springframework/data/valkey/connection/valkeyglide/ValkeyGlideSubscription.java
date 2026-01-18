@@ -15,145 +15,139 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
+import glide.api.models.GlideString;
 
-import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
-import io.valkey.springframework.data.valkey.connection.Subscription;
-import io.valkey.springframework.data.valkey.connection.Message;
+import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
+import io.valkey.springframework.data.valkey.connection.util.AbstractSubscription;
 import org.springframework.util.Assert;
 
 /**
  * Implementation of {@link Subscription} using valkey-glide.
  *
  * @author Ilia Kolominsky
- * @since 2.0
  */
-public class ValkeyGlideSubscription implements Subscription {
+class ValkeyGlideSubscription extends AbstractSubscription {
 
-    private final Object client; // Will be GlideClient in actual implementation
-    private final MessageListener listener;
-    private final AtomicBoolean active = new AtomicBoolean(true);
-    private final List<byte[]> channels = new ArrayList<>();
-    private final List<byte[]> patterns = new ArrayList<>();
+    private final UnifiedGlideClient client;
+    private final DelegatingPubSubListener pubSubListener;
+    private final SubscriptionListener subscriptionListener;
+
+    ValkeyGlideSubscription(MessageListener listener, UnifiedGlideClient client,
+            DelegatingPubSubListener pubSubListener) {
+        super(listener);
+        
+        Assert.notNull(client, "UnifiedGlideClient must not be null");
+        Assert.notNull(pubSubListener, "DelegatingPubSubListener must not be null");
+        
+        this.client = client;
+        this.pubSubListener = pubSubListener;
+        this.subscriptionListener = listener instanceof SubscriptionListener
+            ? (SubscriptionListener) listener
+            : SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER;
+    }
+
+    @Override
+    protected void doSubscribe(byte[]... channels) {
+        sendPubsubCommand("SUBSCRIBE_BLOCKING", channels);
+
+        for (byte[] channel : channels) {
+            subscriptionListener.onChannelSubscribed(channel, getChannels().size());
+        }
+    }
+
+    @Override
+    protected void doPsubscribe(byte[]... patterns) {
+        sendPubsubCommand("PSUBSCRIBE_BLOCKING", patterns);
+
+        for (byte[] pattern : patterns) {
+            subscriptionListener.onPatternSubscribed(pattern, getPatterns().size());
+        }
+    }
+
+    @Override
+    protected void doUnsubscribe(boolean all, byte[]... channels) {
+        byte[][] toNotify;
+        
+        if (all) {
+            toNotify = getChannels().toArray(new byte[0][]);
+            sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
+        } else {
+            toNotify = channels;
+            sendPubsubCommand("UNSUBSCRIBE_BLOCKING", channels);
+        }
+
+        for (byte[] channel : toNotify) {
+            subscriptionListener.onChannelUnsubscribed(channel, getChannels().size());
+        }
+    }
+
+    @Override
+    protected void doPUnsubscribe(boolean all, byte[]... patterns) {
+        byte[][] toNotify;
+        
+        if (all) {
+            toNotify = getPatterns().toArray(new byte[0][]);
+            sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
+        } else {
+            toNotify = patterns;
+            sendPubsubCommand("PUNSUBSCRIBE_BLOCKING", patterns);
+        }
+
+        for (byte[] pattern : toNotify) {
+            subscriptionListener.onPatternUnsubscribed(pattern, getPatterns().size());
+        }
+    }
+
+    @Override
+    protected void doClose() {
+        // Clear listener first to prevent stale messages
+        pubSubListener.clearListener();
+        
+        // Capture channels/patterns BEFORE unsubscribing (they get cleared by parent)
+        byte[][] channelsToNotify = getChannels().toArray(new byte[0][]);
+        byte[][] patternsToNotify = getPatterns().toArray(new byte[0][]);
+        
+        // Unsubscribe from SPECIFIC channels we subscribed to, not ALL
+        if (channelsToNotify.length > 0) {
+            sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
+        }
+        
+        if (patternsToNotify.length > 0) {
+            sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
+        }
+        
+        // Notify subscription callbacks
+        for (byte[] channel : channelsToNotify) {
+            subscriptionListener.onChannelUnsubscribed(channel, 0);
+        }
+        for (byte[] pattern : patternsToNotify) {
+            subscriptionListener.onPatternUnsubscribed(pattern, 0);
+        }
+    }
 
     /**
-     * Create a new {@link ValkeyGlideSubscription} given a client and message listener.
-     *
-     * @param client the Valkey-Glide client
-     * @param listener the message listener
+     * Send a pub/sub command directly to the client using GlideString.
      */
-    public ValkeyGlideSubscription(Object client, MessageListener listener) {
-        Assert.notNull(client, "Client must not be null!");
-        Assert.notNull(listener, "MessageListener must not be null!");
+    private void sendPubsubCommand(String command, byte[]... channels) {
+        GlideString[] cmd = new GlideString[channels.length + 2];
 
-        this.client = client;
-        this.listener = listener;
-    }
-
-    @Override
-    public void subscribe(byte[]... channels) {
-        Assert.notNull(channels, "Channels must not be null!");
-
-        // In a real implementation, this would use the valkey-glide client
-        // to subscribe to the specified channels
+        int i = 0;
+        cmd[i++] = GlideString.of(command);
         for (byte[] channel : channels) {
-            if (channel == null) {
-                throw new IllegalArgumentException("Channel must not be null!");
+            cmd[i++] = GlideString.of(channel);
+        }
+
+        // Always append timeout = 0
+        cmd[i] = GlideString.of("0");
+
+        try {
+            client.customCommand(cmd);
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
             }
-
-            // Add channels to tracking list
-            this.channels.add(channel);
+            throw new ValkeyGlideExceptionConverter().convert(e);
         }
-    }
-
-    @Override
-    public void pSubscribe(byte[]... patterns) {
-        Assert.notNull(patterns, "Patterns must not be null!");
-
-        // In a real implementation, this would use the valkey-glide client
-        // to pattern-subscribe to the specified patterns
-        for (byte[] pattern : patterns) {
-            if (pattern == null) {
-                throw new IllegalArgumentException("Pattern must not be null!");
-            }
-
-            // Add pattern to tracking list
-            this.patterns.add(pattern);
-        }
-    }
-
-    @Override
-    public boolean isAlive() {
-        return active.get();
-    }
-
-    @Override
-    public void close() {
-        if (active.compareAndSet(true, false)) {
-            // In a real implementation, this would unsubscribe from all channels and patterns
-            // using the valkey-glide client
-            channels.clear();
-            patterns.clear();
-        }
-    }
-
-    @Override
-    public void unsubscribe() {
-        if (active.get()) {
-            // In a real implementation, this would unsubscribe from all channels
-            // using the valkey-glide client
-            channels.clear();
-        }
-    }
-
-    @Override
-    public void pUnsubscribe() {
-        if (active.get()) {
-            // In a real implementation, this would unsubscribe from all patterns
-            // using the valkey-glide client
-            patterns.clear();
-        }
-    }
-    
-    @Override
-    public void unsubscribe(byte[]... channels) {
-        if (active.get() && channels != null) {
-            // In a real implementation, this would unsubscribe from specific channels
-            // using the valkey-glide client
-            for (byte[] channel : channels) {
-                this.channels.remove(channel);
-            }
-        }
-    }
-    
-    @Override
-    public void pUnsubscribe(byte[]... patterns) {
-        if (active.get() && patterns != null) {
-            // In a real implementation, this would unsubscribe from specific patterns
-            // using the valkey-glide client
-            for (byte[] pattern : patterns) {
-                this.patterns.remove(pattern);
-            }
-        }
-    }
-
-    @Override
-    public Collection<byte[]> getChannels() {
-        return new ArrayList<>(channels);
-    }
-
-    @Override
-    public Collection<byte[]> getPatterns() {
-        return new ArrayList<>(patterns);
-    }
-    
-    @Override
-    public MessageListener getListener() {
-        return listener;
     }
 }

@@ -63,11 +63,17 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     protected final UnifiedGlideClient unifiedClient;
     protected final @Nullable ValkeyGlideConnectionFactory factory;
+    /**
+     * Bridges Glide's callback mechanism (configured at client creation) with Spring's
+     * {@link MessageListener} (provided at subscribe time). The user's listener is set
+     * on this delegate when {@code subscribe()} is called, and cleared on connection close.
+     */
+    protected final @Nullable DelegatingPubSubListener delegatingListener;
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
     private final Set<byte[]> watchedKeys = new HashSet<>();
-    private @Nullable Subscription subscription;
+    private volatile @Nullable ValkeyGlideSubscription subscription;
 
     // Command interfaces
     private final ValkeyGlideKeyCommands keyCommands;
@@ -90,10 +96,24 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
      * @param factory the connection factory (optional, for pooling support)
      */
     public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, @Nullable ValkeyGlideConnectionFactory factory) {
+        this(unifiedClient, factory, null);
+    }
+
+    /**
+     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter and delegating pub/sub listener.
+     *
+     * @param unifiedClient unified client adapter (standalone or cluster)
+     * @param factory the connection factory (optional, for pooling support)
+     * @param delegatingListener the delegating pub/sub listener for callback-based message delivery
+     */
+    public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, 
+            @Nullable ValkeyGlideConnectionFactory factory,
+            @Nullable DelegatingPubSubListener delegatingListener) {
         Assert.notNull(unifiedClient, "UnifiedClient must not be null");
         
         this.unifiedClient = unifiedClient;
         this.factory = factory;
+        this.delegatingListener = delegatingListener;
         
         // Initialize command interfaces
         this.keyCommands = new ValkeyGlideKeyCommands(this);
@@ -184,12 +204,22 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     public void close() throws DataAccessException {
         try {
             if (closed.compareAndSet(false, true)) {
+                // Close subscription first
+                ValkeyGlideSubscription sub = this.subscription;
+                if (sub != null) {
+                    sub.close();
+                    this.subscription = null;
+                }
+                
                 cleanupConnectionState();
-                // Return client to pool instead of closing it
-                factory.releaseClient(unifiedClient.getNativeClient());
-                if (subscription != null) {
-                    subscription.close();
-                    subscription = null;
+
+                if (delegatingListener != null) {
+                    delegatingListener.clearListener();
+                }
+                
+                // Return client to pool
+                if (factory != null) {
+                    factory.releaseClient(unifiedClient.getNativeClient());
                 }
             }
         } catch (Exception ex) {
@@ -212,10 +242,6 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         @SuppressWarnings("unchecked")
         Callable<Void>[] actions = new Callable[] {
                 () -> nativeClient.customCommand(new String[]{"UNWATCH"}).get(),
-                // TODO: Uncomment when dynamic pubsub is implemented
-                // () -> nativeClient.customCommand(new String[]{"UNSUBSCRIBE"}).get(),
-                // () -> nativeClient.customCommand(new String[]{"PUNSUBSCRIBE"}).get(),
-                // () -> nativeClient.customCommand(new String[]{"SUNSUBSCRIBE"}).get()
             };
 
         for (Callable<Void> action : actions) {
@@ -431,8 +457,26 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
 		}
 
-        // TODO: Implement dynamic subscription management when supported by valkey-glide
-        throw new UnsupportedOperationException("Dynamic subscriptions not yet implemented");
+        if (delegatingListener == null) {
+            throw new InvalidDataAccessApiUsageException(
+                    "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
+        }
+
+        try {
+            delegatingListener.setListener(listener);
+            
+            ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
+                    listener, unifiedClient, delegatingListener);
+            this.subscription = glideSubscription;
+            glideSubscription.subscribe(channels);
+            
+        } catch (Exception ex) {
+            if (delegatingListener != null) {
+                delegatingListener.clearListener();
+            }
+            this.subscription = null;
+            throw new ValkeyGlideExceptionConverter().convert(ex);
+        }
     }
 
     @Override
@@ -449,9 +493,27 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 		if (isQueueing() || isPipelined()) {
 			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
 		}
+        
+        if (delegatingListener == null) {
+            throw new InvalidDataAccessApiUsageException(
+                    "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
+        }
 
-        // TODO: Implement dynamic subscription management when supported by valkey-glide
-        throw new UnsupportedOperationException("Dynamic subscriptions not yet implemented");
+        try {
+            delegatingListener.setListener(listener);
+            
+            ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
+                    listener, unifiedClient, delegatingListener);
+            this.subscription = glideSubscription;
+            glideSubscription.pSubscribe(patterns);
+            
+        } catch (Exception ex) {
+            if (delegatingListener != null) {
+                delegatingListener.clearListener();
+            }
+            this.subscription = null;
+            throw new ValkeyGlideExceptionConverter().convert(ex);
+        }
     }
 
     @Override
@@ -461,7 +523,8 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     @Override
     public boolean isSubscribed() {
-        return subscription != null && subscription.isAlive();
+        Subscription sub = this.subscription;
+        return sub != null && sub.isAlive();
     }
 
     /**

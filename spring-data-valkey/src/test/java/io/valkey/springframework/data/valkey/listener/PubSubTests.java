@@ -34,6 +34,7 @@ import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAdapter;
 import io.valkey.springframework.data.valkey.test.condition.EnabledIfLongRunningTest;
@@ -169,11 +170,12 @@ public class PubSubTests<T> {
 	}
 
 	private static boolean isClusterAware(ValkeyConnectionFactory connectionFactory) {
-
 		if (connectionFactory instanceof LettuceConnectionFactory lettuce) {
 			return lettuce.isClusterAware();
 		} else if (connectionFactory instanceof JedisConnectionFactory jedis) {
 			return jedis.isValkeyClusterAware();
+		} else if (connectionFactory instanceof ValkeyGlideConnectionFactory glide) {
+			return glide.isClusterAware();
 		}
 		return false;
 	}

@@ -30,7 +30,7 @@
 		<springdata.parent.version>3.5.1</springdata.parent.version>
 
 		<!-- Valkey/Redis client versions -->
-		<valkey-glide.version>2.1.1</valkey-glide.version>
+		<valkey-glide.version>2.3.0-rc2</valkey-glide.version>
 		<lettuce.version>6.6.0.RELEASE</lettuce.version>
 		<jedis.version>6.0.0</jedis.version>
 		<pool.version>2.11.1</pool.version>
