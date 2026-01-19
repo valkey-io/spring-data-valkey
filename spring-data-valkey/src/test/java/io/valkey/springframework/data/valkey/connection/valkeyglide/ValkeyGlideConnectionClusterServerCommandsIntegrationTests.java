@@ -17,7 +17,9 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import static io.valkey.springframework.data.valkey.connection.ClusterTestVariables.*;
 import static org.assertj.core.api.Assertions.*;
+import static org.awaitility.Awaitility.*;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -606,6 +608,15 @@ public class ValkeyGlideConnectionClusterServerCommandsIntegrationTests extends 
 
     @Test
     void testGetClientListClusterWideAggregation() {
+        // Wait for all cluster nodes to be available
+        await().atMost(Duration.ofSeconds(3))
+                .untilAsserted(() -> {
+                    for (ValkeyClusterNode node : allPrimaries) {
+                        List<ValkeyClientInfo> nodeClients = clusterConnection.serverCommands().getClientList(node);
+                        assertThat(nodeClients).isNotEmpty();
+                    }
+                });
+        
         // Get cluster-wide client list (should combine lists from all primaries)
         List<ValkeyClientInfo> clusterClientList = clusterConnection.serverCommands().getClientList();
         
