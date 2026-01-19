@@ -4,9 +4,14 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>io.valkey.springframework.data</groupId>
+	<parent>
+		<groupId>io.valkey.springframework</groupId>
+		<artifactId>spring-data-valkey-parent</artifactId>
+		<version>0.1.0</version>
+	</parent>
+
+	<groupId>io.valkey.springframework</groupId>
 	<artifactId>spring-data-valkey-examples</artifactId>
-	<version>1.0.0</version>
 	<packaging>pom</packaging>
 
 	<name>Spring Data Valkey - Examples</name>
@@ -16,22 +21,21 @@
 		<module>cache</module>
 		<module>cluster</module>
 		<module>collections</module>
+		<module>telemetry</module>
 		<module>operations</module>
 		<module>pipeline</module>
 		<module>quickstart</module>
 		<module>repositories</module>
 		<module>scripting</module>
 		<module>serialization</module>
+		<module>spring-boot</module>
 		<module>streams</module>
 		<module>transactions</module>
 	</modules>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.release>17</maven.compiler.release>
-		<spring-data-valkey.version>0.1.0</spring-data-valkey.version>
-		<valkey-glide.version>2.1.1</valkey-glide.version>
-		<slf4j.version>2.0.9</slf4j.version>
+		<maven.deploy.skip>true</maven.deploy.skip>
+		<maven.install.skip>true</maven.install.skip>
 	</properties>
 
 	<dependencies>
@@ -43,7 +47,7 @@
 		<dependency>
 			<groupId>io.valkey.springframework.data</groupId>
 			<artifactId>spring-data-valkey</artifactId>
-			<version>${spring-data-valkey.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.valkey</groupId>
@@ -78,6 +82,14 @@
 					<configuration>
 						<cleanupDaemonThreads>false</cleanupDaemonThreads>
 					</configuration>
+					<executions>
+						<execution>
+							<id>default-cli</id>
+							<configuration>
+								<mainClass>${exec.mainClass}</mainClass>
+							</configuration>
+						</execution>
+					</executions>
 				</plugin>
 			</plugins>
 		</pluginManagement>

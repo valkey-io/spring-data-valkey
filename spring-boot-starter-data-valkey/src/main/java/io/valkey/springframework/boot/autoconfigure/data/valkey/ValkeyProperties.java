@@ -608,6 +608,8 @@ public class ValkeyProperties {
 
 		private final Cluster cluster = new Cluster();
 
+		private final OpenTelemetry openTelemetry = new OpenTelemetry();
+
 		public Duration getConnectionTimeout() {
 			return this.connectionTimeout;
 		}
@@ -652,6 +654,10 @@ public class ValkeyProperties {
 			return this.cluster;
 		}
 
+		public OpenTelemetry getOpenTelemetry() {
+			return this.openTelemetry;
+		}
+
 		public static class Cluster {
 
 			private final Refresh refresh = new Refresh();
@@ -690,6 +696,78 @@ public class ValkeyProperties {
 					this.adaptive = adaptive;
 				}
 			}
+		}
+
+		/**
+		 * OpenTelemetry configuration for GLIDE client.
+		 */
+		public static class OpenTelemetry {
+
+			/**
+			 * Whether to enable OpenTelemetry instrumentation.
+			 */
+			private boolean enabled = false;
+
+			/**
+			 * OTLP endpoint for traces.
+			 */
+			private String tracesEndpoint;
+
+			/**
+			 * OTLP endpoint for metrics.
+			 */
+			private String metricsEndpoint;
+
+			/**
+			 * Sampling percentage for traces (0-100).
+			 */
+			private Integer samplePercentage;
+
+			/**
+			 * Flush interval in milliseconds.
+			 */
+			private Long flushIntervalMs;
+
+			public boolean isEnabled() {
+				return this.enabled;
+			}
+
+			public void setEnabled(boolean enabled) {
+				this.enabled = enabled;
+			}
+
+			public String getTracesEndpoint() {
+				return this.tracesEndpoint;
+			}
+			
+			public void setTracesEndpoint(String tracesEndpoint) {
+				this.tracesEndpoint = tracesEndpoint;
+			}
+
+			public String getMetricsEndpoint() {
+				return this.metricsEndpoint;
+			}
+
+			public void setMetricsEndpoint(String metricsEndpoint) {
+				this.metricsEndpoint = metricsEndpoint;
+			}
+
+			public Integer getSamplePercentage() {
+				return this.samplePercentage;
+			}
+
+			public void setSamplePercentage(Integer samplePercentage) {
+				this.samplePercentage = samplePercentage;
+			}
+
+			public Long getFlushIntervalMs() {
+				return this.flushIntervalMs;
+			}
+
+			public void setFlushIntervalMs(Long flushIntervalMs) {
+				this.flushIntervalMs = flushIntervalMs;
+			}
+
 		}
 
 	}

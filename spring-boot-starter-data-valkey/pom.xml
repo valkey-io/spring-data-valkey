@@ -1,11 +1,17 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
 	<modelVersion>4.0.0</modelVersion>
 
+	<parent>
+		<groupId>io.valkey.springframework</groupId>
+		<artifactId>spring-data-valkey-parent</artifactId>
+		<version>0.1.0</version>
+	</parent>
+
 	<groupId>io.valkey.springframework.boot</groupId>
 	<artifactId>spring-boot-starter-data-valkey</artifactId>
-	<version>0.1.0</version>
 	<packaging>jar</packaging>
 
 	<name>Spring Boot Starter for Valkey</name>
@@ -13,26 +19,7 @@
 	<url>https://github.com/valkey-io/spring-data-valkey</url>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.release>17</maven.compiler.release>
-
-		<spring-boot.version>3.5.1</spring-boot.version>
-		<spring-data-valkey.version>0.1.0</spring-data-valkey.version>
-		<valkey.glide.version>2.1.1</valkey.glide.version>
-		<lettuce.version>6.6.0.RELEASE</lettuce.version>
-		<jedis.version>6.0.0</jedis.version>
-		<pool.version>2.11.1</pool.version>
-		<jackson.version>2.19.1</jackson.version>
-		<micrometer.version>1.14.2</micrometer.version>
-
-		<junit.version>5.12.2</junit.version>
-		<junit-platform.version>1.12.2</junit-platform.version>
-		<assertj.version>3.27.3</assertj.version>
-		<mockito.version>5.17.0</mockito.version>
-		<testcontainers.version>1.20.4</testcontainers.version>
-		<logback.version>1.5.12</logback.version>
-		<maven-resolver.version>1.9.18</maven-resolver.version>
-		<maven-resolver-provider.version>3.9.10</maven-resolver-provider.version>
+		<java-module-name>io.valkey.springframework.boot.autoconfigure.data.valkey</java-module-name>
 	</properties>
 
 	<scm>
@@ -88,7 +75,7 @@
 		<dependency>
 			<groupId>io.valkey.springframework.data</groupId>
 			<artifactId>spring-data-valkey</artifactId>
-			<version>${spring-data-valkey.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 
 		<!-- Valkey Drivers -->
@@ -97,7 +84,7 @@
 			<groupId>io.valkey</groupId>
 			<artifactId>valkey-glide</artifactId>
 			<classifier>${os.detected.classifier}</classifier>
-			<version>${valkey.glide.version}</version>
+			<version>${valkey-glide.version}</version>
 		</dependency>
 
 		<dependency>
@@ -190,14 +177,12 @@
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers</artifactId>
-			<version>${testcontainers.version}</version>
 			<optional>true</optional>
 		</dependency>
 
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>junit-jupiter</artifactId>
-			<version>${testcontainers.version}</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -225,21 +210,18 @@
 		<dependency>
 			<groupId>io.projectreactor</groupId>
 			<artifactId>reactor-test</artifactId>
-			<version>3.7.1</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.assertj</groupId>
 			<artifactId>assertj-core</artifactId>
-			<version>${assertj.version}</version>
 			<scope>test</scope>
 		</dependency>
 
 		<dependency>
 			<groupId>org.mockito</groupId>
 			<artifactId>mockito-core</artifactId>
-			<version>${mockito.version}</version>
 			<scope>test</scope>
 		</dependency>
 

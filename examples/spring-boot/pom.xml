@@ -4,36 +4,27 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>io.valkey.springframework.data</groupId>
+	<parent>
+		<groupId>io.valkey.springframework</groupId>
+		<artifactId>spring-data-valkey-examples</artifactId>
+		<version>0.1.0</version>
+	</parent>
+
 	<artifactId>spring-data-valkey-example-spring-boot</artifactId>
-	<version>1.0.0</version>
 	<name>Spring Data Valkey - Spring Boot Example</name>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.source>17</maven.compiler.source>
-		<maven.compiler.target>17</maven.compiler.target>
-		<spring-boot.version>3.5.1</spring-boot.version>
-		<spring-boot-starter-data-valkey.version>0.1.0</spring-boot-starter-data-valkey.version>
-		<valkey-glide.version>2.1.1</valkey-glide.version>
+		<exec.mainClass>example.springboot.SpringBootExample</exec.mainClass>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
-			<version>${spring-boot.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.valkey.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-valkey</artifactId>
-			<version>${spring-boot-starter-data-valkey.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>io.valkey</groupId>
-			<artifactId>valkey-glide</artifactId>
-			<version>${valkey-glide.version}</version>
-			<classifier>${os.detected.classifier}</classifier>
 		</dependency>
 	</dependencies>
 
@@ -49,10 +40,8 @@
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>exec-maven-plugin</artifactId>
-				<version>3.1.0</version>
 				<configuration>
 					<mainClass>example.springboot.SpringBootExample</mainClass>
-					<cleanupDaemonThreads>false</cleanupDaemonThreads>
 				</configuration>
 			</plugin>
 		</plugins>

@@ -1,18 +1,18 @@
 # Spring Data Valkey
 
-Spring Data Valkey is a dedicated integration module for the [Valkey](https://valkey.io/)
- data store, a high-performance, Redis-compatible in-memory database.
-The project is a fork of Spring Data Redis 3.5.1, created to offer first-class support for Valkey and to ensure seamless, optimized access to the Valkey ecosystem.
+Spring Data Valkey is a dedicated integration module for the [Valkey](https://valkey.io/) data store, a high-performance, Redis-compatible in-memory database. The project is a fork of Spring Data Redis 3.5.1, created to offer first-class support for Valkey and to ensure seamless, optimized access to the Valkey ecosystem.
 
-This module is purpose-built to provide the best possible experience when using Valkey from Spring applications, leveraging the specialized [Valkey-GLIDE](https://github.com/valkey-io/valkey-glide)
- client library for high-performance, cross-language connectivity. By aligning API compatibility with Spring Data Redis, Spring Data Valkey enables developers to migrate with minimal friction while benefiting from improved performance, modern driver capabilities, and long-term support for the Valkey platform.
+This project provides both the [core Spring Data Valkey library](spring-data-valkey/) and a [Spring Boot starter](spring-boot-starter-data-valkey/) for auto-configuration. It is purpose-built to provide the best possible experience when using Valkey from Spring applications, leveraging the specialized [Valkey-GLIDE](https://github.com/valkey-io/valkey-glide) client library for high-performance, cross-language connectivity. By aligning API compatibility with Spring Data Redis, Spring Data Valkey enables developers to migrate with minimal friction while benefiting from improved performance, modern driver capabilities, and long-term support for the Valkey platform.
 
 ## Features
+
+### Spring Data Valkey
 
 * Connection package as low-level abstraction across multiple drivers ([Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core), and [Jedis](https://github.com/redis/jedis)).
 * Exception translation to Spring's portable Data Access exception hierarchy for driver exceptions.
 * `ValkeyTemplate` that provides a high level abstraction for performing various Valkey operations, exception translation and serialization support.
 * Pubsub support (such as a MessageListenerContainer for message-driven POJOs). Available with Jedis and Lettuce, with Valkey GLIDE support WIP for version 1.0.0.
+* OpenTelemetry instrumentation support when using the Valkey GLIDE client for emitting traces and metrics for Valkey operations.
 * Valkey Sentinel support is currently available in Jedis and Lettuce, while support in Valkey GLIDE is planned for a future release.
 * Reactive API using Lettuce.
 * JDK, String, JSON and Spring Object/XML mapping serializers.
@@ -23,6 +23,49 @@ This module is purpose-built to provide the best possible experience when using 
 * Valkey implementation for Spring cache abstraction.
 * Automatic implementation of `Repository` interfaces including support for custom finder methods using `@EnableValkeyRepositories`.
 * CDI support for repositories.
+
+### Spring Boot Starter
+
+* Complete auto-configuration for Valkey connections, templates, repositories, and caching with zero-configuration defaults.
+* Support for multiple Valkey drivers ([Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core), and [Jedis](https://github.com/redis/jedis)).
+* Connection pooling configuration for all supported clients.
+* Valkey Cluster auto-configuration and support.
+* Property-based OpenTelemetry configuration for Valkey GLIDE, enabling automatic trace and metric export without application code changes.
+* Valkey Sentinel configuration support (Lettuce and Jedis only).
+* SSL/TLS connection support with Spring Boot SSL bundles.
+* Spring Boot Actuator health indicators and metrics for Valkey connections.
+* `@DataValkeyTest` slice test annotation for focused Valkey testing.
+* Testcontainers integration with `@ServiceConnection` annotation.
+* Docker Compose support for automatic service detection and startup.
+* Configuration properties with IDE auto-completion support.
+
+## Installation
+
+### Spring Boot
+
+For Spring Boot applications, use the [Spring Boot Starter](spring-boot-starter-data-valkey/):
+
+```xml
+<dependency>
+    <groupId>io.valkey.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-valkey</artifactId>
+    <version>${version}</version>
+</dependency>
+```
+
+### Vanilla Spring
+
+For non-Spring Boot applications, use the [core library](spring-data-valkey/):
+
+```xml
+<dependency>
+    <groupId>io.valkey.springframework.data</groupId>
+    <artifactId>spring-data-valkey</artifactId>
+    <version>${version}</version>
+</dependency>
+```
+
+See the respective module READMEs for complete installation instructions including driver dependencies.
 
 ## Getting Started
 
@@ -45,7 +88,7 @@ public class Example {
 
 ### Vanilla Spring
 
-For non-Spring Boot applications, manually configure Spring Data Valkey:
+For non-Spring Boot applications, manually configure Spring Data Valkey using the [core library](spring-data-valkey/):
 
 ```java
 @Service
@@ -74,94 +117,13 @@ class ApplicationConfig {
 }
 ```
 
-### Maven Configuration
-
-#### Spring Boot
-
-Add the starter and Valkey GLIDE dependencies:
-
-```xml
-<dependencies>
-    <dependency>
-        <groupId>io.valkey.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-data-valkey</artifactId>
-        <version>${version}</version>
-    </dependency>
-    <dependency>
-        <groupId>io.valkey</groupId>
-        <artifactId>valkey-glide</artifactId>
-        <version>${version}</version>
-        <classifier>${os.detected.classifier}</classifier>
-    </dependency>
-</dependencies>
-```
-
-#### Vanilla Spring
-
-Add the Maven dependency:
-
-```xml
-<dependency>
-    <groupId>io.valkey.springframework.data</groupId>
-    <artifactId>spring-data-valkey</artifactId>
-    <version>${version}</version>
-</dependency>
-<dependency>
-    <groupId>io.valkey</groupId>
-    <artifactId>valkey-glide</artifactId>
-    <classifier>${os.detected.classifier}</classifier>
-    <version>${version}</version>
-</dependency>
-```
-
-#### Platform Dependencies
-
-Because GLIDE has platform-specific native libraries, add the os-maven-plugin to resolve `${os.detected.classifier}`:
-
-```xml
-<build>
-    <extensions>
-        <extension>
-            <groupId>kr.motd.maven</groupId>
-            <artifactId>os-maven-plugin</artifactId>
-            <version>1.7.1</version>
-        </extension>
-    </extensions>
-</build>
-```
-
-This applies to both Spring Boot and Vanilla Spring configurations above.
-
 ### Examples
 
 For more comprehensive examples covering templates, repositories, caching, and other Spring Data functionality, see the [examples](examples/) directory.
 
 ## Building from Source
 
-Spring Data Valkey can be easily built with the [maven wrapper](https://github.com/takari/maven-wrapper). You also need JDK 17 or above and `make`. The local build environment is managed within a `Makefile` to download, build and spin up Valkey in various configurations (Standalone, Sentinel, Cluster, etc.)
-
-```bash
-$ make test
-```
-
-The preceding command runs a full build. You can use `make start`, `make stop`, and `make clean` commands to control the environment yourself. This is useful if you want to avoid constant server restarts. Once all Valkey instances have been started, you can either run tests in your IDE or the full Maven build:
-
-```bash
-$ ./mvnw clean install
-```
-
-If you want to build with the regular `mvn` command, you will need [Maven v3.8.0 or above](https://maven.apache.org/run-maven/index.html).
-
-<!-- ## Generating a Release - This should go to a developer readme
-
-In order to generate a new release, create and push a tag to the main branch.  This will build and test the project and add the artifacts to a draft release.  Verify the release and then publish it.
-
-For example:
-
-```bash
-$ git tag v1.0
-$ git push origin v1.0
-``` -->
+See the [Developer Guide](DEVELOPER.md) for comprehensive build instructions and development setup.
 
 ## Migration from Spring Data Redis
 

@@ -5,13 +5,17 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<parent>
-		<groupId>io.valkey.springframework.data</groupId>
+		<groupId>io.valkey.springframework</groupId>
 		<artifactId>spring-data-valkey-examples</artifactId>
-		<version>1.0.0</version>
+		<version>0.1.0</version>
 	</parent>
 
 	<artifactId>spring-data-valkey-example-cluster</artifactId>
 	<name>Spring Data Valkey - Cluster Example</name>
+
+	<properties>
+		<exec.mainClass>example.cluster.ClusterExample</exec.mainClass>
+	</properties>
 
 	<build>
 		<plugins>

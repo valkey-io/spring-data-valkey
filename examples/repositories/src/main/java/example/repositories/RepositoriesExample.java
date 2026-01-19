@@ -16,10 +16,7 @@
 package example.repositories;
 
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
-import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
-import io.valkey.springframework.data.valkey.core.ValkeyKeyValueTemplate;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.repository.configuration.EnableValkeyRepositories;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -66,16 +63,6 @@ public class RepositoriesExample {
 			ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
 			template.setConnectionFactory(connectionFactory);
 			return template;
-		}
-
-		@Bean
-		public ValkeyKeyValueAdapter valkeyKeyValueAdapter(ValkeyTemplate<?, ?> valkeyTemplate) {
-			return new ValkeyKeyValueAdapter(valkeyTemplate);
-		}
-
-		@Bean
-		public ValkeyKeyValueTemplate valkeyKeyValueTemplate(ValkeyKeyValueAdapter adapter) {
-			return new ValkeyKeyValueTemplate(adapter, new ValkeyMappingContext());
 		}
 	}
 }

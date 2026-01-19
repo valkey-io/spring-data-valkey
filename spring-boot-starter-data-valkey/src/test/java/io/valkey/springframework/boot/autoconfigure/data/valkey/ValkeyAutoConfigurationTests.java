@@ -399,6 +399,94 @@ class ValkeyAutoConfigurationTests {
 		});
 	}
 
+	@Test
+	void shouldNotEnableOpenTelemetryByDefault() {
+		this.contextRunner.run((context) -> {
+			ValkeyProperties properties = context.getBean(ValkeyProperties.class);
+			assertThat(properties.getValkeyGlide().getOpenTelemetry().isEnabled()).isEqualTo(false);
+		});
+	}
+
+	@Test
+	void shouldBindOpenTelemetryTracesEndpoint() {
+		this.contextRunner.withPropertyValues(
+				"spring.data.valkey.client-type:valkeyglide",
+				"spring.data.valkey.valkey-glide.open-telemetry.enabled:true",
+				"spring.data.valkey.valkey-glide.open-telemetry.traces-endpoint:http://localhost:4318/v1/traces")
+			.run((context) -> {
+				ValkeyProperties properties = context.getBean(ValkeyProperties.class);
+				assertThat(properties.getValkeyGlide().getOpenTelemetry().getTracesEndpoint())
+					.isEqualTo("http://localhost:4318/v1/traces");
+			});
+	}
+
+	@Test
+	void shouldBindOpenTelemetryMetricsEndpoint() {
+		this.contextRunner.withPropertyValues(
+				"spring.data.valkey.client-type:valkeyglide",
+				"spring.data.valkey.valkey-glide.open-telemetry.enabled:true",
+				"spring.data.valkey.valkey-glide.open-telemetry.metrics-endpoint:http://localhost:4315/v1/metrics")
+			.run((context) -> {
+				ValkeyProperties properties = context.getBean(ValkeyProperties.class);
+				assertThat(properties.getValkeyGlide().getOpenTelemetry().getMetricsEndpoint())
+					.isEqualTo("http://localhost:4315/v1/metrics");
+			});
+	}
+
+	@Test
+	void shouldBindOpenTelemetrySamplePercentage() {
+		this.contextRunner.withPropertyValues(
+				"spring.data.valkey.client-type:valkeyglide",
+				"spring.data.valkey.valkey-glide.open-telemetry.enabled:true",
+				"spring.data.valkey.valkey-glide.open-telemetry.sample-percentage:30")
+			.run((context) -> {
+				ValkeyProperties properties = context.getBean(ValkeyProperties.class);
+				assertThat(properties.getValkeyGlide().getOpenTelemetry().getSamplePercentage()).isEqualTo(30);
+			});
+	}
+
+	@Test
+	void shouldBindOpenTelemetryFlushIntervalMs() {
+		this.contextRunner.withPropertyValues(
+				"spring.data.valkey.client-type:valkeyglide",
+				"spring.data.valkey.valkey-glide.open-telemetry.enabled:true",
+				"spring.data.valkey.valkey-glide.open-telemetry.flush-interval-ms:3000")
+			.run((context) -> {
+				ValkeyProperties properties = context.getBean(ValkeyProperties.class);
+				assertThat(properties.getValkeyGlide().getOpenTelemetry().getFlushIntervalMs()).isEqualTo(3000L);
+			});
+	}
+
+	@Test
+	void shouldFailToStartWhenOpenTelemetrySamplePercentageIsInvalid() {
+		this.contextRunner.withPropertyValues(
+				"spring.data.valkey.client-type:valkeyglide",
+				"spring.data.valkey.valkey-glide.open-telemetry.enabled:true",
+				"spring.data.valkey.valkey-glide.open-telemetry.sample-percentage:abc")
+			.run((context) -> assertThat(context).hasFailed());
+	}
+
+	@Test
+	void shouldFailToStartWhenOpenTelemetryFlushIntervalMsIsInvalid() {
+		this.contextRunner.withPropertyValues(
+				"spring.data.valkey.client-type:valkeyglide",
+				"spring.data.valkey.valkey-glide.open-telemetry.enabled:true",
+				"spring.data.valkey.valkey-glide.open-telemetry.flush-interval-ms:abc")
+			.run((context) -> assertThat(context).hasFailed());
+	}
+
+	@Test
+	void shouldNotEnableOpenTelemetryByDefaultEvenIfOtherPropertiesSet() {
+		this.contextRunner.withPropertyValues(
+				"spring.data.valkey.client-type:valkeyglide",
+				"spring.data.valkey.valkey-glide.open-telemetry.traces-endpoint:http://localhost:4318/v1/traces")
+			.run((context) -> {
+				ValkeyProperties properties = context.getBean(ValkeyProperties.class);
+				assertThat(properties.getValkeyGlide().getOpenTelemetry().isEnabled()).isEqualTo(false);
+
+			});
+	}
+
 	private ContextConsumer<AssertableApplicationContext> assertClientOptions(
 			Consumer<ValkeyGlideClientConfiguration> configConsumer) {
 		return (context) -> {

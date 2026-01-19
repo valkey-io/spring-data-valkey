@@ -1,35 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 
-    <parent>
-        <groupId>io.valkey.springframework.data</groupId>
-        <artifactId>spring-data-valkey-examples</artifactId>
-        <version>1.0.0</version>
-    </parent>
+	<parent>
+		<groupId>io.valkey.springframework</groupId>
+		<artifactId>spring-data-valkey-examples</artifactId>
+		<version>0.1.0</version>
+	</parent>
 
-    <artifactId>spring-data-valkey-example-cache</artifactId>
-    <name>Spring Data Valkey - Cache Example</name>
+	<artifactId>spring-data-valkey-example-cache</artifactId>
+	<name>Spring Data Valkey - Cache Example</name>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-context</artifactId>
-            <version>6.2.1</version>
-        </dependency>
-    </dependencies>
+	<properties>
+		<exec.mainClass>example.cache.CacheExample</exec.mainClass>
+	</properties>
 
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <configuration>
-                    <mainClass>example.cache.CacheExample</mainClass>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+	<dependencies>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<configuration>
+					<mainClass>example.cache.CacheExample</mainClass>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
 </project>

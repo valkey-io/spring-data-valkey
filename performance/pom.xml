@@ -4,35 +4,35 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>io.valkey.springframework.data</groupId>
+	<parent>
+		<groupId>io.valkey.springframework</groupId>
+		<artifactId>spring-data-valkey-parent</artifactId>
+		<version>0.1.0</version>
+	</parent>
+
+	<groupId>io.valkey.springframework</groupId>
 	<artifactId>spring-data-valkey-performance</artifactId>
-	<version>1.0.0</version>
 	<packaging>jar</packaging>
 
 	<name>Spring Data Valkey - Performance Tests</name>
 	<description>Performance benchmarks for Spring Data Valkey operations across different clients</description>
 
 	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<maven.compiler.release>17</maven.compiler.release>
-		<spring-data-valkey.version>0.1.0</spring-data-valkey.version>
-		<valkey-glide.version>2.1.1</valkey-glide.version>
-		<lettuce.version>6.4.0.RELEASE</lettuce.version>
-		<jedis.version>5.2.0</jedis.version>
-		<slf4j.version>2.0.9</slf4j.version>
+		<maven.deploy.skip>true</maven.deploy.skip>
+		<maven.install.skip>true</maven.install.skip>
 	</properties>
 
 	<dependencies>
 		<dependency>
 			<groupId>io.valkey.springframework.data</groupId>
 			<artifactId>spring-data-valkey</artifactId>
-			<version>${spring-data-valkey.version}</version>
+			<version>${project.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.valkey</groupId>
 			<artifactId>valkey-glide</artifactId>
-			<version>${valkey-glide.version}</version>
 			<classifier>${os.detected.classifier}</classifier>
+			<version>${valkey-glide.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.lettuce</groupId>

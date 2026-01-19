@@ -20,11 +20,11 @@ The project is a fork of Spring Boot Starter Data Redis 3.5.1 (part of the [Spri
 * Docker Compose support for automatic service detection and startup.
 * Configuration properties with IDE auto-completion support.
 
-For the full list of Spring Data features see [Spring Data Valkey](../).
+For the full list of Spring Data features see [Spring Data Valkey](../spring-data-valkey/).
 
 ## Installation
 
-Add the starter and Valkey GLIDE (along with OS detector) to your `pom.xml`:
+Add the starter and Valkey GLIDE dependencies:
 
 ```xml
 <dependencies>
@@ -36,11 +36,15 @@ Add the starter and Valkey GLIDE (along with OS detector) to your `pom.xml`:
     <dependency>
         <groupId>io.valkey</groupId>
         <artifactId>valkey-glide</artifactId>
-        <version>${version}</version>
         <classifier>${os.detected.classifier}</classifier>
+        <version>${version}</version>
     </dependency>
 </dependencies>
+```
 
+Add the os-maven-plugin for platform-specific GLIDE libraries:
+
+```xml
 <build>
     <extensions>
         <extension>
@@ -342,15 +346,7 @@ Valkey GLIDE provides async operations via CompletableFuture and does not requir
 
 ## Building from Source
 
-### Prerequisites
-
-- JDK 17 or higher
-- Maven 3.9.9 or higher
-- Docker (for container tests)
-
-### Build Commands
-
-See instructions on starting a Valkey server using the `Makefile` in the root [README](../README.md#building-from-source).  The standalone and cluster instances started by the Makefile are used in the unit tests.
+See instructions on starting a Valkey server in the [Developer Guide](../DEVELOPER.md). The standalone and cluster instances started by the Makefile are used in the unit tests.
 
 Then build the starter:
 

@@ -31,15 +31,24 @@ jobs:
         run: |
           make start PROJECT=valkey VERSION=8.1.1 GH_ORG=valkey-io
 
-      - name: Test and package Spring Data Valkey
+      - name: Test Spring Data Valkey
         run: |
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
-            package javadoc:jar test \
-            -Pnone \
+            test -Pnone \
+            -pl spring-data-valkey \
             -DrunLongTests=true \
             -Dvalkey.server.version=8.1.1 \
+            -U -B
+
+      - name: Package Spring Data Valkey
+        run: |
+          ./mvnw -s settings.xml \
+            -Ddevelocity.storage.directory=$HOME/.develocity-root \
+            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
+            package javadoc:jar -DskipTests \
+            -pl spring-data-valkey \
             -U -B
 
       - name: Install Spring Data Valkey
@@ -48,16 +57,26 @@ jobs:
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             install -DskipTests \
+            -pl spring-data-valkey -am \
             -Dgpg.skip=true \
             -B
 
-      - name: Test and package Spring Boot Starter
+      - name: Test Spring Boot Starter
         run: |
-          cd spring-boot-starter-data-valkey
-          ../mvnw -s ../settings.xml \
+          ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
-            package javadoc:jar test \
+            test \
+            -pl spring-boot-starter-data-valkey \
+            -U -B
+
+      - name: Package Spring Boot Starter
+        run: |
+          ./mvnw -s settings.xml \
+            -Ddevelocity.storage.directory=$HOME/.develocity-root \
+            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
+            package javadoc:jar -DskipTests \
+            -pl spring-boot-starter-data-valkey \
             -U -B
 
       - name: Create draft release
@@ -65,6 +84,6 @@ jobs:
         with:
           draft: true
           files: |
-            target/*.jar
+            spring-data-valkey/target/*.jar
             spring-boot-starter-data-valkey/target/*.jar
           generate_release_notes: true

@@ -99,6 +99,7 @@ jobs:
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             test -Pnone \
+            -pl spring-data-valkey \
             -DrunLongTests=true \
             -Dvalkey.server.version=${{ matrix.version }} \
             -U -B
@@ -109,16 +110,17 @@ jobs:
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             install -DskipTests \
+            -pl spring-data-valkey -am \
             -Dgpg.skip=true \
             -B
 
       - name: Test Spring Boot Starter
         run: |
-          cd spring-boot-starter-data-valkey
-          ../mvnw -s ../settings.xml \
+          ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             test \
+            -pl spring-boot-starter-data-valkey \
             -U -B
 
   ci-runtimehints-tests:
@@ -173,4 +175,5 @@ jobs:
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
             test -Pruntimehints \
             -DrunLongTests=false \
+            -pl spring-data-valkey \
             -U -B
