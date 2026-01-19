@@ -344,6 +344,21 @@ public class ValkeyGlideConnectionFactory
                 "OpenTelemetryForGlide requires at least one of tracesEndpoint or metricsEndpoint"
             );
         }
+        
+        if (samplePercentage != null) {
+            Assert.isTrue(
+                samplePercentage >= 0 && samplePercentage <= 100,
+                "samplePercentage must be in range [0..100]"
+            );
+        }
+
+        if (flushIntervalMs != null) {
+            Assert.isTrue(
+                flushIntervalMs > 0,
+                "flushIntervalMs must be > 0"
+            );
+        }
+
         synchronized (OTEL_LOCK) {
             if (OTEL_INITIALIZED.getAndSet(true)) {
                 if (sameOtelConfig(OTEL_INITIALIZED_CONFIG, openTelemetryForGlide)) {

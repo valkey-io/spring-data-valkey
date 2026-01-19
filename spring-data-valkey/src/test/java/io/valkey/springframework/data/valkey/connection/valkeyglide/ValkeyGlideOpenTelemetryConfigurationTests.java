@@ -51,7 +51,6 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
                 ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
         );
 
-        // Do not call afterPropertiesSet(): that would try to create real clients.
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
     }
@@ -88,7 +87,9 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
     void shouldNotFailWhenAlreadyInitializedWithSameConfig() {
 
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
-                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(TRACES_ENDPOINT, METRICS_ENDPOINT, 10, 100L);
+                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
+                        TRACES_ENDPOINT, METRICS_ENDPOINT, 10, 100L
+                );
 
         ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
                 new ValkeyClusterConfiguration(),
@@ -96,8 +97,6 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         );
 
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
-
-        // second init with the same config should be a no-op (no exception)
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
     }
 
@@ -124,7 +123,110 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
                 .hasMessageContaining("already initialized with a different configuration");
     }
 
+    @Test
+    void shouldTreatBlankEndpointsAsMissingAndFail() {
+
+        ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
+                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide("   ", "\t", 10, 100L);
+
+        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
+                new ValkeyClusterConfiguration(),
+                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
+        );
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg))
+                .withMessageContaining("requires at least one of tracesEndpoint or metricsEndpoint");
+    }
+
+    @Test
+    void shouldInitializeWhenTracesEndpointIsBlankButMetricsIsProvided() {
+
+        ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
+                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide("   ", METRICS_ENDPOINT, null, null);
+
+        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
+                new ValkeyClusterConfiguration(),
+                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
+        );
+
+        assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
+    }
+
+    @Test
+    void shouldInitializeWhenMetricsEndpointIsBlankButTracesIsProvided() {
+
+        ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
+                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(TRACES_ENDPOINT, "   ", 10, 100L);
+
+        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
+                new ValkeyClusterConfiguration(),
+                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
+        );
+
+        assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
+    }
+
+    @Test
+    void shouldNotInitializeWhenOpenTelemetryConfigIsNull() {
+        assertThat(isOtelInitialized()).isFalse();
+        assertThat(getInitializedConfig()).isNull();
+    }
+
+    @Test
+    void shouldThrowWhenSamplePercentageIsOutOfRange() {
+
+        ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
+                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(TRACES_ENDPOINT, null, 101, 100L);
+
+        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
+                new ValkeyClusterConfiguration(),
+                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
+        );
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg))
+                .withMessageContaining("samplePercentage");
+    }
+
+    @Test
+    void shouldThrowWhenFlushIntervalMsIsNonPositive() {
+
+        ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
+                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(TRACES_ENDPOINT, null, 10, 0L);
+
+        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
+                new ValkeyClusterConfiguration(),
+                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
+        );
+
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg))
+                .withMessageContaining("flushIntervalMs");
+    }
+
     // ----------------- helpers -----------------
+
+    private static boolean isOtelInitialized() {
+        try {
+            Field initializedField = ValkeyGlideConnectionFactory.class.getDeclaredField("OTEL_INITIALIZED");
+            initializedField.setAccessible(true);
+            AtomicBoolean initialized = (AtomicBoolean) initializedField.get(null);
+            return initialized.get();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static ValkeyGlideClientConfiguration.OpenTelemetryForGlide getInitializedConfig() {
+        try {
+            Field configField = ValkeyGlideConnectionFactory.class.getDeclaredField("OTEL_INITIALIZED_CONFIG");
+            configField.setAccessible(true);
+            return (ValkeyGlideClientConfiguration.OpenTelemetryForGlide) configField.get(null);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     /**
      * Invoke the private useOpenTelemetry method via reflection.
@@ -135,15 +237,22 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
     ) throws Exception {
 
         Method m = ValkeyGlideConnectionFactory.class
-                .getDeclaredMethod("useOpenTelemetry", ValkeyGlideClientConfiguration.OpenTelemetryForGlide.class);
+                .getDeclaredMethod(
+                        "useOpenTelemetry",
+                        ValkeyGlideClientConfiguration.OpenTelemetryForGlide.class
+                );
         m.setAccessible(true);
 
         try {
             m.invoke(factory, openTelemetryForGlide);
         } catch (InvocationTargetException ite) {
             Throwable cause = ite.getCause();
-            if (cause instanceof Exception e) throw e;
-            if (cause instanceof Error err) throw err;
+            if (cause instanceof Exception e) {
+                throw e;
+            }
+            if (cause instanceof Error err) {
+                throw err;
+            }
             throw new RuntimeException(cause);
         }
     }
@@ -153,7 +262,7 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
      */
     private static void resetFactoryStaticOpenTelemetryState() {
         try {
-            Class<?> factoryClass = ValkeyGlideConnectionFactory.class;
+        Class<?> factoryClass = ValkeyGlideConnectionFactory.class;
 
             Field initializedField = factoryClass.getDeclaredField("OTEL_INITIALIZED");
             initializedField.setAccessible(true);

@@ -38,6 +38,8 @@ class ValkeyPropertiesTests {
 		assertThat(valkeyGlide.getClientAZ()).isNull();
 		assertThat(valkeyGlide.getCluster()).isNotNull();
 		assertThat(valkeyGlide.getMaxPoolSize()).isEqualTo(8);
+		assertThat(valkeyGlide.getOpenTelemetry()).isNotNull();
+		assertThat(valkeyGlide.getOpenTelemetry().isEnabled()).isEqualTo(false);
 	}
 
 }
