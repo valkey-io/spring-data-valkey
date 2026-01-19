@@ -381,7 +381,6 @@ public class ValkeyGlideConnectionFactory
             if (flushIntervalMs != null) {
                 otelBuilder.flushIntervalMs(flushIntervalMs);
             }
-            System.out.println("Initializing OpenTelemetry for Valkey-Glide with config: " + openTelemetryForGlide);
 
             OTEL_INITIALIZED_CONFIG = openTelemetryForGlide;
             OpenTelemetry.init(otelBuilder.build());
