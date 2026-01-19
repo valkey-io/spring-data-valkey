@@ -607,7 +607,7 @@ public class ValkeyGlideConnectionClusterServerCommandsIntegrationTests extends 
     @Test
     void testGetClientListClusterWideAggregation() throws InterruptedException {
         // Wait for cluster nodes to stabilize client connections
-        Thread.sleep(1000);
+        Thread.sleep(3000);
         
         // Get cluster-wide client list (should combine lists from all primaries)
         List<ValkeyClientInfo> clusterClientList = clusterConnection.serverCommands().getClientList();
