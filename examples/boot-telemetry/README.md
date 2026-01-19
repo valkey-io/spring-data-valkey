@@ -4,8 +4,6 @@ This example demonstrates using **Spring Boot** with **Spring Data Valkey**, bac
 
 On startup, the application executes a small number of Valkey `SET` / `GET` commands using `StringValkeyTemplate`. Each command is automatically instrumented by GLIDE and exported via OpenTelemetry.
 
----
-
 ## How it works
 
 - Spring Boot auto-configures all Valkey beans
@@ -16,17 +14,28 @@ On startup, the application executes a small number of Valkey `SET` / `GET` comm
 
 No explicit OpenTelemetry SDK or client setup code is required.
 
----
-
 ## Running the example
 
+From the project root:
+
 ```bash
-../../mvnw clean compile exec:java
-````
+$ ./mvnw -q compile exec:java -pl examples/boot-telemetry
+```
+
+Or from this boot-telemetry folder:
+
+```bash
+$ ../../mvnw -q compile exec:java -Dspring.docker.compose.file=compose.yaml
+```
 
 Docker Compose is started automatically and kept running after the application exits.
 
----
+When finished, stop and remove the container:
+
+```bash
+$ docker stop boot-telemetry-otel-collector-1 && docker rm boot-telemetry-otel-collector-1
+```
+
 
 ## Key configuration properties
 
@@ -40,16 +49,14 @@ spring.data.valkey.valkey-glide.open-telemetry.metrics-endpoint=http://localhost
 spring.docker.compose.lifecycle-management=start-only
 ```
 
----
-
 ## Inspecting OpenTelemetry
 
 ```bash
-docker logs -f spring-boot-opentelemetry-otel-collector-1
+$ docker logs -f boot-telemetry-otel-collector-1
 ```
 
-If yoy change the configuration of the docker shutdown the existing containers first and then run the example again:
+If you change the configuration of the docker shutdown the existing containers first and then run the example again:
 
 ```bash
-docker compose down --remove-orphans
+$ docker compose down --remove-orphans
 ```

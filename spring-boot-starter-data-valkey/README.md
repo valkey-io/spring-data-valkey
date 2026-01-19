@@ -15,6 +15,7 @@ The project is a fork of Spring Boot Starter Data Redis 3.5.1 (part of the [Spri
 * Valkey Sentinel configuration support (Lettuce and Jedis only).
 * SSL/TLS connection support with Spring Boot SSL bundles.
 * Spring Boot Actuator health indicators and metrics for Valkey connections.
+* Property-based OpenTelemetry configuration for Valkey GLIDE, enabling automatic trace and metric export without application code changes.
 * `@DataValkeyTest` slice test annotation for focused Valkey testing.
 * Testcontainers integration with `@ServiceConnection` annotation.
 * Docker Compose support for automatic service detection and startup.

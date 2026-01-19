@@ -39,6 +39,8 @@ Replace `quickstart` with any example name below. To run from project root, use 
 | **streams** | Valkey Streams for event sourcing and message queues (XADD, XREAD, consumer groups) |
 | **collections** | Valkey-backed Java collections (ValkeyList, ValkeySet, ValkeyMap) and atomic counters |
 | **scripting** | Lua script execution (EVAL, EVALSHA) for atomic operations |
+| **telemetry** | OpenTelemetry instrumentation with manual SDK setup for tracing and metrics |
+| **boot-telemetry** | Spring Boot with OpenTelemetry enabled via configuration properties and Docker Compose |
 
 ## Notes
 

@@ -11,7 +11,7 @@ This project provides both the [core Spring Data Valkey library](spring-data-val
 * Connection package as low-level abstraction across multiple drivers ([Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core), and [Jedis](https://github.com/redis/jedis)).
 * Exception translation to Spring's portable Data Access exception hierarchy for driver exceptions.
 * `ValkeyTemplate` that provides a high level abstraction for performing various Valkey operations, exception translation and serialization support.
-* Pubsub support (such as a MessageListenerContainer for message-driven POJOs). Available with Jedis and Lettuce, with Valkey GLIDE support WIP for version 1.0.0.
+* Pubsub support (such as a MessageListenerContainer for message-driven POJOs).
 * OpenTelemetry instrumentation support when using the Valkey GLIDE client for emitting traces and metrics for Valkey operations.
 * Valkey Sentinel support is currently available in Jedis and Lettuce, while support in Valkey GLIDE is planned for a future release.
 * Reactive API using Lettuce.
@@ -30,10 +30,10 @@ This project provides both the [core Spring Data Valkey library](spring-data-val
 * Support for multiple Valkey drivers ([Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core), and [Jedis](https://github.com/redis/jedis)).
 * Connection pooling configuration for all supported clients.
 * Valkey Cluster auto-configuration and support.
-* Property-based OpenTelemetry configuration for Valkey GLIDE, enabling automatic trace and metric export without application code changes.
 * Valkey Sentinel configuration support (Lettuce and Jedis only).
 * SSL/TLS connection support with Spring Boot SSL bundles.
 * Spring Boot Actuator health indicators and metrics for Valkey connections.
+* Property-based OpenTelemetry configuration for Valkey GLIDE, enabling automatic trace and metric export without application code changes.
 * `@DataValkeyTest` slice test annotation for focused Valkey testing.
 * Testcontainers integration with `@ServiceConnection` annotation.
 * Docker Compose support for automatic service detection and startup.

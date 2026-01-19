@@ -18,10 +18,10 @@
 	<description>Example projects demonstrating Spring Data Valkey features</description>
 
 	<modules>
+		<module>boot-telemetry</module>
 		<module>cache</module>
 		<module>cluster</module>
 		<module>collections</module>
-		<module>telemetry</module>
 		<module>operations</module>
 		<module>pipeline</module>
 		<module>quickstart</module>
@@ -30,6 +30,7 @@
 		<module>serialization</module>
 		<module>spring-boot</module>
 		<module>streams</module>
+		<module>telemetry</module>
 		<module>transactions</module>
 	</modules>
 

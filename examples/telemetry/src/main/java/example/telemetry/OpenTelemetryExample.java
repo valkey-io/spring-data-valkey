@@ -34,7 +34,7 @@ import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
  * for example by viewing the collector logs:</p>
  *
  * <pre>
- * docker logs -f spring-boot-opentelemetry-otel-collector-1
+ * docker logs -f boot-telemetry-otel-collector-1
  * </pre>
  */
 public class OpenTelemetryExample {
@@ -70,12 +70,15 @@ public class OpenTelemetryExample {
 
                 template.opsForValue().set(key, value);
                 String readBack = template.opsForValue().get(key);
-
-                // System.out.println("Iteration " + i + ": " + key + "=" + readBack);
+                System.out.println("Iteration " + i + ": " + key + "=" + readBack);
             }
 
             System.out.println("Completed " + iterations + " iterations of Valkey commands.");
 
+            // Cleanup
+            for (int i = 0; i < iterations; i++) {
+                template.delete("key" + i);
+            }
         } finally {
             connectionFactory.destroy();
         }

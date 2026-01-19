@@ -7,7 +7,7 @@ Spring Data Valkey provides Spring Data integration for [Valkey](https://valkey.
 * Connection package as low-level abstraction across multiple drivers ([Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core), and [Jedis](https://github.com/redis/jedis))
 * Exception translation to Spring's portable Data Access exception hierarchy
 * `ValkeyTemplate` for high-level abstraction with serialization support
-* Pubsub support with MessageListenerContainer (Jedis and Lettuce, GLIDE support planned)
+* Pubsub support with MessageListenerContainer
 * Valkey Sentinel support (Jedis and Lettuce, GLIDE support planned)
 * Reactive API using Lettuce
 * JDK, String, JSON and Spring Object/XML mapping serializers

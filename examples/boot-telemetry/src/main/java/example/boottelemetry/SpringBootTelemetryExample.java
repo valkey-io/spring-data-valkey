@@ -19,7 +19,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * for example by viewing the collector logs:</p>
  *
  * <pre>
- * docker logs -f spring-boot-opentelemetry-otel-collector-1
+ * docker logs -f boot-telemetry-otel-collector-1
  * </pre>
  */
 @SpringBootApplication
@@ -43,10 +43,14 @@ public class SpringBootTelemetryExample implements CommandLineRunner {
 
             valkeyTemplate.opsForValue().set(key, value);
             String readBack = valkeyTemplate.opsForValue().get(key);
-
-            // System.out.println("Iteration " + i + ": " + key + "=" + readBack);
+            System.out.println("Iteration " + i + ": " + key + "=" + readBack);
         }
 
         System.out.println("Completed " + iterations + " iterations of Valkey commands.");
+
+        // Cleanup
+        for (int i = 0; i < iterations; i++) {
+            valkeyTemplate.delete("key" + i);
+        }
     }
 }
