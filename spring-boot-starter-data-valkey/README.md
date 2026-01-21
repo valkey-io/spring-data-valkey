@@ -255,6 +255,74 @@ Valkey metrics are automatically collected when Micrometer is present:
 
 View metrics at `/actuator/metrics/valkey.*` or integrate with monitoring systems like Prometheus.
 
+## OpenTelemetry Integration
+
+The starter provides automatic OpenTelemetry instrumentation when using the Valkey GLIDE client, enabling distributed tracing and metrics collection for Valkey operations without code changes.  OpenTelemetry instrumentation is enabled via Spring Boot properties.
+
+### Configuration Properties
+
+Enable and configure OpenTelemetry for Valkey GLIDE operations:
+
+```properties
+# Enable OpenTelemetry instrumentation in GLIDE
+spring.data.valkey.valkey-glide.open-telemetry.enabled=true
+
+# Configure trace and metric endpoints (OTLP format)
+spring.data.valkey.valkey-glide.open-telemetry.traces-endpoint=http://localhost:4318/v1/traces
+spring.data.valkey.valkey-glide.open-telemetry.metrics-endpoint=http://localhost:4318/v1/metrics
+
+# Optional: Configure sampling and flush behavior
+spring.data.valkey.valkey-glide.open-telemetry.sample-percentage=10
+spring.data.valkey.valkey-glide.open-telemetry.flush-interval-ms=50
+```
+
+### Collected Metrics and Traces
+
+The following telemetry data is automatically collected:
+
+- **Command duration** - Time taken for each Valkey command
+- **Command success/failure rates** - Success and error counts per command type
+- **Connection pool metrics** - Active connections, pool utilization
+- **Network metrics** - Bytes sent/received
+- **Distributed traces** - Complete request flow including Valkey operations
+
+### Example Usage
+
+```java
+@Service
+public class UserService {
+
+    @Autowired
+    private StringValkeyTemplate valkeyTemplate;
+
+    // This operation will be automatically traced when OpenTelemetry is enabled
+    public void saveUser(String id, String userData) {
+        valkeyTemplate.opsForValue().set("user:" + id, userData);
+    }
+}
+```
+
+### Docker Compose Integration
+
+For local development, you can use Docker Compose to run an OpenTelemetry Collector:
+
+```yaml
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+```
+
+Enable Docker Compose integration:
+
+```properties
+spring.docker.compose.lifecycle-management=start-only
+```
+
+Traces and metrics will be exported to the collector and can be viewed in your observability backend, such as OpenTelemetry Collector.
+
 ## Testing
 
 ### @DataValkeyTest
