@@ -78,17 +78,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      # Alternative: Install engine directly instead of using Makefile
-      # - name: Install engine
-      #   uses: ./.github/workflows/actions/install-engine
-      #   with:
-      #     engine-type: ${{ matrix.engine }}
-      #     engine-tag: ${{ matrix.version }}
-      #
-      # - name: Start engine
-      #   run: |
-      #     ${{ matrix.engine }}-server --daemonize yes
-
       - name: Start engine
         run: |
           make start PROJECT=${{ matrix.engine }} VERSION=${{ matrix.version }} GH_ORG=${{ matrix.engine == 'redis' && 'redis' || 'valkey-io' }}
@@ -150,17 +139,6 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-
-      # Alternative: Install engine directly instead of using Makefile
-      # - name: Install Valkey
-      #   uses: ./.github/workflows/actions/install-engine
-      #   with:
-      #     engine-type: "valkey"
-      #     engine-tag: "8.0.3"
-      #
-      # - name: Start Valkey
-      #   run: |
-      #     valkey-server --daemonize yes
 
       # Runtime hints tests still need an engine, but can use a single version
       # Use oldest valkey version for runtime hints tests
