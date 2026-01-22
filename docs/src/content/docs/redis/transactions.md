@@ -1,0 +1,117 @@
+---
+title: Redis Transactions
+description: Transactions documentation
+---
+
+Redis provides support for [transactions](https://redis.io/topics/transactions) through the `multi`, `exec`, and `discard` commands.
+These operations are available on `org.springframework.data.redis.core.RedisTemplate`.
+However, `RedisTemplate` is not guaranteed to run all the operations in the transaction with the same connection.
+
+Spring Data Redis provides the `org.springframework.data.redis.core.SessionCallback` interface for use when multiple operations need to be performed with the same `connection`, such as when using Redis transactions.The following example uses the `multi` method:
+
+```java
+//execute a transaction
+List<Object> txResults = redisOperations.execute(new SessionCallback<List<Object>>() {
+  public List<Object> execute(RedisOperations operations) throws DataAccessException {
+    operations.multi();
+    operations.opsForSet().add("key", "value1");
+
+    // This will contain the results of all operations in the transaction
+    return operations.exec();
+  }
+});
+System.out.println("Number of items added to set: " + txResults.get(0));
+```
+
+`RedisTemplate` uses its value, hash key, and hash value serializers to deserialize all results of `exec` before returning.
+There is an additional `exec` method that lets you pass a custom serializer for transaction results.
+
+It is worth mentioning that in case between `multi()` and `exec()` an exception happens (e.g. a timeout exception in case Redis does not respond within the timeout) then the connection may get stuck in a transactional state.
+To prevent such a situation need have to discard the transactional state to clear the connection:
+
+```java
+List<Object> txResults = redisOperations.execute(new SessionCallback<List<Object>>() {
+  public List<Object> execute(RedisOperations operations) throws DataAccessException {
+    boolean transactionStateIsActive = true;
+	try {
+      operations.multi();
+      operations.opsForSet().add("key", "value1");
+
+      // This will contain the results of all operations in the transaction
+      return operations.exec();
+    } catch (RuntimeException e) {
+	    operations.discard();
+		throw e;
+    }
+  }
+});
+```
+
+## `@Transactional` Support
+
+By default, `RedisTemplate` does not participate in managed Spring transactions.
+If you want `RedisTemplate` to make use of Redis transaction when using `@Transactional` or `TransactionTemplate`, you need to be explicitly enable transaction support for each `RedisTemplate` by setting `setEnableTransactionSupport(true)`.
+Enabling transaction support binds `RedisConnection` to the current transaction backed by a `ThreadLocal`.
+If the transaction finishes without errors, the Redis transaction gets commited with `EXEC`, otherwise rolled back with `DISCARD`.
+Redis transactions are batch-oriented.
+Commands issued during an ongoing transaction are queued and only applied when committing the transaction.
+
+Spring Data Redis distinguishes between read-only and write commands in an ongoing transaction.
+Read-only commands, such as `KEYS`, are piped to a fresh (non-thread-bound) `RedisConnection` to allow reads.
+Write commands are queued by `RedisTemplate` and applied upon commit.
+
+The following example shows how to configure transaction management:
+
+*Example 1. Configuration enabling Transaction Management*
+
+```java
+@Configuration
+@EnableTransactionManagement                                 // (1)
+public class RedisTxContextConfiguration {
+
+  @Bean
+  public StringRedisTemplate redisTemplate() {
+    StringRedisTemplate template = new StringRedisTemplate(redisConnectionFactory());
+    // explicitly enable transaction support
+    template.setEnableTransactionSupport(true);              // (2)
+    return template;
+  }
+
+  @Bean
+  public RedisConnectionFactory redisConnectionFactory() {
+    // jedis || Lettuce
+  }
+
+  @Bean
+  public PlatformTransactionManager transactionManager() throws SQLException {
+    return new DataSourceTransactionManager(dataSource());   // (3)
+  }
+
+  @Bean
+  public DataSource dataSource() throws SQLException {
+    // ...
+  }
+}
+```
+```text
+1. Configures a Spring Context to enable [declarative transaction management](https://docs.spring.io/spring-framework/reference/data-access.html#transaction-declarative).
+2. Configures `RedisTemplate` to participate in transactions by binding connections to the current thread.
+3. Transaction management requires a `PlatformTransactionManager`.
+Spring Data Redis does not ship with a `PlatformTransactionManager` implementation.
+Assuming your application uses JDBC, Spring Data Redis can participate in transactions by using existing transaction managers.
+```
+
+The following examples each demonstrate a usage constraint:
+
+*Example 2. Usage Constraints*
+
+```java
+// must be performed on thread-bound connection
+template.opsForValue().set("thing1", "thing2");
+
+// read operation must be run on a free (not transaction-aware) connection
+template.keys("*");
+
+// returns null as values set within a transaction are not visible
+template.opsForValue().get("thing1");
+```

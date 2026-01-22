@@ -1,0 +1,86 @@
+---
+title: Getting Started
+description: Getting Started documentation
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+An easy way to bootstrap setting up a working environment is to create a Spring-based project via [start.spring.io](https://start.spring.io/#!type=maven-project&dependencies=data-redis) or create a Spring project in [Spring Tools](https://spring.io/tools).
+## Examples Repository
+
+The GitHub [spring-data-examples repository](https://github.com/spring-projects/spring-data-examples) hosts several examples that you can download and play around with to get a feel for how the library works.
+## Hello World
+
+First, you need to set up a running Redis server.
+Spring Data Redis requires Redis 2.6 or above and Spring Data Redis integrates with [Lettuce](https://github.com/lettuce-io/lettuce-core) and [Jedis](https://github.com/redis/jedis), two popular open-source Java libraries for Redis.
+
+Now you can create a simple Java application that stores and reads a value to and from Redis.
+
+Create the main application to run, as the following example shows:
+
+<Tabs>
+<TabItem label="Imperative">
+
+```java
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+
+public class RedisApplication {
+
+	private static final Log LOG = LogFactory.getLog(RedisApplication.class);
+
+	public static void main(String[] args) {
+
+		RedisConnectionFactory factory = new LettuceConnectionFactory();
+
+		RedisTemplate<String, String> template = new RedisTemplate<>();
+		template.setConnectionFactory(factory);
+		template.afterPropertiesSet();
+
+		template.opsForValue().set("foo", "bar");
+
+		LOG.info("Value at foo:" + template.opsForValue().get("foo"));
+
+		template.getConnectionFactory().getConnection().close();
+	}
+}
+```
+
+</TabItem>
+<TabItem label="Reactive">
+
+```java
+import reactor.core.publisher.Mono;
+
+import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.ReactiveRedisTemplate;
+import org.springframework.data.redis.serialization.RedisSerializationContext;
+
+public class ReactiveRedisApplication {
+
+	public static void main(String[] args) {
+
+		ReactiveRedisConnectionFactory factory = new LettuceConnectionFactory();
+
+		ReactiveRedisTemplate<String, String> template = new ReactiveRedisTemplate<>(factory, RedisSerializationContext.string());
+
+		template.opsForValue().set("foo", "bar")
+			.then(template.opsForValue().get("foo"))
+			.doOnNext(System.out::println)
+			.then(Mono.fromRunnable(() -> factory.getReactiveConnection().close()))
+			.subscribe();
+	}
+}
+```
+
+</TabItem>
+</Tabs>
+Even in this simple example, there are a few notable things to point out:
+
+* You can create an instance of `org.springframework.data.redis.core.RedisTemplate` (or `org.springframework.data.redis.core.ReactiveRedisTemplate`for reactive usage) with a `org.springframework.data.redis.connection.RedisConnectionFactory`. Connection factories are an abstraction on top of the supported drivers.
+* There's no single way to use Redis as it comes with support for a wide range of data structures such as plain keys ("strings"), lists, sets, sorted sets, streams, hashes and so on.

@@ -1,0 +1,269 @@
+---
+title: Redis Cache
+description: Redis Cache documentation
+---
+
+Spring Data Redis provides an implementation of Spring Framework's [Cache Abstraction](https://docs.spring.io/spring-framework/reference/integration.html#cache) in the `org.springframework.data.redis.cache` package.
+To use Redis as a backing implementation, add `org.springframework.data.redis.cache.RedisCacheManager` to your configuration, as follows:
+
+```java
+@Bean
+public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+    return RedisCacheManager.create(connectionFactory);
+}
+```
+
+`RedisCacheManager` behavior can be configured with `org.springframework.data.redis.cache.RedisCacheManager$RedisCacheManagerBuilder`, letting you set the default `org.springframework.data.redis.cache.RedisCacheManager`, transaction behavior, and predefined caches.
+
+```java
+RedisCacheManager cacheManager = RedisCacheManager.builder(connectionFactory)
+    .cacheDefaults(RedisCacheConfiguration.defaultCacheConfig())
+    .transactionAware()
+    .withInitialCacheConfigurations(Collections.singletonMap("predefined",
+        RedisCacheConfiguration.defaultCacheConfig().disableCachingNullValues()))
+    .build();
+```
+
+As shown in the preceding example, `RedisCacheManager` allows custom configuration on a per-cache basis.
+
+The behavior of `org.springframework.data.redis.cache.RedisCache` created by `org.springframework.data.redis.cache.RedisCacheManager` is defined with `RedisCacheConfiguration`.
+The configuration lets you set key expiration times, prefixes, and `RedisSerializer` implementations for converting to and from the binary storage format, as shown in the following example:
+
+```java
+RedisCacheConfiguration cacheConfiguration = RedisCacheConfiguration.defaultCacheConfig()
+    .entryTtl(Duration.ofSeconds(1))
+    .disableCachingNullValues();
+```
+
+`org.springframework.data.redis.cache.RedisCacheManager` defaults to a lock-free `org.springframework.data.redis.cache.RedisCacheWriter` for reading and writing binary values.
+Lock-free caching improves throughput.
+The lack of entry locking can lead to overlapping, non-atomic commands for the `Cache` `putIfAbsent` and `clean` operations, as those require multiple commands to be sent to Redis.
+The locking counterpart prevents command overlap by setting an explicit lock key and checking against presence of this key, which leads to additional requests and potential command wait times.
+
+Locking applies on the *cache level*, not per *cache entry*.
+
+It is possible to opt in to the locking behavior as follows:
+
+```java
+RedisCacheManager cacheManager = RedisCacheManager
+    .builder(RedisCacheWriter.lockingRedisCacheWriter(connectionFactory))
+    .cacheDefaults(RedisCacheConfiguration.defaultCacheConfig())
+    ...
+```
+
+By default, any `key` for a cache entry gets prefixed with the actual cache name followed by two colons.
+This behavior can be changed to a static as well as a computed prefix.
+
+The following example shows how to set a static prefix:
+
+```java
+// static key prefix
+RedisCacheConfiguration.defaultCacheConfig().prefixCacheNameWith("(͡° ᴥ ͡°)");
+```
+
+The following example shows how to set a computed prefix:
+
+```java
+// computed key prefix
+RedisCacheConfiguration.defaultCacheConfig()
+    .computePrefixWith(cacheName -> "¯\_(ツ)_/¯" + cacheName);
+```
+
+The cache implementation defaults to use `KEYS` and `DEL` to clear the cache. `KEYS` can cause performance issues with large keyspaces.
+Therefore, the default `RedisCacheWriter` can be created with a `BatchStrategy` to switch to a `SCAN`-based batch strategy.
+The `SCAN` strategy requires a batch size to avoid excessive Redis command round trips:
+
+```java
+RedisCacheManager cacheManager = RedisCacheManager
+    .builder(RedisCacheWriter.nonLockingRedisCacheWriter(connectionFactory, BatchStrategies.scan(1000)))
+    .cacheDefaults(RedisCacheConfiguration.defaultCacheConfig())
+    ...
+```
+
+:::note
+The `KEYS` batch strategy is fully supported using any driver and Redis operation mode (Standalone, Clustered).
+:::
+
+`SCAN` is fully supported when using the Lettuce driver.
+Jedis supports `SCAN` only in non-clustered modes.
+
+The following table lists the default settings for `RedisCacheManager`:
+
+*Table 1. `RedisCacheManager` defaults*
+
+| Setting | Value |
+|---------|-------|
+| Cache Writer | Non-locking, `KEYS` batch strategy |
+| Cache Configuration | `RedisCacheConfiguration#defaultConfiguration` |
+| Initial Caches | None |
+| Transaction Aware | No |
+
+The following table lists the default settings for `RedisCacheConfiguration`:
+
+*Table 2. RedisCacheConfiguration defaults*
+
+| Setting | Value |
+|---------|-------|
+| Key Expiration | None |
+| Cache `null` | Yes |
+| Prefix Keys | Yes |
+| Default Prefix | The actual cache name |
+| Key Serializer | `StringRedisSerializer` |
+| Value Serializer | `JdkSerializationRedisSerializer` |
+| Conversion Service | `DefaultFormattingConversionService` with default cache key converters |
+
+:::note
+By default `RedisCache`, statistics are disabled.
+:::
+
+Use `RedisCacheManagerBuilder.enableStatistics()` to collect local _hits_ and _misses_ through  `RedisCache#getStatistics()`, returning a snapshot of the collected data.
+
+## Redis Cache Expiration
+
+The implementation of time-to-idle (TTI) as well as time-to-live (TTL) varies in definition and behavior even across different data stores.
+
+In general:
+
+* _time-to-live_ (TTL) _expiration_ - TTL is only set and reset by a create or update data access operation.
+As long as the entry is written before the TTL expiration timeout, including on creation, an entry's timeout will reset to the configured duration of the TTL expiration timeout.
+For example, if the TTL expiration timeout is set to 5 minutes, then the timeout will be set to 5 minutes on entry creation and reset to 5 minutes anytime the entry is updated thereafter and before the 5-minute interval expires.
+If no update occurs within 5 minutes, even if the entry was read several times, or even just read once during the 5-minute interval, the entry will still expire.
+The entry must be written to prevent the entry from expiring when declaring a TTL expiration policy.
+
+* _time-to-idle_ (TTI) _expiration_ - TTI is reset anytime the entry is also read as well as for entry updates, and is effectively and extension to the TTL expiration policy.
+
+:::note
+Some data stores expire an entry when TTL is configured no matter what type of data access operation occurs on the entry (reads, writes, or otherwise).
+After the set, configured TTL expiration timeout, the entry is evicted from the data store regardless.
+Eviction actions (for example: destroy, invalidate, overflow-to-disk (for persistent stores), etc.) are data store specific.
+:::
+
+### Time-To-Live (TTL) Expiration
+
+Spring Data Redis's `Cache` implementation supports _time-to-live_ (TTL) expiration on cache entries.
+Users can either configure the TTL expiration timeout with a fixed `Duration` or a dynamically computed `Duration` per cache entry by supplying an implementation of the new `RedisCacheWriter.TtlFunction` interface.
+
+:::tip
+The `RedisCacheWriter.TtlFunction` interface was introduced in Spring Data Redis `3.2.0`.
+:::
+
+If all cache entries should expire after a set duration of time, then simply configure a TTL expiration timeout with a fixed `Duration`, as follows:
+
+```java
+RedisCacheConfiguration fiveMinuteTtlExpirationDefaults =
+    RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(5));
+```
+
+However, if the TTL expiration timeout should vary by cache entry, then you must provide a custom implementation of the `RedisCacheWriter.TtlFunction` interface:
+
+```java
+enum MyCustomTtlFunction implements TtlFunction {
+
+    INSTANCE;
+
+    @Override
+    public Duration getTimeToLive(Object key, @Nullable Object value) {
+        // compute a TTL expiration timeout (Duration) based on the cache entry key and/or value
+    }
+}
+```
+
+:::note
+Under-the-hood, a fixed `Duration` TTL expiration is wrapped in a `TtlFunction` implementation returning the provided `Duration`.
+:::
+
+Then, you can either configure the fixed `Duration` or the dynamic, per-cache entry `Duration` TTL expiration on a global basis using:
+
+*Global fixed Duration TTL expiration timeout*
+
+```java
+RedisCacheManager cacheManager = RedisCacheManager.builder(redisConnectionFactory)
+    .cacheDefaults(fiveMinuteTtlExpirationDefaults)
+    .build();
+```
+
+Or, alternatively:
+
+*Global, dynamically computed per-cache entry Duration TTL expiration timeout*
+
+```java
+RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
+        .entryTtl(MyCustomTtlFunction.INSTANCE);
+
+RedisCacheManager cacheManager = RedisCacheManager.builder(redisConnectionFactory)
+    .cacheDefaults(defaults)
+    .build();
+```
+
+Of course, you can combine both global and per-cache configuration using:
+
+*Global fixed Duration TTL expiration timeout*
+
+```java
+RedisCacheConfiguration predefined = RedisCacheConfiguration.defaultCacheConfig()
+                                         .entryTtl(MyCustomTtlFunction.INSTANCE);
+
+Map<String, RedisCacheConfiguration> initialCaches = Collections.singletonMap("predefined", predefined);
+
+RedisCacheManager cacheManager = RedisCacheManager.builder(redisConnectionFactory)
+    .cacheDefaults(fiveMinuteTtlExpirationDefaults)
+    .withInitialCacheConfigurations(initialCaches)
+    .build();
+```
+
+### Time-To-Idle (TTI) Expiration
+
+Redis itself does not support the concept of true, time-to-idle (TTI) expiration.
+Still, using Spring Data Redis's Cache implementation, it is possible to achieve time-to-idle (TTI) expiration-like behavior.
+
+The configuration of TTI in Spring Data Redis's Cache implementation must be explicitly enabled, that is, is opt-in.
+Additionally, you must also provide TTL configuration using either a fixed `Duration` or a custom implementation of the `TtlFunction` interface as described above in [Redis Cache Expiration](#redis-cache-expiration).
+
+For example:
+
+```java
+@Configuration
+@EnableCaching
+class RedisConfiguration {
+
+    @Bean
+    RedisConnectionFactory redisConnectionFactory() {
+        // ...
+    }
+
+    @Bean
+    RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
+
+        RedisCacheConfiguration defaults = RedisCacheConfiguration.defaultCacheConfig()
+            .entryTtl(Duration.ofMinutes(5))
+            .enableTimeToIdle();
+
+        return RedisCacheManager.builder(connectionFactory)
+            .cacheDefaults(defaults)
+            .build();
+    }
+}
+```
+
+Because Redis servers do not implement a proper notion of TTI, then TTI can only be achieved with Redis commands accepting expiration options.
+In Redis, the "expiration" is technically a time-to-live (TTL) policy.
+However, TTL expiration can be passed when reading the value of a key thereby effectively resetting the TTL expiration timeout, as is now the case in Spring Data Redis's `Cache.get(key)` operation.
+
+`RedisCache.get(key)` is implemented by calling the Redis `GETEX` command.
+
+:::danger
+The Redis [`GETEX`](https://redis.io/commands/getex) command is only available in Redis version `6.2.0` and later.
+Therefore, if you are not using Redis `6.2.0` or later, then it is not possible to use Spring Data Redis's TTI expiration.
+A command execution exception will be thrown if you enable TTI against an incompatible Redis (server) version.
+No attempt is made to determine if the Redis server version is correct and supports the `GETEX` command.
+:::
+
+:::danger
+In order to achieve true time-to-idle (TTI) expiration-like behavior in your Spring Data Redis application, then an entry must be consistently accessed with (TTL) expiration on every read or write operation.
+There are no exceptions to this rule.
+If you are mixing and matching different data access patterns across your Spring Data Redis application (for example: caching, invoking operations using `RedisTemplate` and possibly, or especially when using Spring Data Repository CRUD operations), then accessing an entry may not necessarily prevent the entry from expiring if TTL expiration was set.
+For example, an entry maybe "put" in (written to) the cache during a `@Cacheable` service method invocation with a TTL expiration (i.e. `SET <expiration options>`) and later read using a Spring Data Redis Repository before the expiration timeout (using `GET` without expiration options).
+A simple `GET` without specifying expiration options will not reset the TTL expiration timeout on an entry.
+Therefore, the entry may expire before the next data access operation, even though it was just read.
+Since this cannot be enforced in the Redis server, then it is the responsibility of your application to consistently access an entry when time-to-idle expiration is configured, in and outside of caching, where appropriate.
+:::

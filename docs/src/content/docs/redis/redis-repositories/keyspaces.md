@@ -1,0 +1,57 @@
+---
+title: Keyspaces
+description: Keyspaces documentation
+---
+
+Keyspaces define prefixes used to create the actual key for the Redis Hash.
+By default, the prefix is set to `getClass().getName()`.
+You can alter this default by setting `@RedisHash` on the aggregate root level or by setting up a programmatic configuration.
+However, the annotated keyspace supersedes any other configuration.
+
+The following example shows how to set the keyspace configuration with the `@EnableRedisRepositories` annotation:
+
+*Example 1. Keyspace Setup via `@EnableRedisRepositories`*
+
+```java
+@Configuration
+@EnableRedisRepositories(keyspaceConfiguration = MyKeyspaceConfiguration.class)
+public class ApplicationConfig {
+
+  //... RedisConnectionFactory and RedisTemplate Bean definitions omitted
+
+  public static class MyKeyspaceConfiguration extends KeyspaceConfiguration {
+
+    @Override
+    protected Iterable<KeyspaceSettings> initialConfiguration() {
+      return Collections.singleton(new KeyspaceSettings(Person.class, "people"));
+    }
+  }
+}
+```
+
+The following example shows how to programmatically set the keyspace:
+
+*Example 2. Programmatic Keyspace setup*
+
+```java
+@Configuration
+@EnableRedisRepositories
+public class ApplicationConfig {
+
+  //... RedisConnectionFactory and RedisTemplate Bean definitions omitted
+
+  @Bean
+  public RedisMappingContext keyValueMappingContext() {
+    return new RedisMappingContext(
+      new MappingConfiguration(new IndexConfiguration(), new MyKeyspaceConfiguration()));
+  }
+
+  public static class MyKeyspaceConfiguration extends KeyspaceConfiguration {
+
+    @Override
+    protected Iterable<KeyspaceSettings> initialConfiguration() {
+      return Collections.singleton(new KeyspaceSettings(Person.class, "people"));
+    }
+  }
+}
+```
