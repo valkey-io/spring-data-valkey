@@ -16,6 +16,9 @@
 
 package io.valkey.springframework.boot.actuate.autoconfigure.data.valkey;
 
+import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.actuate.autoconfigure.health.CompositeHealthContributorConfiguration;
 import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
@@ -27,10 +30,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
-import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for {@link ValkeyHealthIndicator}.
  *
@@ -40,21 +39,22 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
  * @author Mark Paluch
  * @since 2.1.0
  */
-@AutoConfiguration(after = { ValkeyAutoConfiguration.class, ValkeyReactiveHealthContributorAutoConfiguration.class })
-@ConditionalOnClass({ ValkeyConnectionFactory.class, HealthContributor.class })
+@AutoConfiguration(
+        after = {ValkeyAutoConfiguration.class, ValkeyReactiveHealthContributorAutoConfiguration.class})
+@ConditionalOnClass({ValkeyConnectionFactory.class, HealthContributor.class})
 @ConditionalOnBean(ValkeyConnectionFactory.class)
 @ConditionalOnEnabledHealthIndicator("valkey")
 public class ValkeyHealthContributorAutoConfiguration
-		extends CompositeHealthContributorConfiguration<ValkeyHealthIndicator, ValkeyConnectionFactory> {
+        extends CompositeHealthContributorConfiguration<
+                ValkeyHealthIndicator, ValkeyConnectionFactory> {
 
-	ValkeyHealthContributorAutoConfiguration() {
-		super(ValkeyHealthIndicator::new);
-	}
+    ValkeyHealthContributorAutoConfiguration() {
+        super(ValkeyHealthIndicator::new);
+    }
 
-	@Bean
-	@ConditionalOnMissingBean(name = { "valkeyHealthIndicator", "valkeyHealthContributor" })
-	public HealthContributor valkeyHealthContributor(ConfigurableListableBeanFactory beanFactory) {
-		return createContributor(beanFactory, ValkeyConnectionFactory.class);
-	}
-
+    @Bean
+    @ConditionalOnMissingBean(name = {"valkeyHealthIndicator", "valkeyHealthContributor"})
+    public HealthContributor valkeyHealthContributor(ConfigurableListableBeanFactory beanFactory) {
+        return createContributor(beanFactory, ValkeyConnectionFactory.class);
+    }
 }

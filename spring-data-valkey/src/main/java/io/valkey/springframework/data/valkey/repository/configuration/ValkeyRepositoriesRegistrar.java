@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.repository.configuration;
 
 import java.lang.annotation.Annotation;
-
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.data.repository.config.RepositoryBeanDefinitionRegistrarSupport;
 import org.springframework.data.repository.config.RepositoryConfigurationExtension;
@@ -29,13 +28,13 @@ import org.springframework.data.repository.config.RepositoryConfigurationExtensi
  */
 public class ValkeyRepositoriesRegistrar extends RepositoryBeanDefinitionRegistrarSupport {
 
-	@Override
-	protected Class<? extends Annotation> getAnnotation() {
-		return EnableValkeyRepositories.class;
-	}
+    @Override
+    protected Class<? extends Annotation> getAnnotation() {
+        return EnableValkeyRepositories.class;
+    }
 
-	@Override
-	protected RepositoryConfigurationExtension getExtension() {
-		return new ValkeyRepositoryConfigurationExtension();
-	}
+    @Override
+    protected RepositoryConfigurationExtension getExtension() {
+        return new ValkeyRepositoryConfigurationExtension();
+    }
 }

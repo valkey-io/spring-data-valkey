@@ -17,20 +17,18 @@ package io.valkey.springframework.data.valkey.support.collections;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyCallback;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Base test for Valkey collections.
@@ -41,249 +39,253 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("testParams")
 public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 
-	protected AbstractValkeyCollection<T> collection;
-	protected ObjectFactory<T> factory;
-	@SuppressWarnings("rawtypes") protected ValkeyTemplate template;
+    protected AbstractValkeyCollection<T> collection;
+    protected ObjectFactory<T> factory;
 
-	@BeforeEach
-	public void setUp() throws Exception {
-		collection = createCollection();
-	}
+    @SuppressWarnings("rawtypes")
+    protected ValkeyTemplate template;
 
-	abstract AbstractValkeyCollection<T> createCollection();
+    @BeforeEach
+    public void setUp() throws Exception {
+        collection = createCollection();
+    }
 
-	abstract ValkeyStore copyStore(ValkeyStore store);
+    abstract AbstractValkeyCollection<T> createCollection();
 
-	@SuppressWarnings("rawtypes")
-	AbstractValkeyCollectionIntegrationTests(ObjectFactory<T> factory, ValkeyTemplate template) {
-		this.factory = factory;
-		this.template = template;
-	}
+    abstract ValkeyStore copyStore(ValkeyStore store);
 
-	public static Collection<Object[]> testParams() {
-		return CollectionTestParams.testParams();
-	}
+    @SuppressWarnings("rawtypes")
+    AbstractValkeyCollectionIntegrationTests(ObjectFactory<T> factory, ValkeyTemplate template) {
+        this.factory = factory;
+        this.template = template;
+    }
 
-	/**
-	 * Return a new instance of T
-	 *
-	 * @return
-	 */
-	T getT() {
-		return factory.instance();
-	}
+    public static Collection<Object[]> testParams() {
+        return CollectionTestParams.testParams();
+    }
 
-	@SuppressWarnings("unchecked")
-	@AfterEach
-	void tearDown() throws Exception {
-		// remove the collection entirely since clear() doesn't always work
-		collection.getOperations().delete(Collections.singleton(collection.getKey()));
-		template.execute((ValkeyCallback<Object>) connection -> {
-			connection.flushDb();
-			return null;
-		});
-	}
+    /**
+     * Return a new instance of T
+     *
+     * @return
+     */
+    T getT() {
+        return factory.instance();
+    }
 
-	@ParameterizedValkeyTest
-	public void testAdd() {
-		T t1 = getT();
-		assertThat(collection.add(t1)).isTrue();
-		assertThat(collection).contains(t1);
-		assertThat(collection).hasSize(1);
-	}
+    @SuppressWarnings("unchecked")
+    @AfterEach
+    void tearDown() throws Exception {
+        // remove the collection entirely since clear() doesn't always work
+        collection.getOperations().delete(Collections.singleton(collection.getKey()));
+        template.execute(
+                (ValkeyCallback<Object>)
+                        connection -> {
+                            connection.flushDb();
+                            return null;
+                        });
+    }
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	void testAddAll() {
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
+    @ParameterizedValkeyTest
+    public void testAdd() {
+        T t1 = getT();
+        assertThat(collection.add(t1)).isTrue();
+        assertThat(collection).contains(t1);
+        assertThat(collection).hasSize(1);
+    }
 
-		List<T> list = Arrays.asList(t1, t2, t3);
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    void testAddAll() {
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
 
-		assertThat(collection.addAll(list)).isTrue();
-		assertThat(collection).contains(t1);
-		assertThat(collection).contains(t2);
-		assertThat(collection).contains(t3);
-		assertThat(3).isEqualTo(collection.size());
-	}
+        List<T> list = Arrays.asList(t1, t2, t3);
 
-	@ParameterizedValkeyTest
-	void testClear() {
-		T t1 = getT();
-		assertThat(collection).isEmpty();
-		collection.add(t1);
-		assertThat(collection).hasSize(1);
-		collection.clear();
-		assertThat(collection).isEmpty();
-	}
+        assertThat(collection.addAll(list)).isTrue();
+        assertThat(collection).contains(t1);
+        assertThat(collection).contains(t2);
+        assertThat(collection).contains(t3);
+        assertThat(3).isEqualTo(collection.size());
+    }
 
-	@ParameterizedValkeyTest
-	void testContainsObject() {
-		T t1 = getT();
-		assertThat(collection).doesNotContain(t1);
-		assertThat(collection.add(t1)).isTrue();
-		assertThat(collection).contains(t1);
-	}
+    @ParameterizedValkeyTest
+    void testClear() {
+        T t1 = getT();
+        assertThat(collection).isEmpty();
+        collection.add(t1);
+        assertThat(collection).hasSize(1);
+        collection.clear();
+        assertThat(collection).isEmpty();
+    }
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	void testContainsAll() {
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
+    @ParameterizedValkeyTest
+    void testContainsObject() {
+        T t1 = getT();
+        assertThat(collection).doesNotContain(t1);
+        assertThat(collection.add(t1)).isTrue();
+        assertThat(collection).contains(t1);
+    }
 
-		List<T> list = Arrays.asList(t1, t2, t3);
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    void testContainsAll() {
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
 
-		assertThat(collection.addAll(list)).isTrue();
-		assertThat(collection).contains((T[]) list.toArray());
-		assertThat(collection).contains(t1, t2, t3);
-	}
+        List<T> list = Arrays.asList(t1, t2, t3);
 
-	@ParameterizedValkeyTest
-	void testEquals() {
-		// assertEquals(collection, copyStore(collection));
-	}
+        assertThat(collection.addAll(list)).isTrue();
+        assertThat(collection).contains((T[]) list.toArray());
+        assertThat(collection).contains(t1, t2, t3);
+    }
 
-	@ParameterizedValkeyTest
-	void testHashCode() {
-		assertThat(collection.hashCode()).isNotEqualTo(collection.getKey().hashCode());
-	}
+    @ParameterizedValkeyTest
+    void testEquals() {
+        // assertEquals(collection, copyStore(collection));
+    }
 
-	@ParameterizedValkeyTest
-	void testIsEmpty() {
-		assertThat(collection).isEmpty();
-		assertThat(collection.isEmpty()).isTrue();
-		collection.add(getT());
-		assertThat(collection).hasSize(1);
-		assertThat(collection.isEmpty()).isFalse();
-		collection.clear();
-		assertThat(collection.isEmpty()).isTrue();
-	}
+    @ParameterizedValkeyTest
+    void testHashCode() {
+        assertThat(collection.hashCode()).isNotEqualTo(collection.getKey().hashCode());
+    }
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	public void testIterator() {
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
-		T t4 = getT();
+    @ParameterizedValkeyTest
+    void testIsEmpty() {
+        assertThat(collection).isEmpty();
+        assertThat(collection.isEmpty()).isTrue();
+        collection.add(getT());
+        assertThat(collection).hasSize(1);
+        assertThat(collection.isEmpty()).isFalse();
+        collection.clear();
+        assertThat(collection.isEmpty()).isTrue();
+    }
 
-		List<T> list = Arrays.asList(t1, t2, t3, t4);
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    public void testIterator() {
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
+        T t4 = getT();
 
-		assertThat(collection.addAll(list)).isTrue();
-		Iterator<T> iterator = collection.iterator();
+        List<T> list = Arrays.asList(t1, t2, t3, t4);
 
-		assertThat(iterator.next()).isEqualTo(t1);
-		assertThat(iterator.next()).isEqualTo(t2);
-		assertThat(iterator.next()).isEqualTo(t3);
-		assertThat(iterator.next()).isEqualTo(t4);
-		assertThat(iterator.hasNext()).isFalse();
-	}
+        assertThat(collection.addAll(list)).isTrue();
+        Iterator<T> iterator = collection.iterator();
 
-	@ParameterizedValkeyTest
-	void testRemoveObject() {
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
+        assertThat(iterator.next()).isEqualTo(t1);
+        assertThat(iterator.next()).isEqualTo(t2);
+        assertThat(iterator.next()).isEqualTo(t3);
+        assertThat(iterator.next()).isEqualTo(t4);
+        assertThat(iterator.hasNext()).isFalse();
+    }
 
-		assertThat(collection).isEmpty();
-		assertThat(collection.add(t1)).isTrue();
-		assertThat(collection.add(t2)).isTrue();
-		assertThat(collection).hasSize(2);
-		assertThat(collection.remove(t3)).isFalse();
-		assertThat(collection.remove(t2)).isTrue();
-		assertThat(collection.remove(t2)).isFalse();
-		assertThat(collection).hasSize(1);
-		assertThat(collection.remove(t1)).isTrue();
-		assertThat(collection).isEmpty();
-	}
+    @ParameterizedValkeyTest
+    void testRemoveObject() {
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	void removeAll() {
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
+        assertThat(collection).isEmpty();
+        assertThat(collection.add(t1)).isTrue();
+        assertThat(collection.add(t2)).isTrue();
+        assertThat(collection).hasSize(2);
+        assertThat(collection.remove(t3)).isFalse();
+        assertThat(collection.remove(t2)).isTrue();
+        assertThat(collection.remove(t2)).isFalse();
+        assertThat(collection).hasSize(1);
+        assertThat(collection.remove(t1)).isTrue();
+        assertThat(collection).isEmpty();
+    }
 
-		List<T> list = Arrays.asList(t1, t2, t3);
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    void removeAll() {
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
 
-		assertThat(collection.addAll(list)).isTrue();
-		assertThat(collection).contains((T[]) list.toArray());
-		assertThat(collection).contains(t1, t2, t3);
+        List<T> list = Arrays.asList(t1, t2, t3);
 
-		List<T> newList = Arrays.asList(getT(), getT());
-		List<T> partialList = Arrays.asList(getT(), t1, getT());
+        assertThat(collection.addAll(list)).isTrue();
+        assertThat(collection).contains((T[]) list.toArray());
+        assertThat(collection).contains(t1, t2, t3);
 
-		assertThat(collection.removeAll(newList)).isFalse();
-		assertThat(collection.removeAll(partialList)).isTrue();
-		assertThat(collection).doesNotContain(t1);
-		assertThat(collection).contains(t2, t3);
-		assertThat(collection.removeAll(list)).isTrue();
-		assertThat(collection).doesNotContain(t2, t3);
-	}
+        List<T> newList = Arrays.asList(getT(), getT());
+        List<T> partialList = Arrays.asList(getT(), t1, getT());
 
-	// @ParameterizedValkeyTest(expected = UnsupportedOperationException.class)
-	@SuppressWarnings("unchecked")
-	public void testRetainAll() {
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
+        assertThat(collection.removeAll(newList)).isFalse();
+        assertThat(collection.removeAll(partialList)).isTrue();
+        assertThat(collection).doesNotContain(t1);
+        assertThat(collection).contains(t2, t3);
+        assertThat(collection.removeAll(list)).isTrue();
+        assertThat(collection).doesNotContain(t2, t3);
+    }
 
-		List<T> list = Arrays.asList(t1, t2);
-		List<T> newList = Arrays.asList(t2, t3);
+    // @ParameterizedValkeyTest(expected = UnsupportedOperationException.class)
+    @SuppressWarnings("unchecked")
+    public void testRetainAll() {
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
 
-		assertThat(collection.addAll(list)).isTrue();
-		assertThat(collection).contains(t1, t2);
-		assertThat(collection.retainAll(newList)).isTrue();
-		assertThat(collection).doesNotContain(t1);
-		assertThat(collection).contains(t2);
-	}
+        List<T> list = Arrays.asList(t1, t2);
+        List<T> newList = Arrays.asList(t2, t3);
 
-	@ParameterizedValkeyTest
-	void testSize() {
-		assertThat(collection).isEmpty();
-		assertThat(collection.isEmpty()).isTrue();
-		collection.add(getT());
-		assertThat(collection).hasSize(1);
-		collection.add(getT());
-		collection.add(getT());
-		assertThat(collection).hasSize(3);
-	}
+        assertThat(collection.addAll(list)).isTrue();
+        assertThat(collection).contains(t1, t2);
+        assertThat(collection.retainAll(newList)).isTrue();
+        assertThat(collection).doesNotContain(t1);
+        assertThat(collection).contains(t2);
+    }
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	public void testToArray() {
-		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
-		List<T> list = (List<T>) Arrays.asList(expectedArray);
+    @ParameterizedValkeyTest
+    void testSize() {
+        assertThat(collection).isEmpty();
+        assertThat(collection.isEmpty()).isTrue();
+        collection.add(getT());
+        assertThat(collection).hasSize(1);
+        collection.add(getT());
+        collection.add(getT());
+        assertThat(collection).hasSize(3);
+    }
 
-		assertThat(collection.addAll(list)).isTrue();
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    public void testToArray() {
+        Object[] expectedArray = new Object[] {getT(), getT(), getT()};
+        List<T> list = (List<T>) Arrays.asList(expectedArray);
 
-		Object[] array = collection.toArray();
-		assertThat(array).isEqualTo(expectedArray);
-	}
+        assertThat(collection.addAll(list)).isTrue();
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	public void testToArrayWithGenerics() {
-		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
-		List<T> list = (List<T>) Arrays.asList(expectedArray);
+        Object[] array = collection.toArray();
+        assertThat(array).isEqualTo(expectedArray);
+    }
 
-		assertThat(collection.addAll(list)).isTrue();
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    public void testToArrayWithGenerics() {
+        Object[] expectedArray = new Object[] {getT(), getT(), getT()};
+        List<T> list = (List<T>) Arrays.asList(expectedArray);
 
-		Object[] array = collection.toArray(new Object[expectedArray.length]);
-		assertThat(array).isEqualTo(expectedArray);
-	}
+        assertThat(collection.addAll(list)).isTrue();
 
-	@ParameterizedValkeyTest
-	void testToString() {
-		String name = collection.toString();
-		collection.add(getT());
-		assertThat(collection.toString()).isEqualTo(name);
-	}
+        Object[] array = collection.toArray(new Object[expectedArray.length]);
+        assertThat(array).isEqualTo(expectedArray);
+    }
 
-	@ParameterizedValkeyTest
-	void testGetKey() throws Exception {
-		assertThat(collection.getKey()).isNotNull();
-	}
+    @ParameterizedValkeyTest
+    void testToString() {
+        String name = collection.toString();
+        collection.add(getT());
+        assertThat(collection.toString()).isEqualTo(name);
+    }
+
+    @ParameterizedValkeyTest
+    void testGetKey() throws Exception {
+        assertThat(collection.getKey()).isNotNull();
+    }
 }

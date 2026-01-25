@@ -15,13 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.core.query;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import io.valkey.springframework.data.valkey.connection.DefaultSortParameters;
 import io.valkey.springframework.data.valkey.connection.SortParameters;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Utilities for {@link SortQuery} implementations.
@@ -30,23 +29,29 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
  */
 public abstract class QueryUtils {
 
-	public static <K> SortParameters convertQuery(SortQuery<K> query, ValkeySerializer<String> stringSerializer) {
+    public static <K> SortParameters convertQuery(
+            SortQuery<K> query, ValkeySerializer<String> stringSerializer) {
 
-		return new DefaultSortParameters(stringSerializer.serialize(query.getBy()), query.getLimit(), serialize(
-				query.getGetPattern(), stringSerializer), query.getOrder(), query.isAlphabetic());
-	}
+        return new DefaultSortParameters(
+                stringSerializer.serialize(query.getBy()),
+                query.getLimit(),
+                serialize(query.getGetPattern(), stringSerializer),
+                query.getOrder(),
+                query.isAlphabetic());
+    }
 
-	private static byte[][] serialize(List<String> strings, ValkeySerializer<String> stringSerializer) {
-		List<byte[]> raw = null;
+    private static byte[][] serialize(
+            List<String> strings, ValkeySerializer<String> stringSerializer) {
+        List<byte[]> raw = null;
 
-		if (strings == null) {
-			raw = Collections.emptyList();
-		} else {
-			raw = new ArrayList<>(strings.size());
-			for (String key : strings) {
-				raw.add(stringSerializer.serialize(key));
-			}
-		}
-		return raw.toArray(new byte[raw.size()][]);
-	}
+        if (strings == null) {
+            raw = Collections.emptyList();
+        } else {
+            raw = new ArrayList<>(strings.size());
+            for (String key : strings) {
+                raw.add(stringSerializer.serialize(key));
+            }
+        }
+        return raw.toArray(new byte[raw.size()][]);
+    }
 }

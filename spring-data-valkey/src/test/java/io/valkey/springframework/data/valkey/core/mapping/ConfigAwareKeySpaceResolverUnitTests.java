@@ -17,11 +17,11 @@ package io.valkey.springframework.data.valkey.core.mapping;
 
 import static org.assertj.core.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration;
 import io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration.KeyspaceSettings;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext.ConfigAwareKeySpaceResolver;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ConfigAwareKeySpaceResolver}.
@@ -31,33 +31,30 @@ import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext.C
  */
 class ConfigAwareKeySpaceResolverUnitTests {
 
-	private KeyspaceConfiguration config = new KeyspaceConfiguration();
-	private ConfigAwareKeySpaceResolver resolver;
+    private KeyspaceConfiguration config = new KeyspaceConfiguration();
+    private ConfigAwareKeySpaceResolver resolver;
 
-	@BeforeEach
-	void setUp() {
-		this.resolver = new ConfigAwareKeySpaceResolver(config);
-	}
+    @BeforeEach
+    void setUp() {
+        this.resolver = new ConfigAwareKeySpaceResolver(config);
+    }
 
-	@Test // DATAREDIS-425
-	void resolveShouldThrowExceptionWhenTypeIsNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> resolver.resolveKeySpace(null));
-	}
+    @Test // DATAREDIS-425
+    void resolveShouldThrowExceptionWhenTypeIsNull() {
+        assertThatIllegalArgumentException().isThrownBy(() -> resolver.resolveKeySpace(null));
+    }
 
-	@Test // DATAREDIS-425, GH-2457
-	void resolveShouldReturnNullAsDefaultKeyspace() {
-		assertThat(resolver.resolveKeySpace(TypeWithoutAnySettings.class)).isNull();
-	}
+    @Test // DATAREDIS-425, GH-2457
+    void resolveShouldReturnNullAsDefaultKeyspace() {
+        assertThat(resolver.resolveKeySpace(TypeWithoutAnySettings.class)).isNull();
+    }
 
-	@Test // DATAREDIS-425
-	void resolveShouldFavorConfiguredNameOverClassName() {
+    @Test // DATAREDIS-425
+    void resolveShouldFavorConfiguredNameOverClassName() {
 
-		config.addKeyspaceSettings(new KeyspaceSettings(TypeWithoutAnySettings.class, "ji'e'toh"));
-		assertThat(resolver.resolveKeySpace(TypeWithoutAnySettings.class)).isEqualTo("ji'e'toh");
-	}
+        config.addKeyspaceSettings(new KeyspaceSettings(TypeWithoutAnySettings.class, "ji'e'toh"));
+        assertThat(resolver.resolveKeySpace(TypeWithoutAnySettings.class)).isEqualTo("ji'e'toh");
+    }
 
-	private static class TypeWithoutAnySettings {
-
-	}
-
+    private static class TypeWithoutAnySettings {}
 }

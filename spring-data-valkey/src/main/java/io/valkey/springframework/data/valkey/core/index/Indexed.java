@@ -22,8 +22,8 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Mark properties value to be included in a secondary index. <br />
- * Uses Valkey {@literal SET} for storage. <br />
+ * Mark properties value to be included in a secondary index. <br>
+ * Uses Valkey {@literal SET} for storage. <br>
  * The value will be part of the key built for the index.
  *
  * @author Christoph Strobl
@@ -31,7 +31,5 @@ import java.lang.annotation.Target;
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.FIELD, ElementType.ANNOTATION_TYPE })
-public @interface Indexed {
-
-}
+@Target({ElementType.FIELD, ElementType.ANNOTATION_TYPE})
+public @interface Indexed {}

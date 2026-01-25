@@ -21,26 +21,23 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * {@code @EnabledOnValkeyAvailable} is used to signal that the annotated test class or test method is only
- * <em>enabled</em> if Valkey is running at {@link #value() port}.
- * <p>
- * When applied at the class level, all test methods within that class will be enabled.
+ * {@code @EnabledOnValkeyAvailable} is used to signal that the annotated test class or test method
+ * is only <em>enabled</em> if Valkey is running at {@link #value() port}.
+ *
+ * <p>When applied at the class level, all test methods within that class will be enabled.
  *
  * @author Mark Paluch
  */
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
 @ExtendWith(EnabledOnValkeyAvailableCondition.class)
 public @interface EnabledOnValkeyAvailable {
 
-	/**
-	 * Valkey port number.
-	 */
-	int value() default 6379;
+    /** Valkey port number. */
+    int value() default 6379;
 }

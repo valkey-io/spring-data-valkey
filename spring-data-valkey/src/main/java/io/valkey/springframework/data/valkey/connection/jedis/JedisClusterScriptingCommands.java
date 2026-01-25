@@ -15,16 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
+import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor;
+import io.valkey.springframework.data.valkey.connection.ReturnType;
+import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
+import java.util.List;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.util.Assert;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
-
-import java.util.List;
-
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor;
-import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
-import io.valkey.springframework.data.valkey.connection.ReturnType;
-import org.springframework.util.Assert;
 
 /**
  * @author Mark Paluch
@@ -33,92 +31,106 @@ import org.springframework.util.Assert;
  */
 class JedisClusterScriptingCommands implements ValkeyScriptingCommands {
 
-	private final JedisClusterConnection connection;
+    private final JedisClusterConnection connection;
 
-	JedisClusterScriptingCommands(JedisClusterConnection connection) {
-		this.connection = connection;
-	}
+    JedisClusterScriptingCommands(JedisClusterConnection connection) {
+        this.connection = connection;
+    }
 
-	@Override
-	public void scriptFlush() {
+    @Override
+    public void scriptFlush() {
 
-		try {
-			connection.getClusterCommandExecutor()
-					.executeCommandOnAllNodes((JedisClusterConnection.JedisClusterCommandCallback<String>) Jedis::scriptFlush);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
+        try {
+            connection
+                    .getClusterCommandExecutor()
+                    .executeCommandOnAllNodes(
+                            (JedisClusterConnection.JedisClusterCommandCallback<String>) Jedis::scriptFlush);
+        } catch (Exception ex) {
+            throw convertJedisAccessException(ex);
+        }
+    }
 
-	@Override
-	public void scriptKill() {
+    @Override
+    public void scriptKill() {
 
-		try {
-			connection.getClusterCommandExecutor()
-					.executeCommandOnAllNodes((JedisClusterConnection.JedisClusterCommandCallback<String>) Jedis::scriptKill);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
+        try {
+            connection
+                    .getClusterCommandExecutor()
+                    .executeCommandOnAllNodes(
+                            (JedisClusterConnection.JedisClusterCommandCallback<String>) Jedis::scriptKill);
+        } catch (Exception ex) {
+            throw convertJedisAccessException(ex);
+        }
+    }
 
-	@Override
-	public String scriptLoad(byte[] script) {
+    @Override
+    public String scriptLoad(byte[] script) {
 
-		Assert.notNull(script, "Script must not be null");
+        Assert.notNull(script, "Script must not be null");
 
-		try {
-			ClusterCommandExecutor.MultiNodeResult<byte[]> multiNodeResult = connection.getClusterCommandExecutor()
-					.executeCommandOnAllNodes(
-							(JedisClusterConnection.JedisClusterCommandCallback<byte[]>) client -> client.scriptLoad(script));
+        try {
+            ClusterCommandExecutor.MultiNodeResult<byte[]> multiNodeResult =
+                    connection
+                            .getClusterCommandExecutor()
+                            .executeCommandOnAllNodes(
+                                    (JedisClusterConnection.JedisClusterCommandCallback<byte[]>)
+                                            client -> client.scriptLoad(script));
 
-			return JedisConverters.toString(multiNodeResult.getFirstNonNullNotEmptyOrDefault(new byte[0]));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
+            return JedisConverters.toString(
+                    multiNodeResult.getFirstNonNullNotEmptyOrDefault(new byte[0]));
+        } catch (Exception ex) {
+            throw convertJedisAccessException(ex);
+        }
+    }
 
-	@Override
-	public List<Boolean> scriptExists(String... scriptShas) {
-		throw new InvalidDataAccessApiUsageException("ScriptExists is not supported in cluster environment");
-	}
+    @Override
+    public List<Boolean> scriptExists(String... scriptShas) {
+        throw new InvalidDataAccessApiUsageException(
+                "ScriptExists is not supported in cluster environment");
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> T eval(byte[] script, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T eval(byte[] script, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
 
-		Assert.notNull(script, "Script must not be null");
+        Assert.notNull(script, "Script must not be null");
 
-		try {
-			return (T) new JedisScriptReturnConverter(returnType).convert(getCluster().eval(script, numKeys, keysAndArgs));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
+        try {
+            return (T)
+                    new JedisScriptReturnConverter(returnType)
+                            .convert(getCluster().eval(script, numKeys, keysAndArgs));
+        } catch (Exception ex) {
+            throw convertJedisAccessException(ex);
+        }
+    }
 
-	@Override
-	public <T> T evalSha(String scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
-		return evalSha(JedisConverters.toBytes(scriptSha), returnType, numKeys, keysAndArgs);
-	}
+    @Override
+    public <T> T evalSha(
+            String scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
+        return evalSha(JedisConverters.toBytes(scriptSha), returnType, numKeys, keysAndArgs);
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> T evalSha(byte[] scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T evalSha(
+            byte[] scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
 
-		Assert.notNull(scriptSha, "Script digest must not be null");
+        Assert.notNull(scriptSha, "Script digest must not be null");
 
-		try {
-			return (T) new JedisScriptReturnConverter(returnType)
-					.convert(getCluster().evalsha(scriptSha, numKeys, keysAndArgs));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
+        try {
+            return (T)
+                    new JedisScriptReturnConverter(returnType)
+                            .convert(getCluster().evalsha(scriptSha, numKeys, keysAndArgs));
+        } catch (Exception ex) {
+            throw convertJedisAccessException(ex);
+        }
+    }
 
-	protected RuntimeException convertJedisAccessException(Exception ex) {
-		return connection.convertJedisAccessException(ex);
-	}
+    protected RuntimeException convertJedisAccessException(Exception ex) {
+        return connection.convertJedisAccessException(ex);
+    }
 
-	private JedisCluster getCluster() {
-		return connection.getCluster();
-	}
+    private JedisCluster getCluster() {
+        return connection.getCluster();
+    }
 }

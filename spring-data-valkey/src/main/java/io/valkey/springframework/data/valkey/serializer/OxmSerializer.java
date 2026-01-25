@@ -17,10 +17,8 @@ package io.valkey.springframework.data.valkey.serializer;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
-
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.lang.Nullable;
 import org.springframework.oxm.Marshaller;
@@ -28,92 +26,93 @@ import org.springframework.oxm.Unmarshaller;
 import org.springframework.util.Assert;
 
 /**
- * Serializer adapter on top of Spring's O/X Mapping. Delegates serialization/deserialization to OXM {@link Marshaller}
- * and {@link Unmarshaller}. <b>Note:</b> {@literal null} objects are serialized as empty arrays and vice versa.
+ * Serializer adapter on top of Spring's O/X Mapping. Delegates serialization/deserialization to OXM
+ * {@link Marshaller} and {@link Unmarshaller}. <b>Note:</b> {@literal null} objects are serialized
+ * as empty arrays and vice versa.
  *
  * @author Costin Leau
  * @author Mark Paluch
  */
 public class OxmSerializer implements InitializingBean, ValkeySerializer<Object> {
 
-	private @Nullable Marshaller marshaller;
-	private @Nullable Unmarshaller unmarshaller;
+    private @Nullable Marshaller marshaller;
+    private @Nullable Unmarshaller unmarshaller;
 
-	/**
-	 * Creates a new, uninitialized {@link OxmSerializer}. Requires {@link #setMarshaller(Marshaller)} and
-	 * {@link #setUnmarshaller(Unmarshaller)} to be set before this serializer can be used.
-	 */
-	public OxmSerializer() {}
+    /**
+     * Creates a new, uninitialized {@link OxmSerializer}. Requires {@link #setMarshaller(Marshaller)}
+     * and {@link #setUnmarshaller(Unmarshaller)} to be set before this serializer can be used.
+     */
+    public OxmSerializer() {}
 
-	/**
-	 * Creates a new {@link OxmSerializer} given {@link Marshaller} and {@link Unmarshaller}.
-	 *
-	 * @param marshaller must not be {@literal null}.
-	 * @param unmarshaller must not be {@literal null}.
-	 */
-	public OxmSerializer(Marshaller marshaller, Unmarshaller unmarshaller) {
+    /**
+     * Creates a new {@link OxmSerializer} given {@link Marshaller} and {@link Unmarshaller}.
+     *
+     * @param marshaller must not be {@literal null}.
+     * @param unmarshaller must not be {@literal null}.
+     */
+    public OxmSerializer(Marshaller marshaller, Unmarshaller unmarshaller) {
 
-		setMarshaller(marshaller);
-		setUnmarshaller(unmarshaller);
-	}
+        setMarshaller(marshaller);
+        setUnmarshaller(unmarshaller);
+    }
 
-	/**
-	 * @param marshaller The marshaller to set.
-	 */
-	public void setMarshaller(Marshaller marshaller) {
+    /**
+     * @param marshaller The marshaller to set.
+     */
+    public void setMarshaller(Marshaller marshaller) {
 
-		Assert.notNull(marshaller, "Marshaller must not be null");
+        Assert.notNull(marshaller, "Marshaller must not be null");
 
-		this.marshaller = marshaller;
-	}
+        this.marshaller = marshaller;
+    }
 
-	/**
-	 * @param unmarshaller The unmarshaller to set.
-	 */
-	public void setUnmarshaller(Unmarshaller unmarshaller) {
+    /**
+     * @param unmarshaller The unmarshaller to set.
+     */
+    public void setUnmarshaller(Unmarshaller unmarshaller) {
 
-		Assert.notNull(unmarshaller, "Unmarshaller must not be null");
+        Assert.notNull(unmarshaller, "Unmarshaller must not be null");
 
-		this.unmarshaller = unmarshaller;
-	}
+        this.unmarshaller = unmarshaller;
+    }
 
-	@Override
-	public void afterPropertiesSet() {
+    @Override
+    public void afterPropertiesSet() {
 
-		Assert.state(marshaller != null, "non-null marshaller required");
-		Assert.state(unmarshaller != null, "non-null unmarshaller required");
-	}
+        Assert.state(marshaller != null, "non-null marshaller required");
+        Assert.state(unmarshaller != null, "non-null unmarshaller required");
+    }
 
-	@Override
-	public byte[] serialize(@Nullable Object value) throws SerializationException {
+    @Override
+    public byte[] serialize(@Nullable Object value) throws SerializationException {
 
-		if (value == null) {
-			return SerializationUtils.EMPTY_ARRAY;
-		}
+        if (value == null) {
+            return SerializationUtils.EMPTY_ARRAY;
+        }
 
-		ByteArrayOutputStream stream = new ByteArrayOutputStream();
-		StreamResult result = new StreamResult(stream);
+        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+        StreamResult result = new StreamResult(stream);
 
-		try {
-			marshaller.marshal(value, result);
-		} catch (Exception ex) {
-			throw new SerializationException("Cannot serialize object", ex);
-		}
-		return stream.toByteArray();
-	}
+        try {
+            marshaller.marshal(value, result);
+        } catch (Exception ex) {
+            throw new SerializationException("Cannot serialize object", ex);
+        }
+        return stream.toByteArray();
+    }
 
-	@Nullable
-	@Override
-	public Object deserialize(@Nullable byte[] bytes) throws SerializationException {
+    @Nullable
+    @Override
+    public Object deserialize(@Nullable byte[] bytes) throws SerializationException {
 
-		if (SerializationUtils.isEmpty(bytes)) {
-			return null;
-		}
+        if (SerializationUtils.isEmpty(bytes)) {
+            return null;
+        }
 
-		try {
-			return unmarshaller.unmarshal(new StreamSource(new ByteArrayInputStream(bytes)));
-		} catch (Exception ex) {
-			throw new SerializationException("Cannot deserialize bytes", ex);
-		}
-	}
+        try {
+            return unmarshaller.unmarshal(new StreamSource(new ByteArrayInputStream(bytes)));
+        } catch (Exception ex) {
+            throw new SerializationException("Cannot deserialize bytes", ex);
+        }
+    }
 }

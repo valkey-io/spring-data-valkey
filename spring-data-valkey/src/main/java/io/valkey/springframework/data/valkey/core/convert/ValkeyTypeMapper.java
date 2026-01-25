@@ -15,11 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
-import org.springframework.data.convert.TypeMapper;
 import io.valkey.springframework.data.valkey.core.convert.Bucket.BucketPropertyPath;
+import org.springframework.data.convert.TypeMapper;
 
 /**
- * Valkey-specific {@link TypeMapper} exposing that {@link BucketPropertyPath}s might contain a type key.
+ * Valkey-specific {@link TypeMapper} exposing that {@link BucketPropertyPath}s might contain a type
+ * key.
  *
  * @author Mark Paluch
  * @since 2.1
@@ -27,10 +28,10 @@ import io.valkey.springframework.data.valkey.core.convert.Bucket.BucketPropertyP
  */
 public interface ValkeyTypeMapper extends TypeMapper<BucketPropertyPath> {
 
-	/**
-	 * Returns whether the given {@code key} is the type key.
-	 *
-	 * @return {@literal true} if the given {@code key} is the type key.
-	 */
-	boolean isTypeKey(String key);
+    /**
+     * Returns whether the given {@code key} is the type key.
+     *
+     * @return {@literal true} if the given {@code key} is the type key.
+     */
+    boolean isTypeKey(String key);
 }

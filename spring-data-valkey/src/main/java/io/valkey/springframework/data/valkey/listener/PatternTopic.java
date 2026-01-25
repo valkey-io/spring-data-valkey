@@ -26,25 +26,26 @@ import org.springframework.util.Assert;
  */
 public class PatternTopic extends AbstractTopic {
 
-	/**
-	 * Constructs a new {@link PatternTopic} instance.
-	 *
-	 * @param channelPattern must not be {@literal null}.
-	 */
-	public PatternTopic(String channelPattern) {
+    /**
+     * Constructs a new {@link PatternTopic} instance.
+     *
+     * @param channelPattern must not be {@literal null}.
+     */
+    public PatternTopic(String channelPattern) {
 
-		super(channelPattern);
-		Assert.notNull(channelPattern, "Pattern must not be null");
-	}
+        super(channelPattern);
+        Assert.notNull(channelPattern, "Pattern must not be null");
+    }
 
-	/**
-	 * Create a new {@link PatternTopic} for channel subscriptions based on a {@code pattern}.
-	 *
-	 * @param pattern {@link String pattern} used to match channels; must not be {@literal null} or empty.
-	 * @return the {@link PatternTopic} for the given {@code pattern}.
-	 * @since 2.1
-	 */
-	public static PatternTopic of(String pattern) {
-		return new PatternTopic(pattern);
-	}
+    /**
+     * Create a new {@link PatternTopic} for channel subscriptions based on a {@code pattern}.
+     *
+     * @param pattern {@link String pattern} used to match channels; must not be {@literal null} or
+     *     empty.
+     * @return the {@link PatternTopic} for the given {@code pattern}.
+     * @since 2.1
+     */
+    public static PatternTopic of(String pattern) {
+        return new PatternTopic(pattern);
+    }
 }

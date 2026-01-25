@@ -16,104 +16,104 @@
 package io.valkey.springframework.data.valkey.connection.stream;
 
 import java.util.Map;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * A single entry in the stream consisting of the {@link RecordId entry-id} and the actual entry-value (typically a
- * collection of {@link MapRecord field/value pairs}).
+ * A single entry in the stream consisting of the {@link RecordId entry-id} and the actual
+ * entry-value (typically a collection of {@link MapRecord field/value pairs}).
  *
  * @param <V> the type backing the {@link Record}.
  * @author Christoph Strobl
  * @since 2.2
- * @see <a href="https://valkey.io/topics/streams-intro#streams-basics">Valkey Documentation - Stream Basics</a>
+ * @see <a href="https://valkey.io/topics/streams-intro#streams-basics">Valkey Documentation -
+ *     Stream Basics</a>
  */
 public interface Record<S, V> {
 
-	/**
-	 * The id of the stream (aka the {@literal key} in Valkey).
-	 *
-	 * @return can be {@literal null}.
-	 */
-	@Nullable
-	S getStream();
+    /**
+     * The id of the stream (aka the {@literal key} in Valkey).
+     *
+     * @return can be {@literal null}.
+     */
+    @Nullable
+    S getStream();
 
-	/**
-	 * The id of the stream (aka the {@literal key} in Valkey).
-	 *
-	 * @return can be {@literal null}.
-	 * @throws IllegalStateException if the stream is {@literal null}.
-	 * @since 3.0
-	 */
-	default S getRequiredStream() {
+    /**
+     * The id of the stream (aka the {@literal key} in Valkey).
+     *
+     * @return can be {@literal null}.
+     * @throws IllegalStateException if the stream is {@literal null}.
+     * @since 3.0
+     */
+    default S getRequiredStream() {
 
-		S stream = getStream();
+        S stream = getStream();
 
-		if (stream == null) {
-			throw new IllegalStateException("Stream is not available");
-		}
+        if (stream == null) {
+            throw new IllegalStateException("Stream is not available");
+        }
 
-		return stream;
-	}
+        return stream;
+    }
 
-	/**
-	 * The id of the entry inside the stream.
-	 *
-	 * @return never {@literal null}.
-	 */
-	RecordId getId();
+    /**
+     * The id of the entry inside the stream.
+     *
+     * @return never {@literal null}.
+     */
+    RecordId getId();
 
-	/**
-	 * @return the actual content. Never {@literal null}.
-	 */
-	V getValue();
+    /**
+     * @return the actual content. Never {@literal null}.
+     */
+    V getValue();
 
-	/**
-	 * Create a new {@link MapRecord} instance backed by the given {@link Map} holding {@literal field/value} pairs.
-	 * <br />
-	 * You may want to use the builders available via {@link StreamRecords}.
-	 *
-	 * @param map the raw map.
-	 * @param <K> the key type of the given {@link Map}.
-	 * @param <V> the value type of the given {@link Map}.
-	 * @return new instance of {@link MapRecord}.
-	 */
-	static <S, K, V> MapRecord<S, K, V> of(Map<K, V> map) {
+    /**
+     * Create a new {@link MapRecord} instance backed by the given {@link Map} holding {@literal
+     * field/value} pairs. <br>
+     * You may want to use the builders available via {@link StreamRecords}.
+     *
+     * @param map the raw map.
+     * @param <K> the key type of the given {@link Map}.
+     * @param <V> the value type of the given {@link Map}.
+     * @return new instance of {@link MapRecord}.
+     */
+    static <S, K, V> MapRecord<S, K, V> of(Map<K, V> map) {
 
-		Assert.notNull(map, "Map must not be null");
-		return StreamRecords.mapBacked(map);
-	}
+        Assert.notNull(map, "Map must not be null");
+        return StreamRecords.mapBacked(map);
+    }
 
-	/**
-	 * Create a new {@link ObjectRecord} instance backed by the given {@literal value}. The value may be a simple type,
-	 * like {@link String} or a complex one. <br />
-	 * You may want to use the builders available via {@link StreamRecords}.
-	 *
-	 * @param value the value to persist.
-	 * @param <V> the type of the backing value.
-	 * @return new instance of {@link MapRecord}.
-	 */
-	static <S, V> ObjectRecord<S, V> of(V value) {
+    /**
+     * Create a new {@link ObjectRecord} instance backed by the given {@literal value}. The value may
+     * be a simple type, like {@link String} or a complex one. <br>
+     * You may want to use the builders available via {@link StreamRecords}.
+     *
+     * @param value the value to persist.
+     * @param <V> the type of the backing value.
+     * @return new instance of {@link MapRecord}.
+     */
+    static <S, V> ObjectRecord<S, V> of(V value) {
 
-		Assert.notNull(value, "Value must not be null");
-		return StreamRecords.objectBacked(value);
-	}
+        Assert.notNull(value, "Value must not be null");
+        return StreamRecords.objectBacked(value);
+    }
 
-	/**
-	 * Create a new instance of {@link Record} with the given {@link RecordId}.
-	 *
-	 * @param id must not be {@literal null}.
-	 * @return new instance of {@link Record}.
-	 */
-	Record<S, V> withId(RecordId id);
+    /**
+     * Create a new instance of {@link Record} with the given {@link RecordId}.
+     *
+     * @param id must not be {@literal null}.
+     * @return new instance of {@link Record}.
+     */
+    Record<S, V> withId(RecordId id);
 
-	/**
-	 * Create a new instance of {@link Record} with the given {@literal key} to store the record at.
-	 *
-	 * @param key the Valkey key identifying the stream.
-	 * @param <SK>
-	 * @return new instance of {@link Record}.
-	 */
-	<SK> Record<SK, V> withStreamKey(SK key);
+    /**
+     * Create a new instance of {@link Record} with the given {@literal key} to store the record at.
+     *
+     * @param key the Valkey key identifying the stream.
+     * @param <SK>
+     * @return new instance of {@link Record}.
+     */
+    <SK> Record<SK, V> withStreamKey(SK key);
 }

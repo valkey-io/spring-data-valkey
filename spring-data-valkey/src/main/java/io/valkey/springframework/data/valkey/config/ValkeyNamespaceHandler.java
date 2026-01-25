@@ -25,9 +25,9 @@ import org.springframework.beans.factory.xml.NamespaceHandlerSupport;
  */
 class ValkeyNamespaceHandler extends NamespaceHandlerSupport {
 
-	public void init() {
+    public void init() {
 
-		registerBeanDefinitionParser("listener-container", new ValkeyListenerContainerParser());
-		registerBeanDefinitionParser("collection", new ValkeyCollectionParser());
-	}
+        registerBeanDefinitionParser("listener-container", new ValkeyListenerContainerParser());
+        registerBeanDefinitionParser("collection", new ValkeyCollectionParser());
+    }
 }

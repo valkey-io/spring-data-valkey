@@ -17,24 +17,23 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Set;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.SettingsUtils;
+import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.connection.AbstractConnectionIntegrationTests;
 import io.valkey.springframework.data.valkey.connection.DefaultStringValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ReturnType;
 import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeySentinelAvailable;
 import io.valkey.springframework.data.valkey.test.condition.LongRunningTest;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -52,180 +51,198 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ContextConfiguration
 public class LettuceConnectionIntegrationTests extends AbstractConnectionIntegrationTests {
 
-	@LongRunningTest
-	void testMultiThreadsOneBlocking() throws Exception {
-		Thread th = new Thread(() -> {
-			DefaultStringValkeyConnection conn2 = new DefaultStringValkeyConnection(connectionFactory.getConnection());
-			conn2.openPipeline();
-			conn2.bLPop(3, "multilist");
-			conn2.closePipeline();
-			conn2.close();
-		});
-		th.start();
-		Thread.sleep(1000);
-		connection.set("heythere", "hi");
-		th.join();
-		assertThat(connection.get("heythere")).isEqualTo("hi");
-	}
+    @LongRunningTest
+    void testMultiThreadsOneBlocking() throws Exception {
+        Thread th =
+                new Thread(
+                        () -> {
+                            DefaultStringValkeyConnection conn2 =
+                                    new DefaultStringValkeyConnection(connectionFactory.getConnection());
+                            conn2.openPipeline();
+                            conn2.bLPop(3, "multilist");
+                            conn2.closePipeline();
+                            conn2.close();
+                        });
+        th.start();
+        Thread.sleep(1000);
+        connection.set("heythere", "hi");
+        th.join();
+        assertThat(connection.get("heythere")).isEqualTo("hi");
+    }
 
-	@Test
-	void testMultiConnectionsOneInTx() throws Exception {
-		connection.set("txs1", "rightnow");
-		connection.multi();
-		connection.set("txs1", "delay");
-		DefaultStringValkeyConnection conn2 = new DefaultStringValkeyConnection(connectionFactory.getConnection());
+    @Test
+    void testMultiConnectionsOneInTx() throws Exception {
+        connection.set("txs1", "rightnow");
+        connection.multi();
+        connection.set("txs1", "delay");
+        DefaultStringValkeyConnection conn2 =
+                new DefaultStringValkeyConnection(connectionFactory.getConnection());
 
-		// We get immediate results executing command in separate conn (not part
-		// of tx)
-		conn2.set("txs2", "hi");
-		assertThat(conn2.get("txs2")).isEqualTo("hi");
+        // We get immediate results executing command in separate conn (not part
+        // of tx)
+        conn2.set("txs2", "hi");
+        assertThat(conn2.get("txs2")).isEqualTo("hi");
 
-		// Transactional value not yet set
-		assertThat(conn2.get("txs1")).isEqualTo("rightnow");
-		connection.exec();
+        // Transactional value not yet set
+        assertThat(conn2.get("txs1")).isEqualTo("rightnow");
+        connection.exec();
 
-		// Now it should be set
-		assertThat(conn2.get("txs1")).isEqualTo("delay");
-		conn2.closePipeline();
-		conn2.close();
-	}
+        // Now it should be set
+        assertThat(conn2.get("txs1")).isEqualTo("delay");
+        conn2.closePipeline();
+        conn2.close();
+    }
 
-	@Test
-	void testCloseInTransaction() {
-		connection.multi();
-		connection.close();
-		try {
-			connection.exec();
-			fail("Expected exception resuming tx");
-		} catch (ValkeySystemException expected) {
-			// expected, can't resume tx after closing conn
-		}
-	}
+    @Test
+    void testCloseInTransaction() {
+        connection.multi();
+        connection.close();
+        try {
+            connection.exec();
+            fail("Expected exception resuming tx");
+        } catch (ValkeySystemException expected) {
+            // expected, can't resume tx after closing conn
+        }
+    }
 
-	@Test
-	void testCloseBlockingOps() {
-		connection.lPush("what", "baz");
-		connection.bLPop(1, "what".getBytes());
-		connection.close();
+    @Test
+    void testCloseBlockingOps() {
+        connection.lPush("what", "baz");
+        connection.bLPop(1, "what".getBytes());
+        connection.close();
 
-		// can still operate on shared conn
-		connection.lPush("what", "boo");
+        // can still operate on shared conn
+        connection.lPush("what", "boo");
 
-		try {
-			// can't do blocking ops after closing
-			connection.bLPop(1, "what".getBytes());
-			fail("Expected exception using a closed conn for dedicated ops");
-		} catch (ValkeySystemException expected) {
-		}
-	}
+        try {
+            // can't do blocking ops after closing
+            connection.bLPop(1, "what".getBytes());
+            fail("Expected exception using a closed conn for dedicated ops");
+        } catch (ValkeySystemException expected) {
+        }
+    }
 
-	@Test
-	void testCloseNonPooledConnectionNotShared() {
-		LettuceConnectionFactory factory2 = new LettuceConnectionFactory(SettingsUtils.getHost(), SettingsUtils.getPort());
-		factory2.setClientResources(LettuceTestClientResources.getSharedClientResources());
-		factory2.setShutdownTimeout(0);
-		factory2.setShareNativeConnection(false);
-		factory2.afterPropertiesSet();
-		factory2.start();
-		ValkeyConnection connection = factory2.getConnection();
-		// Use the connection to make sure the channel is initialized, else nothing happens on close
-		connection.ping();
-		connection.close();
-		// The dedicated connection should be closed
-		try {
-			connection.set("foo".getBytes(), "bar".getBytes());
-			fail("Exception should be thrown trying to use a closed connection");
-		} catch (ValkeySystemException expected) {
-		} finally {
+    @Test
+    void testCloseNonPooledConnectionNotShared() {
+        LettuceConnectionFactory factory2 =
+                new LettuceConnectionFactory(SettingsUtils.getHost(), SettingsUtils.getPort());
+        factory2.setClientResources(LettuceTestClientResources.getSharedClientResources());
+        factory2.setShutdownTimeout(0);
+        factory2.setShareNativeConnection(false);
+        factory2.afterPropertiesSet();
+        factory2.start();
+        ValkeyConnection connection = factory2.getConnection();
+        // Use the connection to make sure the channel is initialized, else nothing happens on close
+        connection.ping();
+        connection.close();
+        // The dedicated connection should be closed
+        try {
+            connection.set("foo".getBytes(), "bar".getBytes());
+            fail("Exception should be thrown trying to use a closed connection");
+        } catch (ValkeySystemException expected) {
+        } finally {
 
-		factory2.destroy();
-		}
-	}
+            factory2.destroy();
+        }
+    }
 
-	@Test
-	public void testSelect() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() -> super.testSelect());
-	}
+    @Test
+    public void testSelect() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(() -> super.testSelect());
+    }
 
-	@Test
-	public void testMove() {
-		connection.set("foo", "bar");
-		actual.add(connection.move("foo", 1));
-		verifyResults(Arrays.asList(new Object[] { true }));
-		// Lettuce does not support select when using shared conn, use a new conn factory
-		LettuceConnectionFactory factory2 = new LettuceConnectionFactory();
-		factory2.setClientResources(LettuceTestClientResources.getSharedClientResources());
-		factory2.setShutdownTimeout(0);
-		factory2.setDatabase(1);
-		factory2.afterPropertiesSet();
-		factory2.start();
-		StringValkeyConnection conn2 = new DefaultStringValkeyConnection(factory2.getConnection());
-		try {
-			assertThat(conn2.get("foo")).isEqualTo("bar");
-		} finally {
-			if (conn2.exists("foo")) {
-				conn2.del("foo");
-			}
-			conn2.close();
-			factory2.destroy();
-		}
-	}
+    @Test
+    public void testMove() {
+        connection.set("foo", "bar");
+        actual.add(connection.move("foo", 1));
+        verifyResults(Arrays.asList(new Object[] {true}));
+        // Lettuce does not support select when using shared conn, use a new conn factory
+        LettuceConnectionFactory factory2 = new LettuceConnectionFactory();
+        factory2.setClientResources(LettuceTestClientResources.getSharedClientResources());
+        factory2.setShutdownTimeout(0);
+        factory2.setDatabase(1);
+        factory2.afterPropertiesSet();
+        factory2.start();
+        StringValkeyConnection conn2 = new DefaultStringValkeyConnection(factory2.getConnection());
+        try {
+            assertThat(conn2.get("foo")).isEqualTo("bar");
+        } finally {
+            if (conn2.exists("foo")) {
+                conn2.del("foo");
+            }
+            conn2.close();
+            factory2.destroy();
+        }
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test // DATAREDIS-285
-	void testExecuteShouldConvertArrayReplyCorrectly() {
+    @SuppressWarnings("unchecked")
+    @Test // DATAREDIS-285
+    void testExecuteShouldConvertArrayReplyCorrectly() {
 
-		connection.set("spring", "awesome");
-		connection.set("data", "cool");
-		connection.set("valkey", "supercalifragilisticexpialidocious");
+        connection.set("spring", "awesome");
+        connection.set("data", "cool");
+        connection.set("valkey", "supercalifragilisticexpialidocious");
 
-		assertThat(
-				(Iterable<byte[]>) connection.execute("MGET", "spring".getBytes(), "data".getBytes(), "valkey".getBytes()))
-						.isInstanceOf(List.class)
-						.contains("awesome".getBytes(), "cool".getBytes(), "supercalifragilisticexpialidocious".getBytes());
-	}
+        assertThat(
+                        (Iterable<byte[]>)
+                                connection.execute(
+                                        "MGET", "spring".getBytes(), "data".getBytes(), "valkey".getBytes()))
+                .isInstanceOf(List.class)
+                .contains(
+                        "awesome".getBytes(),
+                        "cool".getBytes(),
+                        "supercalifragilisticexpialidocious".getBytes());
+    }
 
-	@Test // GH-2473
-	void testExecuteZcardShouldReturnNumericValue() {
+    @Test // GH-2473
+    void testExecuteZcardShouldReturnNumericValue() {
 
-		connection.zAdd("spring", 1, "awesome");
-		connection.zAdd("spring", 1, "cool");
-		connection.zAdd("spring", 1, "supercalifragilisticexpialidocious");
+        connection.zAdd("spring", 1, "awesome");
+        connection.zAdd("spring", 1, "cool");
+        connection.zAdd("spring", 1, "supercalifragilisticexpialidocious");
 
-		assertThat(connection.execute("ZCARD", "spring")).isInstanceOf(Long.class).isEqualTo(3L);
-	}
+        assertThat(connection.execute("ZCARD", "spring")).isInstanceOf(Long.class).isEqualTo(3L);
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test
-	public void testEvalShaArrayBytes() {
-		getResults();
-		byte[] sha1 = connection.scriptLoad("return {KEYS[1],ARGV[1]}").getBytes();
-		initConnection();
-		actual.add(byteConnection.evalSha(sha1, ReturnType.MULTI, 1, "key1".getBytes(), "arg1".getBytes()));
-		List<Object> results = getResults();
-		List<byte[]> scriptResults = (List<byte[]>) results.get(0);
-		assertThat(Arrays.asList(new Object[] { new String(scriptResults.get(0)), new String(scriptResults.get(1)) }))
-				.isEqualTo(Arrays.asList(new Object[] { "key1", "arg1" }));
-	}
+    @SuppressWarnings("unchecked")
+    @Test
+    public void testEvalShaArrayBytes() {
+        getResults();
+        byte[] sha1 = connection.scriptLoad("return {KEYS[1],ARGV[1]}").getBytes();
+        initConnection();
+        actual.add(
+                byteConnection.evalSha(sha1, ReturnType.MULTI, 1, "key1".getBytes(), "arg1".getBytes()));
+        List<Object> results = getResults();
+        List<byte[]> scriptResults = (List<byte[]>) results.get(0);
+        assertThat(
+                        Arrays.asList(
+                                new Object[] {new String(scriptResults.get(0)), new String(scriptResults.get(1))}))
+                .isEqualTo(Arrays.asList(new Object[] {"key1", "arg1"}));
+    }
 
-	@Test // DATAREDIS-106
-	void zRangeByScoreTest() {
+    @Test // DATAREDIS-106
+    void zRangeByScoreTest() {
 
-		connection.zAdd("myzset", 1, "one");
-		connection.zAdd("myzset", 2, "two");
-		connection.zAdd("myzset", 3, "three");
+        connection.zAdd("myzset", 1, "one");
+        connection.zAdd("myzset", 2, "two");
+        connection.zAdd("myzset", 3, "three");
 
-		Set<String> zRangeByScore = connection.zRangeByScore("myzset", "(1", "2");
+        Set<String> zRangeByScore = connection.zRangeByScore("myzset", "(1", "2");
 
-		assertThat(zRangeByScore.iterator().next()).isEqualTo("two");
-	}
+        assertThat(zRangeByScore.iterator().next()).isEqualTo("two");
+    }
 
-	@Test // DATAREDIS-348
-	@EnabledOnValkeySentinelAvailable
-	void shouldReturnSentinelCommandsWhenWhenActiveSentinelFound() {
+    @Test // DATAREDIS-348
+    @EnabledOnValkeySentinelAvailable
+    void shouldReturnSentinelCommandsWhenWhenActiveSentinelFound() {
 
-		((LettuceConnection) byteConnection).setSentinelConfiguration(
-				new ValkeySentinelConfiguration().master("mymaster").sentinel("127.0.0.1", 26379).sentinel("127.0.0.1", 26380));
-		assertThat(connection.getSentinelConnection()).isNotNull();
-	}
+        ((LettuceConnection) byteConnection)
+                .setSentinelConfiguration(
+                        new ValkeySentinelConfiguration()
+                                .master("mymaster")
+                                .sentinel("127.0.0.1", 26379)
+                                .sentinel("127.0.0.1", 26380));
+        assertThat(connection.getSentinelConnection()).isNotNull();
+    }
 }

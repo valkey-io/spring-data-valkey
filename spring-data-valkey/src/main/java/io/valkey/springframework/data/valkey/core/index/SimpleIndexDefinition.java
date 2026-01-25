@@ -16,34 +16,34 @@
 package io.valkey.springframework.data.valkey.core.index;
 
 /**
- * {@link PathBasedValkeyIndexDefinition} for including property values in a secondary index. <br />
- * Uses Valkey {@literal SET} for storage. <br />
+ * {@link PathBasedValkeyIndexDefinition} for including property values in a secondary index. <br>
+ * Uses Valkey {@literal SET} for storage. <br>
  *
  * @author Christoph Strobl
  * @since 1.7
  */
-public class SimpleIndexDefinition extends ValkeyIndexDefinition implements PathBasedValkeyIndexDefinition {
+public class SimpleIndexDefinition extends ValkeyIndexDefinition
+        implements PathBasedValkeyIndexDefinition {
 
-	/**
-	 * Creates new {@link SimpleIndexDefinition}.
-	 *
-	 * @param keyspace must not be {@literal null}.
-	 * @param path
-	 */
-	public SimpleIndexDefinition(String keyspace, String path) {
-		this(keyspace, path, path);
-	}
+    /**
+     * Creates new {@link SimpleIndexDefinition}.
+     *
+     * @param keyspace must not be {@literal null}.
+     * @param path
+     */
+    public SimpleIndexDefinition(String keyspace, String path) {
+        this(keyspace, path, path);
+    }
 
-	/**
-	 * Creates new {@link SimpleIndexDefinition}.
-	 *
-	 * @param keyspace must not be {@literal null}.
-	 * @param path
-	 * @param name must not be {@literal null}.
-	 */
-	public SimpleIndexDefinition(String keyspace, String path, String name) {
-		super(keyspace, path, name);
-		addCondition(new PathCondition(path));
-	}
-
+    /**
+     * Creates new {@link SimpleIndexDefinition}.
+     *
+     * @param keyspace must not be {@literal null}.
+     * @param path
+     * @param name must not be {@literal null}.
+     */
+    public SimpleIndexDefinition(String keyspace, String path, String name) {
+        super(keyspace, path, name);
+        addCondition(new PathCondition(path));
+    }
 }

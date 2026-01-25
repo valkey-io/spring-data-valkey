@@ -15,13 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.TimeUnit;
-
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.Expirations;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 import org.springframework.lang.Nullable;
 
 /**
@@ -33,79 +32,86 @@ import org.springframework.lang.Nullable;
  */
 public interface BoundHashFieldExpirationOperations<HK> {
 
-	/**
-	 * Apply {@link Expiration} to the bound hash key/hash fields without any additional constraints.
-	 *
-	 * @param expiration the expiration definition.
-	 * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
-	 */
-	default ExpireChanges<HK> expire(Expiration expiration) {
-		return expire(expiration, ExpirationOptions.none());
-	}
+    /**
+     * Apply {@link Expiration} to the bound hash key/hash fields without any additional constraints.
+     *
+     * @param expiration the expiration definition.
+     * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
+     */
+    default ExpireChanges<HK> expire(Expiration expiration) {
+        return expire(expiration, ExpirationOptions.none());
+    }
 
-	/**
-	 * Apply {@link Expiration} to the bound hash key/hash fields given {@link ExpirationOptions expiration options}.
-	 *
-	 * @param expiration the expiration definition.
-	 * @param options expiration options.
-	 * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
-	 */
-	ExpireChanges<HK> expire(Expiration expiration, ExpirationOptions options);
+    /**
+     * Apply {@link Expiration} to the bound hash key/hash fields given {@link ExpirationOptions
+     * expiration options}.
+     *
+     * @param expiration the expiration definition.
+     * @param options expiration options.
+     * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
+     */
+    ExpireChanges<HK> expire(Expiration expiration, ExpirationOptions options);
 
-	/**
-	 * Set time to live for the bound hash key/hash fields.
-	 *
-	 * @param timeout the amount of time after which the key will be expired, must not be {@literal null}.
-	 * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
-	 * @throws IllegalArgumentException if the timeout is {@literal null}.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	ExpireChanges<HK> expire(Duration timeout);
+    /**
+     * Set time to live for the bound hash key/hash fields.
+     *
+     * @param timeout the amount of time after which the key will be expired, must not be {@literal
+     *     null}.
+     * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
+     * @throws IllegalArgumentException if the timeout is {@literal null}.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation:
+     *     HEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    ExpireChanges<HK> expire(Duration timeout);
 
-	/**
-	 * Set the expiration for the bound hash key/hash fields as a {@literal date} timestamp.
-	 *
-	 * @param expireAt must not be {@literal null}.
-	 * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
-	 * @throws IllegalArgumentException if the instant is {@literal null} or too large to represent as a {@code Date}.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation: HEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	ExpireChanges<HK> expireAt(Instant expireAt);
+    /**
+     * Set the expiration for the bound hash key/hash fields as a {@literal date} timestamp.
+     *
+     * @param expireAt must not be {@literal null}.
+     * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
+     * @throws IllegalArgumentException if the instant is {@literal null} or too large to represent as
+     *     a {@code Date}.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation:
+     *     HEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    ExpireChanges<HK> expireAt(Instant expireAt);
 
-	/**
-	 * Remove the expiration from the bound hash key/hash fields.
-	 *
-	 * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation: HPERSIST</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	ExpireChanges<HK> persist();
+    /**
+     * Remove the expiration from the bound hash key/hash fields.
+     *
+     * @return changes to the hash fields. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation:
+     *     HPERSIST</a>
+     * @since 3.5
+     */
+    @Nullable
+    ExpireChanges<HK> persist();
 
-	/**
-	 * Get the time to live for bound hash key/hash fields in seconds.
-	 *
-	 * @return the actual expirations in seconds for the hash fields. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	Expirations<HK> getTimeToLive();
+    /**
+     * Get the time to live for bound hash key/hash fields in seconds.
+     *
+     * @return the actual expirations in seconds for the hash fields. {@literal null} when used in
+     *     pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
+     * @since 3.5
+     */
+    @Nullable
+    Expirations<HK> getTimeToLive();
 
-	/**
-	 * Get the time to live for the bound hash key/hash fields and convert it to the given {@link TimeUnit}.
-	 *
-	 * @param timeUnit must not be {@literal null}.
-	 * @return the actual expirations for the hash fields in the given time unit. {@literal null} when used in pipeline /
-	 *         transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	Expirations<HK> getTimeToLive(TimeUnit timeUnit);
-
+    /**
+     * Get the time to live for the bound hash key/hash fields and convert it to the given {@link
+     * TimeUnit}.
+     *
+     * @param timeUnit must not be {@literal null}.
+     * @return the actual expirations for the hash fields in the given time unit. {@literal null} when
+     *     used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
+     * @since 3.5
+     */
+    @Nullable
+    Expirations<HK> getTimeToLive(TimeUnit timeUnit);
 }

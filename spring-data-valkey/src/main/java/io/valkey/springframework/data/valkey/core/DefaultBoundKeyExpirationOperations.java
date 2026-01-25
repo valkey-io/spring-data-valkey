@@ -15,13 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import java.time.Duration;
-import java.time.Instant;
-import java.util.concurrent.TimeUnit;
-
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.Expirations;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.concurrent.TimeUnit;
 import org.springframework.lang.Nullable;
 
 /**
@@ -32,68 +31,66 @@ import org.springframework.lang.Nullable;
  */
 class DefaultBoundKeyExpirationOperations<K> implements BoundKeyExpirationOperations {
 
-	private final ValkeyOperations<K, ?> operations;
-	private final K key;
+    private final ValkeyOperations<K, ?> operations;
+    private final K key;
 
-	public DefaultBoundKeyExpirationOperations(ValkeyOperations<K, ?> operations, K key) {
-		this.operations = operations;
-		this.key = key;
-	}
+    public DefaultBoundKeyExpirationOperations(ValkeyOperations<K, ?> operations, K key) {
+        this.operations = operations;
+        this.key = key;
+    }
 
-	@Nullable
-	@Override
-	public ExpireChanges.ExpiryChangeState expire(Expiration expiration, ExpirationOptions options) {
-		return operations.expire(key, expiration, options);
-	}
+    @Nullable
+    @Override
+    public ExpireChanges.ExpiryChangeState expire(Expiration expiration, ExpirationOptions options) {
+        return operations.expire(key, expiration, options);
+    }
 
-	@Nullable
-	@Override
-	public ExpireChanges.ExpiryChangeState expire(Duration timeout) {
+    @Nullable
+    @Override
+    public ExpireChanges.ExpiryChangeState expire(Duration timeout) {
 
-		Boolean expire = operations.expire(key, timeout);
+        Boolean expire = operations.expire(key, timeout);
 
-		return toExpiryChangeState(expire);
-	}
+        return toExpiryChangeState(expire);
+    }
 
-	@Nullable
-	@Override
-	public ExpireChanges.ExpiryChangeState expireAt(Instant expireAt) {
-		return toExpiryChangeState(operations.expireAt(key, expireAt));
-	}
+    @Nullable
+    @Override
+    public ExpireChanges.ExpiryChangeState expireAt(Instant expireAt) {
+        return toExpiryChangeState(operations.expireAt(key, expireAt));
+    }
 
-	@Nullable
-	@Override
-	public ExpireChanges.ExpiryChangeState persist() {
-		return toExpiryChangeState(operations.persist(key));
-	}
+    @Nullable
+    @Override
+    public ExpireChanges.ExpiryChangeState persist() {
+        return toExpiryChangeState(operations.persist(key));
+    }
 
-	@Nullable
-	@Override
-	public Expirations.TimeToLive getTimeToLive() {
+    @Nullable
+    @Override
+    public Expirations.TimeToLive getTimeToLive() {
 
-		Long expire = operations.getExpire(key);
+        Long expire = operations.getExpire(key);
 
-		return expire == null ? null : Expirations.TimeToLive.of(expire, TimeUnit.SECONDS);
-	}
+        return expire == null ? null : Expirations.TimeToLive.of(expire, TimeUnit.SECONDS);
+    }
 
-	@Nullable
-	@Override
-	public Expirations.TimeToLive getTimeToLive(TimeUnit timeUnit) {
+    @Nullable
+    @Override
+    public Expirations.TimeToLive getTimeToLive(TimeUnit timeUnit) {
 
-		Long expire = operations.getExpire(key, timeUnit);
+        Long expire = operations.getExpire(key, timeUnit);
 
-		return expire == null ? null : Expirations.TimeToLive.of(expire, timeUnit);
+        return expire == null ? null : Expirations.TimeToLive.of(expire, timeUnit);
+    }
 
-	}
+    @Nullable
+    private static ExpireChanges.ExpiryChangeState toExpiryChangeState(@Nullable Boolean result) {
 
-	@Nullable
-	private static ExpireChanges.ExpiryChangeState toExpiryChangeState(@Nullable Boolean result) {
+        if (result == null) {
+            return null;
+        }
 
-		if (result == null) {
-			return null;
-		}
-
-		return ExpireChanges.ExpiryChangeState.of(result);
-	}
-
+        return ExpireChanges.ExpiryChangeState.of(result);
+    }
 }

@@ -15,11 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
-import org.springframework.data.convert.EntityConverter;
-import org.springframework.data.mapping.model.EntityInstantiators;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentProperty;
+import org.springframework.data.convert.EntityConverter;
+import org.springframework.data.mapping.model.EntityInstantiators;
 import org.springframework.lang.Nullable;
 
 /**
@@ -30,21 +30,22 @@ import org.springframework.lang.Nullable;
  * @since 1.7
  */
 public interface ValkeyConverter
-		extends EntityConverter<ValkeyPersistentEntity<?>, ValkeyPersistentProperty, Object, ValkeyData> {
+        extends EntityConverter<
+                ValkeyPersistentEntity<?>, ValkeyPersistentProperty, Object, ValkeyData> {
 
-	@Override
-	ValkeyMappingContext getMappingContext();
+    @Override
+    ValkeyMappingContext getMappingContext();
 
-	/**
-	 * @return the configured {@link IndexResolver}, may be {@literal null}.
-	 * @since 2.1
-	 */
-	@Nullable
-	IndexResolver getIndexResolver();
+    /**
+     * @return the configured {@link IndexResolver}, may be {@literal null}.
+     * @since 2.1
+     */
+    @Nullable
+    IndexResolver getIndexResolver();
 
-	/**
-	 * @return the configured {@link EntityInstantiators}.
-	 * @since 3.2.4
-	 */
-	EntityInstantiators getEntityInstantiators();
+    /**
+     * @return the configured {@link EntityInstantiators}.
+     * @since 3.2.4
+     */
+    EntityInstantiators getEntityInstantiators();
 }

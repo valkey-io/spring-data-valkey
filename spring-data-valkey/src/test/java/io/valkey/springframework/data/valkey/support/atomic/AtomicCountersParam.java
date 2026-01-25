@@ -15,9 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.support.atomic;
 
-import java.util.Arrays;
-import java.util.Collection;
-
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
@@ -25,6 +22,8 @@ import io.valkey.springframework.data.valkey.connection.lettuce.extension.Lettuc
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * @author Costin Leau
@@ -34,20 +33,21 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
  */
 abstract class AtomicCountersParam {
 
-	static Collection<Object[]> testParams() {
+    static Collection<Object[]> testParams() {
 
-		// Jedis
-		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // Jedis
+        JedisConnectionFactory jedisConnFactory =
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		// Lettuce
-		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class, false);
+        // Lettuce
+        LettuceConnectionFactory lettuceConnFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class, false);
 
-		// Valkey-Glide
-		ValkeyGlideConnectionFactory valkeyGlideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // Valkey-Glide
+        ValkeyGlideConnectionFactory valkeyGlideConnFactory =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		return Arrays.asList(new Object[][] { { jedisConnFactory }, { lettuceConnFactory }, { valkeyGlideConnFactory } });
-	}
+        return Arrays.asList(
+                new Object[][] {{jedisConnFactory}, {lettuceConnFactory}, {valkeyGlideConnFactory}});
+    }
 }

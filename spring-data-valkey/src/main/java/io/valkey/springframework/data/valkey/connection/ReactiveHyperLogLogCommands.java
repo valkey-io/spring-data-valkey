@@ -15,21 +15,19 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.Command;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
 import org.reactivestreams.Publisher;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.Command;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Valkey HyperLogLog commands executed using reactive infrastructure.
@@ -40,275 +38,284 @@ import org.springframework.util.Assert;
  */
 public interface ReactiveHyperLogLogCommands {
 
-	/**
-	 * {@code PFADD} command parameters.
-	 *
-	 * @author Christoph Strobl
-	 * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
-	 */
-	class PfAddCommand extends KeyCommand {
+    /**
+     * {@code PFADD} command parameters.
+     *
+     * @author Christoph Strobl
+     * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
+     */
+    class PfAddCommand extends KeyCommand {
 
-		private final List<ByteBuffer> values;
+        private final List<ByteBuffer> values;
 
-		private PfAddCommand(ByteBuffer key, List<ByteBuffer> values) {
+        private PfAddCommand(ByteBuffer key, List<ByteBuffer> values) {
 
-			super(key);
-			this.values = values;
-		}
+            super(key);
+            this.values = values;
+        }
 
-		/**
-		 * Creates a new {@link PfAddCommand} given a {@link ByteBuffer value}.
-		 *
-		 * @param value must not be {@literal null}.
-		 * @return a new {@link PfAddCommand} for {@link ByteBuffer value}.
-		 */
-		public static PfAddCommand value(ByteBuffer value) {
+        /**
+         * Creates a new {@link PfAddCommand} given a {@link ByteBuffer value}.
+         *
+         * @param value must not be {@literal null}.
+         * @return a new {@link PfAddCommand} for {@link ByteBuffer value}.
+         */
+        public static PfAddCommand value(ByteBuffer value) {
 
-			Assert.notNull(value, "Value must not be null");
+            Assert.notNull(value, "Value must not be null");
 
-			return values(Collections.singletonList(value));
-		}
+            return values(Collections.singletonList(value));
+        }
 
-		/**
-		 * Creates a new {@link PfAddCommand} given a {@link Collection} of {@link ByteBuffer values}.
-		 *
-		 * @param values must not be {@literal null}.
-		 * @return a new {@link PfAddCommand} for {@link ByteBuffer key}.
-		 */
-		public static PfAddCommand values(Collection<ByteBuffer> values) {
+        /**
+         * Creates a new {@link PfAddCommand} given a {@link Collection} of {@link ByteBuffer values}.
+         *
+         * @param values must not be {@literal null}.
+         * @return a new {@link PfAddCommand} for {@link ByteBuffer key}.
+         */
+        public static PfAddCommand values(Collection<ByteBuffer> values) {
 
-			Assert.notNull(values, "Values must not be null");
+            Assert.notNull(values, "Values must not be null");
 
-			return new PfAddCommand(null, new ArrayList<>(values));
-		}
+            return new PfAddCommand(null, new ArrayList<>(values));
+        }
 
-		/**
-		 * Applies the {@literal key}. Constructs a new command instance with all previously configured properties.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link PfAddCommand} with {@literal key} applied.
-		 */
-		public PfAddCommand to(ByteBuffer key) {
+        /**
+         * Applies the {@literal key}. Constructs a new command instance with all previously configured
+         * properties.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link PfAddCommand} with {@literal key} applied.
+         */
+        public PfAddCommand to(ByteBuffer key) {
 
-			Assert.notNull(key, "Key must not be null");
+            Assert.notNull(key, "Key must not be null");
 
-			return new PfAddCommand(key, values);
-		}
+            return new PfAddCommand(key, values);
+        }
 
-		/**
-		 * @return
-		 */
-		public List<ByteBuffer> getValues() {
-			return values;
-		}
-	}
+        /**
+         * @return
+         */
+        public List<ByteBuffer> getValues() {
+            return values;
+        }
+    }
 
-	/**
-	 * Adds given {@literal value} to the HyperLogLog stored at given {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
-	 */
-	default Mono<Long> pfAdd(ByteBuffer key, ByteBuffer value) {
+    /**
+     * Adds given {@literal value} to the HyperLogLog stored at given {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param value must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
+     */
+    default Mono<Long> pfAdd(ByteBuffer key, ByteBuffer value) {
 
-		Assert.notNull(value, "Value must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-		return pfAdd(key, Collections.singletonList(value));
-	}
+        return pfAdd(key, Collections.singletonList(value));
+    }
 
-	/**
-	 * Adds given {@literal values} to the HyperLogLog stored at given {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param values must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
-	 */
-	default Mono<Long> pfAdd(ByteBuffer key, Collection<ByteBuffer> values) {
+    /**
+     * Adds given {@literal values} to the HyperLogLog stored at given {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param values must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
+     */
+    default Mono<Long> pfAdd(ByteBuffer key, Collection<ByteBuffer> values) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(values, "Values must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(values, "Values must not be null");
 
-		return pfAdd(Mono.just(PfAddCommand.values(values).to(key))).next().map(NumericResponse::getOutput);
-	}
+        return pfAdd(Mono.just(PfAddCommand.values(values).to(key)))
+                .next()
+                .map(NumericResponse::getOutput);
+    }
 
-	/**
-	 * Adds given {@literal values} to the HyperLogLog stored at given {@literal key}.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
-	 */
-	Flux<NumericResponse<PfAddCommand, Long>> pfAdd(Publisher<PfAddCommand> commands);
+    /**
+     * Adds given {@literal values} to the HyperLogLog stored at given {@literal key}.
+     *
+     * @param commands must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
+     */
+    Flux<NumericResponse<PfAddCommand, Long>> pfAdd(Publisher<PfAddCommand> commands);
 
-	/**
-	 * {@code PFCOUNT} command parameters.
-	 *
-	 * @author Christoph Strobl
-	 * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
-	 */
-	class PfCountCommand implements Command {
+    /**
+     * {@code PFCOUNT} command parameters.
+     *
+     * @author Christoph Strobl
+     * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
+     */
+    class PfCountCommand implements Command {
 
-		private final List<ByteBuffer> keys;
+        private final List<ByteBuffer> keys;
 
-		private PfCountCommand(List<ByteBuffer> keys) {
+        private PfCountCommand(List<ByteBuffer> keys) {
 
-			super();
-			this.keys = keys;
-		}
+            super();
+            this.keys = keys;
+        }
 
-		/**
-		 * Creates a new {@link PfCountCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link PfCountCommand} for {@link ByteBuffer key}.
-		 */
-		public static PfCountCommand valueIn(ByteBuffer key) {
+        /**
+         * Creates a new {@link PfCountCommand} given a {@link ByteBuffer key}.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link PfCountCommand} for {@link ByteBuffer key}.
+         */
+        public static PfCountCommand valueIn(ByteBuffer key) {
 
-			Assert.notNull(key, "Key must not be null");
+            Assert.notNull(key, "Key must not be null");
 
-			return valuesIn(Collections.singletonList(key));
-		}
+            return valuesIn(Collections.singletonList(key));
+        }
 
-		/**
-		 * Creates a new {@link PfCountCommand} given a {@link Collection} of {@literal keys}.
-		 *
-		 * @param keys must not be {@literal null}.
-		 * @return a new {@link PfCountCommand} for {@literal keys}.
-		 */
-		public static PfCountCommand valuesIn(Collection<ByteBuffer> keys) {
+        /**
+         * Creates a new {@link PfCountCommand} given a {@link Collection} of {@literal keys}.
+         *
+         * @param keys must not be {@literal null}.
+         * @return a new {@link PfCountCommand} for {@literal keys}.
+         */
+        public static PfCountCommand valuesIn(Collection<ByteBuffer> keys) {
 
-			Assert.notNull(keys, "Keys must not be null");
+            Assert.notNull(keys, "Keys must not be null");
 
-			return new PfCountCommand(new ArrayList<>(keys));
-		}
+            return new PfCountCommand(new ArrayList<>(keys));
+        }
 
-		/**
-		 * @return
-		 */
-		public List<ByteBuffer> getKeys() {
-			return keys;
-		}
+        /**
+         * @return
+         */
+        public List<ByteBuffer> getKeys() {
+            return keys;
+        }
 
-		@Override
-		public ByteBuffer getKey() {
-			return null;
-		}
-	}
+        @Override
+        public ByteBuffer getKey() {
+            return null;
+        }
+    }
 
-	/**
-	 * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
-	 */
-	default Mono<Long> pfCount(ByteBuffer key) {
+    /**
+     * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal
+     * key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
+     */
+    default Mono<Long> pfCount(ByteBuffer key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return pfCount(Collections.singletonList(key));
-	}
+        return pfCount(Collections.singletonList(key));
+    }
 
-	/**
-	 * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal key(s)}.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
-	 */
-	default Mono<Long> pfCount(Collection<ByteBuffer> keys) {
+    /**
+     * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal
+     * key(s)}.
+     *
+     * @param keys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
+     */
+    default Mono<Long> pfCount(Collection<ByteBuffer> keys) {
 
-		Assert.notNull(keys, "Keys must not be null");
+        Assert.notNull(keys, "Keys must not be null");
 
-		return pfCount(Mono.just(PfCountCommand.valuesIn(keys))).next().map(NumericResponse::getOutput);
-	}
+        return pfCount(Mono.just(PfCountCommand.valuesIn(keys))).next().map(NumericResponse::getOutput);
+    }
 
-	/**
-	 * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal key(s)}.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
-	 */
-	Flux<NumericResponse<PfCountCommand, Long>> pfCount(Publisher<PfCountCommand> commands);
+    /**
+     * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal
+     * key(s)}.
+     *
+     * @param commands must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
+     */
+    Flux<NumericResponse<PfCountCommand, Long>> pfCount(Publisher<PfCountCommand> commands);
 
-	/**
-	 * {@code PFMERGE} command parameters.
-	 *
-	 * @author Christoph Strobl
-	 * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
-	 */
-	class PfMergeCommand extends KeyCommand {
+    /**
+     * {@code PFMERGE} command parameters.
+     *
+     * @author Christoph Strobl
+     * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
+     */
+    class PfMergeCommand extends KeyCommand {
 
-		private final List<ByteBuffer> sourceKeys;
+        private final List<ByteBuffer> sourceKeys;
 
-		private PfMergeCommand(ByteBuffer key, List<ByteBuffer> sourceKeys) {
+        private PfMergeCommand(ByteBuffer key, List<ByteBuffer> sourceKeys) {
 
-			super(key);
-			this.sourceKeys = sourceKeys;
-		}
+            super(key);
+            this.sourceKeys = sourceKeys;
+        }
 
-		/**
-		 * Creates a new {@link PfMergeCommand} given a {@link Collection} of {@literal sourceKeys}.
-		 *
-		 * @param sourceKeys must not be {@literal null}.
-		 * @return a new {@link PfMergeCommand} for {@literal sourceKeys}.
-		 */
-		public static PfMergeCommand valuesIn(Collection<ByteBuffer> sourceKeys) {
+        /**
+         * Creates a new {@link PfMergeCommand} given a {@link Collection} of {@literal sourceKeys}.
+         *
+         * @param sourceKeys must not be {@literal null}.
+         * @return a new {@link PfMergeCommand} for {@literal sourceKeys}.
+         */
+        public static PfMergeCommand valuesIn(Collection<ByteBuffer> sourceKeys) {
 
-			Assert.notNull(sourceKeys, "Source keys must not be null");
+            Assert.notNull(sourceKeys, "Source keys must not be null");
 
-			return new PfMergeCommand(null, new ArrayList<>(sourceKeys));
-		}
+            return new PfMergeCommand(null, new ArrayList<>(sourceKeys));
+        }
 
-		/**
-		 * Applies the {@literal destinationKey}. Constructs a new command instance with all previously configured
-		 * properties.
-		 *
-		 * @param destinationKey must not be {@literal null}.
-		 * @return a new {@link PfMergeCommand} with {@literal destinationKey} applied.
-		 */
-		public PfMergeCommand into(ByteBuffer destinationKey) {
+        /**
+         * Applies the {@literal destinationKey}. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param destinationKey must not be {@literal null}.
+         * @return a new {@link PfMergeCommand} with {@literal destinationKey} applied.
+         */
+        public PfMergeCommand into(ByteBuffer destinationKey) {
 
-			Assert.notNull(destinationKey, "Destination key must not be null");
+            Assert.notNull(destinationKey, "Destination key must not be null");
 
-			return new PfMergeCommand(destinationKey, sourceKeys);
-		}
+            return new PfMergeCommand(destinationKey, sourceKeys);
+        }
 
-		/**
-		 * @return
-		 */
-		public List<ByteBuffer> getSourceKeys() {
-			return sourceKeys;
-		}
-	}
+        /**
+         * @return
+         */
+        public List<ByteBuffer> getSourceKeys() {
+            return sourceKeys;
+        }
+    }
 
-	/**
-	 * Merge N different HyperLogLogs at {@literal sourceKeys} into a single {@literal destinationKey}.
-	 *
-	 * @param destinationKey must not be {@literal null}.
-	 * @param sourceKeys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
-	 */
-	default Mono<Boolean> pfMerge(ByteBuffer destinationKey, Collection<ByteBuffer> sourceKeys) {
+    /**
+     * Merge N different HyperLogLogs at {@literal sourceKeys} into a single {@literal
+     * destinationKey}.
+     *
+     * @param destinationKey must not be {@literal null}.
+     * @param sourceKeys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
+     */
+    default Mono<Boolean> pfMerge(ByteBuffer destinationKey, Collection<ByteBuffer> sourceKeys) {
 
-		Assert.notNull(destinationKey, "DestinationKey must not be null");
-		Assert.notNull(sourceKeys, "SourceKeys must not be null");
+        Assert.notNull(destinationKey, "DestinationKey must not be null");
+        Assert.notNull(sourceKeys, "SourceKeys must not be null");
 
-		return pfMerge(Mono.just(PfMergeCommand.valuesIn(sourceKeys).into(destinationKey))).next()
-				.map(BooleanResponse::getOutput);
-	}
+        return pfMerge(Mono.just(PfMergeCommand.valuesIn(sourceKeys).into(destinationKey)))
+                .next()
+                .map(BooleanResponse::getOutput);
+    }
 
-	/**
-	 * Merge N different HyperLogLogs at {@literal sourceKeys} into a single {@literal destinationKey}.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
-	 */
-	Flux<BooleanResponse<PfMergeCommand>> pfMerge(Publisher<PfMergeCommand> commands);
+    /**
+     * Merge N different HyperLogLogs at {@literal sourceKeys} into a single {@literal
+     * destinationKey}.
+     *
+     * @param commands must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
+     */
+    Flux<BooleanResponse<PfMergeCommand>> pfMerge(Publisher<PfMergeCommand> commands);
 }

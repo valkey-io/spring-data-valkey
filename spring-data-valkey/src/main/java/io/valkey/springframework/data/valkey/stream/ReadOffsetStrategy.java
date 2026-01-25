@@ -15,10 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.stream;
 
-import java.util.Optional;
-
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
 import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
+import java.util.Optional;
 
 /**
  * Strategy to determine the first and subsequent {@link ReadOffset}.
@@ -28,86 +27,86 @@ import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
  */
 enum ReadOffsetStrategy {
 
-	/**
-	 * Use the last seen message Id.
-	 */
-	NextMessage {
-		@Override
-		public ReadOffset getFirst(ReadOffset readOffset, Optional<Consumer> consumer) {
-			return readOffset;
-		}
+    /** Use the last seen message Id. */
+    NextMessage {
+        @Override
+        public ReadOffset getFirst(ReadOffset readOffset, Optional<Consumer> consumer) {
+            return readOffset;
+        }
 
-		@Override
-		public ReadOffset getNext(ReadOffset readOffset, Optional<Consumer> consumer, String lastConsumedMessageId) {
-			return ReadOffset.from(lastConsumedMessageId);
-		}
-	},
+        @Override
+        public ReadOffset getNext(
+                ReadOffset readOffset, Optional<Consumer> consumer, String lastConsumedMessageId) {
+            return ReadOffset.from(lastConsumedMessageId);
+        }
+    },
 
-	/**
-	 * Last consumed strategy.
-	 */
-	LastConsumed {
-		@Override
-		public ReadOffset getFirst(ReadOffset readOffset, Optional<Consumer> consumer) {
-			return consumer.map(it -> ReadOffset.lastConsumed()).orElseGet(ReadOffset::latest);
-		}
+    /** Last consumed strategy. */
+    LastConsumed {
+        @Override
+        public ReadOffset getFirst(ReadOffset readOffset, Optional<Consumer> consumer) {
+            return consumer.map(it -> ReadOffset.lastConsumed()).orElseGet(ReadOffset::latest);
+        }
 
-		@Override
-		public ReadOffset getNext(ReadOffset readOffset, Optional<Consumer> consumer, String lastConsumedMessageId) {
-			return consumer.map(it -> ReadOffset.lastConsumed()).orElseGet(() -> ReadOffset.from(lastConsumedMessageId));
-		}
-	},
+        @Override
+        public ReadOffset getNext(
+                ReadOffset readOffset, Optional<Consumer> consumer, String lastConsumedMessageId) {
+            return consumer
+                    .map(it -> ReadOffset.lastConsumed())
+                    .orElseGet(() -> ReadOffset.from(lastConsumedMessageId));
+        }
+    },
 
-	/**
-	 * Use always the latest stream message.
-	 */
-	Latest {
-		@Override
-		public ReadOffset getFirst(ReadOffset readOffset, Optional<Consumer> consumer) {
-			return ReadOffset.latest();
-		}
+    /** Use always the latest stream message. */
+    Latest {
+        @Override
+        public ReadOffset getFirst(ReadOffset readOffset, Optional<Consumer> consumer) {
+            return ReadOffset.latest();
+        }
 
-		@Override
-		public ReadOffset getNext(ReadOffset readOffset, Optional<Consumer> consumer, String lastConsumedMessageId) {
-			return ReadOffset.latest();
-		}
-	};
+        @Override
+        public ReadOffset getNext(
+                ReadOffset readOffset, Optional<Consumer> consumer, String lastConsumedMessageId) {
+            return ReadOffset.latest();
+        }
+    };
 
-	/**
-	 * Return a {@link ReadOffsetStrategy} given the initial {@link ReadOffset}.
-	 *
-	 * @param offset must not be {@literal null}.
-	 * @return the {@link ReadOffsetStrategy}.
-	 */
-	static ReadOffsetStrategy getStrategy(ReadOffset offset) {
+    /**
+     * Return a {@link ReadOffsetStrategy} given the initial {@link ReadOffset}.
+     *
+     * @param offset must not be {@literal null}.
+     * @return the {@link ReadOffsetStrategy}.
+     */
+    static ReadOffsetStrategy getStrategy(ReadOffset offset) {
 
-		if (ReadOffset.latest().equals(offset)) {
-			return Latest;
-		}
+        if (ReadOffset.latest().equals(offset)) {
+            return Latest;
+        }
 
-		if (ReadOffset.lastConsumed().equals(offset)) {
-			return LastConsumed;
-		}
+        if (ReadOffset.lastConsumed().equals(offset)) {
+            return LastConsumed;
+        }
 
-		return NextMessage;
-	}
+        return NextMessage;
+    }
 
-	/**
-	 * Determine the first {@link ReadOffset}.
-	 *
-	 * @param readOffset
-	 * @param consumer
-	 * @return
-	 */
-	public abstract ReadOffset getFirst(ReadOffset readOffset, Optional<Consumer> consumer);
+    /**
+     * Determine the first {@link ReadOffset}.
+     *
+     * @param readOffset
+     * @param consumer
+     * @return
+     */
+    public abstract ReadOffset getFirst(ReadOffset readOffset, Optional<Consumer> consumer);
 
-	/**
-	 * Determine the next {@link ReadOffset} given {@code lastConsumedMessageId}.
-	 *
-	 * @param readOffset
-	 * @param consumer
-	 * @param lastConsumedMessageId
-	 * @return
-	 */
-	public abstract ReadOffset getNext(ReadOffset readOffset, Optional<Consumer> consumer, String lastConsumedMessageId);
+    /**
+     * Determine the next {@link ReadOffset} given {@code lastConsumedMessageId}.
+     *
+     * @param readOffset
+     * @param consumer
+     * @param lastConsumedMessageId
+     * @return
+     */
+    public abstract ReadOffset getNext(
+            ReadOffset readOffset, Optional<Consumer> consumer, String lastConsumedMessageId);
 }

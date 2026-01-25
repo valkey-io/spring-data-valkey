@@ -17,13 +17,11 @@ package io.valkey.springframework.data.valkey.mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.valkey.springframework.data.valkey.hash.Jackson2HashMapper;
 import java.time.LocalDateTime;
 import java.time.Month;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
-import io.valkey.springframework.data.valkey.hash.Jackson2HashMapper;
 
 /**
  * @author Christoph Strobl
@@ -32,35 +30,34 @@ import io.valkey.springframework.data.valkey.hash.Jackson2HashMapper;
  */
 public class Jackson2HashMapperFlatteningUnitTests extends Jackson2HashMapperUnitTests {
 
-	Jackson2HashMapperFlatteningUnitTests() {
-		super(new Jackson2HashMapper(true));
-	}
+    Jackson2HashMapperFlatteningUnitTests() {
+        super(new Jackson2HashMapper(true));
+    }
 
-	@Test // GH-2593
-	void timestampHandledCorrectly() {
+    @Test // GH-2593
+    void timestampHandledCorrectly() {
 
-		Map<String, Object> hash =
-			Map.of("@class", Session.class.getName(), "lastAccessed", "2023-06-05T18:36:30");
+        Map<String, Object> hash =
+                Map.of("@class", Session.class.getName(), "lastAccessed", "2023-06-05T18:36:30");
 
-		//Map<String, Object> hash = Map.of("lastAccessed", "2023-06-05T18:36:30");
+        // Map<String, Object> hash = Map.of("lastAccessed", "2023-06-05T18:36:30");
 
-		Session session = (Session) getMapper().fromHash(hash);
+        Session session = (Session) getMapper().fromHash(hash);
 
-		assertThat(session).isNotNull();
-		assertThat(session.lastAccessed).isEqualTo(LocalDateTime.of(2023, Month.JUNE, 5,
-			18, 36, 30));
-	}
+        assertThat(session).isNotNull();
+        assertThat(session.lastAccessed).isEqualTo(LocalDateTime.of(2023, Month.JUNE, 5, 18, 36, 30));
+    }
 
-	private static class Session {
+    private static class Session {
 
-		private LocalDateTime lastAccessed;
+        private LocalDateTime lastAccessed;
 
-		public LocalDateTime getLastAccessed() {
-			return lastAccessed;
-		}
+        public LocalDateTime getLastAccessed() {
+            return lastAccessed;
+        }
 
-		public void setLastAccessed(LocalDateTime lastAccessed) {
-			this.lastAccessed = lastAccessed;
-		}
-	}
+        public void setLastAccessed(LocalDateTime lastAccessed) {
+            this.lastAccessed = lastAccessed;
+        }
+    }
 }

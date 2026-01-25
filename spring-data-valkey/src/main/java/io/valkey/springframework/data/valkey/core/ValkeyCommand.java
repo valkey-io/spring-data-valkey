@@ -19,14 +19,13 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * {@link Enum Enumeration} of well-known {@literal Valkey commands}. This enumeration serves as non-exhaustive set of
- * built-in commands for a typical Valkey server.
+ * {@link Enum Enumeration} of well-known {@literal Valkey commands}. This enumeration serves as
+ * non-exhaustive set of built-in commands for a typical Valkey server.
  *
  * @author Christoph Strobl
  * @author Thomas Darimont
@@ -37,369 +36,378 @@ import org.springframework.util.StringUtils;
  * @author John Blum
  * @since 1.3
  * @link <a href=
- *       "https://github.com/antirez/valkey/blob/843de8b786562d8d77c78d83a971060adc61f77a/src/server.c#L180">Valkey
- *       command list</a>
+ *     "https://github.com/antirez/valkey/blob/843de8b786562d8d77c78d83a971060adc61f77a/src/server.c#L180">Valkey
+ *     command list</a>
  */
 public enum ValkeyCommand {
 
-	// -- A
-	APPEND("rw", 2, 2), //
-	AUTH("rw", 1, 1), //
-	// -- B
-	BGREWRITEAOF("r", 0, 0, "bgwriteaof"), //
-	BGSAVE("r", 0, 0), //
-	BITCOUNT("r", 1, 3), //
-	BITOP("rw", 3), //
-	BITPOS("r", 2, 4), //
-	BLPOP("rw", 2), //
-	BRPOP("rw", 2), //
-	BRPOPLPUSH("rw", 3), //
-	// -- C
-	CLIENT_KILL("rw", 1, 1), //
-	CLIENT_LIST("r", 0, 0), //
-	CLIENT_GETNAME("r", 0, 0), //
-	CLIENT_PAUSE("rw", 1, 1), //
-	CLIENT_SETNAME("w", 1, 1), //
-	CONFIG_GET("r", 1, 1, "getconfig"), //
-	CONFIG_REWRITE("rw", 0, 0), //
-	CONFIG_SET("w", 2, 2, "setconfig"), //
-	CONFIG_RESETSTAT("w", 0, 0, "resetconfigstats"), //
-	// -- D
-	DBSIZE("r", 0, 0), //
-	DECR("w", 1, 1), //
-	DECRBY("w", 2, 2), //
-	DEL("rw", 1), //
-	DISCARD("rw", 0, 0), //
-	DUMP("r", 1, 1), //
-	// -- E
-	ECHO("r", 1, 1), //
-	EVAL("rw", 2), //
-	EVALSHA("rw", 2), //
-	EXEC("rw", 0, 0), //
-	EXISTS("r", 1, 1), //
-	EXPIRE("rw", 2), //
-	EXPIREAT("rw", 2), //
-	// -- F
-	FLUSHALL("w", 0, 0), //
-	FLUSHDB("w", 0, 0), //
-	// -- G
-	GET("r", 1, 1), //
-	GETBIT("r", 2, 2), //
-	GETRANGE("r", 3, 3), //
-	GETSET("rw", 2, 2), //
-	GEOADD("w", 3), //
-	GEODIST("r", 2), //
-	GEOHASH("r", 2), //
-	GEOPOS("r", 2), //
-	GEORADIUS("r", 4), //
-	GEORADIUSBYMEMBER("r", 3), //
-	// -- H
-	HDEL("rw", 2), //
-	HEXISTS("r", 2, 2), //
-	HGET("r", 2, 2), //
-	HGETALL("r", 1, 1), //
-	HINCRBY("rw", 3, 3), //
-	HINCBYFLOAT("rw", 3, 3), //
-	HKEYS("r", 1), //
-	HLEN("r", 1), //
-	HMGET("r", 2), //
-	HMSET("w", 3), //
-	HSET("w", 3, 3), //
-	HSETNX("w", 3, 3), //
-	HVALS("r", 1, 1), //
-	HEXPIRE("w", 5), //
-	HEXPIREAT("w", 5), //
-	HPEXPIRE("w", 5), //
-	HPEXPIREAT("w", 5), //
-	HPERSIST("w", 4), //
-	HTTL("r", 4), //
-	HPTTL("r", 4), //
-	// -- I
-	INCR("rw", 1), //
-	INCRBYFLOAT("rw", 2, 2), //
-	INFO("r", 0), //
-	// -- K
-	KEYS("r", 1), //
-	// -- L
-	LASTSAVE("r", 0), //
-	LINDEX("r", 2, 2), //
-	LINSERT("rw", 4, 4), //
-	LLEN("r", 1, 1), //
-	LPOP("rw", 1, 1), //
-	LPUSH("rw", 2), //
-	LPUSHX("rw", 2), //
-	LRANGE("r", 3, 3), //
-	LREM("rw", 3, 3), //
-	LSET("w", 3, 3), //
-	LTRIM("w", 3, 3), //
-	// -- M
-	MGET("r", 1), //
-	MIGRATE("rw", 0), //
-	MONITOR("rw", 0, 0), //
-	MOVE("rw", 2, 2), //
-	MSET("w", 2), //
-	MSETNX("w", 2), //
-	MULTI("rw", 0, 0), //
-	// -- P
-	PERSIST("rw", 1, 1), //
-	PEXPIRE("rw", 2), //
-	PEXPIREAT("rw", 2), //
-	PING("r", 0, 0), //
-	PSETEX("w", 3), //
-	PSUBSCRIBE("r", 1), //
-	PTTL("r", 1, 1), //
-	// -- Q
-	QUIT("rw", 0, 0), //
-	// -- R
-	RANDOMKEY("r", 0, 0), //
+    // -- A
+    APPEND("rw", 2, 2), //
+    AUTH("rw", 1, 1), //
+    // -- B
+    BGREWRITEAOF("r", 0, 0, "bgwriteaof"), //
+    BGSAVE("r", 0, 0), //
+    BITCOUNT("r", 1, 3), //
+    BITOP("rw", 3), //
+    BITPOS("r", 2, 4), //
+    BLPOP("rw", 2), //
+    BRPOP("rw", 2), //
+    BRPOPLPUSH("rw", 3), //
+    // -- C
+    CLIENT_KILL("rw", 1, 1), //
+    CLIENT_LIST("r", 0, 0), //
+    CLIENT_GETNAME("r", 0, 0), //
+    CLIENT_PAUSE("rw", 1, 1), //
+    CLIENT_SETNAME("w", 1, 1), //
+    CONFIG_GET("r", 1, 1, "getconfig"), //
+    CONFIG_REWRITE("rw", 0, 0), //
+    CONFIG_SET("w", 2, 2, "setconfig"), //
+    CONFIG_RESETSTAT("w", 0, 0, "resetconfigstats"), //
+    // -- D
+    DBSIZE("r", 0, 0), //
+    DECR("w", 1, 1), //
+    DECRBY("w", 2, 2), //
+    DEL("rw", 1), //
+    DISCARD("rw", 0, 0), //
+    DUMP("r", 1, 1), //
+    // -- E
+    ECHO("r", 1, 1), //
+    EVAL("rw", 2), //
+    EVALSHA("rw", 2), //
+    EXEC("rw", 0, 0), //
+    EXISTS("r", 1, 1), //
+    EXPIRE("rw", 2), //
+    EXPIREAT("rw", 2), //
+    // -- F
+    FLUSHALL("w", 0, 0), //
+    FLUSHDB("w", 0, 0), //
+    // -- G
+    GET("r", 1, 1), //
+    GETBIT("r", 2, 2), //
+    GETRANGE("r", 3, 3), //
+    GETSET("rw", 2, 2), //
+    GEOADD("w", 3), //
+    GEODIST("r", 2), //
+    GEOHASH("r", 2), //
+    GEOPOS("r", 2), //
+    GEORADIUS("r", 4), //
+    GEORADIUSBYMEMBER("r", 3), //
+    // -- H
+    HDEL("rw", 2), //
+    HEXISTS("r", 2, 2), //
+    HGET("r", 2, 2), //
+    HGETALL("r", 1, 1), //
+    HINCRBY("rw", 3, 3), //
+    HINCBYFLOAT("rw", 3, 3), //
+    HKEYS("r", 1), //
+    HLEN("r", 1), //
+    HMGET("r", 2), //
+    HMSET("w", 3), //
+    HSET("w", 3, 3), //
+    HSETNX("w", 3, 3), //
+    HVALS("r", 1, 1), //
+    HEXPIRE("w", 5), //
+    HEXPIREAT("w", 5), //
+    HPEXPIRE("w", 5), //
+    HPEXPIREAT("w", 5), //
+    HPERSIST("w", 4), //
+    HTTL("r", 4), //
+    HPTTL("r", 4), //
+    // -- I
+    INCR("rw", 1), //
+    INCRBYFLOAT("rw", 2, 2), //
+    INFO("r", 0), //
+    // -- K
+    KEYS("r", 1), //
+    // -- L
+    LASTSAVE("r", 0), //
+    LINDEX("r", 2, 2), //
+    LINSERT("rw", 4, 4), //
+    LLEN("r", 1, 1), //
+    LPOP("rw", 1, 1), //
+    LPUSH("rw", 2), //
+    LPUSHX("rw", 2), //
+    LRANGE("r", 3, 3), //
+    LREM("rw", 3, 3), //
+    LSET("w", 3, 3), //
+    LTRIM("w", 3, 3), //
+    // -- M
+    MGET("r", 1), //
+    MIGRATE("rw", 0), //
+    MONITOR("rw", 0, 0), //
+    MOVE("rw", 2, 2), //
+    MSET("w", 2), //
+    MSETNX("w", 2), //
+    MULTI("rw", 0, 0), //
+    // -- P
+    PERSIST("rw", 1, 1), //
+    PEXPIRE("rw", 2), //
+    PEXPIREAT("rw", 2), //
+    PING("r", 0, 0), //
+    PSETEX("w", 3), //
+    PSUBSCRIBE("r", 1), //
+    PTTL("r", 1, 1), //
+    // -- Q
+    QUIT("rw", 0, 0), //
+    // -- R
+    RANDOMKEY("r", 0, 0), //
 
-	RENAME("w", 2, 2), //
-	RENAMENX("w", 2, 2), //
-	REPLICAOF("w", 2), //
-	RESTORE("w", 3, 3), //
-	RPOP("rw", 1, 1), //
-	RPOPLPUSH("rw", 2, 2), //
-	RPUSH("rw", 2), //
-	RPUSHX("rw", 2, 2), //
-	// -- S
-	SADD("rw", 2), //
-	SAVE("rw", 0, 0), //
-	SCARD("r", 1, 1), //
-	SCRIPT_EXISTS("r", 1), //
-	SCRIPT_FLUSH("rw", 0, 0), //
-	SCRIPT_KILL("rw", 0, 0), //
-	SCRIPT_LOAD("rw", 1, 1), //
-	SDIFF("r", 1), //
-	SDIFFSTORE("rw", 2), //
-	SELECT("rw", 1, 1), //
-	SET("w", 2), //
-	SETBIT("rw", 3, 3), //
-	SETEX("w", 3, 3), //
-	SETNX("w", 2, 2), //
-	SETRANGE("rw", 3, 3), //
-	SHUTDOWN("rw", 0), //
-	SINTER("r", 1), //
-	SINTERSTORE("rw", 2), //
-	SISMEMBER("r", 2), //
-	SLAVEOF("w", 2), //
-	SLOWLOG("rw", 1), //
-	SMEMBERS("r", 1, 1), //
-	SMOVE("rw", 3, 3), //
-	SORT("rw", 1), //
-	SPOP("rw", 1, 1), //
-	SRANDMEMBER("r", 1, 1), //
-	SREM("rw", 2), //
-	STRLEN("r", 1, 1), //
-	SUBSCRIBE("rw", 1), //
-	SUNION("r", 1), //
-	SUNIONSTORE("rw ", 2), //
-	SYNC("rw", 0, 0), //
-	// -- T
-	TIME("r", 0, 0), //
-	TTL("r", 1, 1), //
-	TYPE("r", 1, 1), //
-	// -- U
-	UNSUBSCRIBE("rw", 0), //
-	UNWATCH("rw", 0, 0), //
-	// -- W
-	WATCH("rw", 1), //
-	// -- Z
-	ZADD("rw", 3), //
-	ZCARD("r", 1), //
-	ZCOUNT("r", 3, 3), //
-	ZINCRBY("rw", 3), //
-	ZINTERSTORE("rw", 3), //
-	ZRANGE("r", 3), //
-	ZRANGEBYSCORE("r", 3), //
-	ZRANK("r", 2, 2), //
-	ZREM("rw", 2), //
-	ZREMRANGEBYRANK("rw", 3, 3), //
-	ZREMRANGEBYSCORE("rw", 3, 3), //
-	ZREVRANGE("r", 3), //
-	ZREVRANGEBYSCORE("r", 3), //
-	ZREVRANK("r", 2, 2), //
-	ZSCORE("r", 2, 2), //
-	ZUNIONSTORE("rw", 3), //
-	SCAN("r", 1), //
-	SSCAN("r", 2), //
-	HSCAN("r", 2), //
-	ZSCAN("r", 2), //
-	// -- UNKNOWN / DEFAULT
-	UNKNOWN("rw", -1);
+    RENAME("w", 2, 2), //
+    RENAMENX("w", 2, 2), //
+    REPLICAOF("w", 2), //
+    RESTORE("w", 3, 3), //
+    RPOP("rw", 1, 1), //
+    RPOPLPUSH("rw", 2, 2), //
+    RPUSH("rw", 2), //
+    RPUSHX("rw", 2, 2), //
+    // -- S
+    SADD("rw", 2), //
+    SAVE("rw", 0, 0), //
+    SCARD("r", 1, 1), //
+    SCRIPT_EXISTS("r", 1), //
+    SCRIPT_FLUSH("rw", 0, 0), //
+    SCRIPT_KILL("rw", 0, 0), //
+    SCRIPT_LOAD("rw", 1, 1), //
+    SDIFF("r", 1), //
+    SDIFFSTORE("rw", 2), //
+    SELECT("rw", 1, 1), //
+    SET("w", 2), //
+    SETBIT("rw", 3, 3), //
+    SETEX("w", 3, 3), //
+    SETNX("w", 2, 2), //
+    SETRANGE("rw", 3, 3), //
+    SHUTDOWN("rw", 0), //
+    SINTER("r", 1), //
+    SINTERSTORE("rw", 2), //
+    SISMEMBER("r", 2), //
+    SLAVEOF("w", 2), //
+    SLOWLOG("rw", 1), //
+    SMEMBERS("r", 1, 1), //
+    SMOVE("rw", 3, 3), //
+    SORT("rw", 1), //
+    SPOP("rw", 1, 1), //
+    SRANDMEMBER("r", 1, 1), //
+    SREM("rw", 2), //
+    STRLEN("r", 1, 1), //
+    SUBSCRIBE("rw", 1), //
+    SUNION("r", 1), //
+    SUNIONSTORE("rw ", 2), //
+    SYNC("rw", 0, 0), //
+    // -- T
+    TIME("r", 0, 0), //
+    TTL("r", 1, 1), //
+    TYPE("r", 1, 1), //
+    // -- U
+    UNSUBSCRIBE("rw", 0), //
+    UNWATCH("rw", 0, 0), //
+    // -- W
+    WATCH("rw", 1), //
+    // -- Z
+    ZADD("rw", 3), //
+    ZCARD("r", 1), //
+    ZCOUNT("r", 3, 3), //
+    ZINCRBY("rw", 3), //
+    ZINTERSTORE("rw", 3), //
+    ZRANGE("r", 3), //
+    ZRANGEBYSCORE("r", 3), //
+    ZRANK("r", 2, 2), //
+    ZREM("rw", 2), //
+    ZREMRANGEBYRANK("rw", 3, 3), //
+    ZREMRANGEBYSCORE("rw", 3, 3), //
+    ZREVRANGE("r", 3), //
+    ZREVRANGEBYSCORE("r", 3), //
+    ZREVRANK("r", 2, 2), //
+    ZSCORE("r", 2, 2), //
+    ZUNIONSTORE("rw", 3), //
+    SCAN("r", 1), //
+    SSCAN("r", 2), //
+    HSCAN("r", 2), //
+    ZSCAN("r", 2), //
+    // -- UNKNOWN / DEFAULT
+    UNKNOWN("rw", -1);
 
-	private static final Map<String, ValkeyCommand> commandLookup;
+    private static final Map<String, ValkeyCommand> commandLookup;
 
-	static {
-		commandLookup = buildCommandLookupTable();
-	}
+    static {
+        commandLookup = buildCommandLookupTable();
+    }
 
-	private static Map<String, ValkeyCommand> buildCommandLookupTable() {
+    private static Map<String, ValkeyCommand> buildCommandLookupTable() {
 
-		ValkeyCommand[] commands = ValkeyCommand.values();
-		Map<String, ValkeyCommand> map = new HashMap<>(commands.length + 5, 1.0f);
+        ValkeyCommand[] commands = ValkeyCommand.values();
+        Map<String, ValkeyCommand> map = new HashMap<>(commands.length + 5, 1.0f);
 
-		for (ValkeyCommand command : commands) {
+        for (ValkeyCommand command : commands) {
 
-			map.put(command.name().toLowerCase(), command);
+            map.put(command.name().toLowerCase(), command);
 
-			if (!ObjectUtils.isEmpty(command.alias)) {
-				map.put(command.alias, command);
-			}
-		}
+            if (!ObjectUtils.isEmpty(command.alias)) {
+                map.put(command.alias, command);
+            }
+        }
 
-		return Collections.unmodifiableMap(map);
-	}
+        return Collections.unmodifiableMap(map);
+    }
 
-	/**
-	 * Returns the command represented by the given {@code key}, otherwise returns {@link #UNKNOWN} if no matching command
-	 * could be found.
-	 *
-	 * @param key {@link String key} to the {@link ValkeyCommand} to lookup.
-	 * @return a matching {@link ValkeyCommand} for the given {@code key}, otherwise {@link #UNKNOWN}.
-	 */
-	public static ValkeyCommand failsafeCommandLookup(String key) {
-		return StringUtils.hasText(key) ? commandLookup.getOrDefault(key.toLowerCase(), UNKNOWN) : UNKNOWN;
-	}
+    /**
+     * Returns the command represented by the given {@code key}, otherwise returns {@link #UNKNOWN} if
+     * no matching command could be found.
+     *
+     * @param key {@link String key} to the {@link ValkeyCommand} to lookup.
+     * @return a matching {@link ValkeyCommand} for the given {@code key}, otherwise {@link #UNKNOWN}.
+     */
+    public static ValkeyCommand failsafeCommandLookup(String key) {
+        return StringUtils.hasText(key)
+                ? commandLookup.getOrDefault(key.toLowerCase(), UNKNOWN)
+                : UNKNOWN;
+    }
 
-	private final boolean read;
-	private final boolean write;
+    private final boolean read;
+    private final boolean write;
 
-	private final int minArgs;
-	private final int maxArgs;
+    private final int minArgs;
+    private final int maxArgs;
 
-	private final @Nullable String alias;
+    private final @Nullable String alias;
 
-	/**
-	 * Creates a new {@link ValkeyCommand}.
-	 *
-	 * @param mode {@link String} containing the mode ({@literal r} for read, {@literal w} for write or {@literal rw} for
-	 *          read-write) of the Valkey command.
-	 * @param minArgs minimum number of arguments accepted by the Valkey command.
-	 */
-	ValkeyCommand(String mode, int minArgs) {
-		this(mode, minArgs, -1);
-	}
+    /**
+     * Creates a new {@link ValkeyCommand}.
+     *
+     * @param mode {@link String} containing the mode ({@literal r} for read, {@literal w} for write
+     *     or {@literal rw} for read-write) of the Valkey command.
+     * @param minArgs minimum number of arguments accepted by the Valkey command.
+     */
+    ValkeyCommand(String mode, int minArgs) {
+        this(mode, minArgs, -1);
+    }
 
-	/**
-	 * Creates a new {@link ValkeyCommand}.
-	 *
-	 * @param mode {@link String} containing the mode ({@literal r} for read, {@literal w} for write or {@literal rw} for
-	 *          read-write) of the Valkey command.
-	 * @param minArgs minimum number of arguments accepted by the Valkey command.
-	 * @param maxArgs maximum number of arguments accepted by the Valkey command.
-	 */
-	ValkeyCommand(String mode, int minArgs, int maxArgs) {
-		this(mode, minArgs, maxArgs, null);
-	}
+    /**
+     * Creates a new {@link ValkeyCommand}.
+     *
+     * @param mode {@link String} containing the mode ({@literal r} for read, {@literal w} for write
+     *     or {@literal rw} for read-write) of the Valkey command.
+     * @param minArgs minimum number of arguments accepted by the Valkey command.
+     * @param maxArgs maximum number of arguments accepted by the Valkey command.
+     */
+    ValkeyCommand(String mode, int minArgs, int maxArgs) {
+        this(mode, minArgs, maxArgs, null);
+    }
 
-	/**
-	 * Creates a new {@link ValkeyCommand}.
-	 *
-	 * @param mode {@link String} containing the mode ({@literal r} for read, {@literal w} for write or {@literal rw} for
-	 *          read-write) of the Valkey command.
-	 * @param minArgs minimum number of arguments accepted by the Valkey command.
-	 * @param maxArgs maximum number of arguments accepted by the Valkey command.
-	 * @param alias alternate command name used as alias for the Valkey command, can be {@literal null}.
-	 */
-	ValkeyCommand(String mode, int minArgs, int maxArgs, @Nullable String alias) {
+    /**
+     * Creates a new {@link ValkeyCommand}.
+     *
+     * @param mode {@link String} containing the mode ({@literal r} for read, {@literal w} for write
+     *     or {@literal rw} for read-write) of the Valkey command.
+     * @param minArgs minimum number of arguments accepted by the Valkey command.
+     * @param maxArgs maximum number of arguments accepted by the Valkey command.
+     * @param alias alternate command name used as alias for the Valkey command, can be {@literal
+     *     null}.
+     */
+    ValkeyCommand(String mode, int minArgs, int maxArgs, @Nullable String alias) {
 
-		if (StringUtils.hasText(mode)) {
-			this.read = mode.toLowerCase().contains("r");
-			this.write = mode.toLowerCase().contains("w");
-		} else {
-			this.read = true;
-			this.write = true;
-		}
+        if (StringUtils.hasText(mode)) {
+            this.read = mode.toLowerCase().contains("r");
+            this.write = mode.toLowerCase().contains("w");
+        } else {
+            this.read = true;
+            this.write = true;
+        }
 
-		this.minArgs = minArgs;
-		this.maxArgs = maxArgs;
-		this.alias = alias;
-	}
+        this.minArgs = minArgs;
+        this.maxArgs = maxArgs;
+        this.alias = alias;
+    }
 
-	/**
-	 * @return {@literal true} if the command requires arguments
-	 */
-	public boolean requiresArguments() {
-		return minArgs > 0;
-	}
+    /**
+     * @return {@literal true} if the command requires arguments
+     */
+    public boolean requiresArguments() {
+        return minArgs > 0;
+    }
 
-	/**
-	 * @return {@literal true} if an exact number of arguments is expected.
-	 */
-	public boolean requiresExactNumberOfArguments() {
-		return maxArgs == 0 || minArgs == maxArgs;
-	}
+    /**
+     * @return {@literal true} if an exact number of arguments is expected.
+     */
+    public boolean requiresExactNumberOfArguments() {
+        return maxArgs == 0 || minArgs == maxArgs;
+    }
 
-	/**
-	 * Returns a {@link Set} of all {@link String aliases} for this {@link ValkeyCommand}.
-	 *
-	 * @return a {@link Set} of all {@link String aliases} for this {@link ValkeyCommand}.
-	 */
-	Set<String> getAliases() {
-		return ObjectUtils.isEmpty(this.alias) ? Collections.emptySet() : Collections.singleton(this.alias);
-	}
+    /**
+     * Returns a {@link Set} of all {@link String aliases} for this {@link ValkeyCommand}.
+     *
+     * @return a {@link Set} of all {@link String aliases} for this {@link ValkeyCommand}.
+     */
+    Set<String> getAliases() {
+        return ObjectUtils.isEmpty(this.alias)
+                ? Collections.emptySet()
+                : Collections.singleton(this.alias);
+    }
 
-	/**
-	 * @return {@literal true} if the command triggers a read operation
-	 */
-	public boolean isRead() {
-		return read;
-	}
+    /**
+     * @return {@literal true} if the command triggers a read operation
+     */
+    public boolean isRead() {
+        return read;
+    }
 
-	/**
-	 * @return {@literal true} if the command triggers a write operation
-	 */
-	public boolean isWrite() {
-		return write;
-	}
+    /**
+     * @return {@literal true} if the command triggers a write operation
+     */
+    public boolean isWrite() {
+        return write;
+    }
 
-	/**
-	 * @return {@literal true} if values are read but not written
-	 */
-	public boolean isReadonly() {
-		return isRead() && !isWrite();
-	}
+    /**
+     * @return {@literal true} if values are read but not written
+     */
+    public boolean isReadonly() {
+        return isRead() && !isWrite();
+    }
 
-	/**
-	 * {@link String#equalsIgnoreCase(String) Compares} the given {@link String} representing the {@literal Valkey command}
-	 * to the {@link #toString()} representation of {@link ValkeyCommand} as well as any {@link #alias}.
-	 *
-	 * @param command {@link String} representation of the {@literal Valkey command} to match.
-	 * @return {@literal true} if a positive match.
-	 */
-	public boolean isRepresentedBy(String command) {
+    /**
+     * {@link String#equalsIgnoreCase(String) Compares} the given {@link String} representing the
+     * {@literal Valkey command} to the {@link #toString()} representation of {@link ValkeyCommand} as
+     * well as any {@link #alias}.
+     *
+     * @param command {@link String} representation of the {@literal Valkey command} to match.
+     * @return {@literal true} if a positive match.
+     */
+    public boolean isRepresentedBy(String command) {
 
-		return StringUtils.hasText(command)
-				&& (toString().equalsIgnoreCase(command) || command.toLowerCase().equals(this.alias));
-	}
+        return StringUtils.hasText(command)
+                && (toString().equalsIgnoreCase(command) || command.toLowerCase().equals(this.alias));
+    }
 
-	/**
-	 * Validates given {@link Integer argument count} against expected ones.
-	 *
-	 * @param argumentCount {@link Integer number of arguments} passed to the Valkey command.
-	 * @exception IllegalArgumentException if the given {@link Integer argument count} does not match expected.
-	 */
-	public void validateArgumentCount(int argumentCount) {
+    /**
+     * Validates given {@link Integer argument count} against expected ones.
+     *
+     * @param argumentCount {@link Integer number of arguments} passed to the Valkey command.
+     * @exception IllegalArgumentException if the given {@link Integer argument count} does not match
+     *     expected.
+     */
+    public void validateArgumentCount(int argumentCount) {
 
-		if (requiresArguments()) {
-			if (requiresExactNumberOfArguments()) {
-				if (argumentCount != this.maxArgs) {
-					throw new IllegalArgumentException(
-							"%s command requires %d %s".formatted(name(), this.maxArgs, arguments(this.maxArgs)));
-				}
-			}
-			if (argumentCount < this.minArgs) {
-				throw new IllegalArgumentException(
-						"%s command requires at least %d %s".formatted(name(), this.minArgs, arguments(this.maxArgs)));
-			}
-			if (this.maxArgs > 0 && argumentCount > this.maxArgs) {
-				throw new IllegalArgumentException(
-						"%s command requires at most %s %s".formatted(name(), this.maxArgs, arguments(this.maxArgs)));
-			}
-		}
-	}
+        if (requiresArguments()) {
+            if (requiresExactNumberOfArguments()) {
+                if (argumentCount != this.maxArgs) {
+                    throw new IllegalArgumentException(
+                            "%s command requires %d %s".formatted(name(), this.maxArgs, arguments(this.maxArgs)));
+                }
+            }
+            if (argumentCount < this.minArgs) {
+                throw new IllegalArgumentException(
+                        "%s command requires at least %d %s"
+                                .formatted(name(), this.minArgs, arguments(this.maxArgs)));
+            }
+            if (this.maxArgs > 0 && argumentCount > this.maxArgs) {
+                throw new IllegalArgumentException(
+                        "%s command requires at most %s %s"
+                                .formatted(name(), this.maxArgs, arguments(this.maxArgs)));
+            }
+        }
+    }
 
-	private String arguments(int count) {
-		return count == 1 ? "argument" : "arguments";
-	}
+    private String arguments(int count) {
+        return count == 1 ? "argument" : "arguments";
+    }
 }

@@ -25,22 +25,22 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
  */
 public class ValkeyListenerExecutionFailedException extends InvalidDataAccessApiUsageException {
 
-	/**
-	 * Constructs a new <code>ValkeyListenerExecutionFailedException</code> instance.
-	 *
-	 * @param msg
-	 * @param cause
-	 */
-	public ValkeyListenerExecutionFailedException(String msg, Throwable cause) {
-		super(msg, cause);
-	}
+    /**
+     * Constructs a new <code>ValkeyListenerExecutionFailedException</code> instance.
+     *
+     * @param msg
+     * @param cause
+     */
+    public ValkeyListenerExecutionFailedException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 
-	/**
-	 * Constructs a new <code>ValkeyListenerExecutionFailedException</code> instance.
-	 *
-	 * @param msg
-	 */
-	public ValkeyListenerExecutionFailedException(String msg) {
-		super(msg);
-	}
+    /**
+     * Constructs a new <code>ValkeyListenerExecutionFailedException</code> instance.
+     *
+     * @param msg
+     */
+    public ValkeyListenerExecutionFailedException(String msg) {
+        super(msg);
+    }
 }

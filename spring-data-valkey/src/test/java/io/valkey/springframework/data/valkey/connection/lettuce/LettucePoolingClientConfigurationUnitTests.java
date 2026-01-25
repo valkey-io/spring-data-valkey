@@ -22,13 +22,10 @@ import io.lettuce.core.ReadFrom;
 import io.lettuce.core.SslVerifyMode;
 import io.lettuce.core.TimeoutOptions;
 import io.lettuce.core.resource.ClientResources;
-
+import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
 import java.time.Duration;
-
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.junit.jupiter.api.Test;
-
-import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
 
 /**
  * Unit tests for {@link LettucePoolingClientConfiguration}.
@@ -40,83 +37,90 @@ import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientRes
  */
 class LettucePoolingClientConfigurationUnitTests {
 
-	@Test // DATAREDIS-667, DATAREDIS-918, GH-2945
-	void shouldCreateEmptyConfiguration() {
+    @Test // DATAREDIS-667, DATAREDIS-918, GH-2945
+    void shouldCreateEmptyConfiguration() {
 
-		LettucePoolingClientConfiguration configuration = LettucePoolingClientConfiguration.defaultConfiguration();
+        LettucePoolingClientConfiguration configuration =
+                LettucePoolingClientConfiguration.defaultConfiguration();
 
-		assertThat(configuration.getPoolConfig()).isNotNull();
-		assertThat(configuration.isUseSsl()).isFalse();
-		assertThat(configuration.isVerifyPeer()).isTrue();
-		assertThat(configuration.getVerifyMode().equals(SslVerifyMode.FULL));
-		assertThat(configuration.isStartTls()).isFalse();
-		assertThat(configuration.getClientOptions()).hasValueSatisfying(actual -> {
+        assertThat(configuration.getPoolConfig()).isNotNull();
+        assertThat(configuration.isUseSsl()).isFalse();
+        assertThat(configuration.isVerifyPeer()).isTrue();
+        assertThat(configuration.getVerifyMode().equals(SslVerifyMode.FULL));
+        assertThat(configuration.isStartTls()).isFalse();
+        assertThat(configuration.getClientOptions())
+                .hasValueSatisfying(
+                        actual -> {
+                            TimeoutOptions timeoutOptions = actual.getTimeoutOptions();
+                            assertThat(timeoutOptions.isTimeoutCommands()).isTrue();
+                        });
+        assertThat(configuration.getClientResources()).isEmpty();
+        assertThat(configuration.getCommandTimeout()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(configuration.getShutdownTimeout()).isEqualTo(Duration.ofMillis(100));
+        assertThat(configuration.getShutdownQuietPeriod()).isEqualTo(Duration.ZERO);
+    }
 
-			TimeoutOptions timeoutOptions = actual.getTimeoutOptions();
-			assertThat(timeoutOptions.isTimeoutCommands()).isTrue();
-		});
-		assertThat(configuration.getClientResources()).isEmpty();
-		assertThat(configuration.getCommandTimeout()).isEqualTo(Duration.ofSeconds(60));
-		assertThat(configuration.getShutdownTimeout()).isEqualTo(Duration.ofMillis(100));
-		assertThat(configuration.getShutdownQuietPeriod()).isEqualTo(Duration.ZERO);
-	}
+    @Test // DATAREDIS-667
+    void shouldConfigureAllProperties() {
 
-	@Test // DATAREDIS-667
-	void shouldConfigureAllProperties() {
+        ClientOptions clientOptions = ClientOptions.create();
+        ClientResources sharedClientResources = LettuceTestClientResources.getSharedClientResources();
+        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
 
-		ClientOptions clientOptions = ClientOptions.create();
-		ClientResources sharedClientResources = LettuceTestClientResources.getSharedClientResources();
-		GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+        LettucePoolingClientConfiguration configuration =
+                LettucePoolingClientConfiguration.builder() //
+                        .useSsl() //
+                        .disablePeerVerification() //
+                        .startTls()
+                        .and() //
+                        .poolConfig(poolConfig) //
+                        .clientOptions(clientOptions) //
+                        .clientResources(sharedClientResources) //
+                        .commandTimeout(Duration.ofMinutes(5)) //
+                        .shutdownTimeout(Duration.ofHours(2)) //
+                        .shutdownQuietPeriod(Duration.ofMinutes(5)) //
+                        .build();
 
-		LettucePoolingClientConfiguration configuration = LettucePoolingClientConfiguration.builder() //
-				.useSsl() //
-				.disablePeerVerification() //
-				.startTls().and() //
-				.poolConfig(poolConfig) //
-				.clientOptions(clientOptions) //
-				.clientResources(sharedClientResources) //
-				.commandTimeout(Duration.ofMinutes(5)) //
-				.shutdownTimeout(Duration.ofHours(2)) //
-				.shutdownQuietPeriod(Duration.ofMinutes(5)) //
-				.build();
+        assertThat(configuration.getPoolConfig()).isEqualTo(poolConfig);
+        assertThat(configuration.isUseSsl()).isTrue();
+        assertThat(configuration.isVerifyPeer()).isFalse();
+        assertThat(configuration.getVerifyMode().equals(SslVerifyMode.NONE));
+        assertThat(configuration.isStartTls()).isTrue();
+        assertThat(configuration.getClientOptions()).contains(clientOptions);
+        assertThat(configuration.getClientResources()).contains(sharedClientResources);
+        assertThat(configuration.getCommandTimeout()).isEqualTo(Duration.ofMinutes(5));
+        assertThat(configuration.getShutdownTimeout()).isEqualTo(Duration.ofHours(2));
+        assertThat(configuration.getShutdownQuietPeriod()).isEqualTo(Duration.ofMinutes(5));
+    }
 
-		assertThat(configuration.getPoolConfig()).isEqualTo(poolConfig);
-		assertThat(configuration.isUseSsl()).isTrue();
-		assertThat(configuration.isVerifyPeer()).isFalse();
-		assertThat(configuration.getVerifyMode().equals(SslVerifyMode.NONE));
-		assertThat(configuration.isStartTls()).isTrue();
-		assertThat(configuration.getClientOptions()).contains(clientOptions);
-		assertThat(configuration.getClientResources()).contains(sharedClientResources);
-		assertThat(configuration.getCommandTimeout()).isEqualTo(Duration.ofMinutes(5));
-		assertThat(configuration.getShutdownTimeout()).isEqualTo(Duration.ofHours(2));
-		assertThat(configuration.getShutdownQuietPeriod()).isEqualTo(Duration.ofMinutes(5));
-	}
+    @Test // DATAREDIS-956
+    void shouldConfigureReadFrom() {
 
-	@Test // DATAREDIS-956
-	void shouldConfigureReadFrom() {
+        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
 
-		GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+        LettucePoolingClientConfiguration configuration =
+                LettucePoolingClientConfiguration.builder() //
+                        .poolConfig(poolConfig) //
+                        .readFrom(ReadFrom.MASTER_PREFERRED) //
+                        .build();
 
-		LettucePoolingClientConfiguration configuration = LettucePoolingClientConfiguration.builder() //
-				.poolConfig(poolConfig) //
-				.readFrom(ReadFrom.MASTER_PREFERRED) //
-				.build();
+        assertThat(configuration.getPoolConfig()).isEqualTo(poolConfig);
+        assertThat(configuration.getReadFrom().orElse(ReadFrom.MASTER))
+                .isEqualTo(ReadFrom.MASTER_PREFERRED);
+    }
 
-		assertThat(configuration.getPoolConfig()).isEqualTo(poolConfig);
-		assertThat(configuration.getReadFrom().orElse(ReadFrom.MASTER)).isEqualTo(ReadFrom.MASTER_PREFERRED);
-	}
+    @Test // DATAREDIS-956
+    void shouldConfigureClientName() {
 
-	@Test // DATAREDIS-956
-	void shouldConfigureClientName() {
+        GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
 
-		GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+        LettucePoolingClientConfiguration configuration =
+                LettucePoolingClientConfiguration.builder() //
+                        .poolConfig(poolConfig) //
+                        .clientName("clientName") //
+                        .build();
 
-		LettucePoolingClientConfiguration configuration = LettucePoolingClientConfiguration.builder() //
-				.poolConfig(poolConfig) //
-				.clientName("clientName") //
-				.build();
-
-		assertThat(configuration.getPoolConfig()).isEqualTo(poolConfig);
-		assertThat(configuration.getClientName()).contains("clientName");
-	}
+        assertThat(configuration.getPoolConfig()).isEqualTo(poolConfig);
+        assertThat(configuration.getClientName()).contains("clientName");
+    }
 }

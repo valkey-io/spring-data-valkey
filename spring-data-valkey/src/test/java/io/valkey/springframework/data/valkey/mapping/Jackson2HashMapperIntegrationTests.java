@@ -17,15 +17,6 @@ package io.valkey.springframework.data.valkey.mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-
-import org.junit.jupiter.api.BeforeEach;
-
-import org.springframework.beans.factory.InitializingBean;
 import io.valkey.springframework.data.valkey.Address;
 import io.valkey.springframework.data.valkey.Person;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -37,6 +28,13 @@ import io.valkey.springframework.data.valkey.hash.Jackson2HashMapper;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.beans.factory.InitializingBean;
 
 /**
  * Integration tests for {@link Jackson2HashMapper}.
@@ -48,126 +46,127 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("params")
 public class Jackson2HashMapperIntegrationTests {
 
-	ValkeyTemplate<String, Object> template;
-	ValkeyConnectionFactory factory;
-	Jackson2HashMapper mapper;
+    ValkeyTemplate<String, Object> template;
+    ValkeyConnectionFactory factory;
+    Jackson2HashMapper mapper;
 
-	public Jackson2HashMapperIntegrationTests(ValkeyConnectionFactory factory) throws Exception {
+    public Jackson2HashMapperIntegrationTests(ValkeyConnectionFactory factory) throws Exception {
 
-		this.factory = factory;
-		if (factory instanceof InitializingBean initializingBean) {
-			initializingBean.afterPropertiesSet();
-		}
-	}
+        this.factory = factory;
+        if (factory instanceof InitializingBean initializingBean) {
+            initializingBean.afterPropertiesSet();
+        }
+    }
 
-	public static Collection<ValkeyConnectionFactory> params() {
+    public static Collection<ValkeyConnectionFactory> params() {
 
-		return Arrays.asList(JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class),
-				LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class),
-				ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class));
-	}
+        return Arrays.asList(
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class),
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class),
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class));
+    }
 
-	@BeforeEach
-	public void setUp() {
+    @BeforeEach
+    public void setUp() {
 
-		this.template = new ValkeyTemplate<>();
-		this.template.setConnectionFactory(factory);
-		template.afterPropertiesSet();
+        this.template = new ValkeyTemplate<>();
+        this.template.setConnectionFactory(factory);
+        template.afterPropertiesSet();
 
-		this.mapper = new Jackson2HashMapper(true);
-	}
+        this.mapper = new Jackson2HashMapper(true);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-423
-	public void shouldWriteReadHashCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-423
+    public void shouldWriteReadHashCorrectly() {
 
-		Person jon = new Person("jon", "snow", 19);
-		Address adr = new Address();
-		adr.setStreet("the wall");
-		adr.setNumber(100);
-		jon.setAddress(adr);
+        Person jon = new Person("jon", "snow", 19);
+        Address adr = new Address();
+        adr.setStreet("the wall");
+        adr.setNumber(100);
+        jon.setAddress(adr);
 
-		template.opsForHash().putAll("JON-SNOW", mapper.toHash(jon));
+        template.opsForHash().putAll("JON-SNOW", mapper.toHash(jon));
 
-		Person result = (Person) mapper.fromHash(template.<String, Object> opsForHash().entries("JON-SNOW"));
-		assertThat(result).isEqualTo(jon);
-	}
+        Person result =
+                (Person) mapper.fromHash(template.<String, Object>opsForHash().entries("JON-SNOW"));
+        assertThat(result).isEqualTo(jon);
+    }
 
-	@ParameterizedValkeyTest // GH-2565
-	public void shouldPreserveListPropertyOrderOnHashedSource() {
+    @ParameterizedValkeyTest // GH-2565
+    public void shouldPreserveListPropertyOrderOnHashedSource() {
 
-		User jonDoe = User.as("Jon Doe")
-			.withPhoneNumber(9, 7, 1, 5, 5, 5, 4, 1, 8, 2);
+        User jonDoe = User.as("Jon Doe").withPhoneNumber(9, 7, 1, 5, 5, 5, 4, 1, 8, 2);
 
-		template.opsForHash().putAll("JON-DOE", mapper.toHash(jonDoe));
+        template.opsForHash().putAll("JON-DOE", mapper.toHash(jonDoe));
 
-		User deserializedJonDoe =
-			(User) mapper.fromHash(template.<String, Object>opsForHash().entries("JON-DOE"));
+        User deserializedJonDoe =
+                (User) mapper.fromHash(template.<String, Object>opsForHash().entries("JON-DOE"));
 
-		assertThat(deserializedJonDoe).isNotNull();
-		assertThat(deserializedJonDoe).isNotSameAs(jonDoe);
-		assertThat(deserializedJonDoe.getName()).isEqualTo("Jon Doe");
-		assertThat(deserializedJonDoe.getPhoneNumber()).containsExactly(9, 7, 1, 5, 5, 5, 4, 1, 8, 2);
-	}
+        assertThat(deserializedJonDoe).isNotNull();
+        assertThat(deserializedJonDoe).isNotSameAs(jonDoe);
+        assertThat(deserializedJonDoe.getName()).isEqualTo("Jon Doe");
+        assertThat(deserializedJonDoe.getPhoneNumber()).containsExactly(9, 7, 1, 5, 5, 5, 4, 1, 8, 2);
+    }
 
-	static class User {
+    static class User {
 
-		static User as(String name) {
-			return new User(name);
-		}
+        static User as(String name) {
+            return new User(name);
+        }
 
-		private String name;
-		private List<Integer> phoneNumber;
+        private String name;
+        private List<Integer> phoneNumber;
 
-		User() { }
+        User() {}
 
-		User(String name) {
-			this.name = name;
-		}
+        User(String name) {
+            this.name = name;
+        }
 
-		User withPhoneNumber(Integer... numbers) {
-			this.phoneNumber = new ArrayList<>(Arrays.asList(numbers));
-			return this;
-		}
+        User withPhoneNumber(Integer... numbers) {
+            this.phoneNumber = new ArrayList<>(Arrays.asList(numbers));
+            return this;
+        }
 
-		public String getName() {
-			return this.name;
-		}
+        public String getName() {
+            return this.name;
+        }
 
-		public void setName(String name) {
-			this.name = name;
-		}
+        public void setName(String name) {
+            this.name = name;
+        }
 
-		public List<Integer> getPhoneNumber() {
-			return this.phoneNumber;
-		}
+        public List<Integer> getPhoneNumber() {
+            return this.phoneNumber;
+        }
 
-		public void setPhoneNumber(List<Integer> phoneNumber) {
-			this.phoneNumber = phoneNumber;
-		}
+        public void setPhoneNumber(List<Integer> phoneNumber) {
+            this.phoneNumber = phoneNumber;
+        }
 
-		@Override
-		public boolean equals(Object obj) {
+        @Override
+        public boolean equals(Object obj) {
 
-			if (this == obj) {
-				return true;
-			}
+            if (this == obj) {
+                return true;
+            }
 
-			if (!(obj instanceof User that)) {
-				return false;
-			}
+            if (!(obj instanceof User that)) {
+                return false;
+            }
 
-			return Objects.equals(this.getName(), that.getName())
-				&& Objects.equals(this.getPhoneNumber(), that.getPhoneNumber());
-		}
+            return Objects.equals(this.getName(), that.getName())
+                    && Objects.equals(this.getPhoneNumber(), that.getPhoneNumber());
+        }
 
-		@Override
-		public int hashCode() {
-			return Objects.hash(getName(), getPhoneNumber());
-		}
+        @Override
+        public int hashCode() {
+            return Objects.hash(getName(), getPhoneNumber());
+        }
 
-		@Override
-		public String toString() {
-			return getName();
-		}
-	}
+        @Override
+        public String toString() {
+            return getName();
+        }
+    }
 }

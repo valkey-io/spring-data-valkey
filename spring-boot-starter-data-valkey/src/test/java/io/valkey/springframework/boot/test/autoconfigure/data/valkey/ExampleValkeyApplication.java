@@ -19,12 +19,10 @@ package io.valkey.springframework.boot.test.autoconfigure.data.valkey;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Example {@link SpringBootApplication @SpringBootApplication} used with
- * {@link DataValkeyTest @DataValkeyTest} tests.
+ * Example {@link SpringBootApplication @SpringBootApplication} used with {@link
+ * DataValkeyTest @DataValkeyTest} tests.
  *
  * @author Jayaram Pradhan
  */
 @SpringBootApplication
-public class ExampleValkeyApplication {
-
-}
+public class ExampleValkeyApplication {}

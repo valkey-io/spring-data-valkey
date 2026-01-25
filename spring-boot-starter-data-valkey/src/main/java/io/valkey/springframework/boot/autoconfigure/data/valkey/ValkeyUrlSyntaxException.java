@@ -23,24 +23,23 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
  */
 class ValkeyUrlSyntaxException extends RuntimeException {
 
-	private final String url;
+    private final String url;
 
-	ValkeyUrlSyntaxException(String url, Exception cause) {
-		super(buildMessage(url), cause);
-		this.url = url;
-	}
+    ValkeyUrlSyntaxException(String url, Exception cause) {
+        super(buildMessage(url), cause);
+        this.url = url;
+    }
 
-	ValkeyUrlSyntaxException(String url) {
-		super(buildMessage(url));
-		this.url = url;
-	}
+    ValkeyUrlSyntaxException(String url) {
+        super(buildMessage(url));
+        this.url = url;
+    }
 
-	String getUrl() {
-		return this.url;
-	}
+    String getUrl() {
+        return this.url;
+    }
 
-	private static String buildMessage(String url) {
-		return "Invalid Valkey URL '" + url + "'";
-	}
-
+    private static String buildMessage(String url) {
+        return "Invalid Valkey URL '" + url + "'";
+    }
 }

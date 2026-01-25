@@ -16,6 +16,8 @@
 
 package io.valkey.springframework.boot.testcontainers.service.connection.valkey;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
@@ -31,8 +33,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 /**
  * Tests for {@link ValkeyContainerConnectionDetailsFactory}.
  *
@@ -42,30 +42,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Testcontainers(disabledWithoutDocker = true)
 class ValkeyContainerConnectionDetailsFactoryTests {
 
-	@Container
-	@ServiceConnection
-	@SuppressWarnings("resource")
-	static final GenericContainer<?> valkey = new GenericContainer<>(DockerImageName.parse("valkey/valkey:8.1.1"))
-			.withExposedPorts(6379);
+    @Container
+    @ServiceConnection
+    @SuppressWarnings("resource")
+    static final GenericContainer<?> valkey =
+            new GenericContainer<>(DockerImageName.parse("valkey/valkey:8.1.1")).withExposedPorts(6379);
 
-	@Autowired(required = false)
-	private ValkeyConnectionDetails connectionDetails;
+    @Autowired(required = false)
+    private ValkeyConnectionDetails connectionDetails;
 
-	@Autowired
-	private ValkeyConnectionFactory connectionFactory;
+    @Autowired private ValkeyConnectionFactory connectionFactory;
 
-	@Test
-	void connectionCanBeMadeToValkeyContainer() {
-		assertThat(this.connectionDetails).isNotNull();
-		try (ValkeyConnection connection = this.connectionFactory.getConnection()) {
-			assertThat(connection.commands().echo("Hello, World".getBytes())).isEqualTo("Hello, World".getBytes());
-		}
-	}
+    @Test
+    void connectionCanBeMadeToValkeyContainer() {
+        assertThat(this.connectionDetails).isNotNull();
+        try (ValkeyConnection connection = this.connectionFactory.getConnection()) {
+            assertThat(connection.commands().echo("Hello, World".getBytes()))
+                    .isEqualTo("Hello, World".getBytes());
+        }
+    }
 
-	@Configuration(proxyBeanMethods = false)
-	@ImportAutoConfiguration(ValkeyAutoConfiguration.class)
-	static class TestConfiguration {
-
-	}
-
+    @Configuration(proxyBeanMethods = false)
+    @ImportAutoConfiguration(ValkeyAutoConfiguration.class)
+    static class TestConfiguration {}
 }

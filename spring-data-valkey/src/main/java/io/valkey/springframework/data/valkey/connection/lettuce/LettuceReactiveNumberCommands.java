@@ -15,15 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import org.reactivestreams.Publisher;
 import io.valkey.springframework.data.valkey.connection.ReactiveNumberCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
+import org.reactivestreams.Publisher;
 import org.springframework.util.Assert;
 import org.springframework.util.NumberUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Christoph Strobl
@@ -32,107 +31,135 @@ import org.springframework.util.NumberUtils;
  */
 class LettuceReactiveNumberCommands implements ReactiveNumberCommands {
 
-	private final LettuceReactiveValkeyConnection connection;
+    private final LettuceReactiveValkeyConnection connection;
 
-	/**
-	 * Create new {@link LettuceReactiveNumberCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveNumberCommands(LettuceReactiveValkeyConnection connection) {
+    /**
+     * Create new {@link LettuceReactiveNumberCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveNumberCommands(LettuceReactiveValkeyConnection connection) {
 
-		Assert.notNull(connection, "Connection must not be null");
+        Assert.notNull(connection, "Connection must not be null");
 
-		this.connection = connection;
-	}
+        this.connection = connection;
+    }
 
-	@Override
-	public Flux<NumericResponse<KeyCommand, Long>> incr(Publisher<KeyCommand> commands) {
+    @Override
+    public Flux<NumericResponse<KeyCommand, Long>> incr(Publisher<KeyCommand> commands) {
 
-		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+        return connection.execute(
+                cmd ->
+                        Flux.from(commands)
+                                .concatMap(
+                                        command -> {
+                                            Assert.notNull(command.getKey(), "Key must not be null");
 
-			Assert.notNull(command.getKey(), "Key must not be null");
+                                            return cmd.incr(command.getKey())
+                                                    .map(value -> new NumericResponse<>(command, value));
+                                        }));
+    }
 
-			return cmd.incr(command.getKey()).map(value -> new NumericResponse<>(command, value));
-		}));
-	}
+    @Override
+    public <T extends Number> Flux<NumericResponse<IncrByCommand<T>, T>> incrBy(
+            Publisher<IncrByCommand<T>> commands) {
 
-	@Override
-	public <T extends Number> Flux<NumericResponse<IncrByCommand<T>, T>> incrBy(Publisher<IncrByCommand<T>> commands) {
+        return connection.execute(
+                cmd ->
+                        Flux.from(commands)
+                                .concatMap(
+                                        command -> {
+                                            Assert.notNull(command.getKey(), "Key must not be null");
+                                            Assert.notNull(command.getValue(), "Value for INCRBY must not be null");
 
-		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+                                            T incrBy = command.getValue();
 
-			Assert.notNull(command.getKey(), "Key must not be null");
-			Assert.notNull(command.getValue(), "Value for INCRBY must not be null");
+                                            Mono<? extends Number> result;
+                                            if (incrBy instanceof Double || incrBy instanceof Float) {
+                                                result = cmd.incrbyfloat(command.getKey(), incrBy.doubleValue());
+                                            } else {
+                                                result = cmd.incrby(command.getKey(), incrBy.longValue());
+                                            }
 
-			T incrBy = command.getValue();
+                                            return result
+                                                    .map(
+                                                            val -> NumberUtils.convertNumberToTargetClass(val, incrBy.getClass()))
+                                                    .map(res -> new NumericResponse<>(command, (T) res));
+                                        }));
+    }
 
-			Mono<? extends Number> result;
-			if (incrBy instanceof Double || incrBy instanceof Float) {
-				result = cmd.incrbyfloat(command.getKey(), incrBy.doubleValue());
-			} else {
-				result = cmd.incrby(command.getKey(), incrBy.longValue());
-			}
+    @Override
+    public Flux<NumericResponse<KeyCommand, Long>> decr(Publisher<KeyCommand> commands) {
 
-			return result.map(val -> NumberUtils.convertNumberToTargetClass(val, incrBy.getClass()))
-					.map(res -> new NumericResponse<>(command, (T) res));
-		}));
-	}
+        return connection.execute(
+                cmd ->
+                        Flux.from(commands)
+                                .concatMap(
+                                        command -> {
+                                            Assert.notNull(command.getKey(), "Key must not be null");
 
-	@Override
-	public Flux<NumericResponse<KeyCommand, Long>> decr(Publisher<KeyCommand> commands) {
+                                            return cmd.decr(command.getKey())
+                                                    .map(value -> new NumericResponse<>(command, value));
+                                        }));
+    }
 
-		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+    @Override
+    public <T extends Number> Flux<NumericResponse<DecrByCommand<T>, T>> decrBy(
+            Publisher<DecrByCommand<T>> commands) {
 
-			Assert.notNull(command.getKey(), "Key must not be null");
+        return connection.execute(
+                cmd ->
+                        Flux.from(commands)
+                                .concatMap(
+                                        command -> {
+                                            Assert.notNull(command.getKey(), "Key must not be null");
+                                            Assert.notNull(command.getValue(), "Value for DECRBY must not be null");
 
-			return cmd.decr(command.getKey()).map(value -> new NumericResponse<>(command, value));
-		}));
-	}
+                                            T decrBy = command.getValue();
 
-	@Override
-	public <T extends Number> Flux<NumericResponse<DecrByCommand<T>, T>> decrBy(Publisher<DecrByCommand<T>> commands) {
+                                            Mono<? extends Number> result = null;
+                                            if (decrBy instanceof Double || decrBy instanceof Float) {
+                                                result = cmd.incrbyfloat(command.getKey(), decrBy.doubleValue() * (-1.0D));
+                                            } else {
+                                                result = cmd.decrby(command.getKey(), decrBy.longValue());
+                                            }
 
-		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+                                            return result
+                                                    .map(
+                                                            val -> NumberUtils.convertNumberToTargetClass(val, decrBy.getClass()))
+                                                    .map(res -> new NumericResponse<>(command, (T) res));
+                                        }));
+    }
 
-			Assert.notNull(command.getKey(), "Key must not be null");
-			Assert.notNull(command.getValue(), "Value for DECRBY must not be null");
+    @Override
+    public <T extends Number> Flux<NumericResponse<HIncrByCommand<T>, T>> hIncrBy(
+            Publisher<HIncrByCommand<T>> commands) {
 
-			T decrBy = command.getValue();
+        return connection.execute(
+                cmd ->
+                        Flux.from(commands)
+                                .concatMap(
+                                        command -> {
+                                            Assert.notNull(command.getKey(), "Key must not be null");
+                                            Assert.notNull(command.getValue(), "Value must not be null");
 
-			Mono<? extends Number> result = null;
-			if (decrBy instanceof Double || decrBy instanceof Float) {
-				result = cmd.incrbyfloat(command.getKey(), decrBy.doubleValue() * (-1.0D));
-			} else {
-				result = cmd.decrby(command.getKey(), decrBy.longValue());
-			}
+                                            T incrBy = command.getValue();
 
-			return result.map(val -> NumberUtils.convertNumberToTargetClass(val, decrBy.getClass()))
-					.map(res -> new NumericResponse<>(command, (T) res));
-		}));
-	}
+                                            Mono<? extends Number> result = null;
 
-	@Override
-	public <T extends Number> Flux<NumericResponse<HIncrByCommand<T>, T>> hIncrBy(Publisher<HIncrByCommand<T>> commands) {
+                                            if (incrBy instanceof Double || incrBy instanceof Float) {
+                                                result =
+                                                        cmd.hincrbyfloat(
+                                                                command.getKey(), command.getField(), incrBy.doubleValue());
+                                            } else {
+                                                result =
+                                                        cmd.hincrby(command.getKey(), command.getField(), incrBy.longValue());
+                                            }
 
-		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
-
-			Assert.notNull(command.getKey(), "Key must not be null");
-			Assert.notNull(command.getValue(), "Value must not be null");
-
-			T incrBy = command.getValue();
-
-			Mono<? extends Number> result = null;
-
-			if (incrBy instanceof Double || incrBy instanceof Float) {
-				result = cmd.hincrbyfloat(command.getKey(), command.getField(), incrBy.doubleValue());
-			} else {
-				result = cmd.hincrby(command.getKey(), command.getField(), incrBy.longValue());
-			}
-
-			return result.map(val -> NumberUtils.convertNumberToTargetClass(val, incrBy.getClass()))
-					.map(value -> new NumericResponse<>(command, (T) value));
-		}));
-	}
-
+                                            return result
+                                                    .map(
+                                                            val -> NumberUtils.convertNumberToTargetClass(val, incrBy.getClass()))
+                                                    .map(value -> new NumericResponse<>(command, (T) value));
+                                        }));
+    }
 }

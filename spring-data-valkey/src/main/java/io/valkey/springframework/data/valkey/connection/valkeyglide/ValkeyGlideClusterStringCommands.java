@@ -15,22 +15,20 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import glide.api.GlideClusterClient;
+import glide.api.models.ClusterValue;
+import glide.api.models.GlideString;
+import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
+import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
-import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-
-import glide.api.GlideClusterClient;
-import glide.api.models.ClusterValue;
-import glide.api.models.GlideString;
-import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 
 /**
  * Implementation of {@link ValkeyStringCommands} for Valkey-Glide.
@@ -54,10 +52,10 @@ public class ValkeyGlideClusterStringCommands extends ValkeyGlideStringCommands 
     }
 
     /**
-     * Executes mSetNX across multiple cluster nodes in parallel.
-     * Groups keys by their cluster node and executes MSETNX operations
-     * in parallel on each node. Returns true only if all MSETNX operations succeed.
-     * 
+     * Executes mSetNX across multiple cluster nodes in parallel. Groups keys by their cluster node
+     * and executes MSETNX operations in parallel on each node. Returns true only if all MSETNX
+     * operations succeed.
+     *
      * @param tuples the key-value pairs to set
      * @return true if all keys were set, false otherwise
      */
@@ -68,45 +66,48 @@ public class ValkeyGlideClusterStringCommands extends ValkeyGlideStringCommands 
         Assert.notEmpty(tuples, "Tuples must not be empty");
 
         // Fast path: all keys in same slot
-        if (ClusterSlotHashUtil.isSameSlotForAllKeys(tuples.keySet().toArray(new byte[tuples.keySet().size()][]))) {
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(
+                tuples.keySet().toArray(new byte[tuples.keySet().size()][]))) {
             return super.mSetNX(tuples);
         }
 
         // Parallel path: keys across multiple nodes
-        Map<ValkeyClusterNode, List<byte[]>> nodeKeyMap = connection.buildNodeKeyMap(
-            tuples.keySet().toArray(new byte[tuples.keySet().size()][]));
-        
+        Map<ValkeyClusterNode, List<byte[]>> nodeKeyMap =
+                connection.buildNodeKeyMap(tuples.keySet().toArray(new byte[tuples.keySet().size()][]));
+
         List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        
+
         try {
             for (Map.Entry<ValkeyClusterNode, List<byte[]>> entry : nodeKeyMap.entrySet()) {
                 ValkeyClusterNode node = entry.getKey();
                 List<byte[]> nodeKeys = entry.getValue();
-                
+
                 // Build MSETNX command arguments for this node
                 GlideString[] args = new GlideString[nodeKeys.size() * 2 + 1];
                 args[0] = GlideString.of("MSETNX");
-                
+
                 int argIndex = 1;
                 for (byte[] key : nodeKeys) {
                     args[argIndex++] = GlideString.of(key);
                     args[argIndex++] = GlideString.of(tuples.get(key));
                 }
-                
+
                 GlideClusterClient nativeConn = (GlideClusterClient) connection.getNativeConnection();
-                CompletableFuture<Boolean> future = nativeConn.customCommand(args, 
-                    new ByAddressRoute(node.getHost(), node.getPort()))
-                    .thenApply(result -> {
-                        ClusterValue<Object> clusterValue = (ClusterValue<Object>) result;
-                        return  (Boolean) clusterValue.getSingleValue();
-                    });
-                
+                CompletableFuture<Boolean> future =
+                        nativeConn
+                                .customCommand(args, new ByAddressRoute(node.getHost(), node.getPort()))
+                                .thenApply(
+                                        result -> {
+                                            ClusterValue<Object> clusterValue = (ClusterValue<Object>) result;
+                                            return (Boolean) clusterValue.getSingleValue();
+                                        });
+
                 futures.add(future);
             }
-            
+
             // Wait for all nodes to complete
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-            
+
             // Aggregate results - all must be true
             boolean result = true;
             for (CompletableFuture<Boolean> future : futures) {
@@ -115,9 +116,9 @@ public class ValkeyGlideClusterStringCommands extends ValkeyGlideStringCommands 
                     break;
                 }
             }
-            
+
             return result;
-            
+
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted while executing mSetNX on cluster", ex);

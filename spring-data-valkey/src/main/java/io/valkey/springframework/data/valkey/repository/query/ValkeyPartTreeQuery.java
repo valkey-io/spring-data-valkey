@@ -15,12 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.repository.query;
 
+import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
+import io.valkey.springframework.data.valkey.core.convert.ValkeyConverter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.DtoInstantiatingConverter;
 import org.springframework.data.keyvalue.core.KeyValueOperations;
@@ -30,8 +31,6 @@ import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.context.MappingContext;
 import org.springframework.data.mapping.model.EntityInstantiators;
-import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
-import io.valkey.springframework.data.valkey.core.convert.ValkeyConverter;
 import org.springframework.data.repository.query.ParameterAccessor;
 import org.springframework.data.repository.query.ParametersParameterAccessor;
 import org.springframework.data.repository.query.QueryMethod;
@@ -52,100 +51,108 @@ import org.springframework.util.ClassUtils;
  */
 public class ValkeyPartTreeQuery extends KeyValuePartTreeQuery {
 
-	private final ValkeyKeyValueAdapter adapter;
+    private final ValkeyKeyValueAdapter adapter;
 
-	public ValkeyPartTreeQuery(QueryMethod queryMethod, QueryMethodEvaluationContextProvider evaluationContextProvider,
-			KeyValueOperations template, Class<? extends AbstractQueryCreator<?, ?>> queryCreator) {
-		super(queryMethod, evaluationContextProvider, template, queryCreator);
-		this.adapter = (ValkeyKeyValueAdapter) template.getKeyValueAdapter();
-	}
+    public ValkeyPartTreeQuery(
+            QueryMethod queryMethod,
+            QueryMethodEvaluationContextProvider evaluationContextProvider,
+            KeyValueOperations template,
+            Class<? extends AbstractQueryCreator<?, ?>> queryCreator) {
+        super(queryMethod, evaluationContextProvider, template, queryCreator);
+        this.adapter = (ValkeyKeyValueAdapter) template.getKeyValueAdapter();
+    }
 
-	@Override
-	public Object execute(Object[] parameters) {
+    @Override
+    public Object execute(Object[] parameters) {
 
-		ParameterAccessor accessor = new ParametersParameterAccessor(getQueryMethod().getParameters(), parameters);
-		KeyValueQuery<?> query = prepareQuery(parameters);
-		ResultProcessor processor = getQueryMethod().getResultProcessor().withDynamicProjection(accessor);
+        ParameterAccessor accessor =
+                new ParametersParameterAccessor(getQueryMethod().getParameters(), parameters);
+        KeyValueQuery<?> query = prepareQuery(parameters);
+        ResultProcessor processor =
+                getQueryMethod().getResultProcessor().withDynamicProjection(accessor);
 
-		ValkeyConverter converter = adapter.getConverter();
-		Converter<Object, Object> resultPostProcessor = new ResultProcessingConverter(processor,
-				converter.getMappingContext(), converter.getEntityInstantiators());
+        ValkeyConverter converter = adapter.getConverter();
+        Converter<Object, Object> resultPostProcessor =
+                new ResultProcessingConverter(
+                        processor, converter.getMappingContext(), converter.getEntityInstantiators());
 
-		Object source = doExecute(parameters, query);
-		return source != null ? processor.processResult(resultPostProcessor.convert(source)) : null;
-	}
+        Object source = doExecute(parameters, query);
+        return source != null ? processor.processResult(resultPostProcessor.convert(source)) : null;
+    }
 
-	/**
-	 * A {@link Converter} to post-process all source objects using the given {@link ResultProcessor}.
-	 *
-	 * @author Mark Paluch
-	 */
-	static final class ResultProcessingConverter implements Converter<Object, Object> {
+    /**
+     * A {@link Converter} to post-process all source objects using the given {@link ResultProcessor}.
+     *
+     * @author Mark Paluch
+     */
+    static final class ResultProcessingConverter implements Converter<Object, Object> {
 
-		private final ResultProcessor processor;
-		private final MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context;
-		private final EntityInstantiators instantiators;
+        private final ResultProcessor processor;
+        private final MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>>
+                context;
+        private final EntityInstantiators instantiators;
 
-		public ResultProcessingConverter(ResultProcessor processor,
-				MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context,
-				EntityInstantiators instantiators) {
+        public ResultProcessingConverter(
+                ResultProcessor processor,
+                MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context,
+                EntityInstantiators instantiators) {
 
-			Assert.notNull(processor, "Processor must not be null!");
-			Assert.notNull(context, "MappingContext must not be null!");
-			Assert.notNull(instantiators, "Instantiators must not be null!");
+            Assert.notNull(processor, "Processor must not be null!");
+            Assert.notNull(context, "MappingContext must not be null!");
+            Assert.notNull(instantiators, "Instantiators must not be null!");
 
-			this.processor = processor;
-			this.context = context;
-			this.instantiators = instantiators;
-		}
+            this.processor = processor;
+            this.context = context;
+            this.instantiators = instantiators;
+        }
 
-		/*
-		 * (non-Javadoc)
-		 * @see org.springframework.core.convert.converter.Converter#convert(java.lang.Object)
-		 */
-		@Override
-		public Object convert(Object source) {
+        /*
+         * (non-Javadoc)
+         * @see org.springframework.core.convert.converter.Converter#convert(java.lang.Object)
+         */
+        @Override
+        public Object convert(Object source) {
 
-			if (source instanceof Set<?> s) {
+            if (source instanceof Set<?> s) {
 
-				Set<Object> target = new LinkedHashSet<>(s.size());
+                Set<Object> target = new LinkedHashSet<>(s.size());
 
-				for (Object o : s) {
-					target.add(convert(o));
-				}
+                for (Object o : s) {
+                    target.add(convert(o));
+                }
 
-				return target;
-			}
+                return target;
+            }
 
-			if (source instanceof Collection<?> c) {
+            if (source instanceof Collection<?> c) {
 
-				List<Object> target = new ArrayList<>(c.size());
+                List<Object> target = new ArrayList<>(c.size());
 
-				for (Object o : c) {
-					target.add(convert(o));
-				}
+                for (Object o : c) {
+                    target.add(convert(o));
+                }
 
-				return target;
-			}
+                return target;
+            }
 
-			if (source instanceof Streamable<?> s) {
-				return s.map(this::convert);
-			}
+            if (source instanceof Streamable<?> s) {
+                return s.map(this::convert);
+            }
 
-			ReturnedType returnedType = processor.getReturnedType();
+            ReturnedType returnedType = processor.getReturnedType();
 
-			if (ReflectionUtils.isVoid(returnedType.getReturnedType())) {
-				return null;
-			}
+            if (ReflectionUtils.isVoid(returnedType.getReturnedType())) {
+                return null;
+            }
 
-			if (ClassUtils.isPrimitiveOrWrapper(returnedType.getReturnedType())) {
-				return source;
-			}
+            if (ClassUtils.isPrimitiveOrWrapper(returnedType.getReturnedType())) {
+                return source;
+            }
 
-			Converter<Object, Object> converter = new DtoInstantiatingConverter(returnedType.getReturnedType(), context,
-					instantiators);
+            Converter<Object, Object> converter =
+                    new DtoInstantiatingConverter(returnedType.getReturnedType(), context, instantiators);
 
-			return processor.processResult(source, converter);
-		}
-	}
+            return processor.processResult(source, converter);
+        }
+    }
 }

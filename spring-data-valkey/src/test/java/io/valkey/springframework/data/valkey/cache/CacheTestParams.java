@@ -15,12 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.cache;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
@@ -33,15 +27,17 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.Va
 import io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.JdkSerializationValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.SerializationException;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.springframework.lang.Nullable;
 
 /**
@@ -50,127 +46,139 @@ import org.springframework.lang.Nullable;
  */
 class CacheTestParams {
 
-	private static Collection<ValkeyConnectionFactory> connectionFactories() {
+    private static Collection<ValkeyConnectionFactory> connectionFactories() {
 
-		ValkeyStandaloneConfiguration config = new ValkeyStandaloneConfiguration();
-		config.setHostName(SettingsUtils.getHost());
-		config.setPort(SettingsUtils.getPort());
+        ValkeyStandaloneConfiguration config = new ValkeyStandaloneConfiguration();
+        config.setHostName(SettingsUtils.getHost());
+        config.setPort(SettingsUtils.getPort());
 
-		List<ValkeyConnectionFactory> factoryList = new ArrayList<>(3);
+        List<ValkeyConnectionFactory> factoryList = new ArrayList<>(3);
 
-		// Jedis Standalone
-		JedisConnectionFactory jedisConnectionFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
-		factoryList.add(jedisConnectionFactory);
+        // Jedis Standalone
+        JedisConnectionFactory jedisConnectionFactory =
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+        factoryList.add(jedisConnectionFactory);
 
-		// Lettuce Standalone
-		LettuceConnectionFactory lettuceConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
-		factoryList.add(lettuceConnectionFactory);
+        // Lettuce Standalone
+        LettuceConnectionFactory lettuceConnectionFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+        factoryList.add(lettuceConnectionFactory);
 
-		// ValkeyGlide Standalone
-		ValkeyGlideConnectionFactory valkeyGlideConnectionFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
-		factoryList.add(valkeyGlideConnectionFactory);
+        // ValkeyGlide Standalone
+        ValkeyGlideConnectionFactory valkeyGlideConnectionFactory =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+        factoryList.add(valkeyGlideConnectionFactory);
 
-		if (clusterAvailable()) {
+        if (clusterAvailable()) {
 
-			// Jedis Cluster
-			JedisConnectionFactory jedisClusterConnectionFactory = JedisConnectionFactoryExtension
-					.getConnectionFactory(ValkeyCluster.class);
-			factoryList
-					.add(jedisClusterConnectionFactory);
+            // Jedis Cluster
+            JedisConnectionFactory jedisClusterConnectionFactory =
+                    JedisConnectionFactoryExtension.getConnectionFactory(ValkeyCluster.class);
+            factoryList.add(jedisClusterConnectionFactory);
 
-			// Lettuce Cluster
-			LettuceConnectionFactory lettuceClusterConnectionFactory = LettuceConnectionFactoryExtension
-					.getConnectionFactory(ValkeyCluster.class);
-			factoryList
-					.add(lettuceClusterConnectionFactory);
+            // Lettuce Cluster
+            LettuceConnectionFactory lettuceClusterConnectionFactory =
+                    LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyCluster.class);
+            factoryList.add(lettuceClusterConnectionFactory);
 
-			// Valkey-Glide Cluster
-			ValkeyGlideConnectionFactory valkeyGlideClusterConnectionFactory = ValkeyGlideConnectionFactoryExtension
-					.getConnectionFactory(ValkeyCluster.class);
-			factoryList
-					.add(valkeyGlideClusterConnectionFactory);
-		}
+            // Valkey-Glide Cluster
+            ValkeyGlideConnectionFactory valkeyGlideClusterConnectionFactory =
+                    ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyCluster.class);
+            factoryList.add(valkeyGlideClusterConnectionFactory);
+        }
 
-		return factoryList;
-	}
+        return factoryList;
+    }
 
-	static Collection<Object[]> justConnectionFactories() {
-		return connectionFactories().stream().map(factory -> new Object[] { factory }).collect(Collectors.toList());
-	}
+    static Collection<Object[]> justConnectionFactories() {
+        return connectionFactories().stream()
+                .map(factory -> new Object[] {factory})
+                .collect(Collectors.toList());
+    }
 
-	static Collection<Object[]> connectionFactoriesAndSerializers() {
+    static Collection<Object[]> connectionFactoriesAndSerializers() {
 
-		OxmSerializer oxmSerializer = XstreamOxmSerializerSingleton.getInstance();
-		GenericJackson2JsonValkeySerializer jackson2Serializer = new GenericJackson2JsonValkeySerializer();
-		JdkSerializationValkeySerializer jdkSerializer = new JdkSerializationValkeySerializer();
+        OxmSerializer oxmSerializer = XstreamOxmSerializerSingleton.getInstance();
+        GenericJackson2JsonValkeySerializer jackson2Serializer =
+                new GenericJackson2JsonValkeySerializer();
+        JdkSerializationValkeySerializer jdkSerializer = new JdkSerializationValkeySerializer();
 
-		return connectionFactories().stream().flatMap(factory -> Arrays.asList( //
-				new Object[] { factory, new FixDamnedJunitParameterizedNameForValkeySerializer(jdkSerializer) }, //
-				new Object[] { factory, new FixDamnedJunitParameterizedNameForValkeySerializer(jackson2Serializer) }, //
-				new Object[] { factory, new FixDamnedJunitParameterizedNameForValkeySerializer(oxmSerializer) }).stream())
-				.collect(Collectors.toList());
-	}
+        return connectionFactories().stream()
+                .flatMap(
+                        factory ->
+                                Arrays.asList( //
+                                        new Object[] {
+                                            factory, new FixDamnedJunitParameterizedNameForValkeySerializer(jdkSerializer)
+                                        }, //
+                                        new Object[] {
+                                            factory,
+                                            new FixDamnedJunitParameterizedNameForValkeySerializer(jackson2Serializer)
+                                        }, //
+                                        new Object[] {
+                                            factory, new FixDamnedJunitParameterizedNameForValkeySerializer(oxmSerializer)
+                                        })
+                                        .stream())
+                .collect(Collectors.toList());
+    }
 
-	static class FixDamnedJunitParameterizedNameForValkeySerializer/* ¯\_(ツ)_/¯ */ implements ValkeySerializer {
+    static class FixDamnedJunitParameterizedNameForValkeySerializer /* ¯\_(ツ)_/¯ */
+            implements ValkeySerializer {
 
-		final ValkeySerializer serializer;
+        final ValkeySerializer serializer;
 
-		FixDamnedJunitParameterizedNameForValkeySerializer(ValkeySerializer serializer) {
-			this.serializer = serializer;
-		}
+        FixDamnedJunitParameterizedNameForValkeySerializer(ValkeySerializer serializer) {
+            this.serializer = serializer;
+        }
 
-		@Override
-		@Nullable
-		public byte[] serialize(@Nullable Object value) throws SerializationException {
-			return serializer.serialize(value);
-		}
+        @Override
+        @Nullable
+        public byte[] serialize(@Nullable Object value) throws SerializationException {
+            return serializer.serialize(value);
+        }
 
-		@Override
-		@Nullable
-		public Object deserialize(@Nullable byte[] bytes) throws SerializationException {
-			return serializer.deserialize(bytes);
-		}
+        @Override
+        @Nullable
+        public Object deserialize(@Nullable byte[] bytes) throws SerializationException {
+            return serializer.deserialize(bytes);
+        }
 
-		public static ValkeySerializer<Object> java() {
-			return ValkeySerializer.java();
-		}
+        public static ValkeySerializer<Object> java() {
+            return ValkeySerializer.java();
+        }
 
-		public static ValkeySerializer<Object> java(@Nullable ClassLoader classLoader) {
-			return ValkeySerializer.java(classLoader);
-		}
+        public static ValkeySerializer<Object> java(@Nullable ClassLoader classLoader) {
+            return ValkeySerializer.java(classLoader);
+        }
 
-		public static ValkeySerializer<Object> json() {
-			return ValkeySerializer.json();
-		}
+        public static ValkeySerializer<Object> json() {
+            return ValkeySerializer.json();
+        }
 
-		public static ValkeySerializer<String> string() {
-			return ValkeySerializer.string();
-		}
+        public static ValkeySerializer<String> string() {
+            return ValkeySerializer.string();
+        }
 
-		public static ValkeySerializer<byte[]> byteArray() {
-			return ValkeySerializer.byteArray();
-		}
+        public static ValkeySerializer<byte[]> byteArray() {
+            return ValkeySerializer.byteArray();
+        }
 
-		@Override
-		public boolean canSerialize(Class type) {
-			return serializer.canSerialize(type);
-		}
+        @Override
+        public boolean canSerialize(Class type) {
+            return serializer.canSerialize(type);
+        }
 
-		@Override
-		public Class<?> getTargetType() {
-			return serializer.getTargetType();
-		}
+        @Override
+        public Class<?> getTargetType() {
+            return serializer.getTargetType();
+        }
 
-		@Override // Why Junit? Why?
-		public String toString() {
-			return serializer.getClass().getSimpleName();
-		}
-	}
+        @Override // Why Junit? Why?
+        public String toString() {
+            return serializer.getClass().getSimpleName();
+        }
+    }
 
-	private static boolean clusterAvailable() {
-		return ValkeyDetector.isClusterAvailable();
-	}
+    private static boolean clusterAvailable() {
+        return ValkeyDetector.isClusterAvailable();
+    }
 }

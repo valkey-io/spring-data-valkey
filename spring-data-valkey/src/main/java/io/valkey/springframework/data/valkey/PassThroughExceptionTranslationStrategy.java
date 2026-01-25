@@ -20,7 +20,8 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.lang.Nullable;
 
 /**
- * {@link PassThroughExceptionTranslationStrategy} returns {@literal null} for unknown {@link Exception}s.
+ * {@link PassThroughExceptionTranslationStrategy} returns {@literal null} for unknown {@link
+ * Exception}s.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -28,16 +29,16 @@ import org.springframework.lang.Nullable;
  */
 public class PassThroughExceptionTranslationStrategy implements ExceptionTranslationStrategy {
 
-	private final Converter<Exception, DataAccessException> converter;
+    private final Converter<Exception, DataAccessException> converter;
 
-	public PassThroughExceptionTranslationStrategy(Converter<Exception, DataAccessException> converter) {
-		this.converter = converter;
-	}
+    public PassThroughExceptionTranslationStrategy(
+            Converter<Exception, DataAccessException> converter) {
+        this.converter = converter;
+    }
 
-	@Nullable
-	@Override
-	public DataAccessException translate(Exception e) {
-		return this.converter.convert(e);
-	}
-
+    @Nullable
+    @Override
+    public DataAccessException translate(Exception e) {
+        return this.converter.convert(e);
+    }
 }

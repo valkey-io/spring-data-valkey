@@ -18,7 +18,6 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-
 import org.springframework.util.StringUtils;
 
 /**
@@ -41,58 +40,55 @@ import org.springframework.util.StringUtils;
  */
 record ValkeyUrl(URI uri, boolean useSsl, Credentials credentials, int database) {
 
-	static ValkeyUrl of(String url) {
-		return (url != null) ? of(toUri(url)) : null;
-	}
+    static ValkeyUrl of(String url) {
+        return (url != null) ? of(toUri(url)) : null;
+    }
 
-	private static ValkeyUrl of(URI uri) {
-		boolean useSsl = ("valkeys".equals(uri.getScheme()));
-		Credentials credentials = Credentials.fromUserInfo(uri.getUserInfo());
-		int database = getDatabase(uri);
-		return new ValkeyUrl(uri, useSsl, credentials, database);
-	}
+    private static ValkeyUrl of(URI uri) {
+        boolean useSsl = ("valkeys".equals(uri.getScheme()));
+        Credentials credentials = Credentials.fromUserInfo(uri.getUserInfo());
+        int database = getDatabase(uri);
+        return new ValkeyUrl(uri, useSsl, credentials, database);
+    }
 
-	private static int getDatabase(URI uri) {
-		String path = uri.getPath();
-		String[] split = (!StringUtils.hasText(path)) ? new String[0] : path.split("/", 2);
-		return (split.length > 1 && !split[1].isEmpty()) ? Integer.parseInt(split[1]) : 0;
-	}
+    private static int getDatabase(URI uri) {
+        String path = uri.getPath();
+        String[] split = (!StringUtils.hasText(path)) ? new String[0] : path.split("/", 2);
+        return (split.length > 1 && !split[1].isEmpty()) ? Integer.parseInt(split[1]) : 0;
+    }
 
-	private static URI toUri(String url) {
-		try {
-			URI uri = new URI(url);
-			String scheme = uri.getScheme();
-			if (!"valkey".equals(scheme) && !"valkeys".equals(scheme)) {
-				throw new ValkeyUrlSyntaxException(url);
-			}
-			return uri;
-		}
-		catch (URISyntaxException ex) {
-			throw new ValkeyUrlSyntaxException(url, ex);
-		}
-	}
+    private static URI toUri(String url) {
+        try {
+            URI uri = new URI(url);
+            String scheme = uri.getScheme();
+            if (!"valkey".equals(scheme) && !"valkeys".equals(scheme)) {
+                throw new ValkeyUrlSyntaxException(url);
+            }
+            return uri;
+        } catch (URISyntaxException ex) {
+            throw new ValkeyUrlSyntaxException(url, ex);
+        }
+    }
 
-	/**
-	 * Valkey connection credentials.
-	 *
-	 * @param username the username or {@code null}
-	 * @param password the password
-	 */
-	record Credentials(String username, String password) {
+    /**
+     * Valkey connection credentials.
+     *
+     * @param username the username or {@code null}
+     * @param password the password
+     */
+    record Credentials(String username, String password) {
 
-		private static final Credentials NONE = new Credentials(null, null);
+        private static final Credentials NONE = new Credentials(null, null);
 
-		private static Credentials fromUserInfo(String userInfo) {
-			if (userInfo == null) {
-				return NONE;
-			}
-			int index = userInfo.indexOf(':');
-			if (index != -1) {
-				return new Credentials(userInfo.substring(0, index), userInfo.substring(index + 1));
-			}
-			return new Credentials(null, userInfo);
-		}
-
-	}
-
+        private static Credentials fromUserInfo(String userInfo) {
+            if (userInfo == null) {
+                return NONE;
+            }
+            int index = userInfo.indexOf(':');
+            if (index != -1) {
+                return new Credentials(userInfo.substring(0, index), userInfo.substring(index + 1));
+            }
+            return new Credentials(null, userInfo);
+        }
+    }
 }

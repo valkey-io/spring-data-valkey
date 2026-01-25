@@ -15,9 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.listener;
 
-import java.util.ArrayList;
-import java.util.Collection;
-
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.Person;
 import io.valkey.springframework.data.valkey.PersonObjectFactory;
@@ -28,11 +25,13 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectio
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
+import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * @author Costin Leau
@@ -41,91 +40,91 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
  */
 public class PubSubTestParams {
 
-	public static Collection<Object[]> testParams() {
-		// create Jedis Factory
-		ObjectFactory<String> stringFactory = new StringObjectFactory();
-		ObjectFactory<Person> personFactory = new PersonObjectFactory();
+    public static Collection<Object[]> testParams() {
+        // create Jedis Factory
+        ObjectFactory<String> stringFactory = new StringObjectFactory();
+        ObjectFactory<Person> personFactory = new PersonObjectFactory();
 
-		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getNewConnectionFactory(ValkeyStanalone.class);
+        JedisConnectionFactory jedisConnFactory =
+                JedisConnectionFactoryExtension.getNewConnectionFactory(ValkeyStanalone.class);
 
-		jedisConnFactory.afterPropertiesSet();
+        jedisConnFactory.afterPropertiesSet();
 
-		ValkeyTemplate<String, String> stringTemplate = new StringValkeyTemplate(jedisConnFactory);
-		ValkeyTemplate<String, Person> personTemplate = new ValkeyTemplate<>();
-		personTemplate.setConnectionFactory(jedisConnFactory);
-		personTemplate.afterPropertiesSet();
-		ValkeyTemplate<byte[], byte[]> rawTemplate = new ValkeyTemplate<>();
-		rawTemplate.setEnableDefaultSerializer(false);
-		rawTemplate.setConnectionFactory(jedisConnFactory);
-		rawTemplate.afterPropertiesSet();
+        ValkeyTemplate<String, String> stringTemplate = new StringValkeyTemplate(jedisConnFactory);
+        ValkeyTemplate<String, Person> personTemplate = new ValkeyTemplate<>();
+        personTemplate.setConnectionFactory(jedisConnFactory);
+        personTemplate.afterPropertiesSet();
+        ValkeyTemplate<byte[], byte[]> rawTemplate = new ValkeyTemplate<>();
+        rawTemplate.setEnableDefaultSerializer(false);
+        rawTemplate.setConnectionFactory(jedisConnFactory);
+        rawTemplate.afterPropertiesSet();
 
-		// add Lettuce
-		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // add Lettuce
+        LettuceConnectionFactory lettuceConnFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		ValkeyTemplate<String, String> stringTemplateLtc = new StringValkeyTemplate(lettuceConnFactory);
-		ValkeyTemplate<String, Person> personTemplateLtc = new ValkeyTemplate<>();
-		personTemplateLtc.setConnectionFactory(lettuceConnFactory);
-		personTemplateLtc.afterPropertiesSet();
-		ValkeyTemplate<byte[], byte[]> rawTemplateLtc = new ValkeyTemplate<>();
-		rawTemplateLtc.setEnableDefaultSerializer(false);
-		rawTemplateLtc.setConnectionFactory(lettuceConnFactory);
-		rawTemplateLtc.afterPropertiesSet();
+        ValkeyTemplate<String, String> stringTemplateLtc = new StringValkeyTemplate(lettuceConnFactory);
+        ValkeyTemplate<String, Person> personTemplateLtc = new ValkeyTemplate<>();
+        personTemplateLtc.setConnectionFactory(lettuceConnFactory);
+        personTemplateLtc.afterPropertiesSet();
+        ValkeyTemplate<byte[], byte[]> rawTemplateLtc = new ValkeyTemplate<>();
+        rawTemplateLtc.setEnableDefaultSerializer(false);
+        rawTemplateLtc.setConnectionFactory(lettuceConnFactory);
+        rawTemplateLtc.afterPropertiesSet();
 
-		// add Valkey Glide
-		ValkeyGlideConnectionFactory glideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // add Valkey Glide
+        ValkeyGlideConnectionFactory glideConnFactory =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		ValkeyTemplate<String, String> stringTemplateGlide = new StringValkeyTemplate(glideConnFactory);
-		ValkeyTemplate<String, Person> personTemplateGlide = new ValkeyTemplate<>();
-		personTemplateGlide.setConnectionFactory(glideConnFactory);
-		personTemplateGlide.afterPropertiesSet();
-		ValkeyTemplate<byte[], byte[]> rawTemplateGlide = new ValkeyTemplate<>();
-		rawTemplateGlide.setEnableDefaultSerializer(false);
-		rawTemplateGlide.setConnectionFactory(glideConnFactory);
-		rawTemplateGlide.afterPropertiesSet();
+        ValkeyTemplate<String, String> stringTemplateGlide = new StringValkeyTemplate(glideConnFactory);
+        ValkeyTemplate<String, Person> personTemplateGlide = new ValkeyTemplate<>();
+        personTemplateGlide.setConnectionFactory(glideConnFactory);
+        personTemplateGlide.afterPropertiesSet();
+        ValkeyTemplate<byte[], byte[]> rawTemplateGlide = new ValkeyTemplate<>();
+        rawTemplateGlide.setEnableDefaultSerializer(false);
+        rawTemplateGlide.setConnectionFactory(glideConnFactory);
+        rawTemplateGlide.afterPropertiesSet();
 
-		Collection<Object[]> parameters = new ArrayList<>();
-		parameters.add(new Object[] { stringFactory, stringTemplate });
-		parameters.add(new Object[] { personFactory, personTemplate });
-		parameters.add(new Object[] { stringFactory, stringTemplateLtc });
-		parameters.add(new Object[] { personFactory, personTemplateLtc });
-		parameters.add(new Object[] { stringFactory, stringTemplateGlide });
-		parameters.add(new Object[] { personFactory, personTemplateGlide });
+        Collection<Object[]> parameters = new ArrayList<>();
+        parameters.add(new Object[] {stringFactory, stringTemplate});
+        parameters.add(new Object[] {personFactory, personTemplate});
+        parameters.add(new Object[] {stringFactory, stringTemplateLtc});
+        parameters.add(new Object[] {personFactory, personTemplateLtc});
+        parameters.add(new Object[] {stringFactory, stringTemplateGlide});
+        parameters.add(new Object[] {personFactory, personTemplateGlide});
 
-		if (clusterAvailable()) {
+        if (clusterAvailable()) {
 
-			// add Jedis
-			JedisConnectionFactory jedisClusterFactory = JedisConnectionFactoryExtension
-					.getNewConnectionFactory(ValkeyCluster.class);
+            // add Jedis
+            JedisConnectionFactory jedisClusterFactory =
+                    JedisConnectionFactoryExtension.getNewConnectionFactory(ValkeyCluster.class);
 
-			ValkeyTemplate<String, String> jedisClusterStringTemplate =
-					new StringValkeyTemplate(jedisClusterFactory);
+            ValkeyTemplate<String, String> jedisClusterStringTemplate =
+                    new StringValkeyTemplate(jedisClusterFactory);
 
-			// add Lettuce
-			LettuceConnectionFactory lettuceClusterFactory = LettuceConnectionFactoryExtension
-					.getConnectionFactory(ValkeyCluster.class);
+            // add Lettuce
+            LettuceConnectionFactory lettuceClusterFactory =
+                    LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyCluster.class);
 
-			ValkeyTemplate<String, String> lettuceClusterStringTemplate =
-					new StringValkeyTemplate(lettuceClusterFactory);
+            ValkeyTemplate<String, String> lettuceClusterStringTemplate =
+                    new StringValkeyTemplate(lettuceClusterFactory);
 
-			// Add Valkey-GLIDE
-			ValkeyGlideConnectionFactory glideClusterFactory =
-					ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyCluster.class);
+            // Add Valkey-GLIDE
+            ValkeyGlideConnectionFactory glideClusterFactory =
+                    ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyCluster.class);
 
-			ValkeyTemplate<String, String> glideClusterStringTemplate =
-					new StringValkeyTemplate(glideClusterFactory);
+            ValkeyTemplate<String, String> glideClusterStringTemplate =
+                    new StringValkeyTemplate(glideClusterFactory);
 
-			parameters.add(new Object[] { stringFactory, jedisClusterStringTemplate });
-			parameters.add(new Object[] { stringFactory, lettuceClusterStringTemplate });
-			parameters.add(new Object[] { stringFactory, glideClusterStringTemplate });
-		}
+            parameters.add(new Object[] {stringFactory, jedisClusterStringTemplate});
+            parameters.add(new Object[] {stringFactory, lettuceClusterStringTemplate});
+            parameters.add(new Object[] {stringFactory, glideClusterStringTemplate});
+        }
 
-		return parameters;
-	}
+        return parameters;
+    }
 
-	private static boolean clusterAvailable() {
-		return ValkeyDetector.isClusterAvailable();
-	}
+    private static boolean clusterAvailable() {
+        return ValkeyDetector.isClusterAvailable();
+    }
 }

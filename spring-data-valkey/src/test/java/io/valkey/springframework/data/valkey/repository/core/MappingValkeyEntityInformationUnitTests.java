@@ -18,13 +18,12 @@ package io.valkey.springframework.data.valkey.repository.core;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.data.mapping.MappingException;
-import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 
 /**
  * @author Christoph Strobl
@@ -33,14 +32,14 @@ import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity
 @ExtendWith(MockitoExtension.class)
 class MappingValkeyEntityInformationUnitTests<T, ID> {
 
-	@Mock ValkeyPersistentEntity<T> entity;
+    @Mock ValkeyPersistentEntity<T> entity;
 
-	@Test // DATAREDIS-425
-	void throwsMappingExceptionWhenNoIdPropertyPresent() {
+    @Test // DATAREDIS-425
+    void throwsMappingExceptionWhenNoIdPropertyPresent() {
 
-		when(entity.hasIdProperty()).thenReturn(false);
+        when(entity.hasIdProperty()).thenReturn(false);
 
-		assertThatExceptionOfType(MappingException.class)
-				.isThrownBy(() -> new MappingValkeyEntityInformation<T, ID>(entity));
-	}
+        assertThatExceptionOfType(MappingException.class)
+                .isThrownBy(() -> new MappingValkeyEntityInformation<T, ID>(entity));
+    }
 }

@@ -18,10 +18,8 @@ package io.valkey.springframework.boot.actuate.metrics.cache;
 
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.binder.MeterBinder;
-
-import org.springframework.boot.actuate.metrics.cache.CacheMeterBinderProvider;
-
 import io.valkey.springframework.data.valkey.cache.ValkeyCache;
+import org.springframework.boot.actuate.metrics.cache.CacheMeterBinderProvider;
 
 /**
  * {@link CacheMeterBinderProvider} implementation for Valkey.
@@ -31,9 +29,8 @@ import io.valkey.springframework.data.valkey.cache.ValkeyCache;
  */
 public class ValkeyCacheMeterBinderProvider implements CacheMeterBinderProvider<ValkeyCache> {
 
-	@Override
-	public MeterBinder getMeterBinder(ValkeyCache cache, Iterable<Tag> tags) {
-		return new ValkeyCacheMetrics(cache, tags);
-	}
-
+    @Override
+    public MeterBinder getMeterBinder(ValkeyCache cache, Iterable<Tag> tags) {
+        return new ValkeyCacheMetrics(cache, tags);
+    }
 }

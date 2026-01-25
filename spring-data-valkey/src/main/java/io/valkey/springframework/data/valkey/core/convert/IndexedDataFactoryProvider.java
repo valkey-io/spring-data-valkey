@@ -15,10 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
-import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.core.index.GeoIndexDefinition;
 import io.valkey.springframework.data.valkey.core.index.IndexDefinition;
 import io.valkey.springframework.data.valkey.core.index.SimpleIndexDefinition;
+import org.springframework.data.geo.Point;
 import org.springframework.lang.Nullable;
 
 /**
@@ -27,60 +27,64 @@ import org.springframework.lang.Nullable;
  */
 class IndexedDataFactoryProvider {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.8
-	 */
-	@Nullable
-	IndexedDataFactory getIndexedDataFactory(IndexDefinition definition) {
+    /**
+     * @author Christoph Strobl
+     * @since 1.8
+     */
+    @Nullable
+    IndexedDataFactory getIndexedDataFactory(IndexDefinition definition) {
 
-		if (definition instanceof SimpleIndexDefinition) {
-			return new SimpleIndexedPropertyValueFactory((SimpleIndexDefinition) definition);
-		} else if (definition instanceof GeoIndexDefinition) {
-			return new GeoIndexedPropertyValueFactory(((GeoIndexDefinition) definition));
-		}
-		return null;
-	}
+        if (definition instanceof SimpleIndexDefinition) {
+            return new SimpleIndexedPropertyValueFactory((SimpleIndexDefinition) definition);
+        } else if (definition instanceof GeoIndexDefinition) {
+            return new GeoIndexedPropertyValueFactory(((GeoIndexDefinition) definition));
+        }
+        return null;
+    }
 
-	static interface IndexedDataFactory {
-		IndexedData createIndexedDataFor(Object value);
-	}
+    static interface IndexedDataFactory {
+        IndexedData createIndexedDataFor(Object value);
+    }
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.8
-	 */
-	static class SimpleIndexedPropertyValueFactory implements IndexedDataFactory {
+    /**
+     * @author Christoph Strobl
+     * @since 1.8
+     */
+    static class SimpleIndexedPropertyValueFactory implements IndexedDataFactory {
 
-		final SimpleIndexDefinition indexDefinition;
+        final SimpleIndexDefinition indexDefinition;
 
-		SimpleIndexedPropertyValueFactory(SimpleIndexDefinition indexDefinition) {
-			this.indexDefinition = indexDefinition;
-		}
+        SimpleIndexedPropertyValueFactory(SimpleIndexDefinition indexDefinition) {
+            this.indexDefinition = indexDefinition;
+        }
 
-		public SimpleIndexedPropertyValue createIndexedDataFor(Object value) {
+        public SimpleIndexedPropertyValue createIndexedDataFor(Object value) {
 
-			return new SimpleIndexedPropertyValue(indexDefinition.getKeyspace(), indexDefinition.getIndexName(),
-					indexDefinition.valueTransformer().convert(value));
-		}
-	}
+            return new SimpleIndexedPropertyValue(
+                    indexDefinition.getKeyspace(),
+                    indexDefinition.getIndexName(),
+                    indexDefinition.valueTransformer().convert(value));
+        }
+    }
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.8
-	 */
-	static class GeoIndexedPropertyValueFactory implements IndexedDataFactory {
+    /**
+     * @author Christoph Strobl
+     * @since 1.8
+     */
+    static class GeoIndexedPropertyValueFactory implements IndexedDataFactory {
 
-		final GeoIndexDefinition indexDefinition;
+        final GeoIndexDefinition indexDefinition;
 
-		public GeoIndexedPropertyValueFactory(GeoIndexDefinition indexDefinition) {
-			this.indexDefinition = indexDefinition;
-		}
+        public GeoIndexedPropertyValueFactory(GeoIndexDefinition indexDefinition) {
+            this.indexDefinition = indexDefinition;
+        }
 
-		public GeoIndexedPropertyValue createIndexedDataFor(Object value) {
+        public GeoIndexedPropertyValue createIndexedDataFor(Object value) {
 
-			return new GeoIndexedPropertyValue(indexDefinition.getKeyspace(), indexDefinition.getPath(),
-					(Point) indexDefinition.valueTransformer().convert(value));
-		}
-	}
+            return new GeoIndexedPropertyValue(
+                    indexDefinition.getKeyspace(),
+                    indexDefinition.getPath(),
+                    (Point) indexDefinition.valueTransformer().convert(value));
+        }
+    }
 }

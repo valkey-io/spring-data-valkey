@@ -15,16 +15,16 @@
  */
 package io.valkey.springframework.data.valkey.serializer;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 /**
- * Defines the contract for Object Mapping writers. Implementations of this interface can serialize a given Object to a
- * {@code byte[]} containing JSON.
- * <p>
- * Writer functions can customize how the actual JSON is being written by e.g. obtaining a customized
- * {@link com.fasterxml.jackson.databind.ObjectWriter} applying serialization features, date formats, or views.
+ * Defines the contract for Object Mapping writers. Implementations of this interface can serialize
+ * a given Object to a {@code byte[]} containing JSON.
+ *
+ * <p>Writer functions can customize how the actual JSON is being written by e.g. obtaining a
+ * customized {@link com.fasterxml.jackson.databind.ObjectWriter} applying serialization features,
+ * date formats, or views.
  *
  * @author Mark Paluch
  * @since 3.0
@@ -32,23 +32,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @FunctionalInterface
 public interface JacksonObjectWriter {
 
-	/**
-	 * Write the object graph with the given root {@code source} as byte array.
-	 *
-	 * @param mapper the object mapper to use.
-	 * @param source the root of the object graph to marshal.
-	 * @return a byte array containing the serialized object graph.
-	 * @throws IOException if an I/O error or JSON serialization error occurs.
-	 */
-	byte[] write(ObjectMapper mapper, Object source) throws IOException;
+    /**
+     * Write the object graph with the given root {@code source} as byte array.
+     *
+     * @param mapper the object mapper to use.
+     * @param source the root of the object graph to marshal.
+     * @return a byte array containing the serialized object graph.
+     * @throws IOException if an I/O error or JSON serialization error occurs.
+     */
+    byte[] write(ObjectMapper mapper, Object source) throws IOException;
 
-	/**
-	 * Create a default {@link JacksonObjectWriter} delegating to {@link ObjectMapper#writeValueAsBytes(Object)}.
-	 *
-	 * @return the default {@link JacksonObjectWriter}.
-	 */
-	static JacksonObjectWriter create() {
-		return ObjectMapper::writeValueAsBytes;
-	}
-
+    /**
+     * Create a default {@link JacksonObjectWriter} delegating to {@link
+     * ObjectMapper#writeValueAsBytes(Object)}.
+     *
+     * @return the default {@link JacksonObjectWriter}.
+     */
+    static JacksonObjectWriter create() {
+        return ObjectMapper::writeValueAsBytes;
+    }
 }

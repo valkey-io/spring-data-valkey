@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import org.springframework.lang.Nullable;
 
 /**
@@ -31,37 +30,37 @@ import org.springframework.lang.Nullable;
  */
 class CloseSuppressingInvocationHandler implements InvocationHandler {
 
-	private static final String CLOSE = "close";
-	private static final String HASH_CODE = "hashCode";
-	private static final String EQUALS = "equals";
+    private static final String CLOSE = "close";
+    private static final String HASH_CODE = "hashCode";
+    private static final String EQUALS = "equals";
 
-	private final Object target;
+    private final Object target;
 
-	public CloseSuppressingInvocationHandler(Object target) {
-		this.target = target;
-	}
+    public CloseSuppressingInvocationHandler(Object target) {
+        this.target = target;
+    }
 
-	@Override
-	@Nullable
-	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    @Override
+    @Nullable
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 
-		if (method.getName().equals(EQUALS)) {
-			// Only consider equal when proxies are identical.
-			return (proxy == args[0]);
-		} else if (method.getName().equals(HASH_CODE)) {
-			// Use hashCode of PersistenceManager proxy.
-			return System.identityHashCode(proxy);
-		} else if (method.getName().equals(CLOSE)) {
-			// Handle close method: suppress, not valid.
-			return null;
-		}
+        if (method.getName().equals(EQUALS)) {
+            // Only consider equal when proxies are identical.
+            return (proxy == args[0]);
+        } else if (method.getName().equals(HASH_CODE)) {
+            // Use hashCode of PersistenceManager proxy.
+            return System.identityHashCode(proxy);
+        } else if (method.getName().equals(CLOSE)) {
+            // Handle close method: suppress, not valid.
+            return null;
+        }
 
-		// Invoke method on target ValkeyConnection.
-		try {
-			Object returnValue = method.invoke(this.target, args);
-			return returnValue;
-		} catch (InvocationTargetException ex) {
-			throw ex.getTargetException();
-		}
-	}
+        // Invoke method on target ValkeyConnection.
+        try {
+            Object returnValue = method.invoke(this.target, args);
+            return returnValue;
+        } catch (InvocationTargetException ex) {
+            throw ex.getTargetException();
+        }
+    }
 }

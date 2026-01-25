@@ -15,15 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.core.script.jedis;
 
-import redis.clients.jedis.Jedis;
-
-import org.junit.jupiter.api.Disabled;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.core.script.AbstractDefaultScriptExecutorTests;
 import io.valkey.springframework.data.valkey.core.script.DefaultScriptExecutor;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import org.junit.jupiter.api.Disabled;
+import redis.clients.jedis.Jedis;
 
 /**
  * Integration test of {@link DefaultScriptExecutor} with {@link Jedis}.
@@ -32,20 +30,20 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
  */
 public class JedisDefaultScriptExecutorTests extends AbstractDefaultScriptExecutorTests {
 
-	@Override
-	protected ValkeyConnectionFactory getConnectionFactory() {
-		return JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
-	}
+    @Override
+    protected ValkeyConnectionFactory getConnectionFactory() {
+        return JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+    }
 
-	@Disabled("transactional execution is currently not supported with Jedis")
-	@Override
-	public void testExecuteTx() {
-		// super.testExecuteTx();
-	}
+    @Disabled("transactional execution is currently not supported with Jedis")
+    @Override
+    public void testExecuteTx() {
+        // super.testExecuteTx();
+    }
 
-	@Disabled("pipelined execution is currently not supported with Jedis")
-	@Override
-	public void testExecutePipelined() {
-		// super.testExecutePipelined();
-	}
+    @Disabled("pipelined execution is currently not supported with Jedis")
+    @Override
+    public void testExecutePipelined() {
+        // super.testExecutePipelined();
+    }
 }

@@ -17,12 +17,6 @@ package io.valkey.springframework.data.valkey.core;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
@@ -33,6 +27,11 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.Va
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author Artem Bilian
@@ -42,36 +41,38 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("testParams")
 public class MultithreadedValkeyTemplateIntegrationTests {
 
-	private final ValkeyConnectionFactory factory;
+    private final ValkeyConnectionFactory factory;
 
-	public MultithreadedValkeyTemplateIntegrationTests(ValkeyConnectionFactory factory) {
-		this.factory = factory;
-	}
+    public MultithreadedValkeyTemplateIntegrationTests(ValkeyConnectionFactory factory) {
+        this.factory = factory;
+    }
 
-	public static Collection<Object> testParams() {
+    public static Collection<Object> testParams() {
 
-		JedisConnectionFactory jedis = JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
-		LettuceConnectionFactory lettuce = LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
-		ValkeyGlideConnectionFactory valkeyGlide = ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+        JedisConnectionFactory jedis =
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+        LettuceConnectionFactory lettuce =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+        ValkeyGlideConnectionFactory valkeyGlide =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		return Arrays.asList(jedis, lettuce, valkeyGlide);
-	}
+        return Arrays.asList(jedis, lettuce, valkeyGlide);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-300
-	void assertResouresAreReleasedProperlyWhenSharingValkeyTemplate() throws InterruptedException {
+    @ParameterizedValkeyTest // DATAREDIS-300
+    void assertResouresAreReleasedProperlyWhenSharingValkeyTemplate() throws InterruptedException {
 
-		final ValkeyTemplate<Object, Object> template = new ValkeyTemplate<>();
-		template.setConnectionFactory(factory);
-		template.afterPropertiesSet();
+        final ValkeyTemplate<Object, Object> template = new ValkeyTemplate<>();
+        template.setConnectionFactory(factory);
+        template.afterPropertiesSet();
 
-		ExecutorService executor = Executors.newCachedThreadPool();
+        ExecutorService executor = Executors.newCachedThreadPool();
 
-		for (int i = 0; i < 9; i++) {
-			executor.execute(template.boundValueOps("foo")::get);
-		}
+        for (int i = 0; i < 9; i++) {
+            executor.execute(template.boundValueOps("foo")::get);
+        }
 
-		executor.shutdown();
-		assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
-	}
-
+        executor.shutdown();
+        assertThat(executor.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+    }
 }

@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Auto-configuration for Valkey metrics.
- */
+/** Auto-configuration for Valkey metrics. */
 package io.valkey.springframework.boot.actuate.autoconfigure.metrics.valkey;

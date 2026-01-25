@@ -18,6 +18,7 @@ package example.cache;
 import io.valkey.springframework.data.valkey.cache.ValkeyCacheConfiguration;
 import io.valkey.springframework.data.valkey.cache.ValkeyCacheManager;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
+import java.time.Duration;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -25,72 +26,69 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-
-/**
- * Example demonstrating Spring Cache abstraction with Valkey.
- */
+/** Example demonstrating Spring Cache abstraction with Valkey. */
 public class CacheExample {
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 
-		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
-		UserService userService = context.getBean(UserService.class);
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(Config.class);
+        UserService userService = context.getBean(UserService.class);
 
-		System.out.println("First call (cache miss):");
-		long start = System.currentTimeMillis();
-		System.out.println(userService.getUserById("1"));
-		System.out.println("Time: " + (System.currentTimeMillis() - start) + "ms");
+        System.out.println("First call (cache miss):");
+        long start = System.currentTimeMillis();
+        System.out.println(userService.getUserById("1"));
+        System.out.println("Time: " + (System.currentTimeMillis() - start) + "ms");
 
-		System.out.println("\nSecond call (cache hit):");
-		start = System.currentTimeMillis();
-		System.out.println(userService.getUserById("1"));
-		System.out.println("Time: " + (System.currentTimeMillis() - start) + "ms");
+        System.out.println("\nSecond call (cache hit):");
+        start = System.currentTimeMillis();
+        System.out.println(userService.getUserById("1"));
+        System.out.println("Time: " + (System.currentTimeMillis() - start) + "ms");
 
-		// Cleanup
-		context.getBean(ValkeyCacheManager.class).getCacheNames()
-				.forEach(name -> context.getBean(ValkeyCacheManager.class).getCache(name).clear());
+        // Cleanup
+        context
+                .getBean(ValkeyCacheManager.class)
+                .getCacheNames()
+                .forEach(name -> context.getBean(ValkeyCacheManager.class).getCache(name).clear());
 
-		context.close();
-	}
+        context.close();
+    }
 
-	@Configuration
-	@EnableCaching
-	static class Config {
+    @Configuration
+    @EnableCaching
+    static class Config {
 
-		@Bean
-		public ValkeyGlideConnectionFactory connectionFactory() {
-			return new ValkeyGlideConnectionFactory();
-		}
+        @Bean
+        public ValkeyGlideConnectionFactory connectionFactory() {
+            return new ValkeyGlideConnectionFactory();
+        }
 
-		@Bean
-		public ValkeyCacheManager cacheManager(ValkeyGlideConnectionFactory connectionFactory) {
-			ValkeyCacheConfiguration config = ValkeyCacheConfiguration.defaultCacheConfig()
-					.entryTtl(Duration.ofMinutes(10));
-			return ValkeyCacheManager.builder(connectionFactory)
-					.cacheDefaults(config)
-					.build();
-		}
+        @Bean
+        public ValkeyCacheManager cacheManager(ValkeyGlideConnectionFactory connectionFactory) {
+            ValkeyCacheConfiguration config =
+                    ValkeyCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(10));
+            return ValkeyCacheManager.builder(connectionFactory).cacheDefaults(config).build();
+        }
 
-		@Bean
-		public UserService userService() {
-			return new UserService();
-		}
-	}
+        @Bean
+        public UserService userService() {
+            return new UserService();
+        }
+    }
 
-	@Service
-	static class UserService {
+    @Service
+    static class UserService {
 
-		@Cacheable("users")
-		public String getUserById(String id) {
-			System.out.println("Fetching user from database...");
-			// Simulate slow database query
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				Thread.currentThread().interrupt();
-			}
-			return "User-" + id;
-		}
-	}
+        @Cacheable("users")
+        public String getUserById(String id) {
+            System.out.println("Fetching user from database...");
+            // Simulate slow database query
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            return "User-" + id;
+        }
+    }
 }

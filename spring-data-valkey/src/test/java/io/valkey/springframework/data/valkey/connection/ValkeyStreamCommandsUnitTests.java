@@ -17,10 +17,9 @@ package io.valkey.springframework.data.valkey.connection;
 
 import static org.assertj.core.api.Assertions.*;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XPendingOptions;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Range;
 
 /**
  * Unit tests for {@link ValkeyStreamCommands}.
@@ -29,21 +28,21 @@ import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XPe
  */
 class ValkeyStreamCommandsUnitTests {
 
-	@Test // GH-2982
-	void xPendingOptionsUnboundedShouldThrowExceptionWhenCountIsNegative() {
-		assertThatIllegalArgumentException().isThrownBy(() -> XPendingOptions.unbounded(-1L));
-	}
+    @Test // GH-2982
+    void xPendingOptionsUnboundedShouldThrowExceptionWhenCountIsNegative() {
+        assertThatIllegalArgumentException().isThrownBy(() -> XPendingOptions.unbounded(-1L));
+    }
 
-	@Test // GH-2982
-	void xPendingOptionsRangeShouldThrowExceptionWhenRangeIsNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> XPendingOptions.range(null, 10L));
-	}
+    @Test // GH-2982
+    void xPendingOptionsRangeShouldThrowExceptionWhenRangeIsNull() {
+        assertThatIllegalArgumentException().isThrownBy(() -> XPendingOptions.range(null, 10L));
+    }
 
-	@Test // GH-2982
-	void xPendingOptionsRangeShouldThrowExceptionWhenCountIsNegative() {
+    @Test // GH-2982
+    void xPendingOptionsRangeShouldThrowExceptionWhenCountIsNegative() {
 
-		Range<?> range = Range.closed("0", "10");
+        Range<?> range = Range.closed("0", "10");
 
-		assertThatIllegalArgumentException().isThrownBy(() -> XPendingOptions.range(range, -1L));
-	}
+        assertThatIllegalArgumentException().isThrownBy(() -> XPendingOptions.range(range, -1L));
+    }
 }

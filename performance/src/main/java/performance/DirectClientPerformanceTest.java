@@ -25,127 +25,127 @@ import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.sync.RedisCommands;
 import redis.clients.jedis.Jedis;
 
-/**
- * Direct client performance test without Spring Data Valkey overhead.
- */
+/** Direct client performance test without Spring Data Valkey overhead. */
 public class DirectClientPerformanceTest {
 
-	private static final int OPERATIONS = 10000;
-	private static final String KEY_PREFIX = "direct:test:";
+    private static final int OPERATIONS = 10000;
+    private static final String KEY_PREFIX = "direct:test:";
 
-	public static void main(String[] args) throws Exception {
-		String clientType = System.getProperty("client", "valkeyglide");
-		
-		System.out.println("Running Direct Client Performance Test");
-		System.out.println("Client: " + clientType);
-		System.out.println("Operations: " + OPERATIONS);
-		System.out.println("----------------------------------------");
+    public static void main(String[] args) throws Exception {
+        String clientType = System.getProperty("client", "valkeyglide");
 
-		switch (clientType.toLowerCase()) {
-			case "valkeyglide" -> testValkeyGlide();
-			case "lettuce" -> testLettuce();
-			case "jedis" -> testJedis();
-			default -> throw new IllegalArgumentException("Unknown client: " + clientType);
-		}
-	}
+        System.out.println("Running Direct Client Performance Test");
+        System.out.println("Client: " + clientType);
+        System.out.println("Operations: " + OPERATIONS);
+        System.out.println("----------------------------------------");
 
-	private static void testValkeyGlide() throws Exception {
-		GlideClientConfiguration config = GlideClientConfiguration.builder()
-			.address(NodeAddress.builder().host("localhost").port(6379).build())
-			.build();
-		
-		try (GlideClient client = GlideClient.createClient(config).get()) {
-			// SET operations
-			long start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				client.set(GlideString.of(KEY_PREFIX + i), GlideString.of("value" + i)).get();
-			}
-			long setTime = System.nanoTime() - start;
-			printResult("SET", setTime);
+        switch (clientType.toLowerCase()) {
+            case "valkeyglide" -> testValkeyGlide();
+            case "lettuce" -> testLettuce();
+            case "jedis" -> testJedis();
+            default -> throw new IllegalArgumentException("Unknown client: " + clientType);
+        }
+    }
 
-			// GET operations
-			start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				client.get(GlideString.of(KEY_PREFIX + i)).get();
-			}
-			long getTime = System.nanoTime() - start;
-			printResult("GET", getTime);
+    private static void testValkeyGlide() throws Exception {
+        GlideClientConfiguration config =
+                GlideClientConfiguration.builder()
+                        .address(NodeAddress.builder().host("localhost").port(6379).build())
+                        .build();
 
-			// DELETE operations
-			start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				client.del(new GlideString[]{GlideString.of(KEY_PREFIX + i)}).get();
-			}
-			long deleteTime = System.nanoTime() - start;
-			printResult("DELETE", deleteTime);
-		}
-	}
+        try (GlideClient client = GlideClient.createClient(config).get()) {
+            // SET operations
+            long start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                client.set(GlideString.of(KEY_PREFIX + i), GlideString.of("value" + i)).get();
+            }
+            long setTime = System.nanoTime() - start;
+            printResult("SET", setTime);
 
-	private static void testLettuce() {
-		RedisClient client = RedisClient.create(RedisURI.create("redis://localhost:6379"));
-		
-		try (StatefulRedisConnection<String, String> connection = client.connect()) {
-			RedisCommands<String, String> commands = connection.sync();
-			
-			// SET operations
-			long start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				commands.set(KEY_PREFIX + i, "value" + i);
-			}
-			long setTime = System.nanoTime() - start;
-			printResult("SET", setTime);
+            // GET operations
+            start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                client.get(GlideString.of(KEY_PREFIX + i)).get();
+            }
+            long getTime = System.nanoTime() - start;
+            printResult("GET", getTime);
 
-			// GET operations
-			start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				commands.get(KEY_PREFIX + i);
-			}
-			long getTime = System.nanoTime() - start;
-			printResult("GET", getTime);
+            // DELETE operations
+            start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                client.del(new GlideString[] {GlideString.of(KEY_PREFIX + i)}).get();
+            }
+            long deleteTime = System.nanoTime() - start;
+            printResult("DELETE", deleteTime);
+        }
+    }
 
-			// DELETE operations
-			start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				commands.del(KEY_PREFIX + i);
-			}
-			long deleteTime = System.nanoTime() - start;
-			printResult("DELETE", deleteTime);
-		} finally {
-			client.shutdown();
-		}
-	}
+    private static void testLettuce() {
+        RedisClient client = RedisClient.create(RedisURI.create("redis://localhost:6379"));
 
-	private static void testJedis() {
-		try (Jedis jedis = new Jedis("localhost", 6379)) {
-			// SET operations
-			long start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				jedis.set(KEY_PREFIX + i, "value" + i);
-			}
-			long setTime = System.nanoTime() - start;
-			printResult("SET", setTime);
+        try (StatefulRedisConnection<String, String> connection = client.connect()) {
+            RedisCommands<String, String> commands = connection.sync();
 
-			// GET operations
-			start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				jedis.get(KEY_PREFIX + i);
-			}
-			long getTime = System.nanoTime() - start;
-			printResult("GET", getTime);
+            // SET operations
+            long start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                commands.set(KEY_PREFIX + i, "value" + i);
+            }
+            long setTime = System.nanoTime() - start;
+            printResult("SET", setTime);
 
-			// DELETE operations
-			start = System.nanoTime();
-			for (int i = 0; i < OPERATIONS; i++) {
-				jedis.del(KEY_PREFIX + i);
-			}
-			long deleteTime = System.nanoTime() - start;
-			printResult("DELETE", deleteTime);
-		}
-	}
+            // GET operations
+            start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                commands.get(KEY_PREFIX + i);
+            }
+            long getTime = System.nanoTime() - start;
+            printResult("GET", getTime);
 
-	private static void printResult(String operation, long durationNanos) {
-		long durationMs = durationNanos / 1_000_000;
-		System.out.printf("%s:    %,d ops/sec (%.2f ms total)%n", 
-			operation, (long) (OPERATIONS * 1000.0 / durationMs), durationMs / 1.0);
-	}
+            // DELETE operations
+            start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                commands.del(KEY_PREFIX + i);
+            }
+            long deleteTime = System.nanoTime() - start;
+            printResult("DELETE", deleteTime);
+        } finally {
+            client.shutdown();
+        }
+    }
+
+    private static void testJedis() {
+        try (Jedis jedis = new Jedis("localhost", 6379)) {
+            // SET operations
+            long start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                jedis.set(KEY_PREFIX + i, "value" + i);
+            }
+            long setTime = System.nanoTime() - start;
+            printResult("SET", setTime);
+
+            // GET operations
+            start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                jedis.get(KEY_PREFIX + i);
+            }
+            long getTime = System.nanoTime() - start;
+            printResult("GET", getTime);
+
+            // DELETE operations
+            start = System.nanoTime();
+            for (int i = 0; i < OPERATIONS; i++) {
+                jedis.del(KEY_PREFIX + i);
+            }
+            long deleteTime = System.nanoTime() - start;
+            printResult("DELETE", deleteTime);
+        }
+    }
+
+    private static void printResult(String operation, long durationNanos) {
+        long durationMs = durationNanos / 1_000_000;
+        System.out.printf(
+                "%s:    %,d ops/sec (%.2f ms total)%n",
+                operation, (long) (OPERATIONS * 1000.0 / durationMs), durationMs / 1.0);
+    }
 }

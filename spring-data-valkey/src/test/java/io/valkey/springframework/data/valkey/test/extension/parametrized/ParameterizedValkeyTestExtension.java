@@ -23,7 +23,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
@@ -37,124 +36,157 @@ import org.junit.platform.commons.util.ExceptionUtils;
 import org.junit.platform.commons.util.Preconditions;
 import org.junit.platform.commons.util.ReflectionUtils;
 
-/**
- * Copy of {@code org.junit.jupiter.params.ParameterizedTestExtension}.
- */
+/** Copy of {@code org.junit.jupiter.params.ParameterizedTestExtension}. */
 class ParameterizedValkeyTestExtension implements TestTemplateInvocationContextProvider {
 
-	private static final String METHOD_CONTEXT_KEY = "method-context";
-	private static final String CONSTRUCTOR_CONTEXT_KEY = "constructor-context";
-	static final String ARGUMENT_MAX_LENGTH_KEY = "junit.jupiter.params.displayname.argument.maxlength";
+    private static final String METHOD_CONTEXT_KEY = "method-context";
+    private static final String CONSTRUCTOR_CONTEXT_KEY = "constructor-context";
+    static final String ARGUMENT_MAX_LENGTH_KEY =
+            "junit.jupiter.params.displayname.argument.maxlength";
 
-	@Override
-	public boolean supportsTestTemplate(ExtensionContext context) {
-		if (!context.getTestMethod().isPresent()) {
-			return false;
-		}
+    @Override
+    public boolean supportsTestTemplate(ExtensionContext context) {
+        if (!context.getTestMethod().isPresent()) {
+            return false;
+        }
 
-		Method testMethod = context.getTestMethod().get();
-		if (!isAnnotated(testMethod, ParameterizedValkeyTest.class)) {
-			return false;
-		}
+        Method testMethod = context.getTestMethod().get();
+        if (!isAnnotated(testMethod, ParameterizedValkeyTest.class)) {
+            return false;
+        }
 
-		Constructor<?> declaredConstructor = ReflectionUtils.getDeclaredConstructor(context.getRequiredTestClass());
-		ParameterizedTestContext methodContext = new ParameterizedTestContext(testMethod);
-		ParameterizedTestContext constructorContext = new ParameterizedTestContext(declaredConstructor);
+        Constructor<?> declaredConstructor =
+                ReflectionUtils.getDeclaredConstructor(context.getRequiredTestClass());
+        ParameterizedTestContext methodContext = new ParameterizedTestContext(testMethod);
+        ParameterizedTestContext constructorContext = new ParameterizedTestContext(declaredConstructor);
 
-		Preconditions.condition(methodContext.hasPotentiallyValidSignature(), () ->
-				("@ParameterizedValkeyTest method [%s] declares formal parameters in an invalid order: "
-						+ "argument aggregators must be declared after any indexed arguments "
-						+ "and before any arguments resolved by another ParameterResolver.")
-						.formatted(testMethod.toGenericString()));
+        Preconditions.condition(
+                methodContext.hasPotentiallyValidSignature(),
+                () ->
+                        ("@ParameterizedValkeyTest method [%s] declares formal parameters in an invalid order: "
+                                        + "argument aggregators must be declared after any indexed arguments "
+                                        + "and before any arguments resolved by another ParameterResolver.")
+                                .formatted(testMethod.toGenericString()));
 
-		getStore(context).put(METHOD_CONTEXT_KEY, methodContext);
-		getStore(context).put(CONSTRUCTOR_CONTEXT_KEY, constructorContext);
+        getStore(context).put(METHOD_CONTEXT_KEY, methodContext);
+        getStore(context).put(CONSTRUCTOR_CONTEXT_KEY, constructorContext);
 
-		return true;
-	}
+        return true;
+    }
 
-	@Override
-	public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(
-			ExtensionContext extensionContext) {
+    @Override
+    public Stream<TestTemplateInvocationContext> provideTestTemplateInvocationContexts(
+            ExtensionContext extensionContext) {
 
-		Method templateMethod = extensionContext.getRequiredTestMethod();
-		String displayName = extensionContext.getDisplayName();
-		ParameterizedTestContext methodContext = getStore(extensionContext)//
-				.get(METHOD_CONTEXT_KEY, ParameterizedTestContext.class);
+        Method templateMethod = extensionContext.getRequiredTestMethod();
+        String displayName = extensionContext.getDisplayName();
+        ParameterizedTestContext methodContext =
+                getStore(extensionContext) //
+                        .get(METHOD_CONTEXT_KEY, ParameterizedTestContext.class);
 
-		ParameterizedTestContext constructorContext = getStore(extensionContext)//
-				.get(CONSTRUCTOR_CONTEXT_KEY, ParameterizedTestContext.class);
-		int argumentMaxLength = extensionContext.getConfigurationParameter(ARGUMENT_MAX_LENGTH_KEY, Integer::parseInt)
-				.orElse(512);
-		ParameterizedTestNameFormatter formatter = createNameFormatter(templateMethod, methodContext, displayName,
-				argumentMaxLength);
-		AtomicLong invocationCount = new AtomicLong(0);
+        ParameterizedTestContext constructorContext =
+                getStore(extensionContext) //
+                        .get(CONSTRUCTOR_CONTEXT_KEY, ParameterizedTestContext.class);
+        int argumentMaxLength =
+                extensionContext
+                        .getConfigurationParameter(ARGUMENT_MAX_LENGTH_KEY, Integer::parseInt)
+                        .orElse(512);
+        ParameterizedTestNameFormatter formatter =
+                createNameFormatter(templateMethod, methodContext, displayName, argumentMaxLength);
+        AtomicLong invocationCount = new AtomicLong(0);
 
-		List<Class<?>> hierarchy = new ArrayList<>();
-		Class<?> type = extensionContext.getRequiredTestClass();
-		while (type != Object.class) {
-			hierarchy.add(type);
-			type = type.getSuperclass();
-		}
+        List<Class<?>> hierarchy = new ArrayList<>();
+        Class<?> type = extensionContext.getRequiredTestClass();
+        while (type != Object.class) {
+            hierarchy.add(type);
+            type = type.getSuperclass();
+        }
 
-		// @formatter:off
-		return hierarchy.stream().flatMap(it -> findRepeatableAnnotations(it, ArgumentsSource.class).stream()
-				.map(ArgumentsSource::value).map(this::instantiateArgumentsProvider)
-				.map(provider -> AnnotationConsumerInitializer.initialize(it, provider)))
-				.flatMap(provider -> arguments(provider, extensionContext)).map(Arguments::get)
-				.map(arguments -> consumedArguments(arguments, methodContext))
-				.map(arguments -> createInvocationContext(formatter, constructorContext, methodContext, arguments))
-				.peek(invocationContext -> invocationCount.incrementAndGet())
-				.onClose(() -> Preconditions.condition(invocationCount.get() > 0,
-						"Configuration error: You must configure at least one set of arguments for this @ParameterizedValkeyTest class"));
-		// @formatter:on
-	}
+        // @formatter:off
+        return hierarchy.stream()
+                .flatMap(
+                        it ->
+                                findRepeatableAnnotations(it, ArgumentsSource.class).stream()
+                                        .map(ArgumentsSource::value)
+                                        .map(this::instantiateArgumentsProvider)
+                                        .map(provider -> AnnotationConsumerInitializer.initialize(it, provider)))
+                .flatMap(provider -> arguments(provider, extensionContext))
+                .map(Arguments::get)
+                .map(arguments -> consumedArguments(arguments, methodContext))
+                .map(
+                        arguments ->
+                                createInvocationContext(formatter, constructorContext, methodContext, arguments))
+                .peek(invocationContext -> invocationCount.incrementAndGet())
+                .onClose(
+                        () ->
+                                Preconditions.condition(
+                                        invocationCount.get() > 0,
+                                        "Configuration error: You must configure at least one set of arguments for this"
+                                                + " @ParameterizedValkeyTest class"));
+        // @formatter:on
+    }
 
-	@SuppressWarnings("ConstantConditions")
-	private ArgumentsProvider instantiateArgumentsProvider(Class<? extends ArgumentsProvider> clazz) {
-		try {
-			return ReflectionUtils.newInstance(clazz);
-		} catch (Exception ex) {
-			if (ex instanceof NoSuchMethodException) {
-				throw new JUnitException(("Failed to find a no-argument constructor for ArgumentsProvider [%s];"
-						+ " Please ensure that a no-argument constructor exists and that the class is either"
-						+ " a top-level class or a static nested class").formatted(clazz.getName()), ex);
-			}
-			throw ex;
-		}
-	}
+    @SuppressWarnings("ConstantConditions")
+    private ArgumentsProvider instantiateArgumentsProvider(Class<? extends ArgumentsProvider> clazz) {
+        try {
+            return ReflectionUtils.newInstance(clazz);
+        } catch (Exception ex) {
+            if (ex instanceof NoSuchMethodException) {
+                throw new JUnitException(
+                        ("Failed to find a no-argument constructor for ArgumentsProvider [%s]; Please ensure"
+                                + " that a no-argument constructor exists and that the class is either a top-level"
+                                + " class or a static nested class")
+                                .formatted(clazz.getName()),
+                        ex);
+            }
+            throw ex;
+        }
+    }
 
-	private ExtensionContext.Store getStore(ExtensionContext context) {
-		return context.getStore(Namespace.create(ParameterizedValkeyTestExtension.class, context.getRequiredTestMethod()));
-	}
+    private ExtensionContext.Store getStore(ExtensionContext context) {
+        return context.getStore(
+                Namespace.create(ParameterizedValkeyTestExtension.class, context.getRequiredTestMethod()));
+    }
 
-	private TestTemplateInvocationContext createInvocationContext(ParameterizedTestNameFormatter formatter,
-			ParameterizedTestContext constructorContext, ParameterizedTestContext methodContext, Object[] arguments) {
-		return new ParameterizedTestInvocationContext(formatter, constructorContext, methodContext, arguments);
-	}
+    private TestTemplateInvocationContext createInvocationContext(
+            ParameterizedTestNameFormatter formatter,
+            ParameterizedTestContext constructorContext,
+            ParameterizedTestContext methodContext,
+            Object[] arguments) {
+        return new ParameterizedTestInvocationContext(
+                formatter, constructorContext, methodContext, arguments);
+    }
 
-	private ParameterizedTestNameFormatter createNameFormatter(Method templateMethod,
-			ParameterizedTestContext methodContext, String displayName, int argumentMaxLength) {
+    private ParameterizedTestNameFormatter createNameFormatter(
+            Method templateMethod,
+            ParameterizedTestContext methodContext,
+            String displayName,
+            int argumentMaxLength) {
 
-		ParameterizedValkeyTest parameterizedTest = findAnnotation(templateMethod, ParameterizedValkeyTest.class).get();
+        ParameterizedValkeyTest parameterizedTest =
+                findAnnotation(templateMethod, ParameterizedValkeyTest.class).get();
 
-		String pattern = Preconditions.notBlank(parameterizedTest.name().trim(), () ->
-				"Configuration error: @ParameterizedValkeyTest on method [%s] must be declared with a non-empty name"
-						.formatted(templateMethod));
+        String pattern =
+                Preconditions.notBlank(
+                        parameterizedTest.name().trim(),
+                        () ->
+                                "Configuration error: @ParameterizedValkeyTest on method [%s] must be declared with a non-empty name"
+                                        .formatted(templateMethod));
 
-		return new ParameterizedTestNameFormatter(pattern, displayName, methodContext, argumentMaxLength);
-	}
+        return new ParameterizedTestNameFormatter(
+                pattern, displayName, methodContext, argumentMaxLength);
+    }
 
-	protected static Stream<? extends Arguments> arguments(ArgumentsProvider provider, ExtensionContext context) {
-		try {
-			return provider.provideArguments(context);
-		} catch (Exception ex) {
-			throw ExceptionUtils.throwAsUncheckedException(ex);
-		}
-	}
+    protected static Stream<? extends Arguments> arguments(
+            ArgumentsProvider provider, ExtensionContext context) {
+        try {
+            return provider.provideArguments(context);
+        } catch (Exception ex) {
+            throw ExceptionUtils.throwAsUncheckedException(ex);
+        }
+    }
 
-	private Object[] consumedArguments(Object[] arguments, ParameterizedTestContext methodContext) {
-		return arguments;
-	}
-
+    private Object[] consumedArguments(Object[] arguments, ParameterizedTestContext methodContext) {
+        return arguments;
+    }
 }

@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.nio.ByteBuffer;
 import java.util.List;
-
 import reactor.core.publisher.Mono;
 
 /**
@@ -26,20 +25,20 @@ import reactor.core.publisher.Mono;
  */
 public interface ReactiveClusterKeyCommands extends ReactiveKeyCommands {
 
-	/**
-	 * Retrieve all {@literal keys} for a given {@literal pattern} from {@link ValkeyNode}.
-	 *
-	 * @param node must not be {@literal null}.
-	 * @param pattern must not be {@literal null}.
-	 * @return
-	 */
-	Mono<List<ByteBuffer>> keys(ValkeyClusterNode node, ByteBuffer pattern);
+    /**
+     * Retrieve all {@literal keys} for a given {@literal pattern} from {@link ValkeyNode}.
+     *
+     * @param node must not be {@literal null}.
+     * @param pattern must not be {@literal null}.
+     * @return
+     */
+    Mono<List<ByteBuffer>> keys(ValkeyClusterNode node, ByteBuffer pattern);
 
-	/**
-	 * Retrieve a random {@literal key} from {@link ValkeyNode}.
-	 *
-	 * @param node must not be {@literal null}.
-	 * @return
-	 */
-	Mono<ByteBuffer> randomKey(ValkeyClusterNode node);
+    /**
+     * Retrieve a random {@literal key} from {@link ValkeyNode}.
+     *
+     * @param node must not be {@literal null}.
+     * @return
+     */
+    Mono<ByteBuffer> randomKey(ValkeyClusterNode node);
 }

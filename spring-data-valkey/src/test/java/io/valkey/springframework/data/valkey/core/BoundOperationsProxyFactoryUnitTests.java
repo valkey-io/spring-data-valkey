@@ -17,17 +17,15 @@ package io.valkey.springframework.data.valkey.core;
 
 import static org.assertj.core.api.Assertions.*;
 
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
-
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.DynamicContainer;
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.TestFactory;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 /**
  * Unit tests for {@link BoundOperationsProxyFactory}.
@@ -36,48 +34,55 @@ import org.junit.jupiter.api.TestFactory;
  */
 class BoundOperationsProxyFactoryUnitTests {
 
-	private void test(Class<?> operationsTarget, BoundOperationsProxyFactory factory, Method method) {
+    private void test(Class<?> operationsTarget, BoundOperationsProxyFactory factory, Method method) {
 
-		Method toCall = factory.lookupMethod(method, operationsTarget, true);
-		if (toCall == null) {
-			toCall = factory.lookupMethod(method, BoundOperationsProxyFactory.DefaultBoundKeyOperations.class, false);
-		}
+        Method toCall = factory.lookupMethod(method, operationsTarget, true);
+        if (toCall == null) {
+            toCall =
+                    factory.lookupMethod(
+                            method, BoundOperationsProxyFactory.DefaultBoundKeyOperations.class, false);
+        }
 
-		assertThat(toCall)
-				.describedAs("Backing method for method %s not found in %s".formatted(method, operationsTarget.getName()))
-				.isNotNull();
-	}
+        assertThat(toCall)
+                .describedAs(
+                        "Backing method for method %s not found in %s"
+                                .formatted(method, operationsTarget.getName()))
+                .isNotNull();
+    }
 
-	@TestFactory
-	Stream<DynamicContainer> containers() {
+    @TestFactory
+    Stream<DynamicContainer> containers() {
 
-		Stream<Tuple2<Class<?>, Class<?>>> input = Stream.of( //
-				Tuples.of(BoundGeoOperations.class, GeoOperations.class), //
-				Tuples.of(BoundHashOperations.class, HashOperations.class), //
-				Tuples.of(BoundListOperations.class, ListOperations.class), //
-				Tuples.of(BoundStreamOperations.class, StreamOperations.class), //
-				Tuples.of(BoundSetOperations.class, SetOperations.class), //
-				Tuples.of(BoundValueOperations.class, ValueOperations.class), //
-				Tuples.of(BoundZSetOperations.class, ZSetOperations.class) //
-		);
+        Stream<Tuple2<Class<?>, Class<?>>> input =
+                Stream.of( //
+                        Tuples.of(BoundGeoOperations.class, GeoOperations.class), //
+                        Tuples.of(BoundHashOperations.class, HashOperations.class), //
+                        Tuples.of(BoundListOperations.class, ListOperations.class), //
+                        Tuples.of(BoundStreamOperations.class, StreamOperations.class), //
+                        Tuples.of(BoundSetOperations.class, SetOperations.class), //
+                        Tuples.of(BoundValueOperations.class, ValueOperations.class), //
+                        Tuples.of(BoundZSetOperations.class, ZSetOperations.class) //
+                        );
 
-		return input.map(it -> containerFor(it.getT1(), it.getT2()));
-	}
+        return input.map(it -> containerFor(it.getT1(), it.getT2()));
+    }
 
-	private DynamicContainer containerFor(Class<?> boundInterface, Class<?> operationsTarget) {
-		Stream<Method> methods = Arrays.stream(boundInterface.getMethods())
-				.filter(it -> !it.getName().equals("getType") && !it.getName().equals("getOperations"))
-				.filter(Predicate.not(Method::isDefault));
+    private DynamicContainer containerFor(Class<?> boundInterface, Class<?> operationsTarget) {
+        Stream<Method> methods =
+                Arrays.stream(boundInterface.getMethods())
+                        .filter(it -> !it.getName().equals("getType") && !it.getName().equals("getOperations"))
+                        .filter(Predicate.not(Method::isDefault));
 
-		BoundOperationsProxyFactory factory = new BoundOperationsProxyFactory();
+        BoundOperationsProxyFactory factory = new BoundOperationsProxyFactory();
 
-		Stream<DynamicTest> stream = DynamicTest.stream(methods, Method::toString, method -> {
+        Stream<DynamicTest> stream =
+                DynamicTest.stream(
+                        methods,
+                        Method::toString,
+                        method -> {
+                            test(operationsTarget, factory, method);
+                        });
 
-			test(operationsTarget, factory, method);
-
-		});
-
-		return DynamicContainer.dynamicContainer(boundInterface.getSimpleName(), stream);
-	}
-
+        return DynamicContainer.dynamicContainer(boundInterface.getSimpleName(), stream);
+    }
 }

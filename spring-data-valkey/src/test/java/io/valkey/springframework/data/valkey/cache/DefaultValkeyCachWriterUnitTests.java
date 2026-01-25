@@ -28,19 +28,18 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
+import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import java.time.Duration;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.PessimisticLockingFailureException;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
-import io.valkey.springframework.data.valkey.core.types.Expiration;
 
 /**
  * Unit tests for {@link DefaultValkeyCacheWriter}
@@ -51,91 +50,96 @@ import io.valkey.springframework.data.valkey.core.types.Expiration;
 @ExtendWith(MockitoExtension.class)
 class DefaultValkeyCacheWriterUnitTests {
 
-	@Mock
-	private CacheStatisticsCollector mockCacheStatisticsCollector = mock(CacheStatisticsCollector.class);
+    @Mock
+    private CacheStatisticsCollector mockCacheStatisticsCollector =
+            mock(CacheStatisticsCollector.class);
 
-	@Mock
-	private ValkeyConnection mockConnection;
+    @Mock private ValkeyConnection mockConnection;
 
-	@Mock(strictness = Mock.Strictness.LENIENT)
-	private ValkeyConnectionFactory mockConnectionFactory;
+    @Mock(strictness = Mock.Strictness.LENIENT)
+    private ValkeyConnectionFactory mockConnectionFactory;
 
-	@BeforeEach
-	void setup() {
-		doReturn(this.mockConnection).when(this.mockConnectionFactory).getConnection();
-	}
+    @BeforeEach
+    void setup() {
+        doReturn(this.mockConnection).when(this.mockConnectionFactory).getConnection();
+    }
 
-	private ValkeyCacheWriter newValkeyCacheWriter() {
-		return spy(new DefaultValkeyCacheWriter(this.mockConnectionFactory, mock(BatchStrategy.class))
-				.withStatisticsCollector(this.mockCacheStatisticsCollector));
-	}
+    private ValkeyCacheWriter newValkeyCacheWriter() {
+        return spy(
+                new DefaultValkeyCacheWriter(this.mockConnectionFactory, mock(BatchStrategy.class))
+                        .withStatisticsCollector(this.mockCacheStatisticsCollector));
+    }
 
-	@Test // GH-2351
-	void getWithNonNullTtl() {
+    @Test // GH-2351
+    void getWithNonNullTtl() {
 
-		byte[] key = "TestKey".getBytes();
-		byte[] value = "TestValue".getBytes();
+        byte[] key = "TestKey".getBytes();
+        byte[] value = "TestValue".getBytes();
 
-		Duration ttl = Duration.ofSeconds(15);
-		Expiration expiration = Expiration.from(ttl);
+        Duration ttl = Duration.ofSeconds(15);
+        Expiration expiration = Expiration.from(ttl);
 
-		ValkeyStringCommands mockStringCommands = mock(ValkeyStringCommands.class);
+        ValkeyStringCommands mockStringCommands = mock(ValkeyStringCommands.class);
 
-		doReturn(mockStringCommands).when(this.mockConnection).stringCommands();
-		doReturn(value).when(mockStringCommands).getEx(any(), any());
+        doReturn(mockStringCommands).when(this.mockConnection).stringCommands();
+        doReturn(value).when(mockStringCommands).getEx(any(), any());
 
-		ValkeyCacheWriter cacheWriter = newValkeyCacheWriter();
+        ValkeyCacheWriter cacheWriter = newValkeyCacheWriter();
 
-		assertThat(cacheWriter.get("TestCache", key, ttl)).isEqualTo(value);
+        assertThat(cacheWriter.get("TestCache", key, ttl)).isEqualTo(value);
 
-		verify(this.mockConnection, times(1)).stringCommands();
-		verify(mockStringCommands, times(1)).getEx(eq(key), eq(expiration));
-		verify(this.mockConnection, times(1)).close();
-		verifyNoMoreInteractions(this.mockConnection, mockStringCommands);
-	}
+        verify(this.mockConnection, times(1)).stringCommands();
+        verify(mockStringCommands, times(1)).getEx(eq(key), eq(expiration));
+        verify(this.mockConnection, times(1)).close();
+        verifyNoMoreInteractions(this.mockConnection, mockStringCommands);
+    }
 
-	@Test // GH-2351
-	void getWithNullTtl() {
+    @Test // GH-2351
+    void getWithNullTtl() {
 
-		byte[] key = "TestKey".getBytes();
-		byte[] value = "TestValue".getBytes();
+        byte[] key = "TestKey".getBytes();
+        byte[] value = "TestValue".getBytes();
 
-		ValkeyStringCommands mockStringCommands = mock(ValkeyStringCommands.class);
+        ValkeyStringCommands mockStringCommands = mock(ValkeyStringCommands.class);
 
-		doReturn(mockStringCommands).when(this.mockConnection).stringCommands();
-		doReturn(value).when(mockStringCommands).get(any());
+        doReturn(mockStringCommands).when(this.mockConnection).stringCommands();
+        doReturn(value).when(mockStringCommands).get(any());
 
-		ValkeyCacheWriter cacheWriter = newValkeyCacheWriter();
+        ValkeyCacheWriter cacheWriter = newValkeyCacheWriter();
 
-		assertThat(cacheWriter.get("TestCache", key, null)).isEqualTo(value);
+        assertThat(cacheWriter.get("TestCache", key, null)).isEqualTo(value);
 
-		verify(this.mockConnection, times(1)).stringCommands();
-		verify(mockStringCommands, times(1)).get(eq(key));
-		verify(this.mockConnection, times(1)).close();
-		verifyNoMoreInteractions(this.mockConnection, mockStringCommands);
-	}
+        verify(this.mockConnection, times(1)).stringCommands();
+        verify(mockStringCommands, times(1)).get(eq(key));
+        verify(this.mockConnection, times(1)).close();
+        verifyNoMoreInteractions(this.mockConnection, mockStringCommands);
+    }
 
-	@Test // GH-2890
-	void mustNotUnlockWhenLockingFails() {
+    @Test // GH-2890
+    void mustNotUnlockWhenLockingFails() {
 
-		byte[] key = "TestKey".getBytes();
-		byte[] value = "TestValue".getBytes();
+        byte[] key = "TestKey".getBytes();
+        byte[] value = "TestValue".getBytes();
 
-		ValkeyStringCommands mockStringCommands = mock(ValkeyStringCommands.class);
-		ValkeyKeyCommands mockKeyCommands = mock(ValkeyKeyCommands.class);
+        ValkeyStringCommands mockStringCommands = mock(ValkeyStringCommands.class);
+        ValkeyKeyCommands mockKeyCommands = mock(ValkeyKeyCommands.class);
 
-		doReturn(mockStringCommands).when(this.mockConnection).stringCommands();
-		doReturn(mockKeyCommands).when(this.mockConnection).keyCommands();
-		doThrow(new PessimisticLockingFailureException("you-shall-not-pass")).when(mockStringCommands).set(any(byte[].class),
-				any(byte[].class), any(), any());
+        doReturn(mockStringCommands).when(this.mockConnection).stringCommands();
+        doReturn(mockKeyCommands).when(this.mockConnection).keyCommands();
+        doThrow(new PessimisticLockingFailureException("you-shall-not-pass"))
+                .when(mockStringCommands)
+                .set(any(byte[].class), any(byte[].class), any(), any());
 
-		ValkeyCacheWriter cacheWriter = spy(
-				new DefaultValkeyCacheWriter(this.mockConnectionFactory, Duration.ofMillis(10), mock(BatchStrategy.class))
-						.withStatisticsCollector(this.mockCacheStatisticsCollector));
+        ValkeyCacheWriter cacheWriter =
+                spy(
+                        new DefaultValkeyCacheWriter(
+                                        this.mockConnectionFactory, Duration.ofMillis(10), mock(BatchStrategy.class))
+                                .withStatisticsCollector(this.mockCacheStatisticsCollector));
 
-		assertThatException()
-				.isThrownBy(() -> cacheWriter.get("TestCache", key, () -> value, Duration.ofMillis(10), false));
+        assertThatException()
+                .isThrownBy(
+                        () -> cacheWriter.get("TestCache", key, () -> value, Duration.ofMillis(10), false));
 
-		verify(mockKeyCommands, never()).del(any());
-	}
+        verify(mockKeyCommands, never()).del(any());
+    }
 }

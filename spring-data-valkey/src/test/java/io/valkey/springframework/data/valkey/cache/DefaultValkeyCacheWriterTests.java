@@ -15,9 +15,18 @@
  */
 package io.valkey.springframework.data.valkey.cache;
 
-import static org.assertj.core.api.Assertions.*;
 import static io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter.*;
+import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDriver;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDriver.DriverQualifier;
+import io.valkey.springframework.data.valkey.test.condition.ValkeyDriver;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -31,19 +40,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
-import io.valkey.springframework.data.valkey.core.types.Expiration;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDriver;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDriver.DriverQualifier;
-import io.valkey.springframework.data.valkey.test.condition.ValkeyDriver;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.lang.Nullable;
 
 /**
@@ -56,466 +54,534 @@ import org.springframework.lang.Nullable;
 @MethodSource("testParams")
 public class DefaultValkeyCacheWriterTests {
 
-	private static final String CACHE_NAME = "default-valkey-cache-writer-tests";
+    private static final String CACHE_NAME = "default-valkey-cache-writer-tests";
 
-	private String key = "key-1";
-	private String cacheKey = CACHE_NAME + "::" + key;
+    private String key = "key-1";
+    private String cacheKey = CACHE_NAME + "::" + key;
 
-	private byte[] binaryCacheKey = cacheKey.getBytes(StandardCharsets.UTF_8);
-	private byte[] binaryCacheValue = "value".getBytes(StandardCharsets.UTF_8);
+    private byte[] binaryCacheKey = cacheKey.getBytes(StandardCharsets.UTF_8);
+    private byte[] binaryCacheValue = "value".getBytes(StandardCharsets.UTF_8);
 
-	private final @DriverQualifier ValkeyConnectionFactory connectionFactory;
+    private final @DriverQualifier ValkeyConnectionFactory connectionFactory;
+
+    public DefaultValkeyCacheWriterTests(ValkeyConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
+
+    public static Collection<Object[]> testParams() {
+        return CacheTestParams.justConnectionFactories();
+    }
+
+    @BeforeEach
+    void setUp() {
+        doWithConnection(ValkeyConnection::flushAll);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
+    void putShouldAddEternalEntry() {
 
-	public DefaultValkeyCacheWriterTests(ValkeyConnectionFactory connectionFactory) {
-		this.connectionFactory = connectionFactory;
-	}
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-	public static Collection<Object[]> testParams() {
-		return CacheTestParams.justConnectionFactories();
-	}
+        writer.put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
 
-	@BeforeEach
-	void setUp() {
-		doWithConnection(ValkeyConnection::flushAll);
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
+                    assertThat(connection.ttl(binaryCacheKey)).isEqualTo(-1);
+                });
 
-	@ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
-	void putShouldAddEternalEntry() {
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getLockWaitDuration(TimeUnit.NANOSECONDS))
+                .isZero();
+    }
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putShouldAddExpiringEntry() {
 
-		writer.put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
+        nonLockingValkeyCacheWriter(connectionFactory)
+                .put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ofSeconds(1));
 
-		doWithConnection(connection -> {
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
-			assertThat(connection.ttl(binaryCacheKey)).isEqualTo(-1);
-		});
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
+                    assertThat(connection.ttl(binaryCacheKey)).isGreaterThan(0);
+                });
+    }
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getLockWaitDuration(TimeUnit.NANOSECONDS)).isZero();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putShouldOverwriteExistingEternalEntry() {
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putShouldAddExpiringEntry() {
+        doWithConnection(connection -> connection.set(binaryCacheKey, "foo".getBytes()));
 
-		nonLockingValkeyCacheWriter(connectionFactory).put(CACHE_NAME, binaryCacheKey, binaryCacheValue,
-				Duration.ofSeconds(1));
+        nonLockingValkeyCacheWriter(connectionFactory)
+                .put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
 
-		doWithConnection(connection -> {
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
-			assertThat(connection.ttl(binaryCacheKey)).isGreaterThan(0);
-		});
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
+                    assertThat(connection.ttl(binaryCacheKey)).isEqualTo(-1);
+                });
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putShouldOverwriteExistingEternalEntry() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putShouldOverwriteExistingExpiringEntryAndResetTtl() {
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, "foo".getBytes()));
+        doWithConnection(
+                connection ->
+                        connection.set(
+                                binaryCacheKey,
+                                "foo".getBytes(),
+                                Expiration.from(1, TimeUnit.MINUTES),
+                                SetOption.upsert()));
 
-		nonLockingValkeyCacheWriter(connectionFactory).put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
+        nonLockingValkeyCacheWriter(connectionFactory)
+                .put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ofSeconds(5));
 
-		doWithConnection(connection -> {
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
-			assertThat(connection.ttl(binaryCacheKey)).isEqualTo(-1);
-		});
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
+                    assertThat(connection.ttl(binaryCacheKey)).isGreaterThan(3).isLessThan(6);
+                });
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putShouldOverwriteExistingExpiringEntryAndResetTtl() {
+    @ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
+    void getShouldReturnValue() {
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, "foo".getBytes(),
-				Expiration.from(1, TimeUnit.MINUTES), SetOption.upsert()));
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryCacheValue));
 
-		nonLockingValkeyCacheWriter(connectionFactory).put(CACHE_NAME, binaryCacheKey, binaryCacheValue,
-				Duration.ofSeconds(5));
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		doWithConnection(connection -> {
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
-			assertThat(connection.ttl(binaryCacheKey)).isGreaterThan(3).isLessThan(6);
-		});
-	}
+        assertThat(writer.get(CACHE_NAME, binaryCacheKey)).isEqualTo(binaryCacheValue);
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getGets()).isOne();
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getHits()).isOne();
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getMisses()).isZero();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
-	void getShouldReturnValue() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void getShouldReturnNullWhenKeyDoesNotExist() {
+        assertThat(nonLockingValkeyCacheWriter(connectionFactory).get(CACHE_NAME, binaryCacheKey))
+                .isNull();
+    }
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryCacheValue));
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void cacheHitRetrieveShouldIncrementStatistics() throws ExecutionException, InterruptedException {
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryCacheValue));
 
-		assertThat(writer.get(CACHE_NAME, binaryCacheKey)).isEqualTo(binaryCacheValue);
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getGets()).isOne();
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getHits()).isOne();
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getMisses()).isZero();
-	}
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void getShouldReturnNullWhenKeyDoesNotExist() {
-		assertThat(nonLockingValkeyCacheWriter(connectionFactory).get(CACHE_NAME, binaryCacheKey)).isNull();
-	}
+        writer.retrieve(CACHE_NAME, binaryCacheKey).get();
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void cacheHitRetrieveShouldIncrementStatistics() throws ExecutionException, InterruptedException {
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getGets()).isOne();
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getHits()).isOne();
+    }
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryCacheValue));
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void storeShouldIncrementStatistics() throws ExecutionException, InterruptedException {
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		writer.retrieve(CACHE_NAME, binaryCacheKey).get();
+        writer.store(CACHE_NAME, binaryCacheKey, binaryCacheValue, null).get();
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getGets()).isOne();
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getHits()).isOne();
-	}
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
+    }
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void storeShouldIncrementStatistics() throws ExecutionException, InterruptedException {
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void cacheMissRetrieveWithLoaderAsyncShouldIncrementStatistics()
+            throws ExecutionException, InterruptedException {
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		writer.store(CACHE_NAME, binaryCacheKey, binaryCacheValue, null).get();
+        writer.retrieve(CACHE_NAME, binaryCacheKey).get();
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
-	}
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getGets()).isOne();
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getMisses()).isOne();
+    }
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void cacheMissRetrieveWithLoaderAsyncShouldIncrementStatistics() throws ExecutionException, InterruptedException {
+    @ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
+    void putIfAbsentShouldAddEternalEntryWhenKeyDoesNotExist() {
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		writer.retrieve(CACHE_NAME, binaryCacheKey).get();
+        assertThat(writer.putIfAbsent(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO))
+                .isNull();
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getGets()).isOne();
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getMisses()).isOne();
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
+                });
 
-	@ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
-	void putIfAbsentShouldAddEternalEntryWhenKeyDoesNotExist() {
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
+    }
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+    @ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
+    void putIfAbsentShouldNotAddEternalEntryWhenKeyAlreadyExist() {
 
-		assertThat(writer.putIfAbsent(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO)).isNull();
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryCacheValue));
 
-		doWithConnection(connection -> {
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
-		});
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
-	}
+        assertThat(writer.putIfAbsent(CACHE_NAME, binaryCacheKey, "foo".getBytes(), Duration.ZERO))
+                .isEqualTo(binaryCacheValue);
 
-	@ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
-	void putIfAbsentShouldNotAddEternalEntryWhenKeyAlreadyExist() {
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
+                });
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryCacheValue));
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isZero();
+    }
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+    @ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
+    void putIfAbsentShouldAddExpiringEntryWhenKeyDoesNotExist() {
 
-		assertThat(writer.putIfAbsent(CACHE_NAME, binaryCacheKey, "foo".getBytes(), Duration.ZERO))
-				.isEqualTo(binaryCacheValue);
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		doWithConnection(connection -> {
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryCacheValue);
-		});
+        assertThat(
+                        writer.putIfAbsent(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ofSeconds(5)))
+                .isNull();
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isZero();
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.ttl(binaryCacheKey)).isGreaterThan(3).isLessThan(6);
+                });
 
-	@ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
-	void putIfAbsentShouldAddExpiringEntryWhenKeyDoesNotExist() {
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
+    }
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+    @ParameterizedValkeyTest // GH-2890
+    void getWithValueLoaderShouldStoreCacheValue() {
 
-		assertThat(writer.putIfAbsent(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ofSeconds(5))).isNull();
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		doWithConnection(connection -> {
-			assertThat(connection.ttl(binaryCacheKey)).isGreaterThan(3).isLessThan(6);
-		});
+        writer.get(CACHE_NAME, binaryCacheKey, () -> binaryCacheValue, Duration.ofSeconds(5), true);
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.ttl(binaryCacheKey)).isGreaterThan(3).isLessThan(6);
+                });
 
-	@ParameterizedValkeyTest // GH-2890
-	void getWithValueLoaderShouldStoreCacheValue() {
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getMisses()).isOne();
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
+    }
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+    @ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
+    void removeShouldDeleteEntry() {
 
-		writer.get(CACHE_NAME, binaryCacheKey, () -> binaryCacheValue, Duration.ofSeconds(5), true);
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryCacheValue));
 
-		doWithConnection(connection -> {
-			assertThat(connection.ttl(binaryCacheKey)).isGreaterThan(3).isLessThan(6);
-		});
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getMisses()).isOne();
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getPuts()).isOne();
-	}
+        writer.remove(CACHE_NAME, binaryCacheKey);
 
-	@ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
-	void removeShouldDeleteEntry() {
+        doWithConnection(connection -> assertThat(connection.exists(binaryCacheKey)).isFalse());
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryCacheValue));
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getDeletes()).isOne();
+    }
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+    @ParameterizedValkeyTest // DATAREDIS-418, DATAREDIS-1082
+    void cleanShouldRemoveAllKeysByPattern() {
 
-		writer.remove(CACHE_NAME, binaryCacheKey);
+        doWithConnection(
+                connection -> {
+                    connection.set(binaryCacheKey, binaryCacheValue);
+                    connection.set("foo".getBytes(), "bar".getBytes());
+                });
 
-		doWithConnection(connection -> assertThat(connection.exists(binaryCacheKey)).isFalse());
+        ValkeyCacheWriter writer =
+                nonLockingValkeyCacheWriter(connectionFactory)
+                        .withStatisticsCollector(CacheStatisticsCollector.create());
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getDeletes()).isOne();
-	}
+        writer.clean(CACHE_NAME, (CACHE_NAME + "::*").getBytes(Charset.forName("UTF-8")));
 
-	@ParameterizedValkeyTest // DATAREDIS-418, DATAREDIS-1082
-	void cleanShouldRemoveAllKeysByPattern() {
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isFalse();
+                    assertThat(connection.exists("foo".getBytes())).isTrue();
+                });
 
-		doWithConnection(connection -> {
-			connection.set(binaryCacheKey, binaryCacheValue);
-			connection.set("foo".getBytes(), "bar".getBytes());
-		});
+        assertThat(writer.getCacheStatistics(CACHE_NAME).getDeletes()).isOne();
+    }
 
-		ValkeyCacheWriter writer = nonLockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void nonLockingCacheWriterShouldIgnoreExistingLock() {
 
-		writer.clean(CACHE_NAME, (CACHE_NAME + "::*").getBytes(Charset.forName("UTF-8")));
+        ((DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory)).lock(CACHE_NAME);
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isFalse();
-			assertThat(connection.exists("foo".getBytes())).isTrue();
-		});
+        nonLockingValkeyCacheWriter(connectionFactory)
+                .put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
 
-		assertThat(writer.getCacheStatistics(CACHE_NAME).getDeletes()).isOne();
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isTrue();
+                });
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void nonLockingCacheWriterShouldIgnoreExistingLock() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void lockingCacheWriterShouldIgnoreExistingLockOnDifferenceCache() {
 
-		((DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory)).lock(CACHE_NAME);
+        ((DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory)).lock(CACHE_NAME);
 
-		nonLockingValkeyCacheWriter(connectionFactory).put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
+        lockingValkeyCacheWriter(connectionFactory)
+                .put(CACHE_NAME + "-no-the-other-cache", binaryCacheKey, binaryCacheValue, Duration.ZERO);
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isTrue();
-		});
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isTrue();
+                });
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void lockingCacheWriterShouldIgnoreExistingLockOnDifferenceCache() {
+    @ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
+    void lockingCacheWriterShouldWaitForLockRelease() throws InterruptedException {
 
-		((DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory)).lock(CACHE_NAME);
+        DefaultValkeyCacheWriter writer =
+                (DefaultValkeyCacheWriter)
+                        lockingValkeyCacheWriter(connectionFactory)
+                                .withStatisticsCollector(CacheStatisticsCollector.create());
+        writer.lock(CACHE_NAME);
 
-		lockingValkeyCacheWriter(connectionFactory).put(CACHE_NAME + "-no-the-other-cache", binaryCacheKey, binaryCacheValue,
-				Duration.ZERO);
+        CountDownLatch beforeWrite = new CountDownLatch(1);
+        CountDownLatch afterWrite = new CountDownLatch(1);
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isTrue();
-		});
-	}
+        Thread th =
+                new Thread(
+                        () -> {
+                            beforeWrite.countDown();
+                            writer.put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
+                            afterWrite.countDown();
+                        });
 
-	@ParameterizedValkeyTest // DATAREDIS-481, DATAREDIS-1082
-	void lockingCacheWriterShouldWaitForLockRelease() throws InterruptedException {
+        th.start();
 
-		DefaultValkeyCacheWriter writer = (DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory)
-				.withStatisticsCollector(CacheStatisticsCollector.create());
-		writer.lock(CACHE_NAME);
+        try {
 
-		CountDownLatch beforeWrite = new CountDownLatch(1);
-		CountDownLatch afterWrite = new CountDownLatch(1);
+            beforeWrite.await();
 
-		Thread th = new Thread(() -> {
-			beforeWrite.countDown();
-			writer.put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
-			afterWrite.countDown();
-		});
+            Thread.sleep(500);
 
-		th.start();
+            doWithConnection(
+                    connection -> {
+                        assertThat(connection.exists(binaryCacheKey)).isFalse();
+                    });
 
-		try {
+            writer.unlock(CACHE_NAME);
+            afterWrite.await();
 
-			beforeWrite.await();
+            doWithConnection(
+                    connection -> {
+                        assertThat(connection.exists(binaryCacheKey)).isTrue();
+                    });
 
-			Thread.sleep(500);
+            assertThat(writer.getCacheStatistics(CACHE_NAME).getLockWaitDuration(TimeUnit.NANOSECONDS))
+                    .isGreaterThan(0);
 
-			doWithConnection(connection -> {
-				assertThat(connection.exists(binaryCacheKey)).isFalse();
-			});
+        } finally {
+            th.interrupt();
+        }
+    }
 
-			writer.unlock(CACHE_NAME);
-			afterWrite.await();
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void lockingCacheWriterShouldExitWhenInterruptedWaitForLockRelease() throws InterruptedException {
 
-			doWithConnection(connection -> {
-				assertThat(connection.exists(binaryCacheKey)).isTrue();
-			});
+        DefaultValkeyCacheWriter cw =
+                (DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory);
+        cw.lock(CACHE_NAME);
 
-			assertThat(writer.getCacheStatistics(CACHE_NAME).getLockWaitDuration(TimeUnit.NANOSECONDS)).isGreaterThan(0);
+        CountDownLatch beforeWrite = new CountDownLatch(1);
+        CountDownLatch afterWrite = new CountDownLatch(1);
+        AtomicReference<Exception> exceptionRef = new AtomicReference<>();
 
-		} finally {
-			th.interrupt();
-		}
-	}
+        Thread th =
+                new Thread(
+                        () -> {
+                            DefaultValkeyCacheWriter writer =
+                                    new DefaultValkeyCacheWriter(
+                                            connectionFactory, Duration.ofMillis(50), BatchStrategies.keys()) {
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void lockingCacheWriterShouldExitWhenInterruptedWaitForLockRelease() throws InterruptedException {
+                                        @Override
+                                        boolean doCheckLock(String name, ValkeyConnection connection) {
+                                            beforeWrite.countDown();
+                                            return super.doCheckLock(name, connection);
+                                        }
+                                    };
 
-		DefaultValkeyCacheWriter cw = (DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory);
-		cw.lock(CACHE_NAME);
+                            try {
+                                writer.put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
+                            } catch (Exception ex) {
+                                exceptionRef.set(ex);
+                            } finally {
+                                afterWrite.countDown();
+                            }
+                        });
 
-		CountDownLatch beforeWrite = new CountDownLatch(1);
-		CountDownLatch afterWrite = new CountDownLatch(1);
-		AtomicReference<Exception> exceptionRef = new AtomicReference<>();
+        th.start();
+        beforeWrite.await();
 
-		Thread th = new Thread(() -> {
+        th.interrupt();
 
-			DefaultValkeyCacheWriter writer = new DefaultValkeyCacheWriter(connectionFactory, Duration.ofMillis(50),
-					BatchStrategies.keys()) {
+        afterWrite.await();
 
-				@Override
-				boolean doCheckLock(String name, ValkeyConnection connection) {
-					beforeWrite.countDown();
-					return super.doCheckLock(name, connection);
-				}
-			};
+        assertThat(exceptionRef.get()).hasRootCauseInstanceOf(InterruptedException.class);
+    }
 
-			try {
-				writer.put(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
-			} catch (Exception ex) {
-				exceptionRef.set(ex);
-			} finally {
-				afterWrite.countDown();
-			}
-		});
+    @ParameterizedValkeyTest // GH-2300
+    void lockingCacheWriterShouldUsePersistentLocks() {
 
-		th.start();
-		beforeWrite.await();
+        DefaultValkeyCacheWriter writer =
+                (DefaultValkeyCacheWriter)
+                        lockingValkeyCacheWriter(
+                                connectionFactory,
+                                Duration.ofSeconds(1),
+                                TtlFunction.persistent(),
+                                BatchStrategies.keys());
 
-		th.interrupt();
+        writer.lock(CACHE_NAME);
 
-		afterWrite.await();
+        doWithConnection(
+                conn -> {
+                    Long ttl = conn.ttl("default-valkey-cache-writer-tests~lock".getBytes());
+                    assertThat(ttl).isEqualTo(-1);
+                });
+    }
 
-		assertThat(exceptionRef.get()).hasRootCauseInstanceOf(InterruptedException.class);
-	}
+    @ParameterizedValkeyTest // GH-2300
+    void lockingCacheWriterShouldApplyLockTtl() {
 
-	@ParameterizedValkeyTest // GH-2300
-	void lockingCacheWriterShouldUsePersistentLocks() {
+        DefaultValkeyCacheWriter writer =
+                (DefaultValkeyCacheWriter)
+                        lockingValkeyCacheWriter(
+                                connectionFactory,
+                                Duration.ofSeconds(1),
+                                TtlFunction.just(Duration.ofSeconds(60)),
+                                BatchStrategies.keys());
 
-		DefaultValkeyCacheWriter writer = (DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory,
-				Duration.ofSeconds(1), TtlFunction.persistent(), BatchStrategies.keys());
+        writer.lock(CACHE_NAME);
 
-		writer.lock(CACHE_NAME);
+        doWithConnection(
+                conn -> {
+                    Long ttl = conn.ttl("default-valkey-cache-writer-tests~lock".getBytes());
+                    assertThat(ttl).isGreaterThan(30).isLessThan(70);
+                });
+    }
 
-		doWithConnection(conn -> {
-			Long ttl = conn.ttl("default-valkey-cache-writer-tests~lock".getBytes());
-			assertThat(ttl).isEqualTo(-1);
-		});
-	}
+    @ParameterizedValkeyTest // DATAREDIS-1082
+    void noOpStatisticsCollectorReturnsEmptyStatsInstance() {
 
-	@ParameterizedValkeyTest // GH-2300
-	void lockingCacheWriterShouldApplyLockTtl() {
+        DefaultValkeyCacheWriter cw =
+                (DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory);
+        CacheStatistics stats = cw.getCacheStatistics(CACHE_NAME);
 
-		DefaultValkeyCacheWriter writer = (DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory,
-				Duration.ofSeconds(1), TtlFunction.just(Duration.ofSeconds(60)), BatchStrategies.keys());
+        cw.putIfAbsent(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ofSeconds(5));
 
-		writer.lock(CACHE_NAME);
+        assertThat(stats).isNotNull();
+        assertThat(stats.getPuts()).isZero();
+    }
 
-		doWithConnection(conn -> {
-			Long ttl = conn.ttl("default-valkey-cache-writer-tests~lock".getBytes());
-			assertThat(ttl).isGreaterThan(30).isLessThan(70);
-		});
-	}
+    @ParameterizedValkeyTest // GH-1686
+    @Disabled("Occasional failures on CI but not locally")
+    void doLockShouldGetLock() throws InterruptedException {
 
-	@ParameterizedValkeyTest // DATAREDIS-1082
-	void noOpStatisticsCollectorReturnsEmptyStatsInstance() {
+        int threadCount = 3;
+        CountDownLatch beforeWrite = new CountDownLatch(threadCount);
+        CountDownLatch afterWrite = new CountDownLatch(threadCount);
+        AtomicLong concurrency = new AtomicLong();
 
-		DefaultValkeyCacheWriter cw = (DefaultValkeyCacheWriter) lockingValkeyCacheWriter(connectionFactory);
-		CacheStatistics stats = cw.getCacheStatistics(CACHE_NAME);
+        DefaultValkeyCacheWriter cw =
+                new DefaultValkeyCacheWriter(
+                        connectionFactory, Duration.ofMillis(10), BatchStrategies.keys()) {
 
-		cw.putIfAbsent(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ofSeconds(5));
+                    void doLock(
+                            String name,
+                            Object contextualKey,
+                            @Nullable Object contextualValue,
+                            ValkeyConnection connection) {
 
-		assertThat(stats).isNotNull();
-		assertThat(stats.getPuts()).isZero();
-	}
+                        super.doLock(name, contextualKey, contextualValue, connection);
 
-	@ParameterizedValkeyTest // GH-1686
-	@Disabled("Occasional failures on CI but not locally")
-	void doLockShouldGetLock() throws InterruptedException {
+                        // any concurrent access (aka not waiting until the lock is acquired) will result in a
+                        // concurrency greater 1
+                        assertThat(concurrency.incrementAndGet()).isOne();
+                    }
 
-		int threadCount = 3;
-		CountDownLatch beforeWrite = new CountDownLatch(threadCount);
-		CountDownLatch afterWrite = new CountDownLatch(threadCount);
-		AtomicLong concurrency = new AtomicLong();
+                    @Nullable
+                    @Override
+                    Long doUnlock(String name, ValkeyConnection connection) {
+                        try {
+                            return super.doUnlock(name, connection);
+                        } finally {
+                            concurrency.decrementAndGet();
+                        }
+                    }
+                };
 
-		DefaultValkeyCacheWriter cw = new DefaultValkeyCacheWriter(connectionFactory, Duration.ofMillis(10),
-				BatchStrategies.keys()) {
+        cw.lock(CACHE_NAME);
 
-			void doLock(String name, Object contextualKey, @Nullable Object contextualValue, ValkeyConnection connection) {
+        // introduce concurrency
+        List<CompletableFuture<?>> completions = new ArrayList<>();
+        for (int i = 0; i < threadCount; i++) {
 
-				super.doLock(name, contextualKey, contextualValue, connection);
+            CompletableFuture<?> completion = new CompletableFuture<>();
+            completions.add(completion);
 
-				// any concurrent access (aka not waiting until the lock is acquired) will result in a concurrency greater 1
-				assertThat(concurrency.incrementAndGet()).isOne();
-			}
+            Thread th =
+                    new Thread(
+                            () -> {
+                                beforeWrite.countDown();
+                                try {
+                                    cw.putIfAbsent(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
+                                    completion.complete(null);
+                                } catch (Throwable e) {
+                                    completion.completeExceptionally(e);
+                                }
+                                afterWrite.countDown();
+                            });
 
-			@Nullable
-			@Override
-			Long doUnlock(String name, ValkeyConnection connection) {
-				try {
-					return super.doUnlock(name, connection);
-				} finally {
-					concurrency.decrementAndGet();
-				}
-			}
-		};
+            th.start();
+        }
 
-		cw.lock(CACHE_NAME);
+        assertThat(beforeWrite.await(5, TimeUnit.SECONDS)).isTrue();
+        Thread.sleep(500);
 
-		// introduce concurrency
-		List<CompletableFuture<?>> completions = new ArrayList<>();
-		for (int i = 0; i < threadCount; i++) {
+        cw.unlock(CACHE_NAME);
+        assertThat(afterWrite.await(5, TimeUnit.SECONDS)).isTrue();
 
-			CompletableFuture<?> completion = new CompletableFuture<>();
-			completions.add(completion);
+        for (CompletableFuture<?> completion : completions) {
+            assertThat(completion).isCompleted().isCompletedWithValue(null);
+        }
 
-			Thread th = new Thread(() -> {
-				beforeWrite.countDown();
-				try {
-					cw.putIfAbsent(CACHE_NAME, binaryCacheKey, binaryCacheValue, Duration.ZERO);
-					completion.complete(null);
-				} catch (Throwable e) {
-					completion.completeExceptionally(e);
-				}
-				afterWrite.countDown();
-			});
+        doWithConnection(
+                conn -> {
+                    assertThat(conn.exists("default-valkey-cache-writer-tests~lock".getBytes())).isFalse();
+                });
+    }
 
-			th.start();
-		}
+    private void doWithConnection(Consumer<ValkeyConnection> callback) {
 
-		assertThat(beforeWrite.await(5, TimeUnit.SECONDS)).isTrue();
-		Thread.sleep(500);
-
-		cw.unlock(CACHE_NAME);
-		assertThat(afterWrite.await(5, TimeUnit.SECONDS)).isTrue();
-
-		for (CompletableFuture<?> completion : completions) {
-			assertThat(completion).isCompleted().isCompletedWithValue(null);
-		}
-
-		doWithConnection(conn -> {
-			assertThat(conn.exists("default-valkey-cache-writer-tests~lock".getBytes())).isFalse();
-		});
-	}
-
-	private void doWithConnection(Consumer<ValkeyConnection> callback) {
-
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
-			callback.accept(connection);
-		}
-	}
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            callback.accept(connection);
+        }
+    }
 }

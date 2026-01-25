@@ -20,5 +20,5 @@ package io.valkey.springframework.data.valkey.repository.cdi;
  */
 interface PersonFragment {
 
-	int returnOne();
+    int returnOne();
 }

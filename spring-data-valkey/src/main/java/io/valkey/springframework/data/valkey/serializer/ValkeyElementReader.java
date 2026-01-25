@@ -16,13 +16,12 @@
 package io.valkey.springframework.data.valkey.serializer;
 
 import java.nio.ByteBuffer;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Strategy interface that specifies a deserializer that can deserialize a binary element representation stored in Valkey
- * into an object.
+ * Strategy interface that specifies a deserializer that can deserialize a binary element
+ * representation stored in Valkey into an object.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -31,24 +30,24 @@ import org.springframework.util.Assert;
 @FunctionalInterface
 public interface ValkeyElementReader<T> {
 
-	/**
-	 * Deserialize a {@link ByteBuffer} into the according type.
-	 *
-	 * @param buffer must not be {@literal null}.
-	 * @return the deserialized value. Can be {@literal null}.
-	 */
-	@Nullable
-	T read(ByteBuffer buffer);
+    /**
+     * Deserialize a {@link ByteBuffer} into the according type.
+     *
+     * @param buffer must not be {@literal null}.
+     * @return the deserialized value. Can be {@literal null}.
+     */
+    @Nullable
+    T read(ByteBuffer buffer);
 
-	/**
-	 * Create new {@link ValkeyElementReader} using given {@link ValkeySerializer}.
-	 *
-	 * @param serializer must not be {@literal null}.
-	 * @return new instance of {@link ValkeyElementReader}.
-	 */
-	static <T> ValkeyElementReader<T> from(ValkeySerializer<T> serializer) {
+    /**
+     * Create new {@link ValkeyElementReader} using given {@link ValkeySerializer}.
+     *
+     * @param serializer must not be {@literal null}.
+     * @return new instance of {@link ValkeyElementReader}.
+     */
+    static <T> ValkeyElementReader<T> from(ValkeySerializer<T> serializer) {
 
-		Assert.notNull(serializer, "Serializer must not be null");
-		return new DefaultValkeyElementReader<>(serializer);
-	}
+        Assert.notNull(serializer, "Serializer must not be null");
+        return new DefaultValkeyElementReader<>(serializer);
+    }
 }

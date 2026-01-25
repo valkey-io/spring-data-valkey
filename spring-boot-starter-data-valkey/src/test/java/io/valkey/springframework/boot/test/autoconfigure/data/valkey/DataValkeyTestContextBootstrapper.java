@@ -28,10 +28,10 @@ import org.springframework.test.context.TestContextBootstrapper;
  */
 class DataValkeyTestContextBootstrapper extends SpringBootTestContextBootstrapper {
 
-	@Override
-	protected String[] getProperties(Class<?> testClass) {
-		DataValkeyTest dataValkeyTest = TestContextAnnotationUtils.findMergedAnnotation(testClass, DataValkeyTest.class);
-		return (dataValkeyTest != null) ? dataValkeyTest.properties() : null;
-	}
-
+    @Override
+    protected String[] getProperties(Class<?> testClass) {
+        DataValkeyTest dataValkeyTest =
+                TestContextAnnotationUtils.findMergedAnnotation(testClass, DataValkeyTest.class);
+        return (dataValkeyTest != null) ? dataValkeyTest.properties() : null;
+    }
 }

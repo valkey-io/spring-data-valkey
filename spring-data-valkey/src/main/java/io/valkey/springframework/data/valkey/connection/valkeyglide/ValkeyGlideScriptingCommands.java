@@ -15,16 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import glide.api.models.GlideString;
+import io.valkey.springframework.data.valkey.connection.ReturnType;
+import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
-import io.valkey.springframework.data.valkey.connection.ReturnType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-
-import glide.api.models.GlideString;
 
 /**
  * Implementation of {@link ValkeyScriptingCommands} for Valkey-Glide.
@@ -52,18 +50,19 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
         Assert.notNull(script, "Script must not be null");
         Assert.notNull(returnType, "ReturnType must not be null");
         Assert.notNull(keysAndArgs, "Keys and args must not be null");
-        
+
         try {
             Object[] args = new Object[2 + keysAndArgs.length];
             args[0] = script;
             args[1] = String.valueOf(numKeys);
             System.arraycopy(keysAndArgs, 0, args, 2, keysAndArgs.length);
 
-            return connection.execute("EVAL",
-                (Object glideResult) -> {
-                    return convertResult(glideResult, returnType);
-                },
-                args);
+            return connection.execute(
+                    "EVAL",
+                    (Object glideResult) -> {
+                        return convertResult(glideResult, returnType);
+                    },
+                    args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -71,22 +70,24 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
 
     @Override
     @Nullable
-    public <T> T evalSha(String scriptSha1, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
+    public <T> T evalSha(
+            String scriptSha1, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
         Assert.notNull(scriptSha1, "Script SHA1 must not be null");
         Assert.notNull(returnType, "ReturnType must not be null");
         Assert.notNull(keysAndArgs, "Keys and args must not be null");
-        
+
         try {
             Object[] args = new Object[2 + keysAndArgs.length];
             args[0] = scriptSha1;
             args[1] = String.valueOf(numKeys);
             System.arraycopy(keysAndArgs, 0, args, 2, keysAndArgs.length);
 
-            return connection.execute("EVALSHA",
-                (Object glideResult) -> {
-                    return convertResult(glideResult, returnType);
-                },
-                args);
+            return connection.execute(
+                    "EVALSHA",
+                    (Object glideResult) -> {
+                        return convertResult(glideResult, returnType);
+                    },
+                    args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -94,7 +95,8 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
 
     @Override
     @Nullable
-    public <T> T evalSha(byte[] scriptSha1, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
+    public <T> T evalSha(
+            byte[] scriptSha1, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
         Assert.notNull(scriptSha1, "Script SHA1 must not be null");
         return evalSha(new String(scriptSha1), returnType, numKeys, keysAndArgs);
     }
@@ -102,9 +104,10 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
     @Override
     public void scriptFlush() {
         try {
-            connection.execute("SCRIPT",
-                glideResult -> glideResult, // Return "OK" for pipeline/transaction correlation
-                "FLUSH");
+            connection.execute(
+                    "SCRIPT",
+                    glideResult -> glideResult, // Return "OK" for pipeline/transaction correlation
+                    "FLUSH");
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -120,18 +123,19 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
             args[0] = "EXISTS";
             System.arraycopy(scriptSha1s, 0, args, 1, scriptSha1s.length);
 
-            return connection.execute("SCRIPT",
-                (Object[] glideResult) -> {
-                    if (glideResult == null) {
-                        return null;
-                    }
-                    List<Boolean> exists = new ArrayList<>(glideResult.length);
-                    for (Object value : glideResult) {
-                        exists.add((Boolean) value);
-                    }
-                    return exists;
-                },
-                args);
+            return connection.execute(
+                    "SCRIPT",
+                    (Object[] glideResult) -> {
+                        if (glideResult == null) {
+                            return null;
+                        }
+                        List<Boolean> exists = new ArrayList<>(glideResult.length);
+                        for (Object value : glideResult) {
+                            exists.add((Boolean) value);
+                        }
+                        return exists;
+                    },
+                    args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -140,7 +144,7 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
     @Nullable
     public List<Boolean> scriptExists(byte[]... scriptSha1s) {
         Assert.notNull(scriptSha1s, "Script SHA1s must not be null");
-        
+
         String[] sha1s = new String[scriptSha1s.length];
         for (int i = 0; i < scriptSha1s.length; i++) {
             sha1s[i] = new String(scriptSha1s[i]);
@@ -154,9 +158,11 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
         Assert.notNull(script, "Script must not be null");
 
         try {
-            return connection.execute("SCRIPT",
-                (GlideString glideResult) -> glideResult != null ? glideResult.toString() : null,
-                "LOAD", script);
+            return connection.execute(
+                    "SCRIPT",
+                    (GlideString glideResult) -> glideResult != null ? glideResult.toString() : null,
+                    "LOAD",
+                    script);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -165,14 +171,15 @@ public class ValkeyGlideScriptingCommands implements ValkeyScriptingCommands {
     @Override
     public void scriptKill() {
         try {
-            connection.execute("SCRIPT",
-                (String glideResult) -> glideResult, // Return "OK" for pipeline/transaction correlation
-                "KILL");
+            connection.execute(
+                    "SCRIPT",
+                    (String glideResult) -> glideResult, // Return "OK" for pipeline/transaction correlation
+                    "KILL");
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
     }
-    
+
     @SuppressWarnings("unchecked")
     private <T> T convertResult(Object result, ReturnType returnType) {
         switch (returnType) {

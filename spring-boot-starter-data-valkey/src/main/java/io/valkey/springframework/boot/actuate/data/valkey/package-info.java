@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Actuator support for Valkey.
- */
+/** Actuator support for Valkey. */
 package io.valkey.springframework.boot.actuate.data.valkey;

@@ -21,7 +21,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Point;
 import org.springframework.lang.Nullable;
@@ -37,134 +36,134 @@ import org.springframework.util.ObjectUtils;
  */
 public class ValkeyOperationChain {
 
-	private final Set<PathAndValue> sismember = new LinkedHashSet<>();
-	private final Set<PathAndValue> orSismember = new LinkedHashSet<>();
+    private final Set<PathAndValue> sismember = new LinkedHashSet<>();
+    private final Set<PathAndValue> orSismember = new LinkedHashSet<>();
 
-	private @Nullable NearPath near;
+    private @Nullable NearPath near;
 
-	public boolean isEmpty() {
-		return near == null && sismember.isEmpty() && orSismember.isEmpty();
-	}
+    public boolean isEmpty() {
+        return near == null && sismember.isEmpty() && orSismember.isEmpty();
+    }
 
-	public void sismember(String path, Object value) {
-		sismember(new PathAndValue(path, value));
-	}
+    public void sismember(String path, Object value) {
+        sismember(new PathAndValue(path, value));
+    }
 
-	public void sismember(PathAndValue pathAndValue) {
-		sismember.add(pathAndValue);
-	}
+    public void sismember(PathAndValue pathAndValue) {
+        sismember.add(pathAndValue);
+    }
 
-	public Set<PathAndValue> getSismember() {
-		return sismember;
-	}
+    public Set<PathAndValue> getSismember() {
+        return sismember;
+    }
 
-	public void orSismember(String path, Object value) {
-		orSismember(new PathAndValue(path, value));
-	}
+    public void orSismember(String path, Object value) {
+        orSismember(new PathAndValue(path, value));
+    }
 
-	public void orSismember(PathAndValue pathAndValue) {
-		orSismember.add(pathAndValue);
-	}
+    public void orSismember(PathAndValue pathAndValue) {
+        orSismember.add(pathAndValue);
+    }
 
-	public void orSismember(Collection<PathAndValue> next) {
-		orSismember.addAll(next);
-	}
+    public void orSismember(Collection<PathAndValue> next) {
+        orSismember.addAll(next);
+    }
 
-	public Set<PathAndValue> getOrSismember() {
-		return orSismember;
-	}
+    public Set<PathAndValue> getOrSismember() {
+        return orSismember;
+    }
 
-	public void near(NearPath near) {
+    public void near(NearPath near) {
 
-		Assert.notNull(near, "Near must not be null");
-		this.near = near;
-	}
+        Assert.notNull(near, "Near must not be null");
+        this.near = near;
+    }
 
-	@Nullable
-	public NearPath getNear() {
-		return near;
-	}
+    @Nullable
+    public NearPath getNear() {
+        return near;
+    }
 
-	public static class PathAndValue {
+    public static class PathAndValue {
 
-		private final String path;
-		private final Collection<Object> values;
+        private final String path;
+        private final Collection<Object> values;
 
-		public PathAndValue(String path, Object singleValue) {
+        public PathAndValue(String path, Object singleValue) {
 
-			this.path = path;
-			this.values = Collections.singleton(singleValue);
-		}
+            this.path = path;
+            this.values = Collections.singleton(singleValue);
+        }
 
-		public PathAndValue(String path, @Nullable Collection<Object> values) {
+        public PathAndValue(String path, @Nullable Collection<Object> values) {
 
-			this.path = path;
-			this.values = values != null ? values : Collections.emptySet();
-		}
+            this.path = path;
+            this.values = values != null ? values : Collections.emptySet();
+        }
 
-		public boolean isSingleValue() {
-			return values.size() == 1;
-		}
+        public boolean isSingleValue() {
+            return values.size() == 1;
+        }
 
-		public String getPath() {
-			return path;
-		}
+        public String getPath() {
+            return path;
+        }
 
-		public Collection<Object> values() {
-			return values;
-		}
+        public Collection<Object> values() {
+            return values;
+        }
 
-		@Nullable
-		public Object getFirstValue() {
-			return values.isEmpty() ? null : values.iterator().next();
-		}
+        @Nullable
+        public Object getFirstValue() {
+            return values.isEmpty() ? null : values.iterator().next();
+        }
 
-		@Override
-		public String toString() {
-			return path + ":" + (isSingleValue() ? getFirstValue() : values);
-		}
+        @Override
+        public String toString() {
+            return path + ":" + (isSingleValue() ? getFirstValue() : values);
+        }
 
-		@Override
-		public boolean equals(@Nullable Object o) {
+        @Override
+        public boolean equals(@Nullable Object o) {
 
-			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
 
-			PathAndValue that = (PathAndValue) o;
+            PathAndValue that = (PathAndValue) o;
 
-			if (!ObjectUtils.nullSafeEquals(path, that.path)) {
-				return false;
-			}
-			return ObjectUtils.nullSafeEquals(values, that.values);
-		}
+            if (!ObjectUtils.nullSafeEquals(path, that.path)) {
+                return false;
+            }
+            return ObjectUtils.nullSafeEquals(values, that.values);
+        }
 
-		@Override
-		public int hashCode() {
-			int result = ObjectUtils.nullSafeHashCode(path);
-			result = 31 * result + ObjectUtils.nullSafeHashCode(values);
-			return result;
-		}
-	}
+        @Override
+        public int hashCode() {
+            int result = ObjectUtils.nullSafeHashCode(path);
+            result = 31 * result + ObjectUtils.nullSafeHashCode(values);
+            return result;
+        }
+    }
 
-	/**
-	 * @since 1.8
-	 * @author Christoph Strobl
-	 */
-	public static class NearPath extends PathAndValue {
+    /**
+     * @since 1.8
+     * @author Christoph Strobl
+     */
+    public static class NearPath extends PathAndValue {
 
-		public NearPath(String path, Point point, Distance distance) {
-			super(path, Arrays.asList(point, distance));
-		}
+        public NearPath(String path, Point point, Distance distance) {
+            super(path, Arrays.asList(point, distance));
+        }
 
-		public Point getPoint() {
-			return (Point) getFirstValue();
-		}
+        public Point getPoint() {
+            return (Point) getFirstValue();
+        }
 
-		public Distance getDistance() {
+        public Distance getDistance() {
 
-			Iterator<Object> it = values().iterator();
-			it.next();
-			return (Distance) it.next();
-		}
-	}
+            Iterator<Object> it = values().iterator();
+            it.next();
+            return (Distance) it.next();
+        }
+    }
 }

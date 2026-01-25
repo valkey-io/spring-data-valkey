@@ -34,12 +34,14 @@ public abstract class ValkeyGlideUtils {
      */
     public static String convertRangeMinValue(Range<?> range) {
         Assert.notNull(range, "Range must not be null!");
-        
+
         if (range.getLowerBound().isBounded()) {
             Object value = range.getLowerBound().getValue();
-            return range.getLowerBound().isInclusive() ? String.valueOf(value) : "(" + String.valueOf(value);
+            return range.getLowerBound().isInclusive()
+                    ? String.valueOf(value)
+                    : "(" + String.valueOf(value);
         }
-        
+
         return "-inf";
     }
 
@@ -51,12 +53,14 @@ public abstract class ValkeyGlideUtils {
      */
     public static String convertRangeMaxValue(Range<?> range) {
         Assert.notNull(range, "Range must not be null!");
-        
+
         if (range.getUpperBound().isBounded()) {
             Object value = range.getUpperBound().getValue();
-            return range.getUpperBound().isInclusive() ? String.valueOf(value) : "(" + String.valueOf(value);
+            return range.getUpperBound().isInclusive()
+                    ? String.valueOf(value)
+                    : "(" + String.valueOf(value);
         }
-        
+
         return "+inf";
     }
 }

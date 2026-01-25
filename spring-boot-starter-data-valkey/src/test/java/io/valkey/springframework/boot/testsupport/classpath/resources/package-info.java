@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Custom JUnit extension for testing with resources.
- */
+/** Custom JUnit extension for testing with resources. */
 package io.valkey.springframework.boot.testsupport.classpath.resources;

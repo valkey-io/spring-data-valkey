@@ -16,13 +16,12 @@
 package io.valkey.springframework.data.valkey.serializer;
 
 import java.nio.ByteBuffer;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Strategy interface that specifies a serializer that can serialize an element to its binary representation to be used
- * as Valkey protocol payload.
+ * Strategy interface that specifies a serializer that can serialize an element to its binary
+ * representation to be used as Valkey protocol payload.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -31,23 +30,23 @@ import org.springframework.util.Assert;
 @FunctionalInterface
 public interface ValkeyElementWriter<T> {
 
-	/**
-	 * Serialize a {@code element} to its {@link ByteBuffer} representation.
-	 *
-	 * @param element can be {@literal null}.
-	 * @return the {@link ByteBuffer} representing {@code element} in its binary form.
-	 */
-	ByteBuffer write(@Nullable T element);
+    /**
+     * Serialize a {@code element} to its {@link ByteBuffer} representation.
+     *
+     * @param element can be {@literal null}.
+     * @return the {@link ByteBuffer} representing {@code element} in its binary form.
+     */
+    ByteBuffer write(@Nullable T element);
 
-	/**
-	 * Create new {@link ValkeyElementWriter} using given {@link ValkeySerializer}.
-	 *
-	 * @param serializer must not be {@literal null}.
-	 * @return new instance of {@link ValkeyElementWriter}.
-	 */
-	static <T> ValkeyElementWriter<T> from(ValkeySerializer<T> serializer) {
+    /**
+     * Create new {@link ValkeyElementWriter} using given {@link ValkeySerializer}.
+     *
+     * @param serializer must not be {@literal null}.
+     * @return new instance of {@link ValkeyElementWriter}.
+     */
+    static <T> ValkeyElementWriter<T> from(ValkeySerializer<T> serializer) {
 
-		Assert.notNull(serializer, "Serializer must not be null");
-		return new DefaultValkeyElementWriter<>(serializer);
-	}
+        Assert.notNull(serializer, "Serializer must not be null");
+        return new DefaultValkeyElementWriter<>(serializer);
+    }
 }

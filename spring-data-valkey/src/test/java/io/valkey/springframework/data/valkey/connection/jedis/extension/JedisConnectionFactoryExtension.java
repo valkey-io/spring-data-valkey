@@ -15,17 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis.extension;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Supplier;
-
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolutionException;
-import org.junit.jupiter.api.extension.ParameterResolver;
 import io.valkey.springframework.data.valkey.ConnectionFactoryTracker;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
@@ -34,16 +23,27 @@ import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfigurat
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
+import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
-import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 import org.springframework.data.util.Lazy;
 
 /**
- * JUnit {@link ParameterResolver} providing pre-cached {@link JedisConnectionFactory} instances. Connection factories
- * can be qualified with {@code @ValkeyStanalone} (default), {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a
- * specific factory instance. Instances are managed by this extension and will be shut down on JVM shutdown.
+ * JUnit {@link ParameterResolver} providing pre-cached {@link JedisConnectionFactory} instances.
+ * Connection factories can be qualified with {@code @ValkeyStanalone} (default),
+ * {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a specific factory instance.
+ * Instances are managed by this extension and will be shut down on JVM shutdown.
  *
  * @author Mark Paluch
  * @see ValkeyStanalone
@@ -52,184 +52,200 @@ import org.springframework.data.util.Lazy;
  */
 public class JedisConnectionFactoryExtension implements ParameterResolver {
 
-	private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace
-			.create(JedisConnectionFactoryExtension.class);
+    private static final ExtensionContext.Namespace NAMESPACE =
+            ExtensionContext.Namespace.create(JedisConnectionFactoryExtension.class);
 
-	private static final JedisClientConfiguration CLIENT_CONFIGURATION = JedisClientConfiguration.builder()
-			.clientName("jedis-client").build();
+    private static final JedisClientConfiguration CLIENT_CONFIGURATION =
+            JedisClientConfiguration.builder().clientName("jedis-client").build();
 
-	private static final NewableLazy<JedisConnectionFactory> STANDALONE = NewableLazy.of(() -> {
+    private static final NewableLazy<JedisConnectionFactory> STANDALONE =
+            NewableLazy.of(
+                    () -> {
+                        ManagedJedisConnectionFactory factory =
+                                new ManagedJedisConnectionFactory(
+                                        SettingsUtils.standaloneConfiguration(), CLIENT_CONFIGURATION);
 
-		ManagedJedisConnectionFactory factory = new ManagedJedisConnectionFactory(SettingsUtils.standaloneConfiguration(),
-				CLIENT_CONFIGURATION);
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+                        return factory;
+                    });
 
-		return factory;
-	});
+    private static final NewableLazy<JedisConnectionFactory> SENTINEL =
+            NewableLazy.of(
+                    () -> {
+                        ManagedJedisConnectionFactory factory =
+                                new ManagedJedisConnectionFactory(
+                                        SettingsUtils.sentinelConfiguration(), CLIENT_CONFIGURATION);
 
-	private static final NewableLazy<JedisConnectionFactory> SENTINEL = NewableLazy.of(() -> {
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-		ManagedJedisConnectionFactory factory = new ManagedJedisConnectionFactory(SettingsUtils.sentinelConfiguration(),
-				CLIENT_CONFIGURATION);
+                        return factory;
+                    });
 
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+    private static final NewableLazy<JedisConnectionFactory> CLUSTER =
+            NewableLazy.of(
+                    () -> {
+                        ManagedJedisConnectionFactory factory =
+                                new ManagedJedisConnectionFactory(
+                                        SettingsUtils.clusterConfiguration(), CLIENT_CONFIGURATION);
 
-		return factory;
-	});
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-	private static final NewableLazy<JedisConnectionFactory> CLUSTER = NewableLazy.of(() -> {
+                        return factory;
+                    });
 
-		ManagedJedisConnectionFactory factory = new ManagedJedisConnectionFactory(SettingsUtils.clusterConfiguration(),
-				CLIENT_CONFIGURATION);
+    private static final Map<Class<?>, NewableLazy<JedisConnectionFactory>> factories;
 
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+    static {
+        factories = new HashMap<>();
+        factories.put(ValkeyStanalone.class, STANDALONE);
+        factories.put(ValkeySentinel.class, SENTINEL);
+        factories.put(ValkeyCluster.class, CLUSTER);
+    }
 
-		return factory;
-	});
+    /**
+     * Obtain a cached {@link JedisConnectionFactory} described by {@code qualifier}. Instances are
+     * managed by this extension and will be shut down on JVM shutdown.
+     *
+     * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link
+     *     ValkeyCluster}.
+     * @return the managed {@link JedisConnectionFactory}.
+     */
+    public static JedisConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier) {
+        return factories.get(qualifier).getNew();
+    }
 
-	private static final Map<Class<?>, NewableLazy<JedisConnectionFactory>> factories;
+    /**
+     * Obtain a new {@link JedisConnectionFactory} described by {@code qualifier}. Instances are
+     * managed by this extension and will be shut down on JVM shutdown.
+     *
+     * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link
+     *     ValkeyCluster}.
+     * @return the managed {@link JedisConnectionFactory}.
+     */
+    public static JedisConnectionFactory getNewConnectionFactory(
+            Class<? extends Annotation> qualifier) {
+        return factories.get(qualifier).getNew();
+    }
 
-	static {
+    @Override
+    public boolean supportsParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
+        return ValkeyConnectionFactory.class.isAssignableFrom(
+                parameterContext.getParameter().getType());
+    }
 
-		factories = new HashMap<>();
-		factories.put(ValkeyStanalone.class, STANDALONE);
-		factories.put(ValkeySentinel.class, SENTINEL);
-		factories.put(ValkeyCluster.class, CLUSTER);
-	}
+    @Override
+    public Object resolveParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
 
-	/**
-	 * Obtain a cached {@link JedisConnectionFactory} described by {@code qualifier}. Instances are managed by this
-	 * extension and will be shut down on JVM shutdown.
-	 *
-	 * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
-	 * @return the managed {@link JedisConnectionFactory}.
-	 */
-	public static JedisConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier) {
-		return factories.get(qualifier).getNew();
-	}
+        ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
 
-	/**
-	 * Obtain a new {@link JedisConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
-	 * and will be shut down on JVM shutdown.
-	 *
-	 * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
-	 * @return the managed {@link JedisConnectionFactory}.
-	 */
-	public static JedisConnectionFactory getNewConnectionFactory(Class<? extends Annotation> qualifier) {
-		return factories.get(qualifier).getNew();
-	}
+        Class<? extends Annotation> qualifier = getQualifier(parameterContext);
 
-	@Override
-	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-			throws ParameterResolutionException {
-		return ValkeyConnectionFactory.class.isAssignableFrom(parameterContext.getParameter().getType());
-	}
+        return store.getOrComputeIfAbsent(
+                qualifier, JedisConnectionFactoryExtension::getConnectionFactory);
+    }
 
-	@Override
-	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-			throws ParameterResolutionException {
+    private static Class<? extends Annotation> getQualifier(ParameterContext parameterContext) {
 
-		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
+        if (parameterContext.isAnnotated(ValkeySentinel.class)) {
+            return ValkeySentinel.class;
+        }
 
-		Class<? extends Annotation> qualifier = getQualifier(parameterContext);
+        if (parameterContext.isAnnotated(ValkeyCluster.class)) {
+            return ValkeyCluster.class;
+        }
 
-		return store.getOrComputeIfAbsent(qualifier, JedisConnectionFactoryExtension::getConnectionFactory);
-	}
+        return ValkeyStanalone.class;
+    }
 
-	private static Class<? extends Annotation> getQualifier(ParameterContext parameterContext) {
+    static class NewableLazy<T> {
 
-		if (parameterContext.isAnnotated(ValkeySentinel.class)) {
-			return ValkeySentinel.class;
-		}
+        private final Lazy<? extends T> lazy;
 
-		if (parameterContext.isAnnotated(ValkeyCluster.class)) {
-			return ValkeyCluster.class;
-		}
+        private NewableLazy(Supplier<? extends T> supplier) {
+            this.lazy = Lazy.of(supplier);
+        }
 
-		return ValkeyStanalone.class;
-	}
+        public static <T> NewableLazy<T> of(Supplier<? extends T> supplier) {
+            return new NewableLazy<>(supplier);
+        }
 
-	static class NewableLazy<T> {
+        public T getNew() {
+            return lazy.get();
+        }
+    }
 
-		private final Lazy<? extends T> lazy;
+    static class ManagedJedisConnectionFactory extends JedisConnectionFactory
+            implements ConnectionFactoryTracker.Managed, Closeable {
 
-		private NewableLazy(Supplier<? extends T> supplier) {
-			this.lazy = Lazy.of(supplier);
-		}
+        private volatile boolean mayClose;
 
-		public static <T> NewableLazy<T> of(Supplier<? extends T> supplier) {
-			return new NewableLazy<>(supplier);
-		}
+        ManagedJedisConnectionFactory(
+                ValkeyStandaloneConfiguration standaloneConfig, JedisClientConfiguration clientConfig) {
+            super(standaloneConfig, clientConfig);
+        }
 
-		public T getNew() {
-			return lazy.get();
-		}
-	}
+        ManagedJedisConnectionFactory(
+                ValkeySentinelConfiguration sentinelConfig, JedisClientConfiguration clientConfig) {
+            super(sentinelConfig, clientConfig);
+        }
 
-	static class ManagedJedisConnectionFactory extends JedisConnectionFactory
-			implements ConnectionFactoryTracker.Managed, Closeable {
+        ManagedJedisConnectionFactory(
+                ValkeyClusterConfiguration clusterConfig, JedisClientConfiguration clientConfig) {
+            super(clusterConfig, clientConfig);
+        }
 
-		private volatile boolean mayClose;
+        @Override
+        public void destroy() {
 
-		ManagedJedisConnectionFactory(ValkeyStandaloneConfiguration standaloneConfig,
-				JedisClientConfiguration clientConfig) {
-			super(standaloneConfig, clientConfig);
-		}
+            if (!mayClose) {
+                throw new IllegalStateException(
+                        "Prematurely attempted to close ManagedJedisConnectionFactory; Shutdown hook didn't run"
+                                + " yet which means that the test run isn't finished yet; Please fix the tests so"
+                                + " that they don't close this connection factory.");
+            }
 
-		ManagedJedisConnectionFactory(ValkeySentinelConfiguration sentinelConfig, JedisClientConfiguration clientConfig) {
-			super(sentinelConfig, clientConfig);
-		}
+            super.destroy();
+        }
 
-		ManagedJedisConnectionFactory(ValkeyClusterConfiguration clusterConfig, JedisClientConfiguration clientConfig) {
-			super(clusterConfig, clientConfig);
-		}
+        @Override
+        public String toString() {
 
-		@Override
-		public void destroy() {
+            StringBuilder builder = new StringBuilder("Jedis");
 
-			if (!mayClose) {
-				throw new IllegalStateException(
-						"Prematurely attempted to close ManagedJedisConnectionFactory; Shutdown hook didn't run yet which means that the test run isn't finished yet; Please fix the tests so that they don't close this connection factory.");
-			}
+            if (isValkeyClusterAware()) {
+                builder.append(" Cluster");
+            }
 
-			super.destroy();
-		}
+            if (isValkeySentinelAware()) {
+                builder.append(" Sentinel");
+            }
 
-		@Override
-		public String toString() {
+            if (getUsePool()) {
+                builder.append(" [pool]");
+            }
 
-			StringBuilder builder = new StringBuilder("Jedis");
+            return builder.toString();
+        }
 
-			if (isValkeyClusterAware()) {
-				builder.append(" Cluster");
-			}
-
-			if (isValkeySentinelAware()) {
-				builder.append(" Sentinel");
-			}
-
-			if (getUsePool()) {
-				builder.append(" [pool]");
-			}
-
-			return builder.toString();
-		}
-
-		@Override
-		public void close() throws IOException {
-			try {
-				mayClose = true;
-				destroy();
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
-		}
-	}
+        @Override
+        public void close() throws IOException {
+            try {
+                mayClose = true;
+                destroy();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
 }

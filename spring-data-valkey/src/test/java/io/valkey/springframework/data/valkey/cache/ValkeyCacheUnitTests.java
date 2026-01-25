@@ -19,11 +19,10 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
 import java.util.concurrent.CompletableFuture;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.Cache.ValueWrapper;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
 
 /**
  * Unit tests for {@link ValkeyCache}.
@@ -33,30 +32,33 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializationConte
  */
 class ValkeyCacheUnitTests {
 
-	@Test // GH-2650
-	void cacheRetrieveValueCallsCacheWriterRetrieveCorrectly() throws Exception {
+    @Test // GH-2650
+    void cacheRetrieveValueCallsCacheWriterRetrieveCorrectly() throws Exception {
 
-		ValkeyCacheWriter mockCacheWriter = mock(ValkeyCacheWriter.class);
+        ValkeyCacheWriter mockCacheWriter = mock(ValkeyCacheWriter.class);
 
-		doReturn(true).when(mockCacheWriter).supportsAsyncRetrieve();
-		doReturn(usingCompletedFuture("TEST".getBytes())).when(mockCacheWriter).retrieve(anyString(), any(byte[].class));
+        doReturn(true).when(mockCacheWriter).supportsAsyncRetrieve();
+        doReturn(usingCompletedFuture("TEST".getBytes()))
+                .when(mockCacheWriter)
+                .retrieve(anyString(), any(byte[].class));
 
-		ValkeyCacheConfiguration cacheConfiguration = ValkeyCacheConfiguration.defaultCacheConfig()
-				.serializeValuesWith(SerializationPair.byteArray());
+        ValkeyCacheConfiguration cacheConfiguration =
+                ValkeyCacheConfiguration.defaultCacheConfig()
+                        .serializeValuesWith(SerializationPair.byteArray());
 
-		ValkeyCache cache = new ValkeyCache("TestCache", mockCacheWriter, cacheConfiguration);
+        ValkeyCache cache = new ValkeyCache("TestCache", mockCacheWriter, cacheConfiguration);
 
-		CompletableFuture<ValueWrapper> value = cache.retrieve("TestKey");
+        CompletableFuture<ValueWrapper> value = cache.retrieve("TestKey");
 
-		assertThat(value).isNotNull();
-		assertThat(new String((byte[]) value.get().get())).isEqualTo("TEST");
+        assertThat(value).isNotNull();
+        assertThat(new String((byte[]) value.get().get())).isEqualTo("TEST");
 
-		verify(mockCacheWriter, times(1)).retrieve(eq("TestCache"), isA(byte[].class));
-		verify(mockCacheWriter).supportsAsyncRetrieve();
-		verifyNoMoreInteractions(mockCacheWriter);
-	}
+        verify(mockCacheWriter, times(1)).retrieve(eq("TestCache"), isA(byte[].class));
+        verify(mockCacheWriter).supportsAsyncRetrieve();
+        verifyNoMoreInteractions(mockCacheWriter);
+    }
 
-	private <T> CompletableFuture<T> usingCompletedFuture(T value) {
-		return CompletableFuture.completedFuture(value);
-	}
+    private <T> CompletableFuture<T> usingCompletedFuture(T value) {
+        return CompletableFuture.completedFuture(value);
+    }
 }

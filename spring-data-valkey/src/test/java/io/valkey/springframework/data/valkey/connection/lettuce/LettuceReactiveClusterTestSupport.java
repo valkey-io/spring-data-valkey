@@ -19,13 +19,11 @@ import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.cluster.RedisClusterClient;
 import io.lettuce.core.cluster.api.sync.RedisAdvancedClusterCommands;
 import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
-
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
+import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
-import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
 
 /**
  * @author Christoph Strobl
@@ -35,34 +33,36 @@ import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
 @ExtendWith(LettuceExtension.class)
 public abstract class LettuceReactiveClusterTestSupport {
 
-	RedisClusterCommands<String, String> nativeCommands;
-	LettuceReactiveValkeyClusterConnection connection;
+    RedisClusterCommands<String, String> nativeCommands;
+    LettuceReactiveValkeyClusterConnection connection;
 
-	@BeforeEach
-	public void before(RedisClusterClient clusterClient) {
+    @BeforeEach
+    public void before(RedisClusterClient clusterClient) {
 
-		nativeCommands = clusterClient.connect().sync();
-		connection = new LettuceReactiveValkeyClusterConnection(
-				new ClusterConnectionProvider(clusterClient, LettuceReactiveValkeyConnection.CODEC), clusterClient);
-	}
+        nativeCommands = clusterClient.connect().sync();
+        connection =
+                new LettuceReactiveValkeyClusterConnection(
+                        new ClusterConnectionProvider(clusterClient, LettuceReactiveValkeyConnection.CODEC),
+                        clusterClient);
+    }
 
-	@AfterEach
-	public void tearDown() {
+    @AfterEach
+    public void tearDown() {
 
-		if (nativeCommands != null) {
-			nativeCommands.flushall();
+        if (nativeCommands != null) {
+            nativeCommands.flushall();
 
-			if (nativeCommands instanceof RedisCommands valkeyCommands) {
-				valkeyCommands.getStatefulConnection().close();
-			}
+            if (nativeCommands instanceof RedisCommands valkeyCommands) {
+                valkeyCommands.getStatefulConnection().close();
+            }
 
-			if (nativeCommands instanceof RedisAdvancedClusterCommands valkeyAdvancedClusterCommands) {
-				valkeyAdvancedClusterCommands.getStatefulConnection().close();
-			}
-		}
+            if (nativeCommands instanceof RedisAdvancedClusterCommands valkeyAdvancedClusterCommands) {
+                valkeyAdvancedClusterCommands.getStatefulConnection().close();
+            }
+        }
 
-		if (connection != null) {
-			connection.close();
-		}
-	}
+        if (connection != null) {
+            connection.close();
+        }
+    }
 }

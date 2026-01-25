@@ -15,16 +15,16 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverter.BinaryKeyspaceIdentifier;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-
 import org.springframework.context.ApplicationEvent;
-import io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverter.BinaryKeyspaceIdentifier;
 import org.springframework.lang.Nullable;
 
 /**
- * {@link ValkeyKeyExpiredEvent} is a Valkey specific {@link ApplicationEvent} published when a particular key in Valkey
- * expires. It can hold the value of the expired key next to the key, but is not required to do so.
+ * {@link ValkeyKeyExpiredEvent} is a Valkey specific {@link ApplicationEvent} published when a
+ * particular key in Valkey expires. It can hold the value of the expired key next to the key, but
+ * is not required to do so.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -32,86 +32,87 @@ import org.springframework.lang.Nullable;
  */
 public class ValkeyKeyExpiredEvent<T> extends ValkeyKeyspaceEvent {
 
-	/**
-	 * Use {@literal UTF-8} as default charset.
-	 */
-	private static final Charset CHARSET = StandardCharsets.UTF_8;
+    /** Use {@literal UTF-8} as default charset. */
+    private static final Charset CHARSET = StandardCharsets.UTF_8;
 
-	private final BinaryKeyspaceIdentifier objectId;
-	private final @Nullable Object value;
+    private final BinaryKeyspaceIdentifier objectId;
+    private final @Nullable Object value;
 
-	/**
-	 * Creates new {@link ValkeyKeyExpiredEvent}.
-	 *
-	 * @param key the expired key.
-	 */
-	public ValkeyKeyExpiredEvent(byte[] key) {
-		this(key, null);
-	}
+    /**
+     * Creates new {@link ValkeyKeyExpiredEvent}.
+     *
+     * @param key the expired key.
+     */
+    public ValkeyKeyExpiredEvent(byte[] key) {
+        this(key, null);
+    }
 
-	/**
-	 * Creates new {@link ValkeyKeyExpiredEvent}
-	 *
-	 * @param key the expired key.
-	 * @param value the value of the expired key. Can be {@literal null}.
-	 */
-	public ValkeyKeyExpiredEvent(byte[] key, @Nullable Object value) {
-		this(null, key, value);
-	}
+    /**
+     * Creates new {@link ValkeyKeyExpiredEvent}
+     *
+     * @param key the expired key.
+     * @param value the value of the expired key. Can be {@literal null}.
+     */
+    public ValkeyKeyExpiredEvent(byte[] key, @Nullable Object value) {
+        this(null, key, value);
+    }
 
-	/**
-	 * Creates new {@link ValkeyKeyExpiredEvent}
-	 *
-	 * @param channel the Pub/Sub channel through which this event was received.
-	 * @param key the expired key.
-	 * @param value the value of the expired key. Can be {@literal null}.
-	 * @since 1.8
-	 */
-	public ValkeyKeyExpiredEvent(@Nullable String channel, byte[] key, @Nullable Object value) {
-		super(channel, key);
+    /**
+     * Creates new {@link ValkeyKeyExpiredEvent}
+     *
+     * @param channel the Pub/Sub channel through which this event was received.
+     * @param key the expired key.
+     * @param value the value of the expired key. Can be {@literal null}.
+     * @since 1.8
+     */
+    public ValkeyKeyExpiredEvent(@Nullable String channel, byte[] key, @Nullable Object value) {
+        super(channel, key);
 
-		if (BinaryKeyspaceIdentifier.isValid(key)) {
-			this.objectId = BinaryKeyspaceIdentifier.of(key);
-		} else {
-			this.objectId = null;
-		}
+        if (BinaryKeyspaceIdentifier.isValid(key)) {
+            this.objectId = BinaryKeyspaceIdentifier.of(key);
+        } else {
+            this.objectId = null;
+        }
 
-		this.value = value;
-	}
+        this.value = value;
+    }
 
-	/**
-	 * Gets the keyspace in which the expiration occured.
-	 *
-	 * @return {@literal null} if it could not be determined.
-	 */
-	public String getKeyspace() {
-		return objectId != null ? new String(objectId.getKeyspace(), CHARSET) : null;
-	}
+    /**
+     * Gets the keyspace in which the expiration occured.
+     *
+     * @return {@literal null} if it could not be determined.
+     */
+    public String getKeyspace() {
+        return objectId != null ? new String(objectId.getKeyspace(), CHARSET) : null;
+    }
 
-	/**
-	 * Get the expired objects id.
-	 *
-	 * @return the expired objects id.
-	 */
-	public byte[] getId() {
-		return objectId != null ? objectId.getId() : getSource();
-	}
+    /**
+     * Get the expired objects id.
+     *
+     * @return the expired objects id.
+     */
+    public byte[] getId() {
+        return objectId != null ? objectId.getId() : getSource();
+    }
 
-	/**
-	 * Get the expired Object
-	 *
-	 * @return {@literal null} if not present.
-	 */
-	@Nullable
-	public Object getValue() {
-		return value;
-	}
+    /**
+     * Get the expired Object
+     *
+     * @return {@literal null} if not present.
+     */
+    @Nullable
+    public Object getValue() {
+        return value;
+    }
 
-	@Override
-	public String toString() {
+    @Override
+    public String toString() {
 
-		byte[] id = getId();
-		return "ValkeyKeyExpiredEvent [keyspace=" + getKeyspace() + ", id=" + (id == null ? null : new String(id)) + "]";
-	}
-
+        byte[] id = getId();
+        return "ValkeyKeyExpiredEvent [keyspace="
+                + getKeyspace()
+                + ", id="
+                + (id == null ? null : new String(id))
+                + "]";
+    }
 }

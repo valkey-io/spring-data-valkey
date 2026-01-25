@@ -15,19 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-
-import org.reactivestreams.Publisher;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveNumberCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveStringCommands;
@@ -35,8 +22,19 @@ import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.Set
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import org.reactivestreams.Publisher;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Default implementation of {@link ReactiveValueOperations}.
@@ -49,340 +47,380 @@ import org.springframework.util.Assert;
  */
 class DefaultReactiveValueOperations<K, V> implements ReactiveValueOperations<K, V> {
 
-	private final ReactiveValkeyTemplate<?, ?> template;
-	private final ValkeySerializationContext<K, V> serializationContext;
+    private final ReactiveValkeyTemplate<?, ?> template;
+    private final ValkeySerializationContext<K, V> serializationContext;
 
-	DefaultReactiveValueOperations(ReactiveValkeyTemplate<?, ?> template,
-			ValkeySerializationContext<K, V> serializationContext) {
+    DefaultReactiveValueOperations(
+            ReactiveValkeyTemplate<?, ?> template,
+            ValkeySerializationContext<K, V> serializationContext) {
 
-		this.template = template;
-		this.serializationContext = serializationContext;
-	}
+        this.template = template;
+        this.serializationContext = serializationContext;
+    }
 
-	@Override
-	public Mono<Boolean> set(K key, V value) {
+    @Override
+    public Mono<Boolean> set(K key, V value) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(stringCommands -> stringCommands.set(rawKey(key), rawValue(value)));
-	}
+        return createMono(stringCommands -> stringCommands.set(rawKey(key), rawValue(value)));
+    }
 
-	@Override
-	public Mono<Boolean> set(K key, V value, Duration timeout) {
+    @Override
+    public Mono<Boolean> set(K key, V value, Duration timeout) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Duration must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeout, "Duration must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.UPSERT));
-	}
+        return createMono(
+                stringCommands ->
+                        stringCommands.set(
+                                rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.UPSERT));
+    }
 
-	@Override
-	public Mono<V> setGet(K key, V value, Duration timeout) {
+    @Override
+    public Mono<V> setGet(K key, V value, Duration timeout) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
-		Assert.notNull(timeout, "Duration must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
+        Assert.notNull(timeout, "Duration must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.setGet(rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.UPSERT))
-				.map(this::readRequiredValue);
-	}
+        return createMono(
+                        stringCommands ->
+                                stringCommands.setGet(
+                                        rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.UPSERT))
+                .map(this::readRequiredValue);
+    }
 
-	@Override
-	public Mono<Boolean> setIfAbsent(K key, V value) {
+    @Override
+    public Mono<Boolean> setIfAbsent(K key, V value) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.persistent(), SetOption.SET_IF_ABSENT));
-	}
+        return createMono(
+                stringCommands ->
+                        stringCommands.set(
+                                rawKey(key), rawValue(value), Expiration.persistent(), SetOption.SET_IF_ABSENT));
+    }
 
-	@Override
-	public Mono<Boolean> setIfAbsent(K key, V value, Duration timeout) {
+    @Override
+    public Mono<Boolean> setIfAbsent(K key, V value, Duration timeout) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Duration must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeout, "Duration must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.SET_IF_ABSENT));
-	}
+        return createMono(
+                stringCommands ->
+                        stringCommands.set(
+                                rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.SET_IF_ABSENT));
+    }
 
-	@Override
-	public Mono<Boolean> setIfPresent(K key, V value) {
+    @Override
+    public Mono<Boolean> setIfPresent(K key, V value) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.persistent(), SetOption.SET_IF_PRESENT));
-	}
+        return createMono(
+                stringCommands ->
+                        stringCommands.set(
+                                rawKey(key), rawValue(value), Expiration.persistent(), SetOption.SET_IF_PRESENT));
+    }
 
-	@Override
-	public Mono<Boolean> setIfPresent(K key, V value, Duration timeout) {
+    @Override
+    public Mono<Boolean> setIfPresent(K key, V value, Duration timeout) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Duration must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeout, "Duration must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.SET_IF_PRESENT));
-	}
+        return createMono(
+                stringCommands ->
+                        stringCommands.set(
+                                rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.SET_IF_PRESENT));
+    }
 
-	@Override
-	public Mono<Boolean> multiSet(Map<? extends K, ? extends V> map) {
+    @Override
+    public Mono<Boolean> multiSet(Map<? extends K, ? extends V> map) {
 
-		Assert.notNull(map, "Map must not be null");
+        Assert.notNull(map, "Map must not be null");
 
-		return createMono(stringCommands -> {
+        return createMono(
+                stringCommands -> {
+                    Mono<Map<ByteBuffer, ByteBuffer>> serializedMap =
+                            Flux.fromIterable(() -> map.entrySet().iterator())
+                                    .collectMap(entry -> rawKey(entry.getKey()), entry -> rawValue(entry.getValue()));
 
-			Mono<Map<ByteBuffer, ByteBuffer>> serializedMap = Flux.fromIterable(() -> map.entrySet().iterator())
-					.collectMap(entry -> rawKey(entry.getKey()), entry -> rawValue(entry.getValue()));
+                    return serializedMap.flatMap(stringCommands::mSet);
+                });
+    }
 
-			return serializedMap.flatMap(stringCommands::mSet);
-		});
-	}
+    @Override
+    public Mono<Boolean> multiSetIfAbsent(Map<? extends K, ? extends V> map) {
 
-	@Override
-	public Mono<Boolean> multiSetIfAbsent(Map<? extends K, ? extends V> map) {
+        Assert.notNull(map, "Map must not be null");
 
-		Assert.notNull(map, "Map must not be null");
+        return createMono(
+                stringCommands -> {
+                    Mono<Map<ByteBuffer, ByteBuffer>> serializedMap =
+                            Flux.fromIterable(() -> map.entrySet().iterator())
+                                    .collectMap(entry -> rawKey(entry.getKey()), entry -> rawValue(entry.getValue()));
 
-		return createMono(stringCommands -> {
+                    return serializedMap.flatMap(stringCommands::mSetNX);
+                });
+    }
 
-			Mono<Map<ByteBuffer, ByteBuffer>> serializedMap = Flux.fromIterable(() -> map.entrySet().iterator())
-					.collectMap(entry -> rawKey(entry.getKey()), entry -> rawValue(entry.getValue()));
+    @SuppressWarnings("unchecked")
+    @Override
+    public Mono<V> get(Object key) {
 
-			return serializedMap.flatMap(stringCommands::mSetNX);
-		});
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@SuppressWarnings("unchecked")
-	@Override
-	public Mono<V> get(Object key) {
+        return createMono(
+                stringCommands ->
+                        stringCommands
+                                .get(rawKey((K) key)) //
+                                .map(this::readRequiredValue));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<V> getAndDelete(K key) {
 
-		return createMono(stringCommands -> stringCommands.get(rawKey((K) key)) //
-				.map(this::readRequiredValue));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<V> getAndDelete(K key) {
+        return createMono(
+                stringCommands ->
+                        stringCommands
+                                .getDel(rawKey(key)) //
+                                .map(this::readRequiredValue));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<V> getAndExpire(K key, Duration timeout) {
 
-		return createMono(stringCommands -> stringCommands.getDel(rawKey(key)) //
-				.map(this::readRequiredValue));
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
 
-	@Override
-	public Mono<V> getAndExpire(K key, Duration timeout) {
+        return createMono(
+                stringCommands ->
+                        stringCommands
+                                .getEx(rawKey(key), Expiration.from(timeout)) //
+                                .map(this::readRequiredValue));
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Timeout must not be null");
+    @Override
+    public Mono<V> getAndPersist(K key) {
 
-		return createMono(stringCommands -> stringCommands.getEx(rawKey(key), Expiration.from(timeout)) //
-				.map(this::readRequiredValue));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<V> getAndPersist(K key) {
+        return createMono(
+                stringCommands ->
+                        stringCommands
+                                .getEx(rawKey(key), Expiration.persistent()) //
+                                .map(this::readRequiredValue));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<V> getAndSet(K key, V value) {
 
-		return createMono(stringCommands -> stringCommands.getEx(rawKey(key), Expiration.persistent()) //
-				.map(this::readRequiredValue));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<V> getAndSet(K key, V value) {
+        return createMono(
+                stringCommands ->
+                        stringCommands.getSet(rawKey(key), rawValue(value)).mapNotNull(value()::read));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<List<V>> multiGet(Collection<K> keys) {
 
-		return createMono(stringCommands -> stringCommands.getSet(rawKey(key), rawValue(value))
-				.mapNotNull(value()::read));
-	}
+        Assert.notNull(keys, "Keys must not be null");
 
-	@Override
-	public Mono<List<V>> multiGet(Collection<K> keys) {
+        return createMono(
+                stringCommands ->
+                        Flux.fromIterable(keys)
+                                .map(key()::write)
+                                .collectList()
+                                .flatMap(stringCommands::mGet)
+                                .map(this::deserializeValues));
+    }
 
-		Assert.notNull(keys, "Keys must not be null");
+    @Override
+    public Mono<Long> increment(K key) {
 
-		return createMono(stringCommands ->
-				Flux.fromIterable(keys).map(key()::write).collectList().flatMap(stringCommands::mGet)
-						.map(this::deserializeValues));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Long> increment(K key) {
+        return createNumericMono(numberCommands -> numberCommands.incr(rawKey(key)));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Long> increment(K key, long delta) {
 
-		return createNumericMono(numberCommands -> numberCommands.incr(rawKey(key)));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Long> increment(K key, long delta) {
+        return createNumericMono(numberCommands -> numberCommands.incrBy(rawKey(key), delta));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Double> increment(K key, double delta) {
 
-		return createNumericMono(numberCommands -> numberCommands.incrBy(rawKey(key), delta));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Double> increment(K key, double delta) {
+        return createNumericMono(numberCommands -> numberCommands.incrBy(rawKey(key), delta));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Long> decrement(K key) {
 
-		return createNumericMono(numberCommands -> numberCommands.incrBy(rawKey(key), delta));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Long> decrement(K key) {
+        return createNumericMono(numberCommands -> numberCommands.decr(rawKey(key)));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Long> decrement(K key, long delta) {
 
-		return createNumericMono(numberCommands -> numberCommands.decr(rawKey(key)));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Long> decrement(K key, long delta) {
+        return createNumericMono(numberCommands -> numberCommands.decrBy(rawKey(key), delta));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Long> append(K key, String value) {
 
-		return createNumericMono(numberCommands -> numberCommands.decrBy(rawKey(key), delta));
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public Mono<Long> append(K key, String value) {
+        return createMono(
+                stringCommands ->
+                        stringCommands.append(
+                                rawKey(key), serializationContext.getStringSerializationPair().write(value)));
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public Mono<String> get(K key, long start, long end) {
 
-		return createMono(stringCommands ->
-				stringCommands.append(rawKey(key), serializationContext.getStringSerializationPair().write(value)));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<String> get(K key, long start, long end) {
+        return createMono(
+                stringCommands ->
+                        stringCommands
+                                .getRange(rawKey(key), start, end) //
+                                .mapNotNull(stringSerializationPair()::read));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Long> set(K key, V value, long offset) {
 
-		return createMono(stringCommands -> stringCommands.getRange(rawKey(key), start, end) //
-				.mapNotNull(stringSerializationPair()::read));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Long> set(K key, V value, long offset) {
+        return createMono(
+                stringCommands -> stringCommands.setRange(rawKey(key), rawValue(value), offset));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Long> size(K key) {
 
-		return createMono(stringCommands -> stringCommands.setRange(rawKey(key), rawValue(value), offset));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Long> size(K key) {
+        return createMono(stringCommands -> stringCommands.strLen(rawKey(key)));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Boolean> setBit(K key, long offset, boolean value) {
 
-		return createMono(stringCommands -> stringCommands.strLen(rawKey(key)));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Boolean> setBit(K key, long offset, boolean value) {
+        return createMono(stringCommands -> stringCommands.setBit(rawKey(key), offset, value));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<Boolean> getBit(K key, long offset) {
 
-		return createMono(stringCommands -> stringCommands.setBit(rawKey(key), offset, value));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Boolean> getBit(K key, long offset) {
+        return createMono(stringCommands -> stringCommands.getBit(rawKey(key), offset));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Mono<List<Long>> bitField(K key, BitFieldSubCommands subCommands) {
 
-		return createMono(stringCommands -> stringCommands.getBit(rawKey(key), offset));
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(subCommands, "BitFieldSubCommands must not be null");
 
-	@Override
-	public Mono<List<Long>> bitField(K key, BitFieldSubCommands subCommands) {
+        return createMono(stringCommands -> stringCommands.bitField(rawKey(key), subCommands));
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(subCommands, "BitFieldSubCommands must not be null");
+    @Override
+    public Mono<Boolean> delete(K key) {
 
-		return createMono(stringCommands -> stringCommands.bitField(rawKey(key), subCommands));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Boolean> delete(K key) {
+        return template
+                .doCreateMono(connection -> connection.keyCommands().del(rawKey(key)))
+                .map(l -> l != 0);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    private <T> Mono<T> createNumericMono(Function<ReactiveNumberCommands, Publisher<T>> function) {
 
-		return template.doCreateMono(connection -> connection.keyCommands().del(rawKey(key))).map(l -> l != 0);
-	}
+        Assert.notNull(function, "Function must not be null");
 
-	private <T> Mono<T> createNumericMono(Function<ReactiveNumberCommands, Publisher<T>> function) {
+        return template.doCreateMono(connection -> function.apply(connection.numberCommands()));
+    }
 
-		Assert.notNull(function, "Function must not be null");
+    private <T> Mono<T> createMono(Function<ReactiveStringCommands, Publisher<T>> function) {
 
-		return template.doCreateMono(connection -> function.apply(connection.numberCommands()));
-	}
+        Assert.notNull(function, "Function must not be null");
 
-	private <T> Mono<T> createMono(Function<ReactiveStringCommands, Publisher<T>> function) {
+        return template.doCreateMono(connection -> function.apply(connection.stringCommands()));
+    }
 
-		Assert.notNull(function, "Function must not be null");
+    private ByteBuffer rawKey(K key) {
+        return serializationContext.getKeySerializationPair().write(key);
+    }
 
-		return template.doCreateMono(connection -> function.apply(connection.stringCommands()));
-	}
+    private ByteBuffer rawValue(V value) {
+        return serializationContext.getValueSerializationPair().write(value);
+    }
 
-	private ByteBuffer rawKey(K key) {
-		return serializationContext.getKeySerializationPair().write(key);
-	}
+    @Nullable
+    private V readValue(ByteBuffer buffer) {
+        return serializationContext.getValueSerializationPair().read(buffer);
+    }
 
-	private ByteBuffer rawValue(V value) {
-		return serializationContext.getValueSerializationPair().write(value);
-	}
+    private V readRequiredValue(ByteBuffer buffer) {
 
-	@Nullable
-	private V readValue(ByteBuffer buffer) {
-		return serializationContext.getValueSerializationPair().read(buffer);
-	}
+        V value = readValue(buffer);
 
-	private V readRequiredValue(ByteBuffer buffer) {
+        if (value != null) {
+            return value;
+        }
 
-		V value = readValue(buffer);
+        throw new InvalidDataAccessApiUsageException("Deserialized value is null");
+    }
 
-		if (value != null) {
-			return value;
-		}
+    private SerializationPair<String> stringSerializationPair() {
+        return serializationContext.getStringSerializationPair();
+    }
 
-		throw new InvalidDataAccessApiUsageException("Deserialized value is null");
-	}
+    private SerializationPair<K> key() {
+        return serializationContext.getKeySerializationPair();
+    }
 
-	private SerializationPair<String> stringSerializationPair() {
-		return serializationContext.getStringSerializationPair();
-	}
+    private SerializationPair<V> value() {
+        return serializationContext.getValueSerializationPair();
+    }
 
-	private SerializationPair<K> key() {
-		return serializationContext.getKeySerializationPair();
-	}
+    private List<V> deserializeValues(List<ByteBuffer> source) {
 
-	private SerializationPair<V> value() {
-		return serializationContext.getValueSerializationPair();
-	}
+        List<V> result = new ArrayList<>(source.size());
 
-	private List<V> deserializeValues(List<ByteBuffer> source) {
+        for (ByteBuffer buffer : source) {
 
-		List<V> result = new ArrayList<>(source.size());
+            if (buffer == null) {
+                result.add(null);
+            } else {
+                result.add(readValue(buffer));
+            }
+        }
 
-		for (ByteBuffer buffer : source) {
-
-			if (buffer == null) {
-				result.add(null);
-			} else {
-				result.add(readValue(buffer));
-			}
-		}
-
-		return result;
-	}
+        return result;
+    }
 }

@@ -15,12 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.stream;
 
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * Integration tests for {@link StreamMessageListenerContainer} using Jedis.
@@ -31,10 +30,10 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 @EnabledOnCommand("XREAD")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class JedisStreamMessageListenerContainerIntegrationTests
-		extends AbstractStreamMessageListenerContainerIntegrationTests {
+        extends AbstractStreamMessageListenerContainerIntegrationTests {
 
-	public JedisStreamMessageListenerContainerIntegrationTests(ValkeyConnectionFactory connectionFactory) {
-		super(connectionFactory);
-	}
-
+    public JedisStreamMessageListenerContainerIntegrationTests(
+            ValkeyConnectionFactory connectionFactory) {
+        super(connectionFactory);
+    }
 }

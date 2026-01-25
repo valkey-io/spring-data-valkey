@@ -21,22 +21,19 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import org.junit.jupiter.api.Test;
 
 /**
- * {@code @LongRunningTest} is used to signal that the annotated test method is only <em>enabled</em> if long running
- * tests are enabled. This is a meta-annotation for {@code @Test} and
- * {@code @EnabledIfSystemProperty(named = "runLongTests")}.
+ * {@code @LongRunningTest} is used to signal that the annotated test method is only
+ * <em>enabled</em> if long running tests are enabled. This is a meta-annotation for {@code @Test}
+ * and {@code @EnabledIfSystemProperty(named = "runLongTests")}.
  *
  * @author Mark Paluch
  */
-@Target({ ElementType.METHOD })
+@Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
 @Test
 @EnabledIfLongRunningTest
-public @interface LongRunningTest {
-
-}
+public @interface LongRunningTest {}

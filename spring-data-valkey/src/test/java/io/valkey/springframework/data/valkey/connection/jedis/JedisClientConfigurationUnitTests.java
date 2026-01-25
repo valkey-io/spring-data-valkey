@@ -17,18 +17,15 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 
 import static org.assertj.core.api.Assertions.*;
 
-import redis.clients.jedis.JedisPoolConfig;
-
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-
 import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
-
 import org.junit.jupiter.api.Test;
+import redis.clients.jedis.JedisPoolConfig;
 
 /**
  * Unit tests for {@link JedisClientConfiguration}.
@@ -37,57 +34,60 @@ import org.junit.jupiter.api.Test;
  */
 class JedisClientConfigurationUnitTests {
 
-	@Test // DATAREDIS-574
-	void shouldCreateEmptyConfiguration() {
+    @Test // DATAREDIS-574
+    void shouldCreateEmptyConfiguration() {
 
-		JedisClientConfiguration configuration = JedisClientConfiguration.defaultConfiguration();
+        JedisClientConfiguration configuration = JedisClientConfiguration.defaultConfiguration();
 
-		assertThat(configuration.getClientName()).isEmpty();
-		assertThat(configuration.getConnectTimeout()).isEqualTo(Duration.ofSeconds(2));
-		assertThat(configuration.getReadTimeout()).isEqualTo(Duration.ofSeconds(2));
-		assertThat(configuration.getHostnameVerifier()).isEmpty();
-		assertThat(configuration.getPoolConfig()).isPresent();
-		assertThat(configuration.getSslParameters()).isEmpty();
-		assertThat(configuration.getSslSocketFactory()).isEmpty();
-	}
+        assertThat(configuration.getClientName()).isEmpty();
+        assertThat(configuration.getConnectTimeout()).isEqualTo(Duration.ofSeconds(2));
+        assertThat(configuration.getReadTimeout()).isEqualTo(Duration.ofSeconds(2));
+        assertThat(configuration.getHostnameVerifier()).isEmpty();
+        assertThat(configuration.getPoolConfig()).isPresent();
+        assertThat(configuration.getSslParameters()).isEmpty();
+        assertThat(configuration.getSslSocketFactory()).isEmpty();
+    }
 
-	@Test // DATAREDIS-574
-	void shouldConfigureAllProperties() throws NoSuchAlgorithmException {
+    @Test // DATAREDIS-574
+    void shouldConfigureAllProperties() throws NoSuchAlgorithmException {
 
-		SSLParameters sslParameters = new SSLParameters();
-		SSLContext context = SSLContext.getDefault();
-		SSLSocketFactory socketFactory = context.getSocketFactory();
-		JedisPoolConfig poolConfig = new JedisPoolConfig();
+        SSLParameters sslParameters = new SSLParameters();
+        SSLContext context = SSLContext.getDefault();
+        SSLSocketFactory socketFactory = context.getSocketFactory();
+        JedisPoolConfig poolConfig = new JedisPoolConfig();
 
-		JedisClientConfiguration configuration = JedisClientConfiguration.builder().useSsl() //
-				.hostnameVerifier(MyHostnameVerifier.INSTANCE) //
-				.sslParameters(sslParameters) //
-				.sslSocketFactory(socketFactory).and() //
-				.clientName("my-client") //
-				.connectTimeout(Duration.ofMinutes(10)) //
-				.readTimeout(Duration.ofHours(5)) //
-				.usePooling().poolConfig(poolConfig) //
-				.build();
+        JedisClientConfiguration configuration =
+                JedisClientConfiguration.builder()
+                        .useSsl() //
+                        .hostnameVerifier(MyHostnameVerifier.INSTANCE) //
+                        .sslParameters(sslParameters) //
+                        .sslSocketFactory(socketFactory)
+                        .and() //
+                        .clientName("my-client") //
+                        .connectTimeout(Duration.ofMinutes(10)) //
+                        .readTimeout(Duration.ofHours(5)) //
+                        .usePooling()
+                        .poolConfig(poolConfig) //
+                        .build();
 
-		assertThat(configuration.isUseSsl()).isTrue();
-		assertThat(configuration.getHostnameVerifier()).contains(MyHostnameVerifier.INSTANCE);
-		assertThat(configuration.getSslParameters()).contains(sslParameters);
-		assertThat(configuration.getSslSocketFactory()).contains(socketFactory);
+        assertThat(configuration.isUseSsl()).isTrue();
+        assertThat(configuration.getHostnameVerifier()).contains(MyHostnameVerifier.INSTANCE);
+        assertThat(configuration.getSslParameters()).contains(sslParameters);
+        assertThat(configuration.getSslSocketFactory()).contains(socketFactory);
 
-		assertThat(configuration.getClientName()).contains("my-client");
-		assertThat(configuration.getConnectTimeout()).isEqualTo(Duration.ofMinutes(10));
-		assertThat(configuration.getReadTimeout()).isEqualTo(Duration.ofHours(5));
+        assertThat(configuration.getClientName()).contains("my-client");
+        assertThat(configuration.getConnectTimeout()).isEqualTo(Duration.ofMinutes(10));
+        assertThat(configuration.getReadTimeout()).isEqualTo(Duration.ofHours(5));
 
-		assertThat(configuration.getPoolConfig()).contains(poolConfig);
-	}
+        assertThat(configuration.getPoolConfig()).contains(poolConfig);
+    }
 
-	enum MyHostnameVerifier implements HostnameVerifier {
+    enum MyHostnameVerifier implements HostnameVerifier {
+        INSTANCE;
 
-		INSTANCE;
-
-		@Override
-		public boolean verify(String s, SSLSession sslSession) {
-			return false;
-		}
-	}
+        @Override
+        public boolean verify(String s, SSLSession sslSession) {
+            return false;
+        }
+    }
 }

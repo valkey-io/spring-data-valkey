@@ -21,59 +21,59 @@ package io.valkey.springframework.data.valkey.connection;
  */
 public class Limit {
 
-	private static final Limit UNLIMITED = new Unlimited();
+    private static final Limit UNLIMITED = new Unlimited();
 
-	int offset;
-	int count;
+    int offset;
+    int count;
 
-	public static Limit limit() {
-		return new Limit();
-	}
+    public static Limit limit() {
+        return new Limit();
+    }
 
-	public Limit offset(int offset) {
-		this.offset = offset;
-		return this;
-	}
+    public Limit offset(int offset) {
+        this.offset = offset;
+        return this;
+    }
 
-	public Limit count(int count) {
-		this.count = count;
-		return this;
-	}
+    public Limit count(int count) {
+        this.count = count;
+        return this;
+    }
 
-	public int getCount() {
-		return count;
-	}
+    public int getCount() {
+        return count;
+    }
 
-	public int getOffset() {
-		return offset;
-	}
+    public int getOffset() {
+        return offset;
+    }
 
-	public boolean isUnlimited() {
-		return this.equals(UNLIMITED);
-	}
+    public boolean isUnlimited() {
+        return this.equals(UNLIMITED);
+    }
 
-	public boolean isLimited() {
-		return !isUnlimited();
-	}
+    public boolean isLimited() {
+        return !isUnlimited();
+    }
 
-	/**
-	 * @return new {@link Limit} indicating no limit;
-	 * @since 1.3
-	 */
-	public static Limit unlimited() {
-		return UNLIMITED;
-	}
+    /**
+     * @return new {@link Limit} indicating no limit;
+     * @since 1.3
+     */
+    public static Limit unlimited() {
+        return UNLIMITED;
+    }
 
-	private static class Unlimited extends Limit {
+    private static class Unlimited extends Limit {
 
-		@Override
-		public int getCount() {
-			return -1;
-		}
+        @Override
+        public int getCount() {
+            return -1;
+        }
 
-		@Override
-		public int getOffset() {
-			return super.getOffset();
-		}
-	}
+        @Override
+        public int getOffset() {
+            return super.getOffset();
+        }
+    }
 }

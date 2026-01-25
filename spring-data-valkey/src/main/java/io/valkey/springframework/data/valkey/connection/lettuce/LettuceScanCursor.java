@@ -15,18 +15,18 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import java.util.Collection;
-
 import io.valkey.springframework.data.valkey.core.ScanCursor;
 import io.valkey.springframework.data.valkey.core.ScanIteration;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
+import java.util.Collection;
 import org.springframework.lang.Nullable;
 
 /**
- * Lettuce-specific {@link ScanCursor} extension that maintains the cursor state that is required for stateful-scanning
- * across a Valkey Cluster.
- * <p>
- * The cursor state uses Lettuce's stateful {@link io.lettuce.core.ScanCursor} to keep track of scanning progress.
+ * Lettuce-specific {@link ScanCursor} extension that maintains the cursor state that is required
+ * for stateful-scanning across a Valkey Cluster.
+ *
+ * <p>The cursor state uses Lettuce's stateful {@link io.lettuce.core.ScanCursor} to keep track of
+ * scanning progress.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -34,75 +34,81 @@ import org.springframework.lang.Nullable;
  */
 abstract class LettuceScanCursor<T> extends ScanCursor<T> {
 
-	private @Nullable io.lettuce.core.ScanCursor state;
+    private @Nullable io.lettuce.core.ScanCursor state;
 
-	/**
-	 * Creates a new {@link LettuceScanCursor} given {@link ScanOptions}.
-	 *
-	 * @param options must not be {@literal null}.
-	 */
-	LettuceScanCursor(ScanOptions options) {
-		super(options);
-	}
+    /**
+     * Creates a new {@link LettuceScanCursor} given {@link ScanOptions}.
+     *
+     * @param options must not be {@literal null}.
+     */
+    LettuceScanCursor(ScanOptions options) {
+        super(options);
+    }
 
-	@Override
-	protected ScanIteration<T> doScan(CursorId cursorId, ScanOptions options) {
+    @Override
+    protected ScanIteration<T> doScan(CursorId cursorId, ScanOptions options) {
 
-		if (state == null && cursorId.isInitial()) {
-			return scanAndProcessState(io.lettuce.core.ScanCursor.INITIAL, options);
-		}
+        if (state == null && cursorId.isInitial()) {
+            return scanAndProcessState(io.lettuce.core.ScanCursor.INITIAL, options);
+        }
 
-		if (state != null) {
+        if (state != null) {
 
-			if (isMatchingCursor(cursorId)) {
-				return scanAndProcessState(state, options);
-			}
-		}
+            if (isMatchingCursor(cursorId)) {
+                return scanAndProcessState(state, options);
+            }
+        }
 
-		throw new IllegalArgumentException("Current scan %s state and cursor %d do not match"
-				.formatted(state != null ? state.getCursor() : "(none)", cursorId));
-	}
+        throw new IllegalArgumentException(
+                "Current scan %s state and cursor %d do not match"
+                        .formatted(state != null ? state.getCursor() : "(none)", cursorId));
+    }
 
-	@Override
-	protected boolean isFinished(CursorId cursorId) {
-		return state != null && isMatchingCursor(cursorId) ? state.isFinished() : super.isFinished(cursorId);
-	}
+    @Override
+    protected boolean isFinished(CursorId cursorId) {
+        return state != null && isMatchingCursor(cursorId)
+                ? state.isFinished()
+                : super.isFinished(cursorId);
+    }
 
-	private ScanIteration<T> scanAndProcessState(io.lettuce.core.ScanCursor scanCursor, ScanOptions options) {
+    private ScanIteration<T> scanAndProcessState(
+            io.lettuce.core.ScanCursor scanCursor, ScanOptions options) {
 
-		LettuceScanIteration<T> iteration = doScan(scanCursor, options);
-		state = iteration.cursor;
+        LettuceScanIteration<T> iteration = doScan(scanCursor, options);
+        state = iteration.cursor;
 
-		return iteration;
-	}
+        return iteration;
+    }
 
-	private boolean isMatchingCursor(CursorId cursorId) {
-		return state != null && state.getCursor().equals(cursorId.getCursorId());
-	}
+    private boolean isMatchingCursor(CursorId cursorId) {
+        return state != null && state.getCursor().equals(cursorId.getCursorId());
+    }
 
-	/**
-	 * Perform the actual scan operation given {@link io.lettuce.core.ScanCursor} and {@link ScanOptions}.
-	 *
-	 * @param cursor must not be {@literal null}.
-	 * @param options must not be {@literal null}.
-	 * @return never {@literal null}
-	 */
-	protected abstract LettuceScanIteration<T> doScan(io.lettuce.core.ScanCursor cursor, ScanOptions options);
+    /**
+     * Perform the actual scan operation given {@link io.lettuce.core.ScanCursor} and {@link
+     * ScanOptions}.
+     *
+     * @param cursor must not be {@literal null}.
+     * @param options must not be {@literal null}.
+     * @return never {@literal null}
+     */
+    protected abstract LettuceScanIteration<T> doScan(
+            io.lettuce.core.ScanCursor cursor, ScanOptions options);
 
-	/**
-	 * Lettuce-specific extension to {@link ScanIteration} keeping track of the original
-	 * {@link io.lettuce.core.ScanCursor} object.
-	 *
-	 * @author Mark Paluch
-	 */
-	static class LettuceScanIteration<T> extends ScanIteration<T> {
+    /**
+     * Lettuce-specific extension to {@link ScanIteration} keeping track of the original {@link
+     * io.lettuce.core.ScanCursor} object.
+     *
+     * @author Mark Paluch
+     */
+    static class LettuceScanIteration<T> extends ScanIteration<T> {
 
-		private final io.lettuce.core.ScanCursor cursor;
+        private final io.lettuce.core.ScanCursor cursor;
 
-		LettuceScanIteration(io.lettuce.core.ScanCursor cursor, Collection<T> items) {
+        LettuceScanIteration(io.lettuce.core.ScanCursor cursor, Collection<T> items) {
 
-			super(CursorId.of(cursor.getCursor()), items);
-			this.cursor = cursor;
-		}
-	}
+            super(CursorId.of(cursor.getCursor()), items);
+            this.cursor = cursor;
+        }
+    }
 }

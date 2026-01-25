@@ -20,12 +20,10 @@ import static org.mockito.Mockito.*;
 
 import java.util.Arrays;
 import java.util.Collections;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.data.util.TypeInformation;
 
 /**
@@ -34,31 +32,36 @@ import org.springframework.data.util.TypeInformation;
 @ExtendWith(MockitoExtension.class)
 class CompositeIndexResolverUnitTests {
 
-	@Mock IndexResolver resolver1;
-	@Mock IndexResolver resolver2;
-	@Mock TypeInformation<?> typeInfoMock;
+    @Mock IndexResolver resolver1;
+    @Mock IndexResolver resolver2;
+    @Mock TypeInformation<?> typeInfoMock;
 
-	@Test // DATAREDIS-425
-	void shouldRejectNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new CompositeIndexResolver(null));
-	}
+    @Test // DATAREDIS-425
+    void shouldRejectNull() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new CompositeIndexResolver(null));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldRejectCollectionWithNullValues() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new CompositeIndexResolver(Arrays.asList(resolver1, null, resolver2)));
-	}
+    @Test // DATAREDIS-425
+    void shouldRejectCollectionWithNullValues() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new CompositeIndexResolver(Arrays.asList(resolver1, null, resolver2)));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldCollectionIndexesFromResolvers() {
+    @Test // DATAREDIS-425
+    void shouldCollectionIndexesFromResolvers() {
 
-		when(resolver1.resolveIndexesFor(any(TypeInformation.class), any())).thenReturn(
-				Collections.<IndexedData> singleton(new SimpleIndexedPropertyValue("spring", "data", "valkey")));
-		when(resolver2.resolveIndexesFor(any(TypeInformation.class), any())).thenReturn(
-				Collections.<IndexedData> singleton(new SimpleIndexedPropertyValue("valkey", "data", "spring")));
+        when(resolver1.resolveIndexesFor(any(TypeInformation.class), any()))
+                .thenReturn(
+                        Collections.<IndexedData>singleton(
+                                new SimpleIndexedPropertyValue("spring", "data", "valkey")));
+        when(resolver2.resolveIndexesFor(any(TypeInformation.class), any()))
+                .thenReturn(
+                        Collections.<IndexedData>singleton(
+                                new SimpleIndexedPropertyValue("valkey", "data", "spring")));
 
-		CompositeIndexResolver resolver = new CompositeIndexResolver(Arrays.asList(resolver1, resolver2));
+        CompositeIndexResolver resolver =
+                new CompositeIndexResolver(Arrays.asList(resolver1, resolver2));
 
-		assertThat(resolver.resolveIndexesFor(typeInfoMock, "o.O").size()).isEqualTo(2);
-	}
+        assertThat(resolver.resolveIndexesFor(typeInfoMock, "o.O").size()).isEqualTo(2);
+    }
 }

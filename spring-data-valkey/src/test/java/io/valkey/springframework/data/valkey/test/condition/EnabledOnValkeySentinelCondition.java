@@ -17,16 +17,16 @@ package io.valkey.springframework.data.valkey.test.condition;
 
 import static org.junit.jupiter.api.extension.ConditionEvaluationResult.*;
 
+import io.valkey.springframework.data.valkey.SettingsUtils;
 import java.util.Optional;
-
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.platform.commons.util.AnnotationUtils;
-import io.valkey.springframework.data.valkey.SettingsUtils;
 
 /**
- * {@link ExecutionCondition} for {@link EnabledOnValkeySentinelCondition @EnabledOnValkeySentinelAvailable}.
+ * {@link ExecutionCondition} for {@link
+ * EnabledOnValkeySentinelCondition @EnabledOnValkeySentinelAvailable}.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -34,29 +34,32 @@ import io.valkey.springframework.data.valkey.SettingsUtils;
  */
 class EnabledOnValkeySentinelCondition implements ExecutionCondition {
 
-	private static final ConditionEvaluationResult ENABLED_BY_DEFAULT = enabled(
-			"@EnabledOnSentinelAvailable is not present");
+    private static final ConditionEvaluationResult ENABLED_BY_DEFAULT =
+            enabled("@EnabledOnSentinelAvailable is not present");
 
-	@Override
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+    @Override
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
 
-		Optional<EnabledOnValkeySentinelAvailable> optional = AnnotationUtils.findAnnotation(context.getElement(),
-				EnabledOnValkeySentinelAvailable.class);
+        Optional<EnabledOnValkeySentinelAvailable> optional =
+                AnnotationUtils.findAnnotation(
+                        context.getElement(), EnabledOnValkeySentinelAvailable.class);
 
-		if (!optional.isPresent()) {
-			return ENABLED_BY_DEFAULT;
-		}
+        if (!optional.isPresent()) {
+            return ENABLED_BY_DEFAULT;
+        }
 
-		EnabledOnValkeySentinelAvailable annotation = optional.get();
+        EnabledOnValkeySentinelAvailable annotation = optional.get();
 
-		if (ValkeyDetector.canConnectToPort(annotation.value())) {
+        if (ValkeyDetector.canConnectToPort(annotation.value())) {
 
-			return enabled("Connection successful to Valkey Sentinel at %s:%d".formatted(SettingsUtils.getHost(),
-					annotation.value()));
-		}
+            return enabled(
+                    "Connection successful to Valkey Sentinel at %s:%d"
+                            .formatted(SettingsUtils.getHost(), annotation.value()));
+        }
 
-		return disabled("Cannot connect to Valkey Sentinel at %s:%d".formatted(SettingsUtils.getHost(),
-				annotation.value()));
-	}
+        return disabled(
+                "Cannot connect to Valkey Sentinel at %s:%d"
+                        .formatted(SettingsUtils.getHost(), annotation.value()));
+    }
 }

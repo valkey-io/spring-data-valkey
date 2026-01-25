@@ -19,11 +19,6 @@ import static org.assertj.core.api.Assertions.*;
 
 import io.lettuce.core.ClientOptions;
 import io.lettuce.core.protocol.ProtocolVersion;
-
-import java.io.IOException;
-import java.util.Collections;
-
-import org.junit.jupiter.api.Test;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
@@ -33,6 +28,9 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyAvail
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeySentinelAvailable;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
 import io.valkey.springframework.data.valkey.util.ConnectionVerifier;
+import java.io.IOException;
+import java.util.Collections;
+import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for Valkey 6 ACL.
@@ -44,87 +42,102 @@ import io.valkey.springframework.data.valkey.util.ConnectionVerifier;
 @EnabledOnCommand("HELLO")
 class LettuceAclIntegrationTests {
 
-	@Test // DATAREDIS-1046
-	void shouldConnectWithDefaultAuthentication() {
+    @Test // DATAREDIS-1046
+    void shouldConnectWithDefaultAuthentication() {
 
-		ValkeyStandaloneConfiguration standaloneConfiguration = new ValkeyStandaloneConfiguration("localhost", 6382);
-		standaloneConfiguration.setPassword("foobared");
+        ValkeyStandaloneConfiguration standaloneConfiguration =
+                new ValkeyStandaloneConfiguration("localhost", 6382);
+        standaloneConfiguration.setPassword("foobared");
 
-		LettuceClientConfiguration clientConfiguration = LettuceClientConfiguration.builder()
-				.clientResources(LettuceTestClientResources.getSharedClientResources()).build();
+        LettuceClientConfiguration clientConfiguration =
+                LettuceClientConfiguration.builder()
+                        .clientResources(LettuceTestClientResources.getSharedClientResources())
+                        .build();
 
-		LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(standaloneConfiguration,
-				clientConfiguration);
+        LettuceConnectionFactory connectionFactory =
+                new LettuceConnectionFactory(standaloneConfiguration, clientConfiguration);
 
-		ConnectionVerifier.create(connectionFactory) //
-				.execute(connection -> {
-					assertThat(connection.ping()).isEqualTo("PONG");
-				}) //
-				.verifyAndClose();
-	}
+        ConnectionVerifier.create(connectionFactory) //
+                .execute(
+                        connection -> {
+                            assertThat(connection.ping()).isEqualTo("PONG");
+                        }) //
+                .verifyAndClose();
+    }
 
-	@Test // DATAREDIS-1046
-	void shouldConnectStandaloneWithAclAuthentication() {
+    @Test // DATAREDIS-1046
+    void shouldConnectStandaloneWithAclAuthentication() {
 
-		ValkeyStandaloneConfiguration standaloneConfiguration = new ValkeyStandaloneConfiguration("localhost", 6382);
-		standaloneConfiguration.setUsername("spring");
-		standaloneConfiguration.setPassword("data");
+        ValkeyStandaloneConfiguration standaloneConfiguration =
+                new ValkeyStandaloneConfiguration("localhost", 6382);
+        standaloneConfiguration.setUsername("spring");
+        standaloneConfiguration.setPassword("data");
 
-		LettuceClientConfiguration clientConfiguration = LettuceClientConfiguration.builder()
-				.clientResources(LettuceTestClientResources.getSharedClientResources()).build();
+        LettuceClientConfiguration clientConfiguration =
+                LettuceClientConfiguration.builder()
+                        .clientResources(LettuceTestClientResources.getSharedClientResources())
+                        .build();
 
-		LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(standaloneConfiguration,
-				clientConfiguration);
+        LettuceConnectionFactory connectionFactory =
+                new LettuceConnectionFactory(standaloneConfiguration, clientConfiguration);
 
-		ConnectionVerifier.create(connectionFactory) //
-				.execute(connection -> {
-					assertThat(connection.ping()).isEqualTo("PONG");
-				}) //
-				.verifyAndClose();
-	}
+        ConnectionVerifier.create(connectionFactory) //
+                .execute(
+                        connection -> {
+                            assertThat(connection.ping()).isEqualTo("PONG");
+                        }) //
+                .verifyAndClose();
+    }
 
-	@Test // DATAREDIS-1145
-	@EnabledOnValkeySentinelAvailable(26382)
-	void shouldConnectSentinelWithAuthentication() throws IOException {
+    @Test // DATAREDIS-1145
+    @EnabledOnValkeySentinelAvailable(26382)
+    void shouldConnectSentinelWithAuthentication() throws IOException {
 
-		// Note: As per https://github.com/valkey/valkey/issues/7708, Sentinel does not support ACL authentication yet.
+        // Note: As per https://github.com/valkey/valkey/issues/7708, Sentinel does not support ACL
+        // authentication yet.
 
-		LettuceClientConfiguration configuration = LettuceTestClientConfiguration.builder()
-				.clientOptions(ClientOptions.builder().protocolVersion(ProtocolVersion.RESP2).build()).build();
+        LettuceClientConfiguration configuration =
+                LettuceTestClientConfiguration.builder()
+                        .clientOptions(ClientOptions.builder().protocolVersion(ProtocolVersion.RESP2).build())
+                        .build();
 
-		ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration("mymaster",
-				Collections.singleton("localhost:26382"));
-		sentinelConfiguration.setSentinelPassword("foobared");
+        ValkeySentinelConfiguration sentinelConfiguration =
+                new ValkeySentinelConfiguration("mymaster", Collections.singleton("localhost:26382"));
+        sentinelConfiguration.setSentinelPassword("foobared");
 
-		LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(sentinelConfiguration, configuration);
-		connectionFactory.afterPropertiesSet();
-		connectionFactory.start();
+        LettuceConnectionFactory connectionFactory =
+                new LettuceConnectionFactory(sentinelConfiguration, configuration);
+        connectionFactory.afterPropertiesSet();
+        connectionFactory.start();
 
-		try (ValkeySentinelConnection connection = connectionFactory.getSentinelConnection()) {
-			assertThat(connection.masters()).isNotEmpty();
-		} finally {
-			connectionFactory.destroy();
-		}
-	}
+        try (ValkeySentinelConnection connection = connectionFactory.getSentinelConnection()) {
+            assertThat(connection.masters()).isNotEmpty();
+        } finally {
+            connectionFactory.destroy();
+        }
+    }
 
-	@Test // DATAREDIS-1046
-	void shouldConnectMasterReplicaWithAclAuthentication() {
+    @Test // DATAREDIS-1046
+    void shouldConnectMasterReplicaWithAclAuthentication() {
 
-		ValkeyStaticMasterReplicaConfiguration masterReplicaConfiguration = new ValkeyStaticMasterReplicaConfiguration(
-				"localhost", 6382);
-		masterReplicaConfiguration.setUsername("spring");
-		masterReplicaConfiguration.setPassword("data");
+        ValkeyStaticMasterReplicaConfiguration masterReplicaConfiguration =
+                new ValkeyStaticMasterReplicaConfiguration("localhost", 6382);
+        masterReplicaConfiguration.setUsername("spring");
+        masterReplicaConfiguration.setPassword("data");
 
-		LettuceClientConfiguration clientConfiguration = LettuceClientConfiguration.builder()
-				.clientResources(LettuceTestClientResources.getSharedClientResources()).build();
+        LettuceClientConfiguration clientConfiguration =
+                LettuceClientConfiguration.builder()
+                        .clientResources(LettuceTestClientResources.getSharedClientResources())
+                        .build();
 
-		LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(masterReplicaConfiguration,
-				clientConfiguration);
+        LettuceConnectionFactory connectionFactory =
+                new LettuceConnectionFactory(masterReplicaConfiguration, clientConfiguration);
 
-		ConnectionVerifier.create(connectionFactory) //
-				.execute(connection -> {
-					assertThat(connection.ping()).isEqualTo("PONG");
-				}) //
-				.verifyAndClose();
-	}
+        ConnectionVerifier.create(connectionFactory) //
+                .execute(
+                        connection -> {
+                            assertThat(connection.ping()).isEqualTo("PONG");
+                        }) //
+                .verifyAndClose();
+    }
 }

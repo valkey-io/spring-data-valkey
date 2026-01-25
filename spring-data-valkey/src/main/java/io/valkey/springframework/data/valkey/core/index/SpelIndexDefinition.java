@@ -21,57 +21,54 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
- * {@link SpelIndexDefinition} defines index that is evaluated based on a {@link SpelExpression} requires the
- * {@link SpelIndexResolver} to be evaluated.
+ * {@link SpelIndexDefinition} defines index that is evaluated based on a {@link SpelExpression}
+ * requires the {@link SpelIndexResolver} to be evaluated.
  *
  * @author Christoph Strobl
  * @since 1.7
  */
 public class SpelIndexDefinition extends ValkeyIndexDefinition {
 
-	private final String expression;
+    private final String expression;
 
-	/**
-	 * Creates new {@link SpelIndexDefinition}.
-	 *
-	 * @param keyspace must not be {@literal null}.
-	 * @param expression must not be {@literal null}.
-	 * @param indexName must not be {@literal null}.
-	 */
-	public SpelIndexDefinition(String keyspace, String expression, String indexName) {
+    /**
+     * Creates new {@link SpelIndexDefinition}.
+     *
+     * @param keyspace must not be {@literal null}.
+     * @param expression must not be {@literal null}.
+     * @param indexName must not be {@literal null}.
+     */
+    public SpelIndexDefinition(String keyspace, String expression, String indexName) {
 
-		super(keyspace, null, indexName);
+        super(keyspace, null, indexName);
 
-		this.expression = expression;
-	}
+        this.expression = expression;
+    }
 
-	/**
-	 * Get the raw expression.
-	 *
-	 * @return
-	 */
-	public String getExpression() {
-		return expression;
-	}
+    /**
+     * Get the raw expression.
+     *
+     * @return
+     */
+    public String getExpression() {
+        return expression;
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
-		if (!super.equals(o))
-			return false;
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
 
-		SpelIndexDefinition that = (SpelIndexDefinition) o;
+        SpelIndexDefinition that = (SpelIndexDefinition) o;
 
-		return ObjectUtils.nullSafeEquals(expression, that.expression);
-	}
+        return ObjectUtils.nullSafeEquals(expression, that.expression);
+    }
 
-	@Override
-	public int hashCode() {
-		int result = super.hashCode();
-		result = 31 * result + ObjectUtils.nullSafeHashCode(expression);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + ObjectUtils.nullSafeHashCode(expression);
+        return result;
+    }
 }

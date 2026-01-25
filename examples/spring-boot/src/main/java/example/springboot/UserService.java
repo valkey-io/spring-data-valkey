@@ -15,48 +15,47 @@
  */
 package example.springboot;
 
+import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import java.time.Duration;
 import java.util.Set;
-
-import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserService {
 
-	private final StringValkeyTemplate valkeyTemplate;
+    private final StringValkeyTemplate valkeyTemplate;
 
-	@Autowired
-	public UserService(StringValkeyTemplate valkeyTemplate) {
-		this.valkeyTemplate = valkeyTemplate;
-	}
+    @Autowired
+    public UserService(StringValkeyTemplate valkeyTemplate) {
+        this.valkeyTemplate = valkeyTemplate;
+    }
 
-	public void cacheUserSession(String userId, String sessionData) {
-		String key = "session:" + userId;
-		valkeyTemplate.opsForValue().set(key, sessionData, Duration.ofMinutes(30));
-	}
+    public void cacheUserSession(String userId, String sessionData) {
+        String key = "session:" + userId;
+        valkeyTemplate.opsForValue().set(key, sessionData, Duration.ofMinutes(30));
+    }
 
-	public String getUserSession(String userId) {
-		String key = "session:" + userId;
-		return valkeyTemplate.opsForValue().get(key);
-	}
+    public String getUserSession(String userId) {
+        String key = "session:" + userId;
+        return valkeyTemplate.opsForValue().get(key);
+    }
 
-	public void addActiveUser(String userId) {
-		valkeyTemplate.opsForSet().add("active:users", userId);
-	}
+    public void addActiveUser(String userId) {
+        valkeyTemplate.opsForSet().add("active:users", userId);
+    }
 
-	public Set<String> getActiveUsers() {
-		return valkeyTemplate.opsForSet().members("active:users");
-	}
+    public Set<String> getActiveUsers() {
+        return valkeyTemplate.opsForSet().members("active:users");
+    }
 
-	public Long incrementLoginCount(String userId) {
-		String key = "login:count:" + userId;
-		return valkeyTemplate.opsForValue().increment(key);
-	}
+    public Long incrementLoginCount(String userId) {
+        String key = "login:count:" + userId;
+        return valkeyTemplate.opsForValue().increment(key);
+    }
 
-	public String getLoginCount(String userId) {
-		String key = "login:count:" + userId;
-		return valkeyTemplate.opsForValue().get(key);
-	}
+    public String getLoginCount(String userId) {
+        String key = "login:count:" + userId;
+        return valkeyTemplate.opsForValue().get(key);
+    }
 }

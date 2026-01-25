@@ -22,16 +22,14 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 
 /**
- * Minimal example that demonstrates how to enable and emit OpenTelemetry traces
- * from Valkey-GLIDE using {@link StringValkeyTemplate}.
+ * Minimal example that demonstrates how to enable and emit OpenTelemetry traces from Valkey-GLIDE
+ * using {@link StringValkeyTemplate}.
  *
- * <p>This example exists to validate and showcase the OpenTelemetry integration
- * in Valkey-GLIDE by executing a small number of Valkey commands and exporting
- * traces to an OpenTelemetry Collector.</p>
+ * <p>This example exists to validate and showcase the OpenTelemetry integration in Valkey-GLIDE by
+ * executing a small number of Valkey commands and exporting traces to an OpenTelemetry Collector.
  *
- * <p>Telemetry is emitted while the application runs and Valkey commands are
- * executed. Traces can be inspected via the configured OpenTelemetry backend,
- * for example by viewing the collector logs:</p>
+ * <p>Telemetry is emitted while the application runs and Valkey commands are executed. Traces can
+ * be inspected via the configured OpenTelemetry backend, for example by viewing the collector logs:
  *
  * <pre>
  * docker logs -f boot-telemetry-otel-collector-1
@@ -41,17 +39,13 @@ public class OpenTelemetryExample {
 
     public static void main(String[] args) {
 
-        ValkeyStandaloneConfiguration standaloneConfig =
-                new ValkeyStandaloneConfiguration();
+        ValkeyStandaloneConfiguration standaloneConfig = new ValkeyStandaloneConfiguration();
 
         // Change the default tracesEndpoint / metricsEndpoint if needed
-        OpenTelemetryForGlide openTelemetry =
-                OpenTelemetryForGlide.defaults();
+        OpenTelemetryForGlide openTelemetry = OpenTelemetryForGlide.defaults();
 
         ValkeyGlideClientConfiguration clientConfig =
-                ValkeyGlideClientConfiguration.builder()
-                        .useOpenTelemetry(openTelemetry)
-                        .build();
+                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(openTelemetry).build();
 
         ValkeyGlideConnectionFactory connectionFactory =
                 new ValkeyGlideConnectionFactory(standaloneConfig, clientConfig);
@@ -59,8 +53,7 @@ public class OpenTelemetryExample {
         connectionFactory.afterPropertiesSet();
 
         try {
-            StringValkeyTemplate template =
-                    new StringValkeyTemplate(connectionFactory);
+            StringValkeyTemplate template = new StringValkeyTemplate(connectionFactory);
 
             // Increase this number to generate more Valkey commands/traces
             int iterations = 10;

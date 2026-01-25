@@ -15,14 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import glide.api.models.GlideString;
 import java.util.concurrent.ExecutionException;
 
-import glide.api.models.GlideString;
-
 /**
- * Unified interface that abstracts both GlideClient and GlideClusterClient
- * to enable code reuse between standalone and cluster modes.
- * 
+ * Unified interface that abstracts both GlideClient and GlideClusterClient to enable code reuse
+ * between standalone and cluster modes.
+ *
  * @author Ilia Kolominsky
  * @since 2.0
  */
@@ -34,10 +33,16 @@ interface UnifiedGlideClient extends AutoCloseable {
     }
 
     BatchStatus getBatchStatus();
+
     int getBatchCount();
+
     void startNewBatch(boolean atomic);
+
     Object[] execBatch() throws InterruptedException, ExecutionException;
+
     void discardBatch();
+
     Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException;
+
     Object getNativeClient();
 }

@@ -26,55 +26,55 @@ import org.junit.jupiter.api.Test;
  */
 class MutableCacheStatisticsUnitTests {
 
-	MutableCacheStatistics statistics = new MutableCacheStatistics("cache-name");
+    MutableCacheStatistics statistics = new MutableCacheStatistics("cache-name");
 
-	@Test // DATAREDIS-1082
-	void shouldReportRetrievals() {
+    @Test // DATAREDIS-1082
+    void shouldReportRetrievals() {
 
-		assertThat(statistics.getGets()).isZero();
+        assertThat(statistics.getGets()).isZero();
 
-		statistics.incGets();
+        statistics.incGets();
 
-		assertThat(statistics.getGets()).isOne();
-	}
+        assertThat(statistics.getGets()).isOne();
+    }
 
-	@Test // DATAREDIS-1082
-	void shouldReportHits() {
+    @Test // DATAREDIS-1082
+    void shouldReportHits() {
 
-		assertThat(statistics.getHits()).isZero();
+        assertThat(statistics.getHits()).isZero();
 
-		statistics.incHits();
+        statistics.incHits();
 
-		assertThat(statistics.getHits()).isOne();
-	}
+        assertThat(statistics.getHits()).isOne();
+    }
 
-	@Test // DATAREDIS-1082
-	void shouldReportMisses() {
+    @Test // DATAREDIS-1082
+    void shouldReportMisses() {
 
-		assertThat(statistics.getMisses()).isZero();
+        assertThat(statistics.getMisses()).isZero();
 
-		statistics.incMisses();
+        statistics.incMisses();
 
-		assertThat(statistics.getMisses()).isOne();
-	}
+        assertThat(statistics.getMisses()).isOne();
+    }
 
-	@Test // DATAREDIS-1082
-	void shouldReportPuts() {
+    @Test // DATAREDIS-1082
+    void shouldReportPuts() {
 
-		assertThat(statistics.getPuts()).isZero();
+        assertThat(statistics.getPuts()).isZero();
 
-		statistics.incPuts();
+        statistics.incPuts();
 
-		assertThat(statistics.getPuts()).isOne();
-	}
+        assertThat(statistics.getPuts()).isOne();
+    }
 
-	@Test // DATAREDIS-1082
-	void shouldReportRemovals() {
+    @Test // DATAREDIS-1082
+    void shouldReportRemovals() {
 
-		assertThat(statistics.getDeletes()).isZero();
+        assertThat(statistics.getDeletes()).isZero();
 
-		statistics.incDeletes(1);
+        statistics.incDeletes(1);
 
-		assertThat(statistics.getDeletes()).isOne();
-	}
+        assertThat(statistics.getDeletes()).isOne();
+    }
 }

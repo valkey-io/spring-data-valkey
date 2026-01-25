@@ -23,7 +23,7 @@ import io.valkey.springframework.data.valkey.connection.MessageListener;
  */
 public class ThrowableMessageListener implements MessageListener {
 
-	public void onMessage(Message message, byte[] pattern) {
-		throw new IllegalStateException("throwing exception for message " + message);
-	}
+    public void onMessage(Message message, byte[] pattern) {
+        throw new IllegalStateException("throwing exception for message " + message);
+    }
 }

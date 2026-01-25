@@ -16,12 +16,17 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration;
+import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration.JedisClientConfigurationBuilder;
+import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration.JedisSslClientConfigurationBuilder;
+import io.valkey.springframework.data.valkey.connection.jedis.JedisConnection;
+import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import javax.net.ssl.SSLParameters;
-
 import org.apache.commons.pool2.impl.GenericObjectPool;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPoolConfig;
-
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -34,16 +39,9 @@ import org.springframework.boot.ssl.SslOptions;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
-import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
-import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration;
-import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration.JedisClientConfigurationBuilder;
-import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration.JedisSslClientConfigurationBuilder;
-import io.valkey.springframework.data.valkey.connection.jedis.JedisConnection;
-import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import org.springframework.util.StringUtils;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisPoolConfig;
 
 /**
  * Valkey connection configuration using Jedis.
@@ -56,108 +54,118 @@ import org.springframework.util.StringUtils;
  * @author Scott Frederick
  */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnClass({ GenericObjectPool.class, JedisConnection.class, Jedis.class })
+@ConditionalOnClass({GenericObjectPool.class, JedisConnection.class, Jedis.class})
 @ConditionalOnMissingBean(ValkeyConnectionFactory.class)
-@ConditionalOnProperty(name = "spring.data.valkey.client-type", havingValue = "jedis", matchIfMissing = true)
+@ConditionalOnProperty(
+        name = "spring.data.valkey.client-type",
+        havingValue = "jedis",
+        matchIfMissing = true)
 class JedisConnectionConfiguration extends ValkeyConnectionConfiguration {
 
-	JedisConnectionConfiguration(ValkeyProperties properties,
-			ObjectProvider<ValkeyStandaloneConfiguration> standaloneConfigurationProvider,
-			ObjectProvider<ValkeySentinelConfiguration> sentinelConfiguration,
-			ObjectProvider<ValkeyClusterConfiguration> clusterConfiguration, ValkeyConnectionDetails connectionDetails) {
-		super(properties, connectionDetails, standaloneConfigurationProvider, sentinelConfiguration,
-				clusterConfiguration);
-	}
+    JedisConnectionConfiguration(
+            ValkeyProperties properties,
+            ObjectProvider<ValkeyStandaloneConfiguration> standaloneConfigurationProvider,
+            ObjectProvider<ValkeySentinelConfiguration> sentinelConfiguration,
+            ObjectProvider<ValkeyClusterConfiguration> clusterConfiguration,
+            ValkeyConnectionDetails connectionDetails) {
+        super(
+                properties,
+                connectionDetails,
+                standaloneConfigurationProvider,
+                sentinelConfiguration,
+                clusterConfiguration);
+    }
 
-	@Bean
-	@ConditionalOnThreading(Threading.PLATFORM)
-	JedisConnectionFactory valkeyConnectionFactory(
-			ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
-		return createJedisConnectionFactory(builderCustomizers);
-	}
+    @Bean
+    @ConditionalOnThreading(Threading.PLATFORM)
+    JedisConnectionFactory valkeyConnectionFactory(
+            ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
+        return createJedisConnectionFactory(builderCustomizers);
+    }
 
-	@Bean
-	@ConditionalOnThreading(Threading.VIRTUAL)
-	JedisConnectionFactory valkeyConnectionFactoryVirtualThreads(
-			ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
-		JedisConnectionFactory factory = createJedisConnectionFactory(builderCustomizers);
-		SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("valkey-");
-		executor.setVirtualThreads(true);
-		factory.setExecutor(executor);
-		return factory;
-	}
+    @Bean
+    @ConditionalOnThreading(Threading.VIRTUAL)
+    JedisConnectionFactory valkeyConnectionFactoryVirtualThreads(
+            ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
+        JedisConnectionFactory factory = createJedisConnectionFactory(builderCustomizers);
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("valkey-");
+        executor.setVirtualThreads(true);
+        factory.setExecutor(executor);
+        return factory;
+    }
 
-	private JedisConnectionFactory createJedisConnectionFactory(
-			ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
-		JedisClientConfiguration clientConfiguration = getJedisClientConfiguration(builderCustomizers);
-		return switch (this.mode) {
-			case STANDALONE -> new JedisConnectionFactory(getStandaloneConfig(), clientConfiguration);
-			case CLUSTER -> new JedisConnectionFactory(getClusterConfiguration(), clientConfiguration);
-			case SENTINEL -> new JedisConnectionFactory(getSentinelConfig(), clientConfiguration);
-		};
-	}
+    private JedisConnectionFactory createJedisConnectionFactory(
+            ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
+        JedisClientConfiguration clientConfiguration = getJedisClientConfiguration(builderCustomizers);
+        return switch (this.mode) {
+            case STANDALONE -> new JedisConnectionFactory(getStandaloneConfig(), clientConfiguration);
+            case CLUSTER -> new JedisConnectionFactory(getClusterConfiguration(), clientConfiguration);
+            case SENTINEL -> new JedisConnectionFactory(getSentinelConfig(), clientConfiguration);
+        };
+    }
 
-	private JedisClientConfiguration getJedisClientConfiguration(
-			ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
-		JedisClientConfigurationBuilder builder = applyProperties(JedisClientConfiguration.builder());
-		applySslIfNeeded(builder);
-		ValkeyProperties.Pool pool = getProperties().getJedis().getPool();
-		if (isPoolEnabled(pool)) {
-			applyPooling(pool, builder);
-		}
-		if (StringUtils.hasText(getProperties().getUrl())) {
-			customizeConfigurationFromUrl(builder);
-		}
-		builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
-		return builder.build();
-	}
+    private JedisClientConfiguration getJedisClientConfiguration(
+            ObjectProvider<JedisClientConfigurationBuilderCustomizer> builderCustomizers) {
+        JedisClientConfigurationBuilder builder = applyProperties(JedisClientConfiguration.builder());
+        applySslIfNeeded(builder);
+        ValkeyProperties.Pool pool = getProperties().getJedis().getPool();
+        if (isPoolEnabled(pool)) {
+            applyPooling(pool, builder);
+        }
+        if (StringUtils.hasText(getProperties().getUrl())) {
+            customizeConfigurationFromUrl(builder);
+        }
+        builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
+        return builder.build();
+    }
 
-	private JedisClientConfigurationBuilder applyProperties(JedisClientConfigurationBuilder builder) {
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
-		map.from(getProperties().getTimeout()).to(builder::readTimeout);
-		map.from(getProperties().getConnectTimeout()).to(builder::connectTimeout);
-		map.from(getProperties().getClientName()).whenHasText().to(builder::clientName);
-		return builder;
-	}
+    private JedisClientConfigurationBuilder applyProperties(JedisClientConfigurationBuilder builder) {
+        PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+        map.from(getProperties().getTimeout()).to(builder::readTimeout);
+        map.from(getProperties().getConnectTimeout()).to(builder::connectTimeout);
+        map.from(getProperties().getClientName()).whenHasText().to(builder::clientName);
+        return builder;
+    }
 
-	private void applySslIfNeeded(JedisClientConfigurationBuilder builder) {
-		SslBundle sslBundle = getSslBundle();
-		if (sslBundle == null) {
-			return;
-		}
-		JedisSslClientConfigurationBuilder sslBuilder = builder.useSsl();
-		sslBuilder.sslSocketFactory(sslBundle.createSslContext().getSocketFactory());
-		SslOptions sslOptions = sslBundle.getOptions();
-		SSLParameters sslParameters = new SSLParameters();
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
-		map.from(sslOptions.getCiphers()).to(sslParameters::setCipherSuites);
-		map.from(sslOptions.getEnabledProtocols()).to(sslParameters::setProtocols);
-		sslBuilder.sslParameters(sslParameters);
-	}
+    private void applySslIfNeeded(JedisClientConfigurationBuilder builder) {
+        SslBundle sslBundle = getSslBundle();
+        if (sslBundle == null) {
+            return;
+        }
+        JedisSslClientConfigurationBuilder sslBuilder = builder.useSsl();
+        sslBuilder.sslSocketFactory(sslBundle.createSslContext().getSocketFactory());
+        SslOptions sslOptions = sslBundle.getOptions();
+        SSLParameters sslParameters = new SSLParameters();
+        PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+        map.from(sslOptions.getCiphers()).to(sslParameters::setCipherSuites);
+        map.from(sslOptions.getEnabledProtocols()).to(sslParameters::setProtocols);
+        sslBuilder.sslParameters(sslParameters);
+    }
 
-	private void applyPooling(ValkeyProperties.Pool pool,
-			JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
-		builder.usePooling().poolConfig(jedisPoolConfig(pool));
-	}
+    private void applyPooling(
+            ValkeyProperties.Pool pool,
+            JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
+        builder.usePooling().poolConfig(jedisPoolConfig(pool));
+    }
 
-	private JedisPoolConfig jedisPoolConfig(ValkeyProperties.Pool pool) {
-		JedisPoolConfig config = new JedisPoolConfig();
-		config.setMaxTotal(pool.getMaxActive());
-		config.setMaxIdle(pool.getMaxIdle());
-		config.setMinIdle(pool.getMinIdle());
-		if (pool.getTimeBetweenEvictionRuns() != null) {
-			config.setTimeBetweenEvictionRuns(pool.getTimeBetweenEvictionRuns());
-		}
-		if (pool.getMaxWait() != null) {
-			config.setMaxWait(pool.getMaxWait());
-		}
-		return config;
-	}
+    private JedisPoolConfig jedisPoolConfig(ValkeyProperties.Pool pool) {
+        JedisPoolConfig config = new JedisPoolConfig();
+        config.setMaxTotal(pool.getMaxActive());
+        config.setMaxIdle(pool.getMaxIdle());
+        config.setMinIdle(pool.getMinIdle());
+        if (pool.getTimeBetweenEvictionRuns() != null) {
+            config.setTimeBetweenEvictionRuns(pool.getTimeBetweenEvictionRuns());
+        }
+        if (pool.getMaxWait() != null) {
+            config.setMaxWait(pool.getMaxWait());
+        }
+        return config;
+    }
 
-	private void customizeConfigurationFromUrl(JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
-		if (urlUsesSsl()) {
-			builder.useSsl();
-		}
-	}
-
+    private void customizeConfigurationFromUrl(
+            JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
+        if (urlUsesSsl()) {
+            builder.useSsl();
+        }
+    }
 }

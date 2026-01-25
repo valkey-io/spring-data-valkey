@@ -27,48 +27,52 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Christoph Strobl
  */
 public enum DataType {
+    NONE("none"),
+    STRING("string"),
+    LIST("list"),
+    SET("set"),
+    ZSET("zset"),
+    HASH("hash"),
+    /**
+     * @since 2.2
+     */
+    STREAM("stream");
 
-	NONE("none"), STRING("string"), LIST("list"), SET("set"), ZSET("zset"), HASH("hash"),
-	/**
-	 * @since 2.2
-	 */
-	STREAM("stream");
+    private static final Map<String, DataType> codeLookup = new ConcurrentHashMap<>(7);
 
-	private static final Map<String, DataType> codeLookup = new ConcurrentHashMap<>(7);
+    static {
+        for (DataType type : EnumSet.allOf(DataType.class)) {
+            codeLookup.put(type.code, type);
+        }
+    }
 
-	static {
-		for (DataType type : EnumSet.allOf(DataType.class)) {
-			codeLookup.put(type.code, type);
-		}
-	}
+    private final String code;
 
-	private final String code;
+    DataType(String name) {
+        this.code = name;
+    }
 
-	DataType(String name) {
-		this.code = name;
-	}
+    /**
+     * Returns the code associated with the current enum.
+     *
+     * @return code of this enum
+     */
+    public String code() {
+        return code;
+    }
 
-	/**
-	 * Returns the code associated with the current enum.
-	 *
-	 * @return code of this enum
-	 */
-	public String code() {
-		return code;
-	}
+    /**
+     * Utility method for converting an enum code to an actual enum.
+     *
+     * @param code enum code
+     * @return actual enum corresponding to the given code
+     */
+    public static DataType fromCode(String code) {
 
-	/**
-	 * Utility method for converting an enum code to an actual enum.
-	 *
-	 * @param code enum code
-	 * @return actual enum corresponding to the given code
-	 */
-	public static DataType fromCode(String code) {
-
-		DataType data = codeLookup.get(code);
-		if (data == null) {
-			throw new IllegalArgumentException("unknown data type code %s".formatted(code));
-		}
-		return data;
-	}
+        DataType data = codeLookup.get(code);
+        if (data == null) {
+            throw new IllegalArgumentException("unknown data type code %s".formatted(code));
+        }
+        return data;
+    }
 }

@@ -16,19 +16,18 @@
 
 package io.valkey.springframework.boot.actuate.data.valkey;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.core.ValkeyConnectionUtils;
 import org.springframework.boot.actuate.health.AbstractHealthIndicator;
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.HealthIndicator;
 import org.springframework.util.Assert;
 
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.core.ValkeyConnectionUtils;
-
 /**
- * Simple implementation of a {@link HealthIndicator} returning status information for
- * Valkey data stores.
+ * Simple implementation of a {@link HealthIndicator} returning status information for Valkey data
+ * stores.
  *
  * @author Christian Dupuis
  * @author Richard Santana
@@ -37,32 +36,29 @@ import io.valkey.springframework.data.valkey.core.ValkeyConnectionUtils;
  */
 public class ValkeyHealthIndicator extends AbstractHealthIndicator {
 
-	private final ValkeyConnectionFactory valkeyConnectionFactory;
+    private final ValkeyConnectionFactory valkeyConnectionFactory;
 
-	public ValkeyHealthIndicator(ValkeyConnectionFactory connectionFactory) {
-		super("Valkey health check failed");
-		Assert.notNull(connectionFactory, "'connectionFactory' must not be null");
-		this.valkeyConnectionFactory = connectionFactory;
-	}
+    public ValkeyHealthIndicator(ValkeyConnectionFactory connectionFactory) {
+        super("Valkey health check failed");
+        Assert.notNull(connectionFactory, "'connectionFactory' must not be null");
+        this.valkeyConnectionFactory = connectionFactory;
+    }
 
-	@Override
-	protected void doHealthCheck(Health.Builder builder) throws Exception {
-		ValkeyConnection connection = ValkeyConnectionUtils.getConnection(this.valkeyConnectionFactory);
-		try {
-			doHealthCheck(builder, connection);
-		}
-		finally {
-			ValkeyConnectionUtils.releaseConnection(connection, this.valkeyConnectionFactory);
-		}
-	}
+    @Override
+    protected void doHealthCheck(Health.Builder builder) throws Exception {
+        ValkeyConnection connection = ValkeyConnectionUtils.getConnection(this.valkeyConnectionFactory);
+        try {
+            doHealthCheck(builder, connection);
+        } finally {
+            ValkeyConnectionUtils.releaseConnection(connection, this.valkeyConnectionFactory);
+        }
+    }
 
-	private void doHealthCheck(Health.Builder builder, ValkeyConnection connection) {
-		if (connection instanceof ValkeyClusterConnection clusterConnection) {
-			ValkeyHealth.fromClusterInfo(builder, clusterConnection.clusterGetClusterInfo());
-		}
-		else {
-			ValkeyHealth.up(builder, connection.serverCommands().info());
-		}
-	}
-
+    private void doHealthCheck(Health.Builder builder, ValkeyConnection connection) {
+        if (connection instanceof ValkeyClusterConnection clusterConnection) {
+            ValkeyHealth.fromClusterInfo(builder, clusterConnection.clusterGetClusterInfo());
+        } else {
+            ValkeyHealth.up(builder, connection.serverCommands().info());
+        }
+    }
 }

@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
+import io.valkey.springframework.data.valkey.connection.ReturnType;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.springframework.core.convert.converter.Converter;
-import io.valkey.springframework.data.valkey.connection.ReturnType;
 import org.springframework.lang.Nullable;
 
 /**
@@ -29,42 +28,42 @@ import org.springframework.lang.Nullable;
  */
 public class JedisScriptReturnConverter implements Converter<Object, Object> {
 
-	private final ReturnType returnType;
+    private final ReturnType returnType;
 
-	public JedisScriptReturnConverter(ReturnType returnType) {
-		this.returnType = returnType;
-	}
+    public JedisScriptReturnConverter(ReturnType returnType) {
+        this.returnType = returnType;
+    }
 
-	@SuppressWarnings("unchecked")
-	public Object convert(@Nullable Object result) {
-		if (result instanceof String stringResult) {
-			// evalsha converts byte[] to String. Convert back for consistency
-			return JedisConverters.toBytes(stringResult);
-		}
-		if (returnType == ReturnType.STATUS) {
-			return JedisConverters.toString((byte[]) result);
-		}
-		if (returnType == ReturnType.BOOLEAN) {
-			// Lua false comes back as a null bulk reply
-			if (result == null) {
-				return Boolean.FALSE;
-			}
-			return ((Long) result == 1);
-		}
-		if (returnType == ReturnType.MULTI) {
-			List<Object> resultList = (List<Object>) result;
-			List<Object> convertedResults = new ArrayList<>();
-			for (Object res : resultList) {
-				if (res instanceof String stringResult) {
-					// evalsha converts byte[] to String. Convert back for
-					// consistency
-					convertedResults.add(JedisConverters.toBytes(stringResult));
-				} else {
-					convertedResults.add(res);
-				}
-			}
-			return convertedResults;
-		}
-		return result;
-	}
+    @SuppressWarnings("unchecked")
+    public Object convert(@Nullable Object result) {
+        if (result instanceof String stringResult) {
+            // evalsha converts byte[] to String. Convert back for consistency
+            return JedisConverters.toBytes(stringResult);
+        }
+        if (returnType == ReturnType.STATUS) {
+            return JedisConverters.toString((byte[]) result);
+        }
+        if (returnType == ReturnType.BOOLEAN) {
+            // Lua false comes back as a null bulk reply
+            if (result == null) {
+                return Boolean.FALSE;
+            }
+            return ((Long) result == 1);
+        }
+        if (returnType == ReturnType.MULTI) {
+            List<Object> resultList = (List<Object>) result;
+            List<Object> convertedResults = new ArrayList<>();
+            for (Object res : resultList) {
+                if (res instanceof String stringResult) {
+                    // evalsha converts byte[] to String. Convert back for
+                    // consistency
+                    convertedResults.add(JedisConverters.toBytes(stringResult));
+                } else {
+                    convertedResults.add(res);
+                }
+            }
+            return convertedResults;
+        }
+        return result;
+    }
 }

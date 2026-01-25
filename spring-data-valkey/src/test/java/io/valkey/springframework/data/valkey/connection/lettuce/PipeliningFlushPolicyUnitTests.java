@@ -15,79 +15,76 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import static org.mockito.Mockito.*;
 import static io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnection.*;
+import static org.mockito.Mockito.*;
 
 import io.lettuce.core.api.StatefulRedisConnection;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Unit tests for {@link PipeliningFlushPolicy}.
- */
+/** Unit tests for {@link PipeliningFlushPolicy}. */
 @ExtendWith(MockitoExtension.class)
 class PipeliningFlushPolicyUnitTests {
 
-	@Mock StatefulRedisConnection<?, ?> connection;
+    @Mock StatefulRedisConnection<?, ?> connection;
 
-	@Test // DATAREDIS-1011
-	void shouldFlushEachCommand() {
+    @Test // DATAREDIS-1011
+    void shouldFlushEachCommand() {
 
-		PipeliningFlushPolicy policy = PipeliningFlushPolicy.flushEachCommand();
+        PipeliningFlushPolicy policy = PipeliningFlushPolicy.flushEachCommand();
 
-		PipeliningFlushState state = policy.newPipeline();
+        PipeliningFlushState state = policy.newPipeline();
 
-		state.onOpen(connection);
-		state.onCommand(connection);
-		state.onClose(connection);
+        state.onOpen(connection);
+        state.onCommand(connection);
+        state.onClose(connection);
 
-		verifyNoInteractions(connection);
-	}
+        verifyNoInteractions(connection);
+    }
 
-	@Test // DATAREDIS-1011
-	void shouldFlushOnClose() {
+    @Test // DATAREDIS-1011
+    void shouldFlushOnClose() {
 
-		PipeliningFlushPolicy policy = PipeliningFlushPolicy.flushOnClose();
+        PipeliningFlushPolicy policy = PipeliningFlushPolicy.flushOnClose();
 
-		PipeliningFlushState state = policy.newPipeline();
+        PipeliningFlushState state = policy.newPipeline();
 
-		state.onOpen(connection);
+        state.onOpen(connection);
 
-		verify(connection).setAutoFlushCommands(false);
+        verify(connection).setAutoFlushCommands(false);
 
-		state.onCommand(connection);
+        state.onCommand(connection);
 
-		verifyNoMoreInteractions(connection);
+        verifyNoMoreInteractions(connection);
 
-		state.onClose(connection);
+        state.onClose(connection);
 
-		verify(connection).setAutoFlushCommands(true);
-		verify(connection).flushCommands();
-	}
+        verify(connection).setAutoFlushCommands(true);
+        verify(connection).flushCommands();
+    }
 
-	@Test // DATAREDIS-1011
-	void shouldFlushOnBuffer() {
+    @Test // DATAREDIS-1011
+    void shouldFlushOnBuffer() {
 
-		PipeliningFlushPolicy policy = PipeliningFlushPolicy.buffered(2);
+        PipeliningFlushPolicy policy = PipeliningFlushPolicy.buffered(2);
 
-		PipeliningFlushState state = policy.newPipeline();
+        PipeliningFlushState state = policy.newPipeline();
 
-		state.onOpen(connection);
+        state.onOpen(connection);
 
-		verify(connection).setAutoFlushCommands(false);
+        verify(connection).setAutoFlushCommands(false);
 
-		state.onCommand(connection);
-		verifyNoMoreInteractions(connection);
+        state.onCommand(connection);
+        verifyNoMoreInteractions(connection);
 
-		state.onCommand(connection);
-		verify(connection).flushCommands();
+        state.onCommand(connection);
+        verify(connection).flushCommands();
 
-		state.onClose(connection);
+        state.onClose(connection);
 
-		verify(connection).setAutoFlushCommands(true);
-		verify(connection, times(2)).flushCommands();
-	}
+        verify(connection).setAutoFlushCommands(true);
+        verify(connection, times(2)).flushCommands();
+    }
 }

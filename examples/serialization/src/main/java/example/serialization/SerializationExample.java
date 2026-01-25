@@ -20,88 +20,100 @@ import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.JdkSerializationValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-
 import java.io.Serializable;
 import java.util.Arrays;
 
-/**
- * Example demonstrating different serialization strategies.
- */
+/** Example demonstrating different serialization strategies. */
 public class SerializationExample {
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 
-		ValkeyGlideConnectionFactory connectionFactory = new ValkeyGlideConnectionFactory();
-		connectionFactory.afterPropertiesSet();
+        ValkeyGlideConnectionFactory connectionFactory = new ValkeyGlideConnectionFactory();
+        connectionFactory.afterPropertiesSet();
 
-		try {
-			User user = new User("alice", "alice@example.com", 25);
+        try {
+            User user = new User("alice", "alice@example.com", 25);
 
-			// 1. JSON serialization
-			ValkeyTemplate<String, User> jsonTemplate = new ValkeyTemplate<>();
-			jsonTemplate.setConnectionFactory(connectionFactory);
-			jsonTemplate.setKeySerializer(new StringValkeySerializer());
-			jsonTemplate.setValueSerializer(new Jackson2JsonValkeySerializer<>(User.class));
-			jsonTemplate.afterPropertiesSet();
+            // 1. JSON serialization
+            ValkeyTemplate<String, User> jsonTemplate = new ValkeyTemplate<>();
+            jsonTemplate.setConnectionFactory(connectionFactory);
+            jsonTemplate.setKeySerializer(new StringValkeySerializer());
+            jsonTemplate.setValueSerializer(new Jackson2JsonValkeySerializer<>(User.class));
+            jsonTemplate.afterPropertiesSet();
 
-			jsonTemplate.opsForValue().set("user:json", user);
-			User jsonRetrieved = jsonTemplate.opsForValue().get("user:json");
-			System.out.println("JSON retrieved: " + jsonRetrieved);
+            jsonTemplate.opsForValue().set("user:json", user);
+            User jsonRetrieved = jsonTemplate.opsForValue().get("user:json");
+            System.out.println("JSON retrieved: " + jsonRetrieved);
 
-			// 2. JDK serialization
-			ValkeyTemplate<String, User> jdkTemplate = new ValkeyTemplate<>();
-			jdkTemplate.setConnectionFactory(connectionFactory);
-			jdkTemplate.setKeySerializer(new StringValkeySerializer());
-			jdkTemplate.setValueSerializer(new JdkSerializationValkeySerializer());
-			jdkTemplate.afterPropertiesSet();
+            // 2. JDK serialization
+            ValkeyTemplate<String, User> jdkTemplate = new ValkeyTemplate<>();
+            jdkTemplate.setConnectionFactory(connectionFactory);
+            jdkTemplate.setKeySerializer(new StringValkeySerializer());
+            jdkTemplate.setValueSerializer(new JdkSerializationValkeySerializer());
+            jdkTemplate.afterPropertiesSet();
 
-			jdkTemplate.opsForValue().set("user:jdk", user);
-			User jdkRetrieved = jdkTemplate.opsForValue().get("user:jdk");
-			System.out.println("\nJDK retrieved: " + jdkRetrieved);
+            jdkTemplate.opsForValue().set("user:jdk", user);
+            User jdkRetrieved = jdkTemplate.opsForValue().get("user:jdk");
+            System.out.println("\nJDK retrieved: " + jdkRetrieved);
 
-			// 3. String serialization
-			ValkeyTemplate<String, String> stringTemplate = new ValkeyTemplate<>();
-			stringTemplate.setConnectionFactory(connectionFactory);
-			stringTemplate.setDefaultSerializer(StringValkeySerializer.UTF_8);
-			stringTemplate.afterPropertiesSet();
+            // 3. String serialization
+            ValkeyTemplate<String, String> stringTemplate = new ValkeyTemplate<>();
+            stringTemplate.setConnectionFactory(connectionFactory);
+            stringTemplate.setDefaultSerializer(StringValkeySerializer.UTF_8);
+            stringTemplate.afterPropertiesSet();
 
-			stringTemplate.opsForValue().set("message", "Hello, Valkey!");
-			String message = stringTemplate.opsForValue().get("message");
-			System.out.println("\nString retrieved: " + message);
+            stringTemplate.opsForValue().set("message", "Hello, Valkey!");
+            String message = stringTemplate.opsForValue().get("message");
+            System.out.println("\nString retrieved: " + message);
 
-			// Cleanup
-			jsonTemplate.delete(Arrays.asList("user:json", "user:jdk", "message"));
-		} finally {
-			connectionFactory.destroy();
-		}
-	}
+            // Cleanup
+            jsonTemplate.delete(Arrays.asList("user:json", "user:jdk", "message"));
+        } finally {
+            connectionFactory.destroy();
+        }
+    }
 
-	static class User implements Serializable {
+    static class User implements Serializable {
 
-		private String name;
-		private String email;
-		private int age;
+        private String name;
+        private String email;
+        private int age;
 
-		public User() {}
+        public User() {}
 
-		public User(String name, String email, int age) {
-			this.name = name;
-			this.email = email;
-			this.age = age;
-		}
+        public User(String name, String email, int age) {
+            this.name = name;
+            this.email = email;
+            this.age = age;
+        }
 
-		public String getName() { return name; }
-		public void setName(String name) { this.name = name; }
+        public String getName() {
+            return name;
+        }
 
-		public String getEmail() { return email; }
-		public void setEmail(String email) { this.email = email; }
+        public void setName(String name) {
+            this.name = name;
+        }
 
-		public int getAge() { return age; }
-		public void setAge(int age) { this.age = age; }
+        public String getEmail() {
+            return email;
+        }
 
-		@Override
-		public String toString() {
-			return "User{name='" + name + "', email='" + email + "', age=" + age + "}";
-		}
-	}
+        public void setEmail(String email) {
+            this.email = email;
+        }
+
+        public int getAge() {
+            return age;
+        }
+
+        public void setAge(int age) {
+            this.age = age;
+        }
+
+        @Override
+        public String toString() {
+            return "User{name='" + name + "', email='" + email + "', age=" + age + "}";
+        }
+    }
 }

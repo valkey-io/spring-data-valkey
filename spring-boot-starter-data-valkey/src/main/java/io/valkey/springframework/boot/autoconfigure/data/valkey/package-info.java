@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Auto-configuration for Spring Data Valkey.
- */
+/** Auto-configuration for Spring Data Valkey. */
 package io.valkey.springframework.boot.autoconfigure.data.valkey;

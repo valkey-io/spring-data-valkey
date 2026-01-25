@@ -17,54 +17,56 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.ClusterRedirectException;
+import io.valkey.springframework.data.valkey.TooManyClusterRedirectionsException;
+import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessException;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.exceptions.JedisAskDataException;
 import redis.clients.jedis.exceptions.JedisClusterOperationException;
 import redis.clients.jedis.exceptions.JedisMovedDataException;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.dao.DataAccessException;
-import io.valkey.springframework.data.valkey.ClusterRedirectException;
-import io.valkey.springframework.data.valkey.TooManyClusterRedirectionsException;
 
 /**
  * @author Christoph Strobl
  */
 class JedisExceptionConverterUnitTests {
 
-	private JedisExceptionConverter converter = new JedisExceptionConverter();
+    private JedisExceptionConverter converter = new JedisExceptionConverter();
 
-	@Test // DATAREDIS-315
-	void shouldConvertMovedDataException() {
+    @Test // DATAREDIS-315
+    void shouldConvertMovedDataException() {
 
-		DataAccessException converted = converter
-				.convert(new JedisMovedDataException("MOVED 3999 127.0.0.1:6381", new HostAndPort("127.0.0.1", 6381), 3999));
+        DataAccessException converted =
+                converter.convert(
+                        new JedisMovedDataException(
+                                "MOVED 3999 127.0.0.1:6381", new HostAndPort("127.0.0.1", 6381), 3999));
 
-		assertThat(converted).isInstanceOf(ClusterRedirectException.class);
-		assertThat(((ClusterRedirectException) converted).getSlot()).isEqualTo(3999);
-		assertThat(((ClusterRedirectException) converted).getTargetHost()).isEqualTo("127.0.0.1");
-		assertThat(((ClusterRedirectException) converted).getTargetPort()).isEqualTo(6381);
-	}
+        assertThat(converted).isInstanceOf(ClusterRedirectException.class);
+        assertThat(((ClusterRedirectException) converted).getSlot()).isEqualTo(3999);
+        assertThat(((ClusterRedirectException) converted).getTargetHost()).isEqualTo("127.0.0.1");
+        assertThat(((ClusterRedirectException) converted).getTargetPort()).isEqualTo(6381);
+    }
 
-	@Test // DATAREDIS-315
-	void shouldConvertAskDataException() {
+    @Test // DATAREDIS-315
+    void shouldConvertAskDataException() {
 
-		DataAccessException converted = converter
-				.convert(new JedisAskDataException("ASK 3999 127.0.0.1:6381", new HostAndPort("127.0.0.1", 6381), 3999));
+        DataAccessException converted =
+                converter.convert(
+                        new JedisAskDataException(
+                                "ASK 3999 127.0.0.1:6381", new HostAndPort("127.0.0.1", 6381), 3999));
 
-		assertThat(converted).isInstanceOf(ClusterRedirectException.class);
-		assertThat(((ClusterRedirectException) converted).getSlot()).isEqualTo(3999);
-		assertThat(((ClusterRedirectException) converted).getTargetHost()).isEqualTo("127.0.0.1");
-		assertThat(((ClusterRedirectException) converted).getTargetPort()).isEqualTo(6381);
-	}
+        assertThat(converted).isInstanceOf(ClusterRedirectException.class);
+        assertThat(((ClusterRedirectException) converted).getSlot()).isEqualTo(3999);
+        assertThat(((ClusterRedirectException) converted).getTargetHost()).isEqualTo("127.0.0.1");
+        assertThat(((ClusterRedirectException) converted).getTargetPort()).isEqualTo(6381);
+    }
 
-	@Test // DATAREDIS-315
-	void shouldConvertMaxRedirectException() {
+    @Test // DATAREDIS-315
+    void shouldConvertMaxRedirectException() {
 
-		DataAccessException converted = converter
-				.convert(new JedisClusterOperationException("No more cluster attempts left"));
+        DataAccessException converted =
+                converter.convert(new JedisClusterOperationException("No more cluster attempts left"));
 
-		assertThat(converted).isInstanceOf(TooManyClusterRedirectionsException.class);
-	}
+        assertThat(converted).isInstanceOf(TooManyClusterRedirectionsException.class);
+    }
 }

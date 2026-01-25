@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Auto-configuration for Valkey-related tests.
- */
+/** Auto-configuration for Valkey-related tests. */
 package io.valkey.springframework.boot.test.autoconfigure.data.valkey;

@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.core.mapping;
 
 import java.util.HashSet;
 import java.util.Set;
-
 import org.springframework.data.keyvalue.core.mapping.KeyValuePersistentProperty;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
@@ -32,31 +31,33 @@ import org.springframework.data.mapping.model.SimpleTypeHolder;
  */
 public class ValkeyPersistentProperty extends KeyValuePersistentProperty<ValkeyPersistentProperty> {
 
-	private static final Set<String> SUPPORTED_ID_PROPERTY_NAMES = new HashSet<>();
+    private static final Set<String> SUPPORTED_ID_PROPERTY_NAMES = new HashSet<>();
 
-	static {
-		SUPPORTED_ID_PROPERTY_NAMES.add("id");
-	}
+    static {
+        SUPPORTED_ID_PROPERTY_NAMES.add("id");
+    }
 
-	/**
-	 * Creates new {@link ValkeyPersistentProperty}.
-	 *
-	 * @param property
-	 * @param owner
-	 * @param simpleTypeHolder
-	 */
-	public ValkeyPersistentProperty(Property property, PersistentEntity<?, ValkeyPersistentProperty> owner,
-			SimpleTypeHolder simpleTypeHolder) {
-		super(property, owner, simpleTypeHolder);
-	}
+    /**
+     * Creates new {@link ValkeyPersistentProperty}.
+     *
+     * @param property
+     * @param owner
+     * @param simpleTypeHolder
+     */
+    public ValkeyPersistentProperty(
+            Property property,
+            PersistentEntity<?, ValkeyPersistentProperty> owner,
+            SimpleTypeHolder simpleTypeHolder) {
+        super(property, owner, simpleTypeHolder);
+    }
 
-	@Override
-	public boolean isIdProperty() {
+    @Override
+    public boolean isIdProperty() {
 
-		if (super.isIdProperty()) {
-			return true;
-		}
+        if (super.isIdProperty()) {
+            return true;
+        }
 
-		return SUPPORTED_ID_PROPERTY_NAMES.contains(getName());
-	}
+        return SUPPORTED_ID_PROPERTY_NAMES.contains(getName());
+    }
 }

@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.connection.convert;
 
+import io.valkey.springframework.data.valkey.ValkeySystemException;
 import java.io.StringReader;
 import java.util.Properties;
-
 import org.springframework.core.convert.converter.Converter;
-import io.valkey.springframework.data.valkey.ValkeySystemException;
 
 /**
  * Converts Strings to {@link Properties}
@@ -29,15 +28,15 @@ import io.valkey.springframework.data.valkey.ValkeySystemException;
  */
 public class StringToPropertiesConverter implements Converter<String, Properties> {
 
-	@Override
-	public Properties convert(String source) {
+    @Override
+    public Properties convert(String source) {
 
-		Properties info = new Properties();
-		try (StringReader stringReader = new StringReader(source)) {
-			info.load(stringReader);
-		} catch (Exception ex) {
-			throw new ValkeySystemException("Cannot read Valkey info", ex);
-		}
-		return info;
-	}
+        Properties info = new Properties();
+        try (StringReader stringReader = new StringReader(source)) {
+            info.load(stringReader);
+        } catch (Exception ex) {
+            throw new ValkeySystemException("Cannot read Valkey info", ex);
+        }
+        return info;
+    }
 }

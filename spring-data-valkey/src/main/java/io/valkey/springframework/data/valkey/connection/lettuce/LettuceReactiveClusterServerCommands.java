@@ -16,11 +16,12 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.api.reactive.RedisServerReactiveCommands;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
-
+import io.valkey.springframework.data.valkey.connection.ClusterTopologyProvider;
+import io.valkey.springframework.data.valkey.connection.ReactiveClusterServerCommands;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.FlushOption;
+import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -36,15 +37,12 @@ import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
-
 import org.reactivestreams.Publisher;
-import io.valkey.springframework.data.valkey.connection.ClusterTopologyProvider;
-import io.valkey.springframework.data.valkey.connection.ReactiveClusterServerCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
-import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.FlushOption;
-import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
-import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 
 /**
  * {@link ReactiveClusterServerCommands} implementation for {@literal Lettuce}.
@@ -55,240 +53,253 @@ import org.springframework.util.Assert;
  * @since 2.0
  */
 class LettuceReactiveClusterServerCommands extends LettuceReactiveServerCommands
-		implements ReactiveClusterServerCommands {
+        implements ReactiveClusterServerCommands {
 
-	private final LettuceReactiveValkeyClusterConnection connection;
-	private final ClusterTopologyProvider topologyProvider;
+    private final LettuceReactiveValkeyClusterConnection connection;
+    private final ClusterTopologyProvider topologyProvider;
 
-	/**
-	 * Create new {@link LettuceReactiveClusterServerCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 * @param topologyProvider must not be {@literal null}.
-	 * @throws IllegalArgumentException when {@code connection} is {@literal null}.
-	 * @throws IllegalArgumentException when {@code topologyProvider} is {@literal null}.
-	 */
-	LettuceReactiveClusterServerCommands(LettuceReactiveValkeyClusterConnection connection,
-			ClusterTopologyProvider topologyProvider) {
+    /**
+     * Create new {@link LettuceReactiveClusterServerCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     * @param topologyProvider must not be {@literal null}.
+     * @throws IllegalArgumentException when {@code connection} is {@literal null}.
+     * @throws IllegalArgumentException when {@code topologyProvider} is {@literal null}.
+     */
+    LettuceReactiveClusterServerCommands(
+            LettuceReactiveValkeyClusterConnection connection, ClusterTopologyProvider topologyProvider) {
 
-		super(connection);
+        super(connection);
 
-		this.connection = connection;
-		this.topologyProvider = topologyProvider;
-	}
+        this.connection = connection;
+        this.topologyProvider = topologyProvider;
+    }
 
-	@Override
-	public Mono<String> bgReWriteAof(ValkeyClusterNode node) {
-		return connection.execute(node, RedisServerReactiveCommands::bgrewriteaof).next();
-	}
+    @Override
+    public Mono<String> bgReWriteAof(ValkeyClusterNode node) {
+        return connection.execute(node, RedisServerReactiveCommands::bgrewriteaof).next();
+    }
 
-	@Override
-	public Mono<String> bgSave(ValkeyClusterNode node) {
-		return connection.execute(node, RedisServerReactiveCommands::bgsave).next();
-	}
+    @Override
+    public Mono<String> bgSave(ValkeyClusterNode node) {
+        return connection.execute(node, RedisServerReactiveCommands::bgsave).next();
+    }
 
-	@Override
-	public Mono<Long> lastSave(ValkeyClusterNode node) {
-		return connection.execute(node, RedisServerReactiveCommands::lastsave).map(Date::getTime).next();
-	}
+    @Override
+    public Mono<Long> lastSave(ValkeyClusterNode node) {
+        return connection
+                .execute(node, RedisServerReactiveCommands::lastsave)
+                .map(Date::getTime)
+                .next();
+    }
 
-	@Override
-	public Mono<String> save(ValkeyClusterNode node) {
-		return connection.execute(node, RedisServerReactiveCommands::save).next();
-	}
+    @Override
+    public Mono<String> save(ValkeyClusterNode node) {
+        return connection.execute(node, RedisServerReactiveCommands::save).next();
+    }
 
-	@Override
-	public Mono<Long> dbSize(ValkeyClusterNode node) {
-		return connection.execute(node, RedisServerReactiveCommands::dbsize).next();
-	}
+    @Override
+    public Mono<Long> dbSize(ValkeyClusterNode node) {
+        return connection.execute(node, RedisServerReactiveCommands::dbsize).next();
+    }
 
-	@Override
-	public Mono<String> flushDb(ValkeyClusterNode node) {
-		return connection.execute(node, RedisServerReactiveCommands::flushdb).next();
-	}
+    @Override
+    public Mono<String> flushDb(ValkeyClusterNode node) {
+        return connection.execute(node, RedisServerReactiveCommands::flushdb).next();
+    }
 
-	@Override
-	public Mono<String> flushDb(ValkeyClusterNode node, FlushOption option) {
-		return connection.execute(node, it -> it.flushdb(LettuceConverters.toFlushMode(option))).next();
-	}
+    @Override
+    public Mono<String> flushDb(ValkeyClusterNode node, FlushOption option) {
+        return connection.execute(node, it -> it.flushdb(LettuceConverters.toFlushMode(option))).next();
+    }
 
-	@Override
-	public Mono<String> flushAll(ValkeyClusterNode node) {
-		return connection.execute(node, RedisServerReactiveCommands::flushall).next();
-	}
+    @Override
+    public Mono<String> flushAll(ValkeyClusterNode node) {
+        return connection.execute(node, RedisServerReactiveCommands::flushall).next();
+    }
 
-	@Override
-	public Mono<String> flushAll(ValkeyClusterNode node, FlushOption option) {
-		return connection.execute(node, it -> it.flushall(LettuceConverters.toFlushMode(option))).next();
-	}
+    @Override
+    public Mono<String> flushAll(ValkeyClusterNode node, FlushOption option) {
+        return connection
+                .execute(node, it -> it.flushall(LettuceConverters.toFlushMode(option)))
+                .next();
+    }
 
-	@Override
-	public Mono<Properties> info() {
-		return Flux.merge(executeOnAllNodes(this::info)).collect(PropertiesCollector.INSTANCE);
-	}
+    @Override
+    public Mono<Properties> info() {
+        return Flux.merge(executeOnAllNodes(this::info)).collect(PropertiesCollector.INSTANCE);
+    }
 
-	@Override
-	public Mono<Properties> info(ValkeyClusterNode node) {
+    @Override
+    public Mono<Properties> info(ValkeyClusterNode node) {
 
-		return connection.execute(node, RedisServerReactiveCommands::info) //
-				.map(LettuceConverters::toProperties) //
-				.next();
-	}
+        return connection
+                .execute(node, RedisServerReactiveCommands::info) //
+                .map(LettuceConverters::toProperties) //
+                .next();
+    }
 
-	@Override
-	public Mono<Properties> info(String section) {
+    @Override
+    public Mono<Properties> info(String section) {
 
-		Assert.hasText(section, "Section must not be null or empty");
+        Assert.hasText(section, "Section must not be null or empty");
 
-		return Flux.merge(executeOnAllNodes(valkeyClusterNode -> info(valkeyClusterNode, section)))
-				.collect(PropertiesCollector.INSTANCE);
-	}
+        return Flux.merge(executeOnAllNodes(valkeyClusterNode -> info(valkeyClusterNode, section)))
+                .collect(PropertiesCollector.INSTANCE);
+    }
 
-	@Override
-	public Mono<Properties> info(ValkeyClusterNode node, String section) {
+    @Override
+    public Mono<Properties> info(ValkeyClusterNode node, String section) {
 
-		Assert.hasText(section, "Section must not be null or empty");
+        Assert.hasText(section, "Section must not be null or empty");
 
-		return connection.execute(node, c -> c.info(section)) //
-				.map(LettuceConverters::toProperties).next();
-	}
+        return connection
+                .execute(node, c -> c.info(section)) //
+                .map(LettuceConverters::toProperties)
+                .next();
+    }
 
-	@Override
-	public Mono<Properties> getConfig(String pattern) {
+    @Override
+    public Mono<Properties> getConfig(String pattern) {
 
-		Assert.hasText(pattern, "Pattern must not be null or empty");
+        Assert.hasText(pattern, "Pattern must not be null or empty");
 
-		return Flux.merge(executeOnAllNodes(node -> getConfig(node, pattern))) //
-				.collect(PropertiesCollector.INSTANCE);
-	}
+        return Flux.merge(executeOnAllNodes(node -> getConfig(node, pattern))) //
+                .collect(PropertiesCollector.INSTANCE);
+    }
 
-	@Override
-	public Mono<Properties> getConfig(ValkeyClusterNode node, String pattern) {
+    @Override
+    public Mono<Properties> getConfig(ValkeyClusterNode node, String pattern) {
 
-		Assert.hasText(pattern, "Pattern must not be null or empty");
+        Assert.hasText(pattern, "Pattern must not be null or empty");
 
-		return connection.execute(node, c -> c.configGet(pattern)) //
-				.map(LettuceConverters::toProperties) //
-				.next();
-	}
+        return connection
+                .execute(node, c -> c.configGet(pattern)) //
+                .map(LettuceConverters::toProperties) //
+                .next();
+    }
 
-	@Override
-	public Mono<String> setConfig(String param, String value) {
-		return Flux.merge(executeOnAllNodes(node -> setConfig(node, param, value))).map(Tuple2::getT2).last();
-	}
+    @Override
+    public Mono<String> setConfig(String param, String value) {
+        return Flux.merge(executeOnAllNodes(node -> setConfig(node, param, value)))
+                .map(Tuple2::getT2)
+                .last();
+    }
 
-	@Override
-	public Mono<String> setConfig(ValkeyClusterNode node, String param, String value) {
+    @Override
+    public Mono<String> setConfig(ValkeyClusterNode node, String param, String value) {
 
-		Assert.hasText(param, "Parameter must not be null or empty");
-		Assert.hasText(value, "Value must not be null or empty");
+        Assert.hasText(param, "Parameter must not be null or empty");
+        Assert.hasText(value, "Value must not be null or empty");
 
-		return connection.execute(node, c -> c.configSet(param, value)).next();
-	}
+        return connection.execute(node, c -> c.configSet(param, value)).next();
+    }
 
-	@Override
-	public Mono<String> resetConfigStats() {
-		return Flux.merge(executeOnAllNodes(this::resetConfigStats)).map(Tuple2::getT2).last();
-	}
+    @Override
+    public Mono<String> resetConfigStats() {
+        return Flux.merge(executeOnAllNodes(this::resetConfigStats)).map(Tuple2::getT2).last();
+    }
 
-	@Override
-	public Mono<String> resetConfigStats(ValkeyClusterNode node) {
-		return connection.execute(node, RedisServerReactiveCommands::configResetstat).next();
-	}
+    @Override
+    public Mono<String> resetConfigStats(ValkeyClusterNode node) {
+        return connection.execute(node, RedisServerReactiveCommands::configResetstat).next();
+    }
 
-	@Override
-	public Mono<Long> time(ValkeyClusterNode node) {
+    @Override
+    public Mono<Long> time(ValkeyClusterNode node) {
 
-		return connection.execute(node, RedisServerReactiveCommands::time) //
-				.map(ByteUtils::getBytes) //
-				.collectList() //
-				.map(LettuceConverters.toTimeConverter(TimeUnit.MILLISECONDS)::convert);
-	}
+        return connection
+                .execute(node, RedisServerReactiveCommands::time) //
+                .map(ByteUtils::getBytes) //
+                .collectList() //
+                .map(LettuceConverters.toTimeConverter(TimeUnit.MILLISECONDS)::convert);
+    }
 
-	@Override
-	public Flux<ValkeyClientInfo> getClientList() {
-		return Flux.merge(executeOnAllNodesMany(this::getClientList)).map(Tuple2::getT2);
-	}
+    @Override
+    public Flux<ValkeyClientInfo> getClientList() {
+        return Flux.merge(executeOnAllNodesMany(this::getClientList)).map(Tuple2::getT2);
+    }
 
-	@Override
-	public Flux<ValkeyClientInfo> getClientList(ValkeyClusterNode node) {
+    @Override
+    public Flux<ValkeyClientInfo> getClientList(ValkeyClusterNode node) {
 
-		return connection.execute(node, RedisServerReactiveCommands::clientList)
-				.concatMapIterable(LettuceConverters.stringToValkeyClientListConverter()::convert);
-	}
+        return connection
+                .execute(node, RedisServerReactiveCommands::clientList)
+                .concatMapIterable(LettuceConverters.stringToValkeyClientListConverter()::convert);
+    }
 
-	private <T> Collection<Publisher<Tuple2<ValkeyClusterNode, T>>> executeOnAllNodes(
-			Function<ValkeyClusterNode, Mono<T>> callback) {
+    private <T> Collection<Publisher<Tuple2<ValkeyClusterNode, T>>> executeOnAllNodes(
+            Function<ValkeyClusterNode, Mono<T>> callback) {
 
-		Set<ValkeyClusterNode> nodes = topologyProvider.getTopology().getNodes();
-		List<Publisher<Tuple2<ValkeyClusterNode, T>>> pipeline = new ArrayList<>(nodes.size());
+        Set<ValkeyClusterNode> nodes = topologyProvider.getTopology().getNodes();
+        List<Publisher<Tuple2<ValkeyClusterNode, T>>> pipeline = new ArrayList<>(nodes.size());
 
-		for (ValkeyClusterNode valkeyClusterNode : nodes) {
-			pipeline.add(callback.apply(valkeyClusterNode).map(p -> Tuples.of(valkeyClusterNode, p)));
-		}
+        for (ValkeyClusterNode valkeyClusterNode : nodes) {
+            pipeline.add(callback.apply(valkeyClusterNode).map(p -> Tuples.of(valkeyClusterNode, p)));
+        }
 
-		return pipeline;
-	}
+        return pipeline;
+    }
 
-	private <T> Collection<Publisher<Tuple2<ValkeyClusterNode, T>>> executeOnAllNodesMany(
-			Function<ValkeyClusterNode, Flux<T>> callback) {
+    private <T> Collection<Publisher<Tuple2<ValkeyClusterNode, T>>> executeOnAllNodesMany(
+            Function<ValkeyClusterNode, Flux<T>> callback) {
 
-		Set<ValkeyClusterNode> nodes = topologyProvider.getTopology().getNodes();
-		List<Publisher<Tuple2<ValkeyClusterNode, T>>> pipeline = new ArrayList<>(nodes.size());
+        Set<ValkeyClusterNode> nodes = topologyProvider.getTopology().getNodes();
+        List<Publisher<Tuple2<ValkeyClusterNode, T>>> pipeline = new ArrayList<>(nodes.size());
 
-		for (ValkeyClusterNode valkeyClusterNode : nodes) {
-			pipeline.add(callback.apply(valkeyClusterNode).map(p -> Tuples.of(valkeyClusterNode, p)));
-		}
+        for (ValkeyClusterNode valkeyClusterNode : nodes) {
+            pipeline.add(callback.apply(valkeyClusterNode).map(p -> Tuples.of(valkeyClusterNode, p)));
+        }
 
-		return pipeline;
-	}
+        return pipeline;
+    }
 
-	/**
-	 * Collector to merge {@link Tuple2} of {@link ValkeyClusterNode} and {@link Properties} into a single
-	 * {@link Properties} object by prefixing original the keys with {@link ValkeyClusterNode#asString()}.
-	 */
-	private enum PropertiesCollector implements Collector<Tuple2<ValkeyClusterNode, Properties>, Properties, Properties> {
+    /**
+     * Collector to merge {@link Tuple2} of {@link ValkeyClusterNode} and {@link Properties} into a
+     * single {@link Properties} object by prefixing original the keys with {@link
+     * ValkeyClusterNode#asString()}.
+     */
+    private enum PropertiesCollector
+            implements Collector<Tuple2<ValkeyClusterNode, Properties>, Properties, Properties> {
+        INSTANCE;
 
-		INSTANCE;
+        @Override
+        public Supplier<Properties> supplier() {
+            return Properties::new;
+        }
 
-		@Override
-		public Supplier<Properties> supplier() {
-			return Properties::new;
-		}
+        @Override
+        public BiConsumer<Properties, Tuple2<ValkeyClusterNode, Properties>> accumulator() {
 
-		@Override
-		public BiConsumer<Properties, Tuple2<ValkeyClusterNode, Properties>> accumulator() {
+            return (properties, tuple) -> {
+                for (Entry<Object, Object> entry : tuple.getT2().entrySet()) {
+                    properties.put(tuple.getT1().asString() + "." + entry.getKey(), entry.getValue());
+                }
+            };
+        }
 
-			return (properties, tuple) -> {
+        @Override
+        public BinaryOperator<Properties> combiner() {
 
-				for (Entry<Object, Object> entry : tuple.getT2().entrySet()) {
-					properties.put(tuple.getT1().asString() + "." + entry.getKey(), entry.getValue());
-				}
-			};
-		}
+            return (left, right) -> {
+                Properties merge = new Properties();
 
-		@Override
-		public BinaryOperator<Properties> combiner() {
+                merge.putAll(left);
+                merge.putAll(right);
 
-			return (left, right) -> {
+                return merge;
+            };
+        }
 
-				Properties merge = new Properties();
+        @Override
+        public Function<Properties, Properties> finisher() {
+            return properties -> properties;
+        }
 
-				merge.putAll(left);
-				merge.putAll(right);
-
-				return merge;
-			};
-		}
-
-		@Override
-		public Function<Properties, Properties> finisher() {
-			return properties -> properties;
-		}
-
-		@Override
-		public Set<Characteristics> characteristics() {
-			return new HashSet<>(Arrays.asList(Characteristics.UNORDERED, Characteristics.IDENTITY_FINISH));
-		}
-	}
+        @Override
+        public Set<Characteristics> characteristics() {
+            return new HashSet<>(
+                    Arrays.asList(Characteristics.UNORDERED, Characteristics.IDENTITY_FINISH));
+        }
+    }
 }

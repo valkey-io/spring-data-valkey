@@ -16,31 +16,31 @@
 package io.valkey.springframework.data.valkey.examples;
 
 // tag::file[]
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class ValkeyApplication {
 
-	private static final Log LOG = LogFactory.getLog(ValkeyApplication.class);
+    private static final Log LOG = LogFactory.getLog(ValkeyApplication.class);
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 
-		ValkeyGlideConnectionFactory connectionFactory = new ValkeyGlideConnectionFactory();
-		connectionFactory.afterPropertiesSet();
+        ValkeyGlideConnectionFactory connectionFactory = new ValkeyGlideConnectionFactory();
+        connectionFactory.afterPropertiesSet();
 
-		ValkeyTemplate<String, String> template = new ValkeyTemplate<>();
-		template.setConnectionFactory(connectionFactory);
-		template.setDefaultSerializer(StringValkeySerializer.UTF_8);
-		template.afterPropertiesSet();
+        ValkeyTemplate<String, String> template = new ValkeyTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.setDefaultSerializer(StringValkeySerializer.UTF_8);
+        template.afterPropertiesSet();
 
-		template.opsForValue().set("foo", "bar");
+        template.opsForValue().set("foo", "bar");
 
-		LOG.info("Value at foo:" + template.opsForValue().get("foo"));
+        LOG.info("Value at foo:" + template.opsForValue().get("foo"));
 
-		connectionFactory.destroy();
-	}
+        connectionFactory.destroy();
+    }
 }
 // end::file[]

@@ -15,9 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
+import glide.api.GlideClient;
+import glide.api.models.GlideString;
 import io.valkey.springframework.data.valkey.connection.AbstractValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.MessageListener;
+import io.valkey.springframework.data.valkey.connection.Subscription;
 import io.valkey.springframework.data.valkey.connection.ValkeyCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
@@ -27,19 +29,14 @@ import io.valkey.springframework.data.valkey.connection.ValkeyListCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyPipelineException;
 import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
+import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeySetCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeySubscribedConnectionException;
 import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands;
-import io.valkey.springframework.data.valkey.connection.Subscription;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConverters.ResultMapper;
-import io.valkey.springframework.data.valkey.connection.MessageListener;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -48,14 +45,14 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-// Imports from valkey-glide library
-import glide.api.GlideClient;
-import glide.api.models.GlideString;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 
 /**
- * Connection to a Valkey server using Valkey-Glide client. The connection
- * adapts Valkey-Glide's asynchronous API to Spring Data Valkey's synchronous API.
+ * Connection to a Valkey server using Valkey-Glide client. The connection adapts Valkey-Glide's
+ * asynchronous API to Spring Data Valkey's synchronous API.
  *
  * @author Ilia Kolominsky
  */
@@ -63,12 +60,14 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     protected final UnifiedGlideClient unifiedClient;
     protected final @Nullable ValkeyGlideConnectionFactory factory;
+
     /**
-     * Bridges Glide's callback mechanism (configured at client creation) with Spring's
-     * {@link MessageListener} (provided at subscribe time). The user's listener is set
-     * on this delegate when {@code subscribe()} is called, and cleared on connection close.
+     * Bridges Glide's callback mechanism (configured at client creation) with Spring's {@link
+     * MessageListener} (provided at subscribe time). The user's listener is set on this delegate when
+     * {@code subscribe()} is called, and cleared on connection close.
      */
     protected final @Nullable DelegatingPubSubListener delegatingListener;
+
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
@@ -89,32 +88,35 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     private final ValkeyGlideStreamCommands streamCommands;
 
     /**
-     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter.
-     * Each connection owns and manages its own client instance.
+     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter. Each connection owns
+     * and manages its own client instance.
      *
      * @param unifiedClient unified client adapter (standalone or cluster)
      * @param factory the connection factory (optional, for pooling support)
      */
-    public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, @Nullable ValkeyGlideConnectionFactory factory) {
+    public ValkeyGlideConnection(
+            UnifiedGlideClient unifiedClient, @Nullable ValkeyGlideConnectionFactory factory) {
         this(unifiedClient, factory, null);
     }
 
     /**
-     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter and delegating pub/sub listener.
+     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter and delegating
+     * pub/sub listener.
      *
      * @param unifiedClient unified client adapter (standalone or cluster)
      * @param factory the connection factory (optional, for pooling support)
      * @param delegatingListener the delegating pub/sub listener for callback-based message delivery
      */
-    public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, 
+    public ValkeyGlideConnection(
+            UnifiedGlideClient unifiedClient,
             @Nullable ValkeyGlideConnectionFactory factory,
             @Nullable DelegatingPubSubListener delegatingListener) {
         Assert.notNull(unifiedClient, "UnifiedClient must not be null");
-        
+
         this.unifiedClient = unifiedClient;
         this.factory = factory;
         this.delegatingListener = delegatingListener;
-        
+
         // Initialize command interfaces
         this.keyCommands = new ValkeyGlideKeyCommands(this);
         this.stringCommands = new ValkeyGlideStringCommands(this);
@@ -210,13 +212,13 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
                     sub.close();
                     this.subscription = null;
                 }
-                
+
                 cleanupConnectionState();
 
                 if (delegatingListener != null) {
                     delegatingListener.clearListener();
                 }
-                
+
                 // Return client to pool
                 if (factory != null) {
                     factory.releaseClient(unifiedClient.getNativeClient());
@@ -226,10 +228,10 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
     }
-    
+
     /**
-     * Cleans up server-side connection state before returning client to pool.
-     * This ensures the next connection gets a clean client without stale state.
+     * Cleans up server-side connection state before returning client to pool. This ensures the next
+     * connection gets a clean client without stale state.
      */
     protected void cleanupConnectionState() {
         // Dont use RESET - we will destroy the configured state
@@ -240,9 +242,10 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
 
         @SuppressWarnings("unchecked")
-        Callable<Void>[] actions = new Callable[] {
-                () -> nativeClient.customCommand(new String[]{"UNWATCH"}).get(),
-            };
+        Callable<Void>[] actions =
+                new Callable[] {
+                    () -> nativeClient.customCommand(new String[] {"UNWATCH"}).get(),
+                };
 
         for (Callable<Void> action : actions) {
             try {
@@ -278,8 +281,9 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     @Override
     public void openPipeline() {
         if (isQueueing()) {
-			throw new InvalidDataAccessApiUsageException("Cannot use pipelining while a transaction is active");
-		}
+            throw new InvalidDataAccessApiUsageException(
+                    "Cannot use pipelining while a transaction is active");
+        }
         if (!isPipelined()) {
             unifiedClient.startNewBatch(false);
         }
@@ -321,9 +325,10 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     @Override
     public void multi() {
         if (isPipelined()) {
-			throw new InvalidDataAccessApiUsageException("Cannot use transaction while a pipeline is open");
-		}
-        
+            throw new InvalidDataAccessApiUsageException(
+                    "Cannot use transaction while a pipeline is open");
+        }
+
         if (!isQueueing()) {
             // Create atomic batch (transaction)
             unifiedClient.startNewBatch(true);
@@ -332,10 +337,11 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     @Override
     public void discard() {
-        if (!isQueueing()) { 
-            throw new InvalidDataAccessApiUsageException("No ongoing transaction; Did you forget to call multi");
+        if (!isQueueing()) {
+            throw new InvalidDataAccessApiUsageException(
+                    "No ongoing transaction; Did you forget to call multi");
         }
-        
+
         // Clear the current batch and reset transaction state
         unifiedClient.discardBatch();
         batchCommandsConverters.clear();
@@ -344,22 +350,23 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     @Override
     public List<Object> exec() {
         if (!isQueueing()) {
-		    throw new InvalidDataAccessApiUsageException("No ongoing transaction; Did you forget to call multi");
+            throw new InvalidDataAccessApiUsageException(
+                    "No ongoing transaction; Did you forget to call multi");
         }
-		
+
         try {
             if (unifiedClient.getBatchCount() == 0) {
                 return new ArrayList<>();
             }
 
             Object[] results = unifiedClient.execBatch();
-            
+
             // Handle transaction abort cases - valkey-glide returns null for WATCH conflicts
             if (results == null) {
                 // Return empty list for WATCH conflicts (matches Jedis behavior and Valkey specification)
                 return new ArrayList<>();
             }
-            
+
             List<Object> resultList = new ArrayList<>(results.length);
             for (int i = 0; i < results.length; i++) {
                 Object item = results[i];
@@ -421,7 +428,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         try {
             // Execute WATCH immediately to set up key monitoring at connection level
             execute("WATCH", keys);
-            
+
             // Track watched keys for cleanup
             Collections.addAll(watchedKeys, keys);
         } catch (Exception ex) {
@@ -448,28 +455,31 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         Assert.notNull(channels, "Channels must not be null");
         Assert.noNullElements(channels, "Channels must not contain null elements");
 
-		if (isSubscribed()) {
-			throw new ValkeySubscribedConnectionException(
-					"Connection already subscribed; use the connection Subscription to cancel or add new channels");
-		}
+        if (isSubscribed()) {
+            throw new ValkeySubscribedConnectionException(
+                    "Connection already subscribed; use the connection Subscription to cancel or add new"
+                            + " channels");
+        }
 
-		if (isQueueing() || isPipelined()) {
-			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
-		}
+        if (isQueueing() || isPipelined()) {
+            throw new InvalidDataAccessApiUsageException(
+                    "Cannot subscribe in pipeline / transaction mode");
+        }
 
         if (delegatingListener == null) {
             throw new InvalidDataAccessApiUsageException(
-                    "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
+                    "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback"
+                            + " support.");
         }
 
         try {
             delegatingListener.setListener(listener);
-            
-            ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
-                    listener, unifiedClient, delegatingListener);
+
+            ValkeyGlideSubscription glideSubscription =
+                    new ValkeyGlideSubscription(listener, unifiedClient, delegatingListener);
             this.subscription = glideSubscription;
             glideSubscription.subscribe(channels);
-            
+
         } catch (Exception ex) {
             if (delegatingListener != null) {
                 delegatingListener.clearListener();
@@ -485,28 +495,31 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         Assert.notNull(patterns, "Patterns must not be null");
         Assert.noNullElements(patterns, "Patterns must not contain null elements");
 
-		if (isSubscribed()) {
-			throw new ValkeySubscribedConnectionException(
-					"Connection already subscribed; use the connection Subscription to cancel or add new channels");
-		}
+        if (isSubscribed()) {
+            throw new ValkeySubscribedConnectionException(
+                    "Connection already subscribed; use the connection Subscription to cancel or add new"
+                            + " channels");
+        }
 
-		if (isQueueing() || isPipelined()) {
-			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
-		}
-        
+        if (isQueueing() || isPipelined()) {
+            throw new InvalidDataAccessApiUsageException(
+                    "Cannot subscribe in pipeline / transaction mode");
+        }
+
         if (delegatingListener == null) {
             throw new InvalidDataAccessApiUsageException(
-                    "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
+                    "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback"
+                            + " support.");
         }
 
         try {
             delegatingListener.setListener(listener);
-            
-            ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
-                    listener, unifiedClient, delegatingListener);
+
+            ValkeyGlideSubscription glideSubscription =
+                    new ValkeyGlideSubscription(listener, unifiedClient, delegatingListener);
             this.subscription = glideSubscription;
             glideSubscription.pSubscribe(patterns);
-            
+
         } catch (Exception ex) {
             if (delegatingListener != null) {
                 delegatingListener.clearListener();
@@ -529,40 +542,39 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     /**
      * Execute a Valkey command using string arguments.
-     * 
+     *
      * @param command the command to execute
      * @param args the command arguments
      * @return the command result
      */
 
     /**
-     * Executes a Valkey command with arguments and converts the raw driver result
-     * into a strongly typed value using the provided {@link ResultMapper}.
+     * Executes a Valkey command with arguments and converts the raw driver result into a strongly
+     * typed value using the provided {@link ResultMapper}.
      *
      * <p>Behavior depends on whether pipelining/transaction is enabled:
+     *
      * <ul>
-     *   <li><b>Immediate mode</b> – the command is sent directly to the driver,
-     *       and the raw result is synchronously converted via {@code mapper.map(raw)}.</li>
+     *   <li><b>Immediate mode</b> – the command is sent directly to the driver, and the raw result is
+     *       synchronously converted via {@code mapper.map(raw)}.
      *   <li><b>Pipeline/Transaction mode</b> – the command and mapper are queued for later execution.
-     *       In this case, the method returns {@code null}. When
-     *       {@link #closePipeline()}/{@link #exec()} are called, all queued commands are flushed,
-     *       raw results are collected, and each queued {@code ResultMapper}
-     *       is applied in order.</li>
+     *       In this case, the method returns {@code null}. When {@link #closePipeline()}/{@link
+     *       #exec()} are called, all queued commands are flushed, raw results are collected, and each
+     *       queued {@code ResultMapper} is applied in order.
      * </ul>
      *
-     * <p>The caller (API layer) is responsible for providing the appropriate
-     * {@link ResultMapper} for the Valkey command being executed. This allows each
-     * high-level API method to encapsulate its own decoding logic.
+     * <p>The caller (API layer) is responsible for providing the appropriate {@link ResultMapper} for
+     * the Valkey command being executed. This allows each high-level API method to encapsulate its
+     * own decoding logic.
      *
      * @param command The Valkey command name (e.g. "GET", "SMEMBERS").
-     * @param mapper  A function that knows how to convert the raw driver result
-     *                into a strongly typed value of type {@code R}.
-     * @param args    The command arguments, already encoded into driver-acceptable
-     *                representations (e.g. {@code byte[]} or primitives).
-     * @param <R>     The expected return type after mapping the driver result.
-     * @return        The mapped result in immediate mode, or {@code null} if
-     *                pipelining/transaction is active (result will be available after
-     *                {@link #closePipeline()} or {@link #exec()}).
+     * @param mapper A function that knows how to convert the raw driver result into a strongly typed
+     *     value of type {@code R}.
+     * @param args The command arguments, already encoded into driver-acceptable representations (e.g.
+     *     {@code byte[]} or primitives).
+     * @param <R> The expected return type after mapping the driver result.
+     * @return The mapped result in immediate mode, or {@code null} if pipelining/transaction is
+     *     active (result will be available after {@link #closePipeline()} or {@link #exec()}).
      */
     @SuppressWarnings("unchecked")
     @Nullable
@@ -594,7 +606,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
                 unifiedClient.customCommand(glideArgs);
                 return null; // Return null for queued commands in transaction
             }
-            
+
             // Immediate execution mode
             I result = (I) unifiedClient.customCommand(glideArgs);
             return mapper.map(result);
@@ -610,10 +622,12 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         Assert.noNullElements(args, "Arguments must not contain null elements");
         try {
             // Delegate to the generic execute method
-            return execute(command, rawResult -> {
-                return ValkeyGlideConverters.defaultFromGlideResult(rawResult);
-            },
-            (Object[]) args);
+            return execute(
+                    command,
+                    rawResult -> {
+                        return ValkeyGlideConverters.defaultFromGlideResult(rawResult);
+                    },
+                    (Object[]) args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }

@@ -17,10 +17,6 @@ package io.valkey.springframework.data.valkey.support.atomic;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Collection;
-
-import org.junit.jupiter.api.BeforeEach;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
@@ -29,6 +25,8 @@ import io.valkey.springframework.data.valkey.serializer.GenericToStringSerialize
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Collection;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Integration tests for {@link CompareAndSet}.
@@ -39,83 +37,90 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("testParams")
 public class CompareAndSetIntegrationIntegrationTests {
 
-	private static final String KEY = "key";
+    private static final String KEY = "key";
 
-	private final ValkeyConnectionFactory factory;
-	private final ValkeyTemplate<String, Long> template;
-	private final ValueOperations<String, Long> valueOps;
+    private final ValkeyConnectionFactory factory;
+    private final ValkeyTemplate<String, Long> template;
+    private final ValueOperations<String, Long> valueOps;
 
-	public CompareAndSetIntegrationIntegrationTests(ValkeyConnectionFactory factory) {
+    public CompareAndSetIntegrationIntegrationTests(ValkeyConnectionFactory factory) {
 
-		this.factory = factory;
+        this.factory = factory;
 
-		this.template = new ValkeyTemplate<>();
-		this.template.setConnectionFactory(factory);
-		this.template.setKeySerializer(StringValkeySerializer.UTF_8);
-		this.template.setValueSerializer(new GenericToStringSerializer<>(Long.class));
-		this.template.afterPropertiesSet();
+        this.template = new ValkeyTemplate<>();
+        this.template.setConnectionFactory(factory);
+        this.template.setKeySerializer(StringValkeySerializer.UTF_8);
+        this.template.setValueSerializer(new GenericToStringSerializer<>(Long.class));
+        this.template.afterPropertiesSet();
 
-		this.valueOps = this.template.opsForValue();
-	}
+        this.valueOps = this.template.opsForValue();
+    }
 
-	public static Collection<Object[]> testParams() {
-		return AtomicCountersParam.testParams();
-	}
+    public static Collection<Object[]> testParams() {
+        return AtomicCountersParam.testParams();
+    }
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		ValkeyConnection connection = factory.getConnection();
-		connection.flushDb();
-		connection.close();
-	}
+        ValkeyConnection connection = factory.getConnection();
+        connection.flushDb();
+        connection.close();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-843
-	void shouldUpdateCounter() {
+    @ParameterizedValkeyTest // DATAREDIS-843
+    void shouldUpdateCounter() {
 
-		long expected = 5;
-		long actual = 5;
-		long update = 6;
+        long expected = 5;
+        long actual = 5;
+        long update = 6;
 
-		CompareAndSet<Long> cas = new CompareAndSet<>(() -> actual, newValue -> valueOps.set(KEY, newValue), KEY, expected,
-				update);
+        CompareAndSet<Long> cas =
+                new CompareAndSet<>(
+                        () -> actual, newValue -> valueOps.set(KEY, newValue), KEY, expected, update);
 
-		assertThat(template.execute(cas)).isTrue();
-		assertThat(valueOps.get(KEY)).isEqualTo(update);
-	}
+        assertThat(template.execute(cas)).isTrue();
+        assertThat(valueOps.get(KEY)).isEqualTo(update);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-843
-	void expectationNotMet() {
+    @ParameterizedValkeyTest // DATAREDIS-843
+    void expectationNotMet() {
 
-		long expected = 5;
-		long actual = 7;
-		long update = 6;
+        long expected = 5;
+        long actual = 7;
+        long update = 6;
 
-		CompareAndSet<Long> cas = new CompareAndSet<>(() -> actual, newValue -> valueOps.set(KEY, newValue), KEY, expected,
-				update);
+        CompareAndSet<Long> cas =
+                new CompareAndSet<>(
+                        () -> actual, newValue -> valueOps.set(KEY, newValue), KEY, expected, update);
 
-		assertThat(template.execute(cas)).isFalse();
-		assertThat(valueOps.get(KEY)).isNull();
-	}
+        assertThat(template.execute(cas)).isFalse();
+        assertThat(valueOps.get(KEY)).isNull();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-843
-	void concurrentUpdate() {
+    @ParameterizedValkeyTest // DATAREDIS-843
+    void concurrentUpdate() {
 
-		long expected = 5;
-		long actual = 5;
-		long update = 6;
-		long concurrentlyUpdated = 7;
+        long expected = 5;
+        long actual = 5;
+        long update = 6;
+        long concurrentlyUpdated = 7;
 
-		CompareAndSet<Long> cas = new CompareAndSet<>(() -> actual, newValue -> {
+        CompareAndSet<Long> cas =
+                new CompareAndSet<>(
+                        () -> actual,
+                        newValue -> {
+                            ValkeyConnection connection = factory.getConnection();
+                            connection.set(KEY.getBytes(), Long.toString(concurrentlyUpdated).getBytes());
+                            connection.close();
 
-			ValkeyConnection connection = factory.getConnection();
-			connection.set(KEY.getBytes(), Long.toString(concurrentlyUpdated).getBytes());
-			connection.close();
+                            valueOps.set(KEY, newValue);
+                        },
+                        KEY,
+                        expected,
+                        update);
 
-			valueOps.set(KEY, newValue);
-		}, KEY, expected, update);
-
-		assertThat(template.execute(cas)).isFalse();
-		assertThat(valueOps.get(KEY)).isEqualTo(concurrentlyUpdated);
-	}
+        assertThat(template.execute(cas)).isFalse();
+        assertThat(valueOps.get(KEY)).isEqualTo(concurrentlyUpdated);
+    }
 }

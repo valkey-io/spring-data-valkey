@@ -15,6 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import glide.api.GlideClusterClient;
+import glide.api.models.ClusterValue;
+import glide.api.models.GlideString;
+import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
+import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import io.valkey.springframework.data.valkey.connection.util.ByteArraySet;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,23 +31,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
-import glide.api.GlideClusterClient;
-import glide.api.models.ClusterValue;
-import glide.api.models.GlideString;
-import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
-import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
-import io.valkey.springframework.data.valkey.connection.util.ByteArraySet;
-
 /**
- * Implementation of {@link ValkeySetCommands} for Valkey Glide in cluster mode.
- * This implementation handles multi-slot routing by fetching set members from different
- * cluster nodes in parallel and performing set operations locally.
- * 
+ * Implementation of {@link ValkeySetCommands} for Valkey Glide in cluster mode. This implementation
+ * handles multi-slot routing by fetching set members from different cluster nodes in parallel and
+ * performing set operations locally.
+ *
  * @author Ilia Kolominsky
  * @since 2.0
  */
@@ -72,55 +70,55 @@ public class ValkeyGlideClusterSetCommands extends ValkeyGlideSetCommands {
 
         // Parallel path: keys across multiple nodes
         Map<ValkeyClusterNode, List<byte[]>> nodeKeyMap = connection.buildNodeKeyMap(keys);
-        
+
         List<CompletableFuture<Set<byte[]>>> futures = new ArrayList<>();
-        
+
         try {
             // Fetch SMEMBERS for each key in parallel
             for (Map.Entry<ValkeyClusterNode, List<byte[]>> entry : nodeKeyMap.entrySet()) {
                 ValkeyClusterNode node = entry.getKey();
                 List<byte[]> nodeKeys = entry.getValue();
-                
+
                 for (byte[] key : nodeKeys) {
                     // Build SMEMBERS command for this key
-                    GlideString[] args = new GlideString[] {
-                        GlideString.of("SMEMBERS"),
-                        GlideString.of(key)
-                    };
-                    
+                    GlideString[] args = new GlideString[] {GlideString.of("SMEMBERS"), GlideString.of(key)};
+
                     GlideClusterClient nativeConn = (GlideClusterClient) connection.getNativeConnection();
-                    CompletableFuture<Set<byte[]>> future = nativeConn.customCommand(args,
-                        new ByAddressRoute(node.getHost(), node.getPort()))
-                        .thenApply(result -> {
-                            ClusterValue<Object> clusterValue = (ClusterValue<Object>) result;
-                            @SuppressWarnings("unchecked")
-                            HashSet<GlideString> glideSet = (HashSet<GlideString>) clusterValue.getSingleValue();
-                            
-                            if (glideSet == null) {
-                                return Collections.emptySet();
-                            }
-                            
-                            Set<byte[]> resultSet = new HashSet<>();
-                            for (GlideString gs : glideSet) {
-                                resultSet.add(gs.getBytes());
-                            }
-                            return resultSet;
-                        });
-                    
+                    CompletableFuture<Set<byte[]>> future =
+                            nativeConn
+                                    .customCommand(args, new ByAddressRoute(node.getHost(), node.getPort()))
+                                    .thenApply(
+                                            result -> {
+                                                ClusterValue<Object> clusterValue = (ClusterValue<Object>) result;
+                                                @SuppressWarnings("unchecked")
+                                                HashSet<GlideString> glideSet =
+                                                        (HashSet<GlideString>) clusterValue.getSingleValue();
+
+                                                if (glideSet == null) {
+                                                    return Collections.emptySet();
+                                                }
+
+                                                Set<byte[]> resultSet = new HashSet<>();
+                                                for (GlideString gs : glideSet) {
+                                                    resultSet.add(gs.getBytes());
+                                                }
+                                                return resultSet;
+                                            });
+
                     futures.add(future);
                 }
             }
-            
+
             // Wait for all nodes to complete
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-            
+
             // Aggregate results - compute intersection
             ByteArraySet result = null;
-            
+
             for (CompletableFuture<Set<byte[]>> future : futures) {
                 Set<byte[]> value = future.get();
                 ByteArraySet tmp = new ByteArraySet(value);
-                
+
                 if (result == null) {
                     result = tmp;
                 } else {
@@ -131,13 +129,13 @@ public class ValkeyGlideClusterSetCommands extends ValkeyGlideSetCommands {
                     }
                 }
             }
-            
+
             if (result == null || result.isEmpty()) {
                 return Collections.emptySet();
             }
-            
+
             return result.asRawSet();
-            
+
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted while executing sInter on cluster", ex);
@@ -162,62 +160,62 @@ public class ValkeyGlideClusterSetCommands extends ValkeyGlideSetCommands {
 
         // Parallel path: keys across multiple nodes
         Map<ValkeyClusterNode, List<byte[]>> nodeKeyMap = connection.buildNodeKeyMap(keys);
-        
+
         List<CompletableFuture<Set<byte[]>>> futures = new ArrayList<>();
-        
+
         try {
             // Fetch SMEMBERS for each key in parallel
             for (Map.Entry<ValkeyClusterNode, List<byte[]>> entry : nodeKeyMap.entrySet()) {
                 ValkeyClusterNode node = entry.getKey();
                 List<byte[]> nodeKeys = entry.getValue();
-                
+
                 for (byte[] key : nodeKeys) {
                     // Build SMEMBERS command for this key
-                    GlideString[] args = new GlideString[] {
-                        GlideString.of("SMEMBERS"),
-                        GlideString.of(key)
-                    };
-                    
+                    GlideString[] args = new GlideString[] {GlideString.of("SMEMBERS"), GlideString.of(key)};
+
                     GlideClusterClient nativeConn = (GlideClusterClient) connection.getNativeConnection();
-                    CompletableFuture<Set<byte[]>> future = nativeConn.customCommand(args,
-                        new ByAddressRoute(node.getHost(), node.getPort()))
-                        .thenApply(result -> {
-                            ClusterValue<Object> clusterValue = (ClusterValue<Object>) result;
-                            @SuppressWarnings("unchecked")
-                            HashSet<GlideString> glideSet = (HashSet<GlideString>) clusterValue.getSingleValue();
-                            
-                            if (glideSet == null) {
-                                return Collections.emptySet();
-                            }
-                            
-                            Set<byte[]> resultSet = new HashSet<>();
-                            for (GlideString gs : glideSet) {
-                                resultSet.add(gs.getBytes());
-                            }
-                            return resultSet;
-                        });
-                    
+                    CompletableFuture<Set<byte[]>> future =
+                            nativeConn
+                                    .customCommand(args, new ByAddressRoute(node.getHost(), node.getPort()))
+                                    .thenApply(
+                                            result -> {
+                                                ClusterValue<Object> clusterValue = (ClusterValue<Object>) result;
+                                                @SuppressWarnings("unchecked")
+                                                HashSet<GlideString> glideSet =
+                                                        (HashSet<GlideString>) clusterValue.getSingleValue();
+
+                                                if (glideSet == null) {
+                                                    return Collections.emptySet();
+                                                }
+
+                                                Set<byte[]> resultSet = new HashSet<>();
+                                                for (GlideString gs : glideSet) {
+                                                    resultSet.add(gs.getBytes());
+                                                }
+                                                return resultSet;
+                                            });
+
                     futures.add(future);
                 }
             }
-            
+
             // Wait for all nodes to complete
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).get();
-            
+
             // Aggregate results - compute union
             ByteArraySet result = new ByteArraySet();
-            
+
             for (CompletableFuture<Set<byte[]>> future : futures) {
                 Set<byte[]> value = future.get();
                 result.addAll(value);
             }
-            
+
             if (result.isEmpty()) {
                 return Collections.emptySet();
             }
-            
+
             return result.asRawSet();
-            
+
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted while executing sUnion on cluster", ex);
@@ -244,56 +242,56 @@ public class ValkeyGlideClusterSetCommands extends ValkeyGlideSetCommands {
         // Note: First key is the base set, others are subtracted from it
         // IMPORTANT: We must preserve the order of keys - first key is base, others are subtracted
         Map<ValkeyClusterNode, List<byte[]>> nodeKeyMap = connection.buildNodeKeyMap(keys);
-        
+
         // Map to store futures by key to preserve order
         Map<byte[], CompletableFuture<Set<byte[]>>> futuresByKey = new HashMap<>();
-        
+
         try {
             // Fetch SMEMBERS for each key in parallel, but track by key to maintain order
             for (Map.Entry<ValkeyClusterNode, List<byte[]>> entry : nodeKeyMap.entrySet()) {
                 ValkeyClusterNode node = entry.getKey();
                 List<byte[]> nodeKeys = entry.getValue();
-                
+
                 for (byte[] key : nodeKeys) {
                     // Build SMEMBERS command for this key
-                    GlideString[] args = new GlideString[] {
-                        GlideString.of("SMEMBERS"),
-                        GlideString.of(key)
-                    };
-                    
+                    GlideString[] args = new GlideString[] {GlideString.of("SMEMBERS"), GlideString.of(key)};
+
                     GlideClusterClient nativeConn = (GlideClusterClient) connection.getNativeConnection();
-                    CompletableFuture<Set<byte[]>> future = nativeConn.customCommand(args,
-                        new ByAddressRoute(node.getHost(), node.getPort()))
-                        .thenApply(result -> {
-                            ClusterValue<Object> clusterValue = (ClusterValue<Object>) result;
-                            @SuppressWarnings("unchecked")
-                            HashSet<GlideString> glideSet = (HashSet<GlideString>) clusterValue.getSingleValue();
-                            
-                            if (glideSet == null) {
-                                return Collections.emptySet();
-                            }
-                            
-                            Set<byte[]> resultSet = new HashSet<>();
-                            for (GlideString gs : glideSet) {
-                                resultSet.add(gs.getBytes());
-                            }
-                            return resultSet;
-                        });
-                    
+                    CompletableFuture<Set<byte[]>> future =
+                            nativeConn
+                                    .customCommand(args, new ByAddressRoute(node.getHost(), node.getPort()))
+                                    .thenApply(
+                                            result -> {
+                                                ClusterValue<Object> clusterValue = (ClusterValue<Object>) result;
+                                                @SuppressWarnings("unchecked")
+                                                HashSet<GlideString> glideSet =
+                                                        (HashSet<GlideString>) clusterValue.getSingleValue();
+
+                                                if (glideSet == null) {
+                                                    return Collections.emptySet();
+                                                }
+
+                                                Set<byte[]> resultSet = new HashSet<>();
+                                                for (GlideString gs : glideSet) {
+                                                    resultSet.add(gs.getBytes());
+                                                }
+                                                return resultSet;
+                                            });
+
                     futuresByKey.put(key, future);
                 }
             }
-            
+
             // Wait for all nodes to complete
             CompletableFuture.allOf(futuresByKey.values().toArray(new CompletableFuture[0])).get();
-            
+
             // Aggregate results in the correct order - first key is base, subtract all others
             ByteArraySet result = null;
-            
+
             for (int i = 0; i < keys.length; i++) {
                 byte[] key = keys[i];
                 Set<byte[]> value = futuresByKey.get(key).get();
-                
+
                 if (i == 0) {
                     // First set is the base
                     result = new ByteArraySet(value);
@@ -302,13 +300,13 @@ public class ValkeyGlideClusterSetCommands extends ValkeyGlideSetCommands {
                     result.removeAll(value);
                 }
             }
-            
+
             if (result == null || result.isEmpty()) {
                 return Collections.emptySet();
             }
-            
+
             return result.asRawSet();
-            
+
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Interrupted while executing sDiff on cluster", ex);
@@ -342,7 +340,7 @@ public class ValkeyGlideClusterSetCommands extends ValkeyGlideSetCommands {
         if (diff == null || diff.isEmpty()) {
             return 0L;
         }
-        
+
         return sAdd(destKey, diff.toArray(new byte[diff.size()][]));
     }
 
@@ -368,7 +366,7 @@ public class ValkeyGlideClusterSetCommands extends ValkeyGlideSetCommands {
         if (result == null || result.isEmpty()) {
             return 0L;
         }
-        
+
         return sAdd(destKey, result.toArray(new byte[result.size()][]));
     }
 
@@ -394,7 +392,7 @@ public class ValkeyGlideClusterSetCommands extends ValkeyGlideSetCommands {
         if (result == null || result.isEmpty()) {
             return 0L;
         }
-        
+
         return sAdd(destKey, result.toArray(new byte[result.size()][]));
     }
 

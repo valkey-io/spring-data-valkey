@@ -18,12 +18,11 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
- * Integration test of {@link LettuceConnection} transactions within a pipeline
- * {@link LettuceConnection.PipeliningFlushPolicy}.
+ * Integration test of {@link LettuceConnection} transactions within a pipeline {@link
+ * LettuceConnection.PipeliningFlushPolicy}.
  *
  * @author Mark Paluch
  */
 @ContextConfiguration("LettuceConnectionPipelineFlushOnEndIntegrationTests-context.xml")
-class LettuceConnectionPipelineTxFlushOnEndIntegrationTests extends LettuceConnectionPipelineTxIntegrationTests {
-
-}
+class LettuceConnectionPipelineTxFlushOnEndIntegrationTests
+        extends LettuceConnectionPipelineTxIntegrationTests {}

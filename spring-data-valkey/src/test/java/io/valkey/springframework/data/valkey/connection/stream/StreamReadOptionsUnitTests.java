@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.connection.stream;
 import static org.assertj.core.api.Assertions.*;
 
 import java.time.Duration;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -29,18 +28,18 @@ import org.junit.jupiter.api.Test;
  */
 class StreamReadOptionsUnitTests {
 
-	@Test // DATAREDIS-1138
-	void shouldConsiderBlocking() {
+    @Test // DATAREDIS-1138
+    void shouldConsiderBlocking() {
 
-		assertThat(StreamReadOptions.empty().isBlocking()).isFalse();
-		assertThat(StreamReadOptions.empty().block(Duration.ofSeconds(1)).isBlocking()).isTrue();
-		assertThat(StreamReadOptions.empty().block(Duration.ZERO).isBlocking()).isTrue();
-	}
+        assertThat(StreamReadOptions.empty().isBlocking()).isFalse();
+        assertThat(StreamReadOptions.empty().block(Duration.ofSeconds(1)).isBlocking()).isTrue();
+        assertThat(StreamReadOptions.empty().block(Duration.ZERO).isBlocking()).isTrue();
+    }
 
-	@Test // DATAREDIS-1210
-	void testToString() {
+    @Test // DATAREDIS-1210
+    void testToString() {
 
-		assertThat(StreamReadOptions.empty())
-				.hasToString("StreamReadOptions{block=null, count=null, noack=false, blocking=false}");
-	}
+        assertThat(StreamReadOptions.empty())
+                .hasToString("StreamReadOptions{block=null, count=null, noack=false, blocking=false}");
+    }
 }

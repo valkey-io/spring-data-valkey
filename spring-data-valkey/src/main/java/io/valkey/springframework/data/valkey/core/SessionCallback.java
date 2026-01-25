@@ -19,19 +19,20 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.lang.Nullable;
 
 /**
- * Callback executing all operations against a surrogate 'session' (basically against the same underlying Valkey
- * connection). Allows 'transactions' to take place through the use of multi/discard/exec/watch/unwatch commands.
+ * Callback executing all operations against a surrogate 'session' (basically against the same
+ * underlying Valkey connection). Allows 'transactions' to take place through the use of
+ * multi/discard/exec/watch/unwatch commands.
  *
  * @author Costin Leau
  */
 public interface SessionCallback<T> {
 
-	/**
-	 * Executes all the given operations inside the same session.
-	 *
-	 * @param operations Valkey operations
-	 * @return return value
-	 */
-	@Nullable
-	<K, V> T execute(ValkeyOperations<K, V> operations) throws DataAccessException;
+    /**
+     * Executes all the given operations inside the same session.
+     *
+     * @param operations Valkey operations
+     * @return return value
+     */
+    @Nullable
+    <K, V> T execute(ValkeyOperations<K, V> operations) throws DataAccessException;
 }

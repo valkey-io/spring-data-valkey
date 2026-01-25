@@ -23,10 +23,10 @@ package io.valkey.springframework.data.valkey.core.index;
  */
 public interface IndexDefinitionRegistry {
 
-	/**
-	 * Add given {@link IndexDefinition}.
-	 *
-	 * @param indexDefinition must not be {@literal null}.
-	 */
-	void addIndexDefinition(IndexDefinition indexDefinition);
+    /**
+     * Add given {@link IndexDefinition}.
+     *
+     * @param indexDefinition must not be {@literal null}.
+     */
+    void addIndexDefinition(IndexDefinition indexDefinition);
 }

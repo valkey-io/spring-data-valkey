@@ -25,8 +25,8 @@ import org.awaitility.Awaitility;
  */
 public interface TestCondition {
 
-	/**
-	 * @return true if condition passes
-	 */
-	boolean passes();
+    /**
+     * @return true if condition passes
+     */
+    boolean passes();
 }

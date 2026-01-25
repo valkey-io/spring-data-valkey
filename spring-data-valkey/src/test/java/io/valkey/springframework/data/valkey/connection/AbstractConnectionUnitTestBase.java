@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-
 import org.mockito.Mockito;
 
 /**
@@ -25,44 +24,43 @@ import org.mockito.Mockito;
  */
 public abstract class AbstractConnectionUnitTestBase<T> {
 
-	private T nativeValkeyConnectionMock;
+    private T nativeValkeyConnectionMock;
 
-	protected T getNativeValkeyConnectionMock() {
+    protected T getNativeValkeyConnectionMock() {
 
-		if (this.nativeValkeyConnectionMock == null) {
-			Class<T> type = resolveReturnedClassFromGernericType();
-			this.nativeValkeyConnectionMock = Mockito.mock(type);
-		}
+        if (this.nativeValkeyConnectionMock == null) {
+            Class<T> type = resolveReturnedClassFromGernericType();
+            this.nativeValkeyConnectionMock = Mockito.mock(type);
+        }
 
-		return this.nativeValkeyConnectionMock;
-	}
+        return this.nativeValkeyConnectionMock;
+    }
 
-	protected T verifyNativeConnectionInvocation() {
-		return Mockito.verify(getNativeValkeyConnectionMock(), Mockito.times(1));
-	}
+    protected T verifyNativeConnectionInvocation() {
+        return Mockito.verify(getNativeValkeyConnectionMock(), Mockito.times(1));
+    }
 
-	protected void setNativeValkeyConnectionMock(T nativeValkeyConnectionMock) {
-		this.nativeValkeyConnectionMock = nativeValkeyConnectionMock;
-	}
+    protected void setNativeValkeyConnectionMock(T nativeValkeyConnectionMock) {
+        this.nativeValkeyConnectionMock = nativeValkeyConnectionMock;
+    }
 
-	@SuppressWarnings("unchecked")
-	private Class<T> resolveReturnedClassFromGernericType() {
+    @SuppressWarnings("unchecked")
+    private Class<T> resolveReturnedClassFromGernericType() {
 
-		ParameterizedType parameterizedType = resolveReturnedClassFromGernericType(getClass());
-		return (Class<T>) parameterizedType.getActualTypeArguments()[0];
-	}
+        ParameterizedType parameterizedType = resolveReturnedClassFromGernericType(getClass());
+        return (Class<T>) parameterizedType.getActualTypeArguments()[0];
+    }
 
-	private ParameterizedType resolveReturnedClassFromGernericType(Class<?> clazz) {
+    private ParameterizedType resolveReturnedClassFromGernericType(Class<?> clazz) {
 
-		Object genericSuperclass = clazz.getGenericSuperclass();
-		if (genericSuperclass instanceof ParameterizedType parameterizedType) {
-			Type rawtype = parameterizedType.getRawType();
-			if (AbstractConnectionUnitTestBase.class.equals(rawtype)) {
-				return parameterizedType;
-			}
-		}
+        Object genericSuperclass = clazz.getGenericSuperclass();
+        if (genericSuperclass instanceof ParameterizedType parameterizedType) {
+            Type rawtype = parameterizedType.getRawType();
+            if (AbstractConnectionUnitTestBase.class.equals(rawtype)) {
+                return parameterizedType;
+            }
+        }
 
-		return resolveReturnedClassFromGernericType(clazz.getSuperclass());
-	}
-
+        return resolveReturnedClassFromGernericType(clazz.getSuperclass());
+    }
 }

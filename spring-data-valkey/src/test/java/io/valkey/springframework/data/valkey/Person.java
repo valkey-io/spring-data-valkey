@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey;
 
 import java.io.Serializable;
-
 import org.springframework.lang.Nullable;
 
 /**
@@ -27,97 +26,86 @@ import org.springframework.lang.Nullable;
  */
 public class Person implements Serializable {
 
-	private static final long serialVersionUID = 92633004015631981L;
+    private static final long serialVersionUID = 92633004015631981L;
 
-	private String firstName;
-	private String lastName;
+    private String firstName;
+    private String lastName;
 
-	private Integer age;
-	private Address address;
+    private Integer age;
+    private Address address;
 
-	public Person() {}
+    public Person() {}
 
-	public Person(String firstName, String lastName, int age) {
-		this(firstName, lastName, age, null);
-	}
+    public Person(String firstName, String lastName, int age) {
+        this(firstName, lastName, age, null);
+    }
 
-	public Person(String firstName, String lastName, int age, Address address) {
-		super();
-		this.firstName = firstName;
-		this.lastName = lastName;
-		this.age = age;
-		this.address = address;
-	}
+    public Person(String firstName, String lastName, int age, Address address) {
+        super();
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.age = age;
+        this.address = address;
+    }
 
-	public String getFirstName() {
-		return firstName;
-	}
+    public String getFirstName() {
+        return firstName;
+    }
 
-	public void setFirstName(String firstName) {
-		this.firstName = firstName;
-	}
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
 
-	public String getLastName() {
-		return lastName;
-	}
+    public String getLastName() {
+        return lastName;
+    }
 
-	public void setLastName(String lastName) {
-		this.lastName = lastName;
-	}
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
 
-	public int getAge() {
-		return age;
-	}
+    public int getAge() {
+        return age;
+    }
 
-	public void setAge(int age) {
-		this.age = age;
-	}
+    public void setAge(int age) {
+        this.age = age;
+    }
 
-	public Address getAddress() {
-		return address;
-	}
+    public Address getAddress() {
+        return address;
+    }
 
-	public void setAddress(Address address) {
-		this.address = address;
-	}
+    public void setAddress(Address address) {
+        this.address = address;
+    }
 
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((address == null) ? 0 : address.hashCode());
-		result = prime * result + ((age == null) ? 0 : age.hashCode());
-		result = prime * result + ((firstName == null) ? 0 : firstName.hashCode());
-		result = prime * result + ((lastName == null) ? 0 : lastName.hashCode());
-		return result;
-	}
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((address == null) ? 0 : address.hashCode());
+        result = prime * result + ((age == null) ? 0 : age.hashCode());
+        result = prime * result + ((firstName == null) ? 0 : firstName.hashCode());
+        result = prime * result + ((lastName == null) ? 0 : lastName.hashCode());
+        return result;
+    }
 
-	public boolean equals(@Nullable Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (!(obj instanceof Person that))
-			return false;
-		if (address == null) {
-			if (that.address != null)
-				return false;
-		} else if (!address.equals(that.address))
-			return false;
-		if (age == null) {
-			if (that.age != null)
-				return false;
-		} else if (!age.equals(that.age))
-			return false;
-		if (firstName == null) {
-			if (that.firstName != null)
-				return false;
-		} else if (!firstName.equals(that.firstName))
-			return false;
-		if (lastName == null) {
-			if (that.lastName != null)
-				return false;
-		} else if (!lastName.equals(that.lastName))
-			return false;
-		return true;
-	}
+    public boolean equals(@Nullable Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (!(obj instanceof Person that)) return false;
+        if (address == null) {
+            if (that.address != null) return false;
+        } else if (!address.equals(that.address)) return false;
+        if (age == null) {
+            if (that.age != null) return false;
+        } else if (!age.equals(that.age)) return false;
+        if (firstName == null) {
+            if (that.firstName != null) return false;
+        } else if (!firstName.equals(that.firstName)) return false;
+        if (lastName == null) {
+            if (that.lastName != null) return false;
+        } else if (!lastName.equals(that.lastName)) return false;
+        return true;
+    }
 }

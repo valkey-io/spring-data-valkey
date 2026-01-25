@@ -19,10 +19,10 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.DefaultValkeyGlideClientConfiguration;
 
 /**
- * Callback interface that can be implemented by beans wishing to customize the
- * {@link DefaultValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder
- * ValkeyGlideClientConfigurationBuilder} via a {@link DefaultValkeyGlideClientConfiguration}
- * using the builder pattern.
+ * Callback interface that can be implemented by beans wishing to customize the {@link
+ * DefaultValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder
+ * ValkeyGlideClientConfigurationBuilder} via a {@link DefaultValkeyGlideClientConfiguration} using
+ * the builder pattern.
  *
  * @author Jeremy Parr-Pearson
  * @since 3.5.1
@@ -30,10 +30,13 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.DefaultValke
 @FunctionalInterface
 public interface ValkeyGlideClientConfigurationBuilderCustomizer {
 
-	/**
-	 * Customize the {@link DefaultValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder}.
-	 * @param clientConfigurationBuilder the builder to customize
-	 */
-	void customize(DefaultValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder clientConfigurationBuilder);
-
+    /**
+     * Customize the {@link
+     * DefaultValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder}.
+     *
+     * @param clientConfigurationBuilder the builder to customize
+     */
+    void customize(
+            DefaultValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder
+                    clientConfigurationBuilder);
 }

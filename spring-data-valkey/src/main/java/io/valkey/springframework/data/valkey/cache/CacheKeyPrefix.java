@@ -18,8 +18,8 @@ package io.valkey.springframework.data.valkey.cache;
 import org.springframework.util.Assert;
 
 /**
- * {@link CacheKeyPrefix} is a callback hook for creating custom prefixes prepended to the actual {@literal key}
- * stored in Valkey.
+ * {@link CacheKeyPrefix} is a callback hook for creating custom prefixes prepended to the actual
+ * {@literal key} stored in Valkey.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -29,51 +29,54 @@ import org.springframework.util.Assert;
 @FunctionalInterface
 public interface CacheKeyPrefix {
 
-	/**
-	 * Default separator.
-	 *
-	 * @since 2.3
-	 */
-	String SEPARATOR = "::";
+    /**
+     * Default separator.
+     *
+     * @since 2.3
+     */
+    String SEPARATOR = "::";
 
-	/**
-	 * Compute the {@link String prefix} for the actual {@literal cache key} stored in Valkey.
-	 *
-	 * @param cacheName {@link String name} of the cache in which the key is stored;
-	 * will never be {@literal null}.
-	 * @return the computed {@link String prefix} of the {@literal cache key} stored in Valkey;
-	 * never {@literal null}.
-	 */
-	String compute(String cacheName);
+    /**
+     * Compute the {@link String prefix} for the actual {@literal cache key} stored in Valkey.
+     *
+     * @param cacheName {@link String name} of the cache in which the key is stored; will never be
+     *     {@literal null}.
+     * @return the computed {@link String prefix} of the {@literal cache key} stored in Valkey; never
+     *     {@literal null}.
+     */
+    String compute(String cacheName);
 
-	/**
-	 * Creates a default {@link CacheKeyPrefix} scheme that prefixes cache keys with the {@link String name}
-	 * of the cache followed by double colons.
-	 *
-	 * For example, a cache named {@literal myCache} will prefix all cache keys with {@literal myCache::}.
-	 *
-	 * @return the default {@link CacheKeyPrefix} scheme.
-	 */
-	static CacheKeyPrefix simple() {
-		return name -> name + SEPARATOR;
-	}
+    /**
+     * Creates a default {@link CacheKeyPrefix} scheme that prefixes cache keys with the {@link String
+     * name} of the cache followed by double colons.
+     *
+     * <p>For example, a cache named {@literal myCache} will prefix all cache keys with {@literal
+     * myCache::}.
+     *
+     * @return the default {@link CacheKeyPrefix} scheme.
+     */
+    static CacheKeyPrefix simple() {
+        return name -> name + SEPARATOR;
+    }
 
-	/**
-	 * Creates a {@link CacheKeyPrefix} scheme that prefixes cache keys with the given {@link String prefix}.
-	 *
-	 * The {@link String prefix} is prepended to the {@link String cacheName} followed by double colons.
-	 *
-	 * For example, a prefix {@literal valkey-} with a cache named {@literal  myCache}
-	 * results in {@literal  valkey-myCache::}.
-	 *
-	 * @param prefix must not be {@literal null}.
-	 * @return the default {@link CacheKeyPrefix} scheme.
-	 * @since 2.3
-	 */
-	static CacheKeyPrefix prefixed(String prefix) {
+    /**
+     * Creates a {@link CacheKeyPrefix} scheme that prefixes cache keys with the given {@link String
+     * prefix}.
+     *
+     * <p>The {@link String prefix} is prepended to the {@link String cacheName} followed by double
+     * colons.
+     *
+     * <p>For example, a prefix {@literal valkey-} with a cache named {@literal myCache} results in
+     * {@literal valkey-myCache::}.
+     *
+     * @param prefix must not be {@literal null}.
+     * @return the default {@link CacheKeyPrefix} scheme.
+     * @since 2.3
+     */
+    static CacheKeyPrefix prefixed(String prefix) {
 
-		Assert.notNull(prefix, "Prefix must not be null");
+        Assert.notNull(prefix, "Prefix must not be null");
 
-		return name -> prefix + name + SEPARATOR;
-	}
+        return name -> prefix + name + SEPARATOR;
+    }
 }

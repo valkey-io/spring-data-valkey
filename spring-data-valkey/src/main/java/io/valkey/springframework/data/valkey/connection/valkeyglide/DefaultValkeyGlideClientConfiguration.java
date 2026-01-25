@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import java.time.Duration;
-import java.util.Optional;
-
 import glide.api.models.configuration.BackoffStrategy;
 import glide.api.models.configuration.ReadFrom;
+import java.time.Duration;
+import java.util.Optional;
 import org.springframework.lang.Nullable;
 
 /**
@@ -51,7 +50,7 @@ public class DefaultValkeyGlideClientConfiguration implements ValkeyGlideClientC
             @Nullable Integer inflightRequestsLimit,
             @Nullable String clientAZ,
             @Nullable BackoffStrategy reconnectStrategy,
-            int maxPoolSize, 
+            int maxPoolSize,
             @Nullable OpenTelemetryForGlide openTelemetryForGlide) {
         this.commandTimeout = commandTimeout;
         this.useSsl = useSsl;

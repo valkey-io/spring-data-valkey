@@ -18,9 +18,7 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import io.lettuce.core.Range;
 import io.lettuce.core.Range.Boundary;
 import io.lettuce.core.codec.StringCodec;
-
 import java.util.function.Function;
-
 import org.springframework.data.domain.Range.Bound;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
@@ -32,95 +30,113 @@ import org.springframework.util.StringUtils;
  */
 class RangeConverter {
 
-	static <T> Range<T> toRange(org.springframework.data.domain.Range<?> range) {
-		return toRange(range, StringCodec.UTF8::encodeValue);
-	}
+    static <T> Range<T> toRange(org.springframework.data.domain.Range<?> range) {
+        return toRange(range, StringCodec.UTF8::encodeValue);
+    }
 
-	/**
-	 * @param range the source {@link org.springframework.data.domain.Range} to convert.
-	 * @param lowerDefault the lower default to use if {@link org.springframework.data.domain.Range#getLowerBound()} is
-	 *          not {@link Bound#isBounded() bounded}.
-	 * @param upperDefault the upper default to use if {@link org.springframework.data.domain.Range#getUpperBound()} is
-	 *          not {@link Bound#isBounded() bounded}.
-	 * @param <T>
-	 * @return new instance of {@link Range}.
-	 * @since 2.3
-	 */
-	static <T> Range<T> toRangeWithDefault(org.springframework.data.domain.Range<?> range, @Nullable T lowerDefault,
-			@Nullable T upperDefault) {
-		return toRangeWithDefault(range, lowerDefault, upperDefault, StringCodec.UTF8::encodeValue);
-	}
+    /**
+     * @param range the source {@link org.springframework.data.domain.Range} to convert.
+     * @param lowerDefault the lower default to use if {@link
+     *     org.springframework.data.domain.Range#getLowerBound()} is not {@link Bound#isBounded()
+     *     bounded}.
+     * @param upperDefault the upper default to use if {@link
+     *     org.springframework.data.domain.Range#getUpperBound()} is not {@link Bound#isBounded()
+     *     bounded}.
+     * @param <T>
+     * @return new instance of {@link Range}.
+     * @since 2.3
+     */
+    static <T> Range<T> toRangeWithDefault(
+            org.springframework.data.domain.Range<?> range,
+            @Nullable T lowerDefault,
+            @Nullable T upperDefault) {
+        return toRangeWithDefault(range, lowerDefault, upperDefault, StringCodec.UTF8::encodeValue);
+    }
 
-	static <T> Range<T> toRange(org.springframework.data.domain.Range<?> range,
-			Function<String, ? extends Object> stringEncoder) {
-		return toRangeWithDefault(range, null, null, stringEncoder);
-	}
+    static <T> Range<T> toRange(
+            org.springframework.data.domain.Range<?> range,
+            Function<String, ? extends Object> stringEncoder) {
+        return toRangeWithDefault(range, null, null, stringEncoder);
+    }
 
-	/**
-	 * @param range the source {@link org.springframework.data.domain.Range} to convert.
-	 * @param lowerDefault the lower default to use if {@link org.springframework.data.domain.Range#getLowerBound()} is
-	 *          not {@link Bound#isBounded() bounded}.
-	 * @param upperDefault the upper default to use if {@link org.springframework.data.domain.Range#getUpperBound()} is
-	 *          not {@link Bound#isBounded() bounded}.
-	 * @param stringEncoder the encoder to use.
-	 * @param <T>
-	 * @return new instance of {@link Range}.
-	 * @since 2.3
-	 */
-	static <T> Range<T> toRangeWithDefault(org.springframework.data.domain.Range<?> range, @Nullable T lowerDefault,
-			@Nullable T upperDefault, Function<String, ? extends Object> stringEncoder) {
+    /**
+     * @param range the source {@link org.springframework.data.domain.Range} to convert.
+     * @param lowerDefault the lower default to use if {@link
+     *     org.springframework.data.domain.Range#getLowerBound()} is not {@link Bound#isBounded()
+     *     bounded}.
+     * @param upperDefault the upper default to use if {@link
+     *     org.springframework.data.domain.Range#getUpperBound()} is not {@link Bound#isBounded()
+     *     bounded}.
+     * @param stringEncoder the encoder to use.
+     * @param <T>
+     * @return new instance of {@link Range}.
+     * @since 2.3
+     */
+    static <T> Range<T> toRangeWithDefault(
+            org.springframework.data.domain.Range<?> range,
+            @Nullable T lowerDefault,
+            @Nullable T upperDefault,
+            Function<String, ? extends Object> stringEncoder) {
 
-		return Range.from(lowerBoundArgOf(range, lowerDefault, stringEncoder),
-				upperBoundArgOf(range, upperDefault, stringEncoder));
-	}
+        return Range.from(
+                lowerBoundArgOf(range, lowerDefault, stringEncoder),
+                upperBoundArgOf(range, upperDefault, stringEncoder));
+    }
 
-	@SuppressWarnings("unchecked")
-	private static <T> Boundary<T> lowerBoundArgOf(org.springframework.data.domain.Range<?> range,
-			@Nullable T lowerDefault, Function<String, ? extends Object> stringEncoder) {
-		return (Boundary<T>) convertBound(range.getLowerBound(), false, lowerDefault, stringEncoder);
-	}
+    @SuppressWarnings("unchecked")
+    private static <T> Boundary<T> lowerBoundArgOf(
+            org.springframework.data.domain.Range<?> range,
+            @Nullable T lowerDefault,
+            Function<String, ? extends Object> stringEncoder) {
+        return (Boundary<T>) convertBound(range.getLowerBound(), false, lowerDefault, stringEncoder);
+    }
 
-	@SuppressWarnings("unchecked")
-	private static <T> Boundary<T> upperBoundArgOf(org.springframework.data.domain.Range<?> range,
-			@Nullable T upperDefault, Function<String, ? extends Object> stringEncoder) {
-		return (Boundary<T>) convertBound(range.getUpperBound(), false, upperDefault, stringEncoder);
-	}
+    @SuppressWarnings("unchecked")
+    private static <T> Boundary<T> upperBoundArgOf(
+            org.springframework.data.domain.Range<?> range,
+            @Nullable T upperDefault,
+            Function<String, ? extends Object> stringEncoder) {
+        return (Boundary<T>) convertBound(range.getUpperBound(), false, upperDefault, stringEncoder);
+    }
 
-	static Boundary<?> convertBound(org.springframework.data.domain.Range.Bound source, boolean convertNumberToBytes,
-			Object defaultValue, Function<String, ? extends Object> stringEncoder) {
+    static Boundary<?> convertBound(
+            org.springframework.data.domain.Range.Bound source,
+            boolean convertNumberToBytes,
+            Object defaultValue,
+            Function<String, ? extends Object> stringEncoder) {
 
-		if (!source.isBounded()) {
-			return Boundary.unbounded();
-		}
+        if (!source.isBounded()) {
+            return Boundary.unbounded();
+        }
 
-		Boolean inclusive = source.isInclusive();
-		Object value = source.getValue().orElse(defaultValue);
+        Boolean inclusive = source.isInclusive();
+        Object value = source.getValue().orElse(defaultValue);
 
-		if (value instanceof Number) {
+        if (value instanceof Number) {
 
-			if (convertNumberToBytes) {
-				value = value.toString();
-			} else {
-				return inclusive ? Boundary.including((Number) value) : Boundary.excluding((Number) value);
-			}
-		}
+            if (convertNumberToBytes) {
+                value = value.toString();
+            } else {
+                return inclusive ? Boundary.including((Number) value) : Boundary.excluding((Number) value);
+            }
+        }
 
-		if (value instanceof String) {
+        if (value instanceof String) {
 
-			if (!StringUtils.hasText((String) value) || ObjectUtils.nullSafeEquals(value, "+")
-					|| ObjectUtils.nullSafeEquals(value, "-")) {
-				return Boundary.unbounded();
-			}
+            if (!StringUtils.hasText((String) value)
+                    || ObjectUtils.nullSafeEquals(value, "+")
+                    || ObjectUtils.nullSafeEquals(value, "-")) {
+                return Boundary.unbounded();
+            }
 
-			Object encoded = stringEncoder.apply((String) value);
-			return inclusive ? Boundary.including(encoded) : Boundary.excluding(encoded);
+            Object encoded = stringEncoder.apply((String) value);
+            return inclusive ? Boundary.including(encoded) : Boundary.excluding(encoded);
+        }
 
-		}
+        if (value == null) {
+            return Boundary.unbounded();
+        }
 
-		if (value == null) {
-			return Boundary.unbounded();
-		}
-
-		return inclusive ? Boundary.including(value) : Boundary.excluding(value);
-	}
+        return inclusive ? Boundary.including(value) : Boundary.excluding(value);
+    }
 }

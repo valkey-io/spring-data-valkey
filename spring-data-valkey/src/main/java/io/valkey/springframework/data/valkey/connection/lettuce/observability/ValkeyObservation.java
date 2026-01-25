@@ -23,153 +23,124 @@ import io.micrometer.observation.docs.ObservationDocumentation;
  *
  * @author Mark Paluch
  * @since 3.0
- * @deprecated since 3.4 for removal with the next major revision. Use Lettuce's Micrometer integration through
- *             {@link io.lettuce.core.tracing.MicrometerTracing}.
+ * @deprecated since 3.4 for removal with the next major revision. Use Lettuce's Micrometer
+ *     integration through {@link io.lettuce.core.tracing.MicrometerTracing}.
  */
 @Deprecated(since = "3.4", forRemoval = true)
 public enum ValkeyObservation implements ObservationDocumentation {
 
-	/**
-	 * Timer created around a Valkey command execution.
-	 */
-	VALKEY_COMMAND_OBSERVATION {
+    /** Timer created around a Valkey command execution. */
+    VALKEY_COMMAND_OBSERVATION {
 
-		@Override
-		public String getName() {
-			return "spring.data.valkey";
-		}
+        @Override
+        public String getName() {
+            return "spring.data.valkey";
+        }
 
-		@Override
-		public KeyName[] getLowCardinalityKeyNames() {
-			return LowCardinalityCommandKeyNames.values();
-		}
+        @Override
+        public KeyName[] getLowCardinalityKeyNames() {
+            return LowCardinalityCommandKeyNames.values();
+        }
 
-		@Override
-		public KeyName[] getHighCardinalityKeyNames() {
-			return HighCardinalityCommandKeyNames.values();
-		}
-	};
+        @Override
+        public KeyName[] getHighCardinalityKeyNames() {
+            return HighCardinalityCommandKeyNames.values();
+        }
+    };
 
-	/**
-	 * Enums related to low cardinality key names for Valkey commands.
-	 */
-	enum LowCardinalityCommandKeyNames implements KeyName {
+    /** Enums related to low cardinality key names for Valkey commands. */
+    enum LowCardinalityCommandKeyNames implements KeyName {
 
-		/**
-		 * Database system.
-		 */
-		DATABASE_SYSTEM {
-			@Override
-			public String asString() {
-				return "db.system";
-			}
-		},
+        /** Database system. */
+        DATABASE_SYSTEM {
+            @Override
+            public String asString() {
+                return "db.system";
+            }
+        },
 
-		/**
-		 * Network transport.
-		 */
-		NET_TRANSPORT {
-			@Override
-			public String asString() {
-				return "net.transport";
-			}
-		},
+        /** Network transport. */
+        NET_TRANSPORT {
+            @Override
+            public String asString() {
+                return "net.transport";
+            }
+        },
 
-		/**
-		 * Name of the database host.
-		 */
-		NET_PEER_NAME {
-			@Override
-			public String asString() {
-				return "net.peer.name";
-			}
-		},
+        /** Name of the database host. */
+        NET_PEER_NAME {
+            @Override
+            public String asString() {
+                return "net.peer.name";
+            }
+        },
 
-		/**
-		 * Logical remote port number.
-		 */
-		NET_PEER_PORT {
-			@Override
-			public String asString() {
-				return "net.peer.port";
-			}
-		},
+        /** Logical remote port number. */
+        NET_PEER_PORT {
+            @Override
+            public String asString() {
+                return "net.peer.port";
+            }
+        },
 
-		/**
-		 * Mongo peer address.
-		 */
-		NET_SOCK_PEER_ADDR {
-			@Override
-			public String asString() {
-				return "net.sock.peer.addr";
-			}
-		},
+        /** Mongo peer address. */
+        NET_SOCK_PEER_ADDR {
+            @Override
+            public String asString() {
+                return "net.sock.peer.addr";
+            }
+        },
 
-		/**
-		 * Mongo peer port.
-		 */
-		NET_SOCK_PEER_PORT {
-			@Override
-			public String asString() {
-				return "net.sock.peer.port";
-			}
-		},
+        /** Mongo peer port. */
+        NET_SOCK_PEER_PORT {
+            @Override
+            public String asString() {
+                return "net.sock.peer.port";
+            }
+        },
 
-		/**
-		 * Valkey user.
-		 */
-		DB_USER {
-			@Override
-			public String asString() {
-				return "db.user";
-			}
-		},
+        /** Valkey user. */
+        DB_USER {
+            @Override
+            public String asString() {
+                return "db.user";
+            }
+        },
 
-		/**
-		 * Valkey database index.
-		 */
-		DB_INDEX {
-			@Override
-			public String asString() {
-				return "db.valkey.database_index";
-			}
-		},
+        /** Valkey database index. */
+        DB_INDEX {
+            @Override
+            public String asString() {
+                return "db.valkey.database_index";
+            }
+        },
 
-		/**
-		 * Valkey command value.
-		 */
-		VALKEY_COMMAND {
-			@Override
-			public String asString() {
-				return "db.operation";
-			}
-		}
+        /** Valkey command value. */
+        VALKEY_COMMAND {
+            @Override
+            public String asString() {
+                return "db.operation";
+            }
+        }
+    }
 
-	}
+    /** Enums related to high cardinality key names for Valkey commands. */
+    enum HighCardinalityCommandKeyNames implements KeyName {
 
-	/**
-	 * Enums related to high cardinality key names for Valkey commands.
-	 */
-	enum HighCardinalityCommandKeyNames implements KeyName {
+        /** Valkey statement. */
+        STATEMENT {
+            @Override
+            public String asString() {
+                return "db.statement";
+            }
+        },
 
-		/**
-		 * Valkey statement.
-		 */
-		STATEMENT {
-			@Override
-			public String asString() {
-				return "db.statement";
-			}
-		},
-
-		/**
-		 * Valkey error response.
-		 */
-		ERROR {
-			@Override
-			public String asString() {
-				return "spring.data.valkey.command.error";
-			}
-		}
-	}
+        /** Valkey error response. */
+        ERROR {
+            @Override
+            public String asString() {
+                return "spring.data.valkey.command.error";
+            }
+        }
+    }
 }

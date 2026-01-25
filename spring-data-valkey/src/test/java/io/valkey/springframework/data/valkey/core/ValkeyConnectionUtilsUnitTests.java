@@ -18,13 +18,12 @@ package io.valkey.springframework.data.valkey.core;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionException;
 import org.springframework.transaction.support.AbstractPlatformTransactionManager;
@@ -39,228 +38,224 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 class ValkeyConnectionUtilsUnitTests {
 
-	ValkeyConnection connectionMock1 = mock(ValkeyConnection.class);
-	ValkeyConnection connectionMock2 = mock(ValkeyConnection.class);
-	ValkeyConnectionFactory factoryMock = mock(ValkeyConnectionFactory.class);
+    ValkeyConnection connectionMock1 = mock(ValkeyConnection.class);
+    ValkeyConnection connectionMock2 = mock(ValkeyConnection.class);
+    ValkeyConnectionFactory factoryMock = mock(ValkeyConnectionFactory.class);
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		// cleanup to avoid lingering resources
-		TransactionSynchronizationManager.clear();
+        // cleanup to avoid lingering resources
+        TransactionSynchronizationManager.clear();
 
-		if (TransactionSynchronizationManager.isSynchronizationActive()) {
-			TransactionSynchronizationManager.clearSynchronization();
-		}
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
 
-		when(factoryMock.getConnection()).thenReturn(connectionMock1, connectionMock2);
-	}
+        when(factoryMock.getConnection()).thenReturn(connectionMock1, connectionMock2);
+    }
 
-	@Test // DATAREDIS-1104
-	void shouldSilentlyCloseValkeyConnection() {
+    @Test // DATAREDIS-1104
+    void shouldSilentlyCloseValkeyConnection() {
 
-		Mockito.reset(connectionMock1);
-		doThrow(new IllegalStateException()).when(connectionMock1).close();
-		ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+        Mockito.reset(connectionMock1);
+        doThrow(new IllegalStateException()).when(connectionMock1).close();
+        ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
 
-		verify(connectionMock1).close();
-	}
+        verify(connectionMock1).close();
+    }
 
-	@Test // DATAREDIS-891
-	void bindConnectionShouldBindConnectionToClosureScope() {
+    @Test // DATAREDIS-891
+    void bindConnectionShouldBindConnectionToClosureScope() {
 
-		assertThat(ValkeyConnectionUtils.bindConnection(factoryMock)).isSameAs(connectionMock1);
-		assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
+        assertThat(ValkeyConnectionUtils.bindConnection(factoryMock)).isSameAs(connectionMock1);
+        assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
 
-		assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isSameAs(connectionMock1);
+        assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isSameAs(connectionMock1);
 
-		ValkeyConnectionUtils.unbindConnection(factoryMock);
-		verifyNoInteractions(connectionMock1);
+        ValkeyConnectionUtils.unbindConnection(factoryMock);
+        verifyNoInteractions(connectionMock1);
 
-		ValkeyConnectionUtils.unbindConnection(factoryMock);
-		verify(connectionMock1).close();
+        ValkeyConnectionUtils.unbindConnection(factoryMock);
+        verify(connectionMock1).close();
 
-		assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
-	}
+        assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
+    }
 
-	@Test // DATAREDIS-891
-	void getConnectionShouldBindConnectionToTransactionScopeWithReadOnlyTransaction() {
+    @Test // DATAREDIS-891
+    void getConnectionShouldBindConnectionToTransactionScopeWithReadOnlyTransaction() {
 
-		TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
-		template.setReadOnly(true);
+        TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
+        template.setReadOnly(true);
 
-		template.executeWithoutResult(status -> {
+        template.executeWithoutResult(
+                status -> {
+                    assertThat(ValkeyConnectionUtils.getConnection(factoryMock, true))
+                            .isSameAs(connectionMock1);
+                    assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
+                    assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isSameAs(connectionMock1);
 
-			assertThat(ValkeyConnectionUtils.getConnection(factoryMock, true)).isSameAs(connectionMock1);
-			assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
-			assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isSameAs(connectionMock1);
+                    ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+                    ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
 
-			ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
-			ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+                    verifyNoInteractions(connectionMock1);
+                });
 
-			verifyNoInteractions(connectionMock1);
-		});
+        verify(connectionMock1).close();
+        assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
+    }
 
-		verify(connectionMock1).close();
-		assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
-	}
+    @Test // DATAREDIS-891, GH-2016
+    void bindConnectionShouldBindConnectionToOngoingTransactionScope() {
 
-	@Test // DATAREDIS-891, GH-2016
-	void bindConnectionShouldBindConnectionToOngoingTransactionScope() {
+        TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
 
-		TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
+        template.executeWithoutResult(
+                status -> {
+                    assertThat(ValkeyConnectionUtils.bindConnection(factoryMock, true))
+                            .isInstanceOf(ValkeyConnectionUtils.ValkeyConnectionProxy.class);
+                    assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
+                    assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isNotNull();
 
-		template.executeWithoutResult(status -> {
+                    ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+                    ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
 
-			assertThat(ValkeyConnectionUtils.bindConnection(factoryMock, true))
-					.isInstanceOf(ValkeyConnectionUtils.ValkeyConnectionProxy.class);
-			assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
-			assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isNotNull();
+                    verify(connectionMock1).multi();
+                    verifyNoMoreInteractions(connectionMock1);
+                });
 
-			ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
-			ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+        verify(connectionMock1).close();
+        assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
+    }
 
-			verify(connectionMock1).multi();
-			verifyNoMoreInteractions(connectionMock1);
-		});
+    @Test // DATAREDIS-891
+    void bindConnectionShouldNotBindConnectionToTransactionWithoutTransaction() {
 
-		verify(connectionMock1).close();
-		assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
-	}
+        assertThat(ValkeyConnectionUtils.bindConnection(factoryMock, true)).isNotNull();
+        assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
+        assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isNotNull();
 
-	@Test // DATAREDIS-891
-	void bindConnectionShouldNotBindConnectionToTransactionWithoutTransaction() {
+        ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+        ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
 
-		assertThat(ValkeyConnectionUtils.bindConnection(factoryMock, true)).isNotNull();
-		assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
-		assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isNotNull();
+        verify(connectionMock1).close();
+        assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
+    }
 
-		ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
-		ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+    @Test // DATAREDIS-891
+    void getConnectionShouldBindConnectionToTransactionScopeWithReadWriteTransaction() {
 
-		verify(connectionMock1).close();
-		assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
-	}
+        TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
 
-	@Test // DATAREDIS-891
-	void getConnectionShouldBindConnectionToTransactionScopeWithReadWriteTransaction() {
+        template.executeWithoutResult(
+                status -> {
+                    assertThat(ValkeyConnectionUtils.getConnection(factoryMock, true)).isNotNull();
+                    assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
 
-		TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
+                    ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
 
-		template.executeWithoutResult(status -> {
+                    verify(connectionMock1).multi();
+                    verify(factoryMock, times(1)).getConnection();
+                });
 
-			assertThat(ValkeyConnectionUtils.getConnection(factoryMock, true)).isNotNull();
-			assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
+        verify(connectionMock1).close();
+        assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
+    }
 
-			ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+    @Test // DATAREDIS-891
+    void getConnectionShouldNotBindConnectionToTransaction() {
 
-			verify(connectionMock1).multi();
-			verify(factoryMock, times(1)).getConnection();
-		});
+        TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
 
-		verify(connectionMock1).close();
-		assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
-	}
+        template.executeWithoutResult(
+                status -> {
+                    assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isSameAs(connectionMock1);
+                    assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
 
-	@Test // DATAREDIS-891
-	void getConnectionShouldNotBindConnectionToTransaction() {
+                    ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
 
-		TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
+                    verify(factoryMock).getConnection();
+                    verify(connectionMock1).close();
+                });
 
-		template.executeWithoutResult(status -> {
+        verifyNoMoreInteractions(factoryMock);
+        verifyNoMoreInteractions(connectionMock1);
+    }
 
-			assertThat(ValkeyConnectionUtils.getConnection(factoryMock)).isSameAs(connectionMock1);
-			assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
+    @Test // DATAREDIS-891
+    void bindConnectionShouldNotBindConnectionToTransaction() {
 
-			ValkeyConnectionUtils.releaseConnection(connectionMock1, factoryMock);
+        TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
 
-			verify(factoryMock).getConnection();
-			verify(connectionMock1).close();
-		});
+        template.executeWithoutResult(
+                status -> {
+                    assertThat(ValkeyConnectionUtils.bindConnection(factoryMock)).isSameAs(connectionMock1);
+                    assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
 
-		verifyNoMoreInteractions(factoryMock);
-		verifyNoMoreInteractions(connectionMock1);
-	}
+                    ValkeyConnectionUtils.unbindConnection(factoryMock);
 
-	@Test // DATAREDIS-891
-	void bindConnectionShouldNotBindConnectionToTransaction() {
+                    verify(connectionMock1).close();
+                    verify(factoryMock, times(1)).getConnection();
+                });
 
-		TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
+        verifyNoMoreInteractions(factoryMock);
+        assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
+    }
 
-		template.executeWithoutResult(status -> {
+    @Test // GH-2886
+    void connectionProxyShouldInvokeReadOnlyMethods() {
 
-			assertThat(ValkeyConnectionUtils.bindConnection(factoryMock)).isSameAs(connectionMock1);
-			assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isTrue();
+        TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
 
-			ValkeyConnectionUtils.unbindConnection(factoryMock);
+        byte[] anyBytes = new byte[] {1, 2, 3};
+        when(connectionMock2.exists(anyBytes)).thenReturn(true);
 
-			verify(connectionMock1).close();
-			verify(factoryMock, times(1)).getConnection();
-		});
+        template.executeWithoutResult(
+                status -> {
+                    ValkeyConnection connection = ValkeyConnectionUtils.getConnection(factoryMock, true);
 
-		verifyNoMoreInteractions(factoryMock);
-		assertThat(TransactionSynchronizationManager.hasResource(factoryMock)).isFalse();
-	}
+                    assertThat(connection.exists(anyBytes)).isEqualTo(true);
+                });
+    }
 
-	@Test // GH-2886
-	void connectionProxyShouldInvokeReadOnlyMethods() {
+    @Test // GH-2886
+    void connectionProxyShouldConsiderCommandInterfaces() {
 
-		TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
+        TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
 
-		byte[] anyBytes = new byte[] { 1, 2, 3 };
-		when(connectionMock2.exists(anyBytes)).thenReturn(true);
+        byte[] anyBytes = new byte[] {1, 2, 3};
 
-		template.executeWithoutResult(status -> {
+        ValkeyKeyCommands commandsMock = mock(ValkeyKeyCommands.class);
 
-			ValkeyConnection connection = ValkeyConnectionUtils.getConnection(factoryMock, true);
+        when(connectionMock1.keyCommands()).thenReturn(commandsMock);
+        when(connectionMock2.keyCommands()).thenReturn(commandsMock);
+        when(commandsMock.exists(anyBytes)).thenReturn(true);
+        when(commandsMock.del(anyBytes)).thenReturn(42L);
 
-			assertThat(connection.exists(anyBytes)).isEqualTo(true);
-		});
-	}
+        template.executeWithoutResult(
+                status -> {
+                    ValkeyConnection connection = ValkeyConnectionUtils.getConnection(factoryMock, true);
 
-	@Test // GH-2886
-	void connectionProxyShouldConsiderCommandInterfaces() {
+                    assertThat(connection.keyCommands().exists(anyBytes)).isEqualTo(true);
+                    assertThat(connection.keyCommands().del(anyBytes)).isEqualTo(42L);
+                });
+    }
 
-		TransactionTemplate template = new TransactionTemplate(new DummyTransactionManager());
+    static class DummyTransactionManager extends AbstractPlatformTransactionManager {
 
-		byte[] anyBytes = new byte[] { 1, 2, 3 };
+        @Override
+        protected Object doGetTransaction() throws TransactionException {
+            return new Object();
+        }
 
-		ValkeyKeyCommands commandsMock = mock(ValkeyKeyCommands.class);
+        @Override
+        protected void doBegin(Object transaction, TransactionDefinition definition)
+                throws TransactionException {}
 
-		when(connectionMock1.keyCommands()).thenReturn(commandsMock);
-		when(connectionMock2.keyCommands()).thenReturn(commandsMock);
-		when(commandsMock.exists(anyBytes)).thenReturn(true);
-		when(commandsMock.del(anyBytes)).thenReturn(42L);
+        @Override
+        protected void doCommit(DefaultTransactionStatus status) throws TransactionException {}
 
-		template.executeWithoutResult(status -> {
-
-			ValkeyConnection connection = ValkeyConnectionUtils.getConnection(factoryMock, true);
-
-			assertThat(connection.keyCommands().exists(anyBytes)).isEqualTo(true);
-			assertThat(connection.keyCommands().del(anyBytes)).isEqualTo(42L);
-		});
-	}
-
-	static class DummyTransactionManager extends AbstractPlatformTransactionManager {
-
-		@Override
-		protected Object doGetTransaction() throws TransactionException {
-			return new Object();
-		}
-
-		@Override
-		protected void doBegin(Object transaction, TransactionDefinition definition) throws TransactionException {
-
-		}
-
-		@Override
-		protected void doCommit(DefaultTransactionStatus status) throws TransactionException {
-
-		}
-
-		@Override
-		protected void doRollback(DefaultTransactionStatus status) throws TransactionException {
-
-		}
-	}
+        @Override
+        protected void doRollback(DefaultTransactionStatus status) throws TransactionException {}
+    }
 }

@@ -16,16 +16,14 @@
 
 package io.valkey.springframework.boot.actuate.autoconfigure.data.valkey;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.boot.actuate.health.HealthContributor;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.actuate.health.HealthContributor;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /**
  * Tests for {@link ValkeyHealthContributorAutoConfiguration}.
@@ -34,21 +32,29 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ValkeyHealthContributorAutoConfigurationTests {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class,
-				ValkeyHealthContributorAutoConfiguration.class));
+    private final ApplicationContextRunner contextRunner =
+            new ApplicationContextRunner()
+                    .withConfiguration(
+                            AutoConfigurations.of(
+                                    ValkeyAutoConfiguration.class, ValkeyHealthContributorAutoConfiguration.class));
 
-	@Test
-	void runShouldCreateIndicator() {
-		this.contextRunner.run((context) -> assertThat(context).hasSingleBean(ValkeyHealthIndicator.class)
-			.hasSingleBean(HealthContributor.class));
-	}
+    @Test
+    void runShouldCreateIndicator() {
+        this.contextRunner.run(
+                (context) ->
+                        assertThat(context)
+                                .hasSingleBean(ValkeyHealthIndicator.class)
+                                .hasSingleBean(HealthContributor.class));
+    }
 
-	@Test
-	void runWhenDisabledShouldNotCreateIndicator() {
-		this.contextRunner.withPropertyValues("management.health.valkey.enabled:false")
-			.run((context) -> assertThat(context).doesNotHaveBean(ValkeyHealthIndicator.class)
-				.doesNotHaveBean(HealthContributor.class));
-	}
-
+    @Test
+    void runWhenDisabledShouldNotCreateIndicator() {
+        this.contextRunner
+                .withPropertyValues("management.health.valkey.enabled:false")
+                .run(
+                        (context) ->
+                                assertThat(context)
+                                        .doesNotHaveBean(ValkeyHealthIndicator.class)
+                                        .doesNotHaveBean(HealthContributor.class));
+    }
 }

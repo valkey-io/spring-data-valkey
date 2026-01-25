@@ -18,17 +18,15 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import redis.clients.jedis.Jedis;
-
+import io.valkey.springframework.data.valkey.connection.ValkeyNode;
+import io.valkey.springframework.data.valkey.connection.ValkeyNode.ValkeyNodeBuilder;
+import io.valkey.springframework.data.valkey.connection.ValkeyServer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyNode;
-import io.valkey.springframework.data.valkey.connection.ValkeyNode.ValkeyNodeBuilder;
-import io.valkey.springframework.data.valkey.connection.ValkeyServer;
+import redis.clients.jedis.Jedis;
 
 /**
  * @author Christoph Strobl
@@ -36,116 +34,119 @@ import io.valkey.springframework.data.valkey.connection.ValkeyServer;
 @ExtendWith(MockitoExtension.class)
 class JedisSentinelConnectionUnitTests {
 
-	private @Mock Jedis jedisMock;
+    private @Mock Jedis jedisMock;
 
-	private JedisSentinelConnection connection;
+    private JedisSentinelConnection connection;
 
-	@BeforeEach
-	void setUp() {
-		this.connection = new JedisSentinelConnection(jedisMock);
-	}
+    @BeforeEach
+    void setUp() {
+        this.connection = new JedisSentinelConnection(jedisMock);
+    }
 
-	@Test // DATAREDIS-330
-	void shouldConnectAfterCreation() {
-		verify(jedisMock, times(1)).connect();
-	}
+    @Test // DATAREDIS-330
+    void shouldConnectAfterCreation() {
+        verify(jedisMock, times(1)).connect();
+    }
 
-	@SuppressWarnings("resource")
-	@Test // DATAREDIS-330
-	void shouldNotConnectIfAlreadyConnected() {
+    @SuppressWarnings("resource")
+    @Test // DATAREDIS-330
+    void shouldNotConnectIfAlreadyConnected() {
 
-		Jedis yetAnotherJedisMock = mock(Jedis.class);
-		when(yetAnotherJedisMock.isConnected()).thenReturn(true);
+        Jedis yetAnotherJedisMock = mock(Jedis.class);
+        when(yetAnotherJedisMock.isConnected()).thenReturn(true);
 
-		new JedisSentinelConnection(yetAnotherJedisMock);
+        new JedisSentinelConnection(yetAnotherJedisMock);
 
-		verify(yetAnotherJedisMock, never()).connect();
-	}
+        verify(yetAnotherJedisMock, never()).connect();
+    }
 
-	@Test // DATAREDIS-330
-	void failoverShouldBeSentCorrectly() {
+    @Test // DATAREDIS-330
+    void failoverShouldBeSentCorrectly() {
 
-		connection.failover(new ValkeyNodeBuilder().withName("mymaster").build());
-		verify(jedisMock, times(1)).sentinelFailover(eq("mymaster"));
-	}
+        connection.failover(new ValkeyNodeBuilder().withName("mymaster").build());
+        verify(jedisMock, times(1)).sentinelFailover(eq("mymaster"));
+    }
 
-	@Test // DATAREDIS-330
-	void failoverShouldThrowExceptionIfMasterNodeIsNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> connection.failover(null));
-	}
+    @Test // DATAREDIS-330
+    void failoverShouldThrowExceptionIfMasterNodeIsNull() {
+        assertThatIllegalArgumentException().isThrownBy(() -> connection.failover(null));
+    }
 
-	@Test // DATAREDIS-330
-	void failoverShouldThrowExceptionIfMasterNodeNameIsEmpty() {
-		assertThatIllegalArgumentException().isThrownBy(() -> connection.failover(new ValkeyNodeBuilder().build()));
-	}
+    @Test // DATAREDIS-330
+    void failoverShouldThrowExceptionIfMasterNodeNameIsEmpty() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> connection.failover(new ValkeyNodeBuilder().build()));
+    }
 
-	@Test // DATAREDIS-330
-	void mastersShouldReadMastersCorrectly() {
+    @Test // DATAREDIS-330
+    void mastersShouldReadMastersCorrectly() {
 
-		connection.masters();
-		verify(jedisMock, times(1)).sentinelMasters();
-	}
+        connection.masters();
+        verify(jedisMock, times(1)).sentinelMasters();
+    }
 
-	@Test // DATAREDIS-330
-	void shouldReadReplicasCorrectly() {
+    @Test // DATAREDIS-330
+    void shouldReadReplicasCorrectly() {
 
-		connection.replicas("mymaster");
-		verify(jedisMock, times(1)).sentinelReplicas(eq("mymaster"));
-	}
+        connection.replicas("mymaster");
+        verify(jedisMock, times(1)).sentinelReplicas(eq("mymaster"));
+    }
 
-	@Test // DATAREDIS-330
-	void shouldReadReplicasCorrectlyWhenGivenNamedNode() {
+    @Test // DATAREDIS-330
+    void shouldReadReplicasCorrectlyWhenGivenNamedNode() {
 
-		connection.replicas(new ValkeyNodeBuilder().withName("mymaster").build());
-		verify(jedisMock, times(1)).sentinelReplicas(eq("mymaster"));
-	}
+        connection.replicas(new ValkeyNodeBuilder().withName("mymaster").build());
+        verify(jedisMock, times(1)).sentinelReplicas(eq("mymaster"));
+    }
 
-	@Test // DATAREDIS-330
-	void readReplicasShouldThrowExceptionWhenGivenEmptyMasterName() {
-		assertThatIllegalArgumentException().isThrownBy(() -> connection.replicas(""));
-	}
+    @Test // DATAREDIS-330
+    void readReplicasShouldThrowExceptionWhenGivenEmptyMasterName() {
+        assertThatIllegalArgumentException().isThrownBy(() -> connection.replicas(""));
+    }
 
-	@Test // DATAREDIS-330
-	void readReplicasShouldThrowExceptionWhenGivenNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> connection.replicas((ValkeyNode) null));
-	}
+    @Test // DATAREDIS-330
+    void readReplicasShouldThrowExceptionWhenGivenNull() {
+        assertThatIllegalArgumentException().isThrownBy(() -> connection.replicas((ValkeyNode) null));
+    }
 
-	@Test // DATAREDIS-330
-	void readReplicasShouldThrowExceptionWhenNodeWithoutName() {
-		assertThatIllegalArgumentException().isThrownBy(() -> connection.replicas(new ValkeyNodeBuilder().build()));
-	}
+    @Test // DATAREDIS-330
+    void readReplicasShouldThrowExceptionWhenNodeWithoutName() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> connection.replicas(new ValkeyNodeBuilder().build()));
+    }
 
-	@Test // DATAREDIS-330
-	void shouldRemoveMasterCorrectlyWhenGivenNamedNode() {
+    @Test // DATAREDIS-330
+    void shouldRemoveMasterCorrectlyWhenGivenNamedNode() {
 
-		connection.remove(new ValkeyNodeBuilder().withName("mymaster").build());
-		verify(jedisMock, times(1)).sentinelRemove(eq("mymaster"));
-	}
+        connection.remove(new ValkeyNodeBuilder().withName("mymaster").build());
+        verify(jedisMock, times(1)).sentinelRemove(eq("mymaster"));
+    }
 
-	@Test // DATAREDIS-330
-	void removeShouldThrowExceptionWhenGivenEmptyMasterName() {
-		assertThatIllegalArgumentException().isThrownBy(() -> connection.remove(""));
-	}
+    @Test // DATAREDIS-330
+    void removeShouldThrowExceptionWhenGivenEmptyMasterName() {
+        assertThatIllegalArgumentException().isThrownBy(() -> connection.remove(""));
+    }
 
-	@Test // DATAREDIS-330
-	void removeShouldThrowExceptionWhenGivenNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> connection.remove((ValkeyNode) null));
-	}
+    @Test // DATAREDIS-330
+    void removeShouldThrowExceptionWhenGivenNull() {
+        assertThatIllegalArgumentException().isThrownBy(() -> connection.remove((ValkeyNode) null));
+    }
 
-	@Test // DATAREDIS-330
-	void removeShouldThrowExceptionWhenNodeWithoutName() {
-		assertThatIllegalArgumentException().isThrownBy(() -> connection.remove(new ValkeyNodeBuilder().build()));
-	}
+    @Test // DATAREDIS-330
+    void removeShouldThrowExceptionWhenNodeWithoutName() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> connection.remove(new ValkeyNodeBuilder().build()));
+    }
 
-	@Test // DATAREDIS-330
-	void monitorShouldBeSentCorrectly() {
+    @Test // DATAREDIS-330
+    void monitorShouldBeSentCorrectly() {
 
-		ValkeyServer server = new ValkeyServer("127.0.0.1", 6382);
-		server.setName("anothermaster");
-		server.setQuorum(3L);
+        ValkeyServer server = new ValkeyServer("127.0.0.1", 6382);
+        server.setName("anothermaster");
+        server.setQuorum(3L);
 
-		connection.monitor(server);
-		verify(jedisMock, times(1)).sentinelMonitor(eq("anothermaster"), eq("127.0.0.1"), eq(6382), eq(3));
-	}
-
+        connection.monitor(server);
+        verify(jedisMock, times(1))
+                .sentinelMonitor(eq("anothermaster"), eq("127.0.0.1"), eq(6382), eq(3));
+    }
 }

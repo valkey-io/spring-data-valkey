@@ -20,11 +20,6 @@ import io.lettuce.core.XClaimArgs;
 import io.lettuce.core.XReadArgs;
 import io.lettuce.core.models.stream.PendingMessage;
 import io.lettuce.core.models.stream.PendingMessages;
-
-import java.time.Duration;
-import java.util.List;
-
-import org.springframework.core.convert.converter.Converter;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
 import io.valkey.springframework.data.valkey.connection.stream.ByteRecord;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
@@ -32,141 +27,153 @@ import io.valkey.springframework.data.valkey.connection.stream.PendingMessagesSu
 import io.valkey.springframework.data.valkey.connection.stream.RecordId;
 import io.valkey.springframework.data.valkey.connection.stream.StreamReadOptions;
 import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
+import java.time.Duration;
+import java.util.List;
+import org.springframework.core.convert.converter.Converter;
 
 /**
  * Converters for Valkey Stream-specific types.
- * <p>
- * Converters typically convert between value objects/argument objects retaining the actual types of values (i.e. no
- * serialization/deserialization happens here).
+ *
+ * <p>Converters typically convert between value objects/argument objects retaining the actual types
+ * of values (i.e. no serialization/deserialization happens here).
  *
  * @author Mark Paluch
  * @author Christoph Strobl
  * @since 2.2
  */
-@SuppressWarnings({ "rawtypes" })
+@SuppressWarnings({"rawtypes"})
 class StreamConverters {
 
-	/**
-	 * Convert {@link StreamReadOptions} to Lettuce's {@link XReadArgs}.
-	 *
-	 * @param readOptions must not be {@literal null}.
-	 * @return the converted {@link XReadArgs}.
-	 */
-	static XReadArgs toReadArgs(StreamReadOptions readOptions) {
-		return StreamReadOptionsToXReadArgsConverter.INSTANCE.convert(readOptions);
-	}
+    /**
+     * Convert {@link StreamReadOptions} to Lettuce's {@link XReadArgs}.
+     *
+     * @param readOptions must not be {@literal null}.
+     * @return the converted {@link XReadArgs}.
+     */
+    static XReadArgs toReadArgs(StreamReadOptions readOptions) {
+        return StreamReadOptionsToXReadArgsConverter.INSTANCE.convert(readOptions);
+    }
 
-	/**
-	 * Convert {@link XClaimOptions} to Lettuce's {@link XClaimArgs}.
-	 *
-	 * @param options must not be {@literal null}.
-	 * @return the converted {@link XClaimArgs}.
-	 * @since 2.3
-	 */
-	static XClaimArgs toXClaimArgs(XClaimOptions options) {
-		return XClaimOptionsToXClaimArgsConverter.INSTANCE.convert(options);
-	}
+    /**
+     * Convert {@link XClaimOptions} to Lettuce's {@link XClaimArgs}.
+     *
+     * @param options must not be {@literal null}.
+     * @return the converted {@link XClaimArgs}.
+     * @since 2.3
+     */
+    static XClaimArgs toXClaimArgs(XClaimOptions options) {
+        return XClaimOptionsToXClaimArgsConverter.INSTANCE.convert(options);
+    }
 
-	static Converter<StreamMessage<byte[], byte[]>, ByteRecord> byteRecordConverter() {
-		return (it) -> StreamRecords.newRecord().in(it.getStream()).withId(it.getId()).ofBytes(it.getBody());
-	}
+    static Converter<StreamMessage<byte[], byte[]>, ByteRecord> byteRecordConverter() {
+        return (it) ->
+                StreamRecords.newRecord().in(it.getStream()).withId(it.getId()).ofBytes(it.getBody());
+    }
 
-	/**
-	 * Convert the raw Lettuce xpending result to {@link PendingMessages}.
-	 *
-	 * @param groupName the group name
-	 * @param range the range of messages requested
-	 * @param source the raw lettuce response.
-	 * @return
-	 * @since 2.3
-	 */
-	static io.valkey.springframework.data.valkey.connection.stream.PendingMessages toPendingMessages(String groupName,
-			org.springframework.data.domain.Range<?> range, List<PendingMessage> source) {
+    /**
+     * Convert the raw Lettuce xpending result to {@link PendingMessages}.
+     *
+     * @param groupName the group name
+     * @param range the range of messages requested
+     * @param source the raw lettuce response.
+     * @return
+     * @since 2.3
+     */
+    static io.valkey.springframework.data.valkey.connection.stream.PendingMessages toPendingMessages(
+            String groupName,
+            org.springframework.data.domain.Range<?> range,
+            List<PendingMessage> source) {
 
-		List<io.valkey.springframework.data.valkey.connection.stream.PendingMessage> messages = source.stream().map(it -> {
+        List<io.valkey.springframework.data.valkey.connection.stream.PendingMessage> messages =
+                source.stream()
+                        .map(
+                                it -> {
+                                    RecordId id = RecordId.of(it.getId());
+                                    Consumer consumer = Consumer.from(groupName, it.getConsumer());
 
-			RecordId id = RecordId.of(it.getId());
-			Consumer consumer = Consumer.from(groupName, it.getConsumer());
+                                    return new io.valkey.springframework.data.valkey.connection.stream.PendingMessage(
+                                            id,
+                                            consumer,
+                                            Duration.ofMillis(it.getMsSinceLastDelivery()),
+                                            it.getRedeliveryCount());
+                                })
+                        .toList();
 
-			return new io.valkey.springframework.data.valkey.connection.stream.PendingMessage(id, consumer,
-					Duration.ofMillis(it.getMsSinceLastDelivery()), it.getRedeliveryCount());
+        return new io.valkey.springframework.data.valkey.connection.stream.PendingMessages(
+                        groupName, messages)
+                .withinRange(range);
+    }
 
-		}).toList();
+    /**
+     * Convert the raw Lettuce {@code xpending} result to {@link PendingMessagesSummary}.
+     *
+     * @param groupName
+     * @param source the raw lettuce response.
+     * @return
+     * @since 2.3
+     */
+    static PendingMessagesSummary toPendingMessagesInfo(String groupName, PendingMessages source) {
 
-		return new io.valkey.springframework.data.valkey.connection.stream.PendingMessages(groupName, messages).withinRange(range);
-	}
+        org.springframework.data.domain.Range<String> range =
+                source.getMessageIds().isUnbounded()
+                        ? org.springframework.data.domain.Range.unbounded()
+                        : org.springframework.data.domain.Range.open(
+                                source.getMessageIds().getLower().getValue(),
+                                source.getMessageIds().getUpper().getValue());
 
-	/**
-	 * Convert the raw Lettuce {@code xpending} result to {@link PendingMessagesSummary}.
-	 *
-	 * @param groupName
-	 * @param source the raw lettuce response.
-	 * @return
-	 * @since 2.3
-	 */
-	static PendingMessagesSummary toPendingMessagesInfo(String groupName, PendingMessages source) {
+        return new PendingMessagesSummary(
+                groupName, source.getCount(), range, source.getConsumerMessageCount());
+    }
 
-		org.springframework.data.domain.Range<String> range = source.getMessageIds().isUnbounded()
-				? org.springframework.data.domain.Range.unbounded()
-				: org.springframework.data.domain.Range.open(source.getMessageIds().getLower().getValue(),
-						source.getMessageIds().getUpper().getValue());
+    /** {@link Converter} to convert {@link StreamReadOptions} to Lettuce's {@link XReadArgs}. */
+    enum StreamReadOptionsToXReadArgsConverter implements Converter<StreamReadOptions, XReadArgs> {
+        INSTANCE;
 
-		return new PendingMessagesSummary(groupName, source.getCount(), range, source.getConsumerMessageCount());
-	}
+        @Override
+        public XReadArgs convert(StreamReadOptions source) {
 
-	/**
-	 * {@link Converter} to convert {@link StreamReadOptions} to Lettuce's {@link XReadArgs}.
-	 */
-	enum StreamReadOptionsToXReadArgsConverter implements Converter<StreamReadOptions, XReadArgs> {
+            XReadArgs args = new XReadArgs();
 
-		INSTANCE;
+            if (source.isNoack()) {
+                args.noack(true);
+            }
 
-		@Override
-		public XReadArgs convert(StreamReadOptions source) {
+            if (source.getBlock() != null) {
+                args.block(source.getBlock());
+            }
 
-			XReadArgs args = new XReadArgs();
+            if (source.getCount() != null) {
+                args.count(source.getCount());
+            }
+            return args;
+        }
+    }
 
-			if (source.isNoack()) {
-				args.noack(true);
-			}
+    /**
+     * {@link Converter} to convert {@link XClaimOptions} to Lettuce's {@link XClaimArgs}.
+     *
+     * @since 2.3
+     */
+    enum XClaimOptionsToXClaimArgsConverter implements Converter<XClaimOptions, XClaimArgs> {
+        INSTANCE;
 
-			if (source.getBlock() != null) {
-				args.block(source.getBlock());
-			}
+        @Override
+        public XClaimArgs convert(XClaimOptions source) {
 
-			if (source.getCount() != null) {
-				args.count(source.getCount());
-			}
-			return args;
-		}
-	}
+            XClaimArgs args = XClaimArgs.Builder.minIdleTime(source.getMinIdleTime());
+            args.minIdleTime(source.getMinIdleTime());
+            args.force(source.isForce());
 
-	/**
-	 * {@link Converter} to convert {@link XClaimOptions} to Lettuce's {@link XClaimArgs}.
-	 *
-	 * @since 2.3
-	 */
-	enum XClaimOptionsToXClaimArgsConverter implements Converter<XClaimOptions, XClaimArgs> {
-		INSTANCE;
-
-		@Override
-		public XClaimArgs convert(XClaimOptions source) {
-
-			XClaimArgs args = XClaimArgs.Builder.minIdleTime(source.getMinIdleTime());
-			args.minIdleTime(source.getMinIdleTime());
-			args.force(source.isForce());
-
-			if (source.getIdleTime() != null) {
-				args.idle(source.getIdleTime());
-			}
-			if (source.getRetryCount() != null) {
-				args.retryCount(source.getRetryCount());
-			}
-			if (source.getUnixTime() != null) {
-				args.time(source.getUnixTime());
-			}
-			return args;
-
-		}
-	}
+            if (source.getIdleTime() != null) {
+                args.idle(source.getIdleTime());
+            }
+            if (source.getRetryCount() != null) {
+                args.retryCount(source.getRetryCount());
+            }
+            if (source.getUnixTime() != null) {
+                args.time(source.getUnixTime());
+            }
+            return args;
+        }
+    }
 }

@@ -18,10 +18,8 @@ package io.valkey.springframework.data.valkey.connection;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
@@ -35,88 +33,89 @@ import org.springframework.util.Assert;
  */
 public abstract class AbstractValkeyConnection implements ValkeyConnection {
 
-	private final Log LOGGER = LogFactory.getLog(getClass());
+    private final Log LOGGER = LogFactory.getLog(getClass());
 
-	private @Nullable ValkeySentinelConfiguration sentinelConfiguration;
-	private final Map<ValkeyNode, ValkeySentinelConnection> connectionCache = new ConcurrentHashMap<>();
+    private @Nullable ValkeySentinelConfiguration sentinelConfiguration;
+    private final Map<ValkeyNode, ValkeySentinelConnection> connectionCache =
+            new ConcurrentHashMap<>();
 
-	@Override
-	public ValkeySentinelConnection getSentinelConnection() {
+    @Override
+    public ValkeySentinelConnection getSentinelConnection() {
 
-		if (!hasValkeySentinelConfigured()) {
-			throw new InvalidDataAccessResourceUsageException("No sentinels configured.");
-		}
+        if (!hasValkeySentinelConfigured()) {
+            throw new InvalidDataAccessResourceUsageException("No sentinels configured.");
+        }
 
-		ValkeyNode node = selectActiveSentinel();
-		ValkeySentinelConnection connection = connectionCache.get(node);
-		if (connection == null || !connection.isOpen()) {
-			connection = getSentinelConnection(node);
-			connectionCache.putIfAbsent(node, connection);
-		}
-		return connection;
-	}
+        ValkeyNode node = selectActiveSentinel();
+        ValkeySentinelConnection connection = connectionCache.get(node);
+        if (connection == null || !connection.isOpen()) {
+            connection = getSentinelConnection(node);
+            connectionCache.putIfAbsent(node, connection);
+        }
+        return connection;
+    }
 
-	public void setSentinelConfiguration(ValkeySentinelConfiguration sentinelConfiguration) {
-		this.sentinelConfiguration = sentinelConfiguration;
-	}
+    public void setSentinelConfiguration(ValkeySentinelConfiguration sentinelConfiguration) {
+        this.sentinelConfiguration = sentinelConfiguration;
+    }
 
-	public boolean hasValkeySentinelConfigured() {
-		return this.sentinelConfiguration != null;
-	}
+    public boolean hasValkeySentinelConfigured() {
+        return this.sentinelConfiguration != null;
+    }
 
-	private ValkeyNode selectActiveSentinel() {
+    private ValkeyNode selectActiveSentinel() {
 
-		Assert.state(hasValkeySentinelConfigured(), "Sentinel configuration missing");
+        Assert.state(hasValkeySentinelConfigured(), "Sentinel configuration missing");
 
-		for (ValkeyNode node : this.sentinelConfiguration.getSentinels()) {
-			if (isActive(node)) {
-				return node;
-			}
-		}
+        for (ValkeyNode node : this.sentinelConfiguration.getSentinels()) {
+            if (isActive(node)) {
+                return node;
+            }
+        }
 
-		throw new InvalidDataAccessApiUsageException("Could not find any active sentinels");
-	}
+        throw new InvalidDataAccessApiUsageException("Could not find any active sentinels");
+    }
 
-	/**
-	 * Check if node is active by sending ping.
-	 *
-	 * @param node
-	 * @return
-	 */
-	protected boolean isActive(ValkeyNode node) {
-		return false;
-	}
+    /**
+     * Check if node is active by sending ping.
+     *
+     * @param node
+     * @return
+     */
+    protected boolean isActive(ValkeyNode node) {
+        return false;
+    }
 
-	/**
-	 * Get {@link ValkeySentinelCommands} connected to given node.
-	 *
-	 * @param sentinel
-	 * @return
-	 */
-	protected ValkeySentinelConnection getSentinelConnection(ValkeyNode sentinel) {
-		throw new UnsupportedOperationException("Sentinel is not supported by this client.");
-	}
+    /**
+     * Get {@link ValkeySentinelCommands} connected to given node.
+     *
+     * @param sentinel
+     * @return
+     */
+    protected ValkeySentinelConnection getSentinelConnection(ValkeyNode sentinel) {
+        throw new UnsupportedOperationException("Sentinel is not supported by this client.");
+    }
 
-	@Override
-	public void close() throws DataAccessException {
+    @Override
+    public void close() throws DataAccessException {
 
-		if (connectionCache.isEmpty()) {
-			return;
-		}
+        if (connectionCache.isEmpty()) {
+            return;
+        }
 
-		for (ValkeyNode node : connectionCache.keySet()) {
+        for (ValkeyNode node : connectionCache.keySet()) {
 
-			ValkeySentinelConnection connection = connectionCache.remove(node);
+            ValkeySentinelConnection connection = connectionCache.remove(node);
 
-			if (!connection.isOpen()) {
-				continue;
-			}
+            if (!connection.isOpen()) {
+                continue;
+            }
 
-			try {
-				connection.close();
-			} catch (IOException ex) {
-				LOGGER.info("Failed to close sentinel connection", ex);
-			}
-		}
-	}
+            try {
+                connection.close();
+            } catch (IOException ex) {
+                LOGGER.info("Failed to close sentinel connection", ex);
+            }
+        }
+    }
 }

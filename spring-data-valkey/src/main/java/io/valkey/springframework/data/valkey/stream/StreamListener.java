@@ -28,10 +28,10 @@ import io.valkey.springframework.data.valkey.connection.stream.Record;
 @FunctionalInterface
 public interface StreamListener<K, V extends Record<K, ?>> {
 
-	/**
-	 * Callback invoked on receiving a {@link Record}.
-	 *
-	 * @param message never {@literal null}.
-	 */
-	void onMessage(V message);
+    /**
+     * Callback invoked on receiving a {@link Record}.
+     *
+     * @param message never {@literal null}.
+     */
+    void onMessage(V message);
 }

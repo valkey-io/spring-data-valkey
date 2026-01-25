@@ -24,7 +24,10 @@ import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.api.sync.RedisAdvancedClusterCommands;
 import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 import io.lettuce.core.codec.StringCodec;
-
+import io.valkey.springframework.data.valkey.connection.lettuce.LettuceReactiveValkeyConnection.ByteBufferCodec;
+import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
+import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,15 +35,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.DisposableBean;
-import io.valkey.springframework.data.valkey.connection.lettuce.LettuceReactiveValkeyConnection.ByteBufferCodec;
-import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
-import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 
 /**
  * @author Christoph Strobl
@@ -49,180 +47,207 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodS
 @MethodSource("parameters")
 public abstract class LettuceReactiveCommandsTestSupport {
 
-	static final String KEY_1 = "key-1";
-	static final String KEY_2 = "key-2";
-	static final String KEY_3 = "key-3";
-	static final String SAME_SLOT_KEY_1 = "{key}-1";
-	static final String SAME_SLOT_KEY_2 = "{key}-2";
-	static final String SAME_SLOT_KEY_3 = "{key}-3";
-	static final String VALUE_1 = "value-1";
-	static final String VALUE_2 = "value-2";
-	static final String VALUE_3 = "value-3";
+    static final String KEY_1 = "key-1";
+    static final String KEY_2 = "key-2";
+    static final String KEY_3 = "key-3";
+    static final String SAME_SLOT_KEY_1 = "{key}-1";
+    static final String SAME_SLOT_KEY_2 = "{key}-2";
+    static final String SAME_SLOT_KEY_3 = "{key}-3";
+    static final String VALUE_1 = "value-1";
+    static final String VALUE_2 = "value-2";
+    static final String VALUE_3 = "value-3";
 
-	static final byte[] SAME_SLOT_KEY_1_BYTES = SAME_SLOT_KEY_1.getBytes(StandardCharsets.UTF_8);
-	static final byte[] SAME_SLOT_KEY_2_BYTES = SAME_SLOT_KEY_2.getBytes(StandardCharsets.UTF_8);
-	static final byte[] SAME_SLOT_KEY_3_BYTES = SAME_SLOT_KEY_3.getBytes(StandardCharsets.UTF_8);
-	static final byte[] KEY_1_BYTES = KEY_1.getBytes(StandardCharsets.UTF_8);
-	static final byte[] KEY_2_BYTES = KEY_2.getBytes(StandardCharsets.UTF_8);
-	static final byte[] KEY_3_BYTES = KEY_3.getBytes(StandardCharsets.UTF_8);
-	static final byte[] VALUE_1_BYTES = VALUE_1.getBytes(StandardCharsets.UTF_8);
-	static final byte[] VALUE_2_BYTES = VALUE_2.getBytes(StandardCharsets.UTF_8);
-	static final byte[] VALUE_3_BYTES = VALUE_3.getBytes(StandardCharsets.UTF_8);
+    static final byte[] SAME_SLOT_KEY_1_BYTES = SAME_SLOT_KEY_1.getBytes(StandardCharsets.UTF_8);
+    static final byte[] SAME_SLOT_KEY_2_BYTES = SAME_SLOT_KEY_2.getBytes(StandardCharsets.UTF_8);
+    static final byte[] SAME_SLOT_KEY_3_BYTES = SAME_SLOT_KEY_3.getBytes(StandardCharsets.UTF_8);
+    static final byte[] KEY_1_BYTES = KEY_1.getBytes(StandardCharsets.UTF_8);
+    static final byte[] KEY_2_BYTES = KEY_2.getBytes(StandardCharsets.UTF_8);
+    static final byte[] KEY_3_BYTES = KEY_3.getBytes(StandardCharsets.UTF_8);
+    static final byte[] VALUE_1_BYTES = VALUE_1.getBytes(StandardCharsets.UTF_8);
+    static final byte[] VALUE_2_BYTES = VALUE_2.getBytes(StandardCharsets.UTF_8);
+    static final byte[] VALUE_3_BYTES = VALUE_3.getBytes(StandardCharsets.UTF_8);
 
-	static final ByteBuffer KEY_1_BBUFFER = ByteBuffer.wrap(KEY_1_BYTES);
-	static final ByteBuffer SAME_SLOT_KEY_1_BBUFFER = ByteBuffer.wrap(SAME_SLOT_KEY_1_BYTES);
-	static final ByteBuffer VALUE_1_BBUFFER = ByteBuffer.wrap(VALUE_1_BYTES);
+    static final ByteBuffer KEY_1_BBUFFER = ByteBuffer.wrap(KEY_1_BYTES);
+    static final ByteBuffer SAME_SLOT_KEY_1_BBUFFER = ByteBuffer.wrap(SAME_SLOT_KEY_1_BYTES);
+    static final ByteBuffer VALUE_1_BBUFFER = ByteBuffer.wrap(VALUE_1_BYTES);
 
-	static final ByteBuffer KEY_2_BBUFFER = ByteBuffer.wrap(KEY_2_BYTES);
-	static final ByteBuffer SAME_SLOT_KEY_2_BBUFFER = ByteBuffer.wrap(SAME_SLOT_KEY_2_BYTES);
-	static final ByteBuffer VALUE_2_BBUFFER = ByteBuffer.wrap(VALUE_2_BYTES);
+    static final ByteBuffer KEY_2_BBUFFER = ByteBuffer.wrap(KEY_2_BYTES);
+    static final ByteBuffer SAME_SLOT_KEY_2_BBUFFER = ByteBuffer.wrap(SAME_SLOT_KEY_2_BYTES);
+    static final ByteBuffer VALUE_2_BBUFFER = ByteBuffer.wrap(VALUE_2_BYTES);
 
-	static final ByteBuffer KEY_3_BBUFFER = ByteBuffer.wrap(KEY_3_BYTES);
-	static final ByteBuffer SAME_SLOT_KEY_3_BBUFFER = ByteBuffer.wrap(SAME_SLOT_KEY_3_BYTES);
-	static final ByteBuffer VALUE_3_BBUFFER = ByteBuffer.wrap(VALUE_3_BYTES);
+    static final ByteBuffer KEY_3_BBUFFER = ByteBuffer.wrap(KEY_3_BYTES);
+    static final ByteBuffer SAME_SLOT_KEY_3_BBUFFER = ByteBuffer.wrap(SAME_SLOT_KEY_3_BYTES);
+    static final ByteBuffer VALUE_3_BBUFFER = ByteBuffer.wrap(VALUE_3_BYTES);
 
-	public final LettuceConnectionProvider connectionProvider;
-	public final LettuceConnectionProvider nativeConnectionProvider;
-	public final LettuceConnectionProvider nativeBinaryConnectionProvider;
+    public final LettuceConnectionProvider connectionProvider;
+    public final LettuceConnectionProvider nativeConnectionProvider;
+    public final LettuceConnectionProvider nativeBinaryConnectionProvider;
 
-	LettuceReactiveValkeyConnection connection;
-	RedisClusterCommands<String, String> nativeCommands;
-	RedisClusterCommands<ByteBuffer, ByteBuffer> nativeBinaryCommands;
+    LettuceReactiveValkeyConnection connection;
+    RedisClusterCommands<String, String> nativeCommands;
+    RedisClusterCommands<ByteBuffer, ByteBuffer> nativeBinaryCommands;
 
-	public LettuceReactiveCommandsTestSupport(Fixture fixture) {
-		this.connectionProvider = fixture.connectionProvider;
-		this.nativeConnectionProvider = fixture.nativeConnectionProvider;
-		this.nativeBinaryConnectionProvider = fixture.nativeBinaryConnectionProvider;
-	}
+    public LettuceReactiveCommandsTestSupport(Fixture fixture) {
+        this.connectionProvider = fixture.connectionProvider;
+        this.nativeConnectionProvider = fixture.nativeConnectionProvider;
+        this.nativeBinaryConnectionProvider = fixture.nativeBinaryConnectionProvider;
+    }
 
-	public static List<Fixture> parameters() {
+    public static List<Fixture> parameters() {
 
-		LettuceExtension extension = new LettuceExtension();
+        LettuceExtension extension = new LettuceExtension();
 
-		List<Fixture> parameters = new ArrayList<>();
+        List<Fixture> parameters = new ArrayList<>();
 
-		StandaloneConnectionProvider standaloneProvider = new StandaloneConnectionProvider(
-				extension.getInstance(RedisClient.class), LettuceReactiveValkeyConnection.CODEC);
-		StandaloneConnectionProvider nativeConnectionProvider = new StandaloneConnectionProvider(
-				extension.getInstance(RedisClient.class), StringCodec.UTF8);
-		StandaloneConnectionProvider nativeBinaryConnectionProvider = new StandaloneConnectionProvider(
-				extension.getInstance(RedisClient.class), ByteBufferCodec.INSTANCE);
+        StandaloneConnectionProvider standaloneProvider =
+                new StandaloneConnectionProvider(
+                        extension.getInstance(RedisClient.class), LettuceReactiveValkeyConnection.CODEC);
+        StandaloneConnectionProvider nativeConnectionProvider =
+                new StandaloneConnectionProvider(
+                        extension.getInstance(RedisClient.class), StringCodec.UTF8);
+        StandaloneConnectionProvider nativeBinaryConnectionProvider =
+                new StandaloneConnectionProvider(
+                        extension.getInstance(RedisClient.class), ByteBufferCodec.INSTANCE);
 
-		/*parameters
-				.add(new Fixture(standaloneProvider, nativeConnectionProvider, nativeBinaryConnectionProvider, "Standalone"));*/
-		LettucePoolingClientConfiguration poolingClientConfiguration = LettucePoolingClientConfiguration.builder()
-				.shutdownQuietPeriod(Duration.ZERO).shutdownTimeout(Duration.ZERO).build();
-		parameters.add(new Fixture(new LettucePoolingConnectionProvider(standaloneProvider, poolingClientConfiguration),
-				new LettucePoolingConnectionProvider(nativeConnectionProvider, poolingClientConfiguration),
-				new LettucePoolingConnectionProvider(nativeBinaryConnectionProvider, poolingClientConfiguration), "Pooling"));
+        /*parameters
+        .add(new Fixture(standaloneProvider, nativeConnectionProvider, nativeBinaryConnectionProvider, "Standalone"));*/
+        LettucePoolingClientConfiguration poolingClientConfiguration =
+                LettucePoolingClientConfiguration.builder()
+                        .shutdownQuietPeriod(Duration.ZERO)
+                        .shutdownTimeout(Duration.ZERO)
+                        .build();
+        parameters.add(
+                new Fixture(
+                        new LettucePoolingConnectionProvider(standaloneProvider, poolingClientConfiguration),
+                        new LettucePoolingConnectionProvider(
+                                nativeConnectionProvider, poolingClientConfiguration),
+                        new LettucePoolingConnectionProvider(
+                                nativeBinaryConnectionProvider, poolingClientConfiguration),
+                        "Pooling"));
 
-		ClusterConnectionProvider clusterProvider = new ClusterConnectionProvider(
-				extension.getInstance(RedisClusterClient.class), LettuceReactiveValkeyConnection.CODEC);
-		ClusterConnectionProvider nativeClusterConnectionProvider = new ClusterConnectionProvider(
-				extension.getInstance(RedisClusterClient.class), StringCodec.UTF8);
-		ClusterConnectionProvider nativeBinaryClusterConnectionProvider = new ClusterConnectionProvider(
-				extension.getInstance(RedisClusterClient.class), ByteBufferCodec.INSTANCE);
+        ClusterConnectionProvider clusterProvider =
+                new ClusterConnectionProvider(
+                        extension.getInstance(RedisClusterClient.class), LettuceReactiveValkeyConnection.CODEC);
+        ClusterConnectionProvider nativeClusterConnectionProvider =
+                new ClusterConnectionProvider(
+                        extension.getInstance(RedisClusterClient.class), StringCodec.UTF8);
+        ClusterConnectionProvider nativeBinaryClusterConnectionProvider =
+                new ClusterConnectionProvider(
+                        extension.getInstance(RedisClusterClient.class), ByteBufferCodec.INSTANCE);
 
-		parameters.add(new Fixture(new LettucePoolingConnectionProvider(clusterProvider, poolingClientConfiguration),
-				new LettucePoolingConnectionProvider(nativeClusterConnectionProvider, poolingClientConfiguration),
-				new LettucePoolingConnectionProvider(nativeBinaryClusterConnectionProvider, poolingClientConfiguration),
-				"Cluster"));
+        parameters.add(
+                new Fixture(
+                        new LettucePoolingConnectionProvider(clusterProvider, poolingClientConfiguration),
+                        new LettucePoolingConnectionProvider(
+                                nativeClusterConnectionProvider, poolingClientConfiguration),
+                        new LettucePoolingConnectionProvider(
+                                nativeBinaryClusterConnectionProvider, poolingClientConfiguration),
+                        "Cluster"));
 
-		return parameters;
-	}
+        return parameters;
+    }
 
-	static class Fixture implements Closeable {
+    static class Fixture implements Closeable {
 
-		final LettuceConnectionProvider connectionProvider;
-		final LettuceConnectionProvider nativeConnectionProvider;
-		final LettuceConnectionProvider nativeBinaryConnectionProvider;
-		final String label;
+        final LettuceConnectionProvider connectionProvider;
+        final LettuceConnectionProvider nativeConnectionProvider;
+        final LettuceConnectionProvider nativeBinaryConnectionProvider;
+        final String label;
 
-		Fixture(LettuceConnectionProvider connectionProvider, LettuceConnectionProvider nativeConnectionProvider,
-				LettuceConnectionProvider nativeBinaryConnectionProvider, String label) {
-			this.connectionProvider = connectionProvider;
-			this.nativeConnectionProvider = nativeConnectionProvider;
-			this.nativeBinaryConnectionProvider = nativeBinaryConnectionProvider;
-			this.label = label;
-		}
+        Fixture(
+                LettuceConnectionProvider connectionProvider,
+                LettuceConnectionProvider nativeConnectionProvider,
+                LettuceConnectionProvider nativeBinaryConnectionProvider,
+                String label) {
+            this.connectionProvider = connectionProvider;
+            this.nativeConnectionProvider = nativeConnectionProvider;
+            this.nativeBinaryConnectionProvider = nativeBinaryConnectionProvider;
+            this.label = label;
+        }
 
-		@Override
-		public String toString() {
-			return label;
-		}
+        @Override
+        public String toString() {
+            return label;
+        }
 
-		@Override
-		public void close() throws IOException {
+        @Override
+        public void close() throws IOException {
 
-			try {
-				if (connectionProvider instanceof DisposableBean disposableBean) {
-					disposableBean.destroy();
-				}
+            try {
+                if (connectionProvider instanceof DisposableBean disposableBean) {
+                    disposableBean.destroy();
+                }
 
-				if (nativeConnectionProvider instanceof DisposableBean disposableBean) {
-					disposableBean.destroy();
-				}
+                if (nativeConnectionProvider instanceof DisposableBean disposableBean) {
+                    disposableBean.destroy();
+                }
 
-				if (nativeBinaryConnectionProvider instanceof DisposableBean disposableBean) {
-					disposableBean.destroy();
-				}
-			} catch (Exception ex) {
-				throw new RuntimeException(ex);
-			}
-		}
-	}
+                if (nativeBinaryConnectionProvider instanceof DisposableBean disposableBean) {
+                    disposableBean.destroy();
+                }
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+    }
 
-	@BeforeEach
-	public void setUp() {
+    @BeforeEach
+    public void setUp() {
 
-		AbstractRedisClient valkeyClient = ((ValkeyClientProvider) nativeConnectionProvider).getValkeyClient();
+        AbstractRedisClient valkeyClient =
+                ((ValkeyClientProvider) nativeConnectionProvider).getValkeyClient();
 
-		if (valkeyClient instanceof RedisClient) {
+        if (valkeyClient instanceof RedisClient) {
 
-			nativeCommands = nativeConnectionProvider.getConnection(StatefulRedisConnection.class).sync();
-			nativeBinaryCommands = nativeBinaryConnectionProvider.getConnection(StatefulRedisConnection.class).sync();
-			this.connection = new LettuceReactiveValkeyConnection(connectionProvider);
-		} else {
+            nativeCommands = nativeConnectionProvider.getConnection(StatefulRedisConnection.class).sync();
+            nativeBinaryCommands =
+                    nativeBinaryConnectionProvider.getConnection(StatefulRedisConnection.class).sync();
+            this.connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        } else {
 
-			Assumptions.assumeThat(ValkeyDetector.isClusterAvailable()).isTrue();
+            Assumptions.assumeThat(ValkeyDetector.isClusterAvailable()).isTrue();
 
-			nativeCommands = nativeConnectionProvider.getConnection(StatefulRedisClusterConnection.class).sync();
-			nativeBinaryCommands = nativeBinaryConnectionProvider.getConnection(StatefulRedisClusterConnection.class).sync();
-			this.connection = new LettuceReactiveValkeyClusterConnection(connectionProvider, (RedisClusterClient) valkeyClient);
-		}
-	}
+            nativeCommands =
+                    nativeConnectionProvider.getConnection(StatefulRedisClusterConnection.class).sync();
+            nativeBinaryCommands =
+                    nativeBinaryConnectionProvider.getConnection(StatefulRedisClusterConnection.class).sync();
+            this.connection =
+                    new LettuceReactiveValkeyClusterConnection(
+                            connectionProvider, (RedisClusterClient) valkeyClient);
+        }
+    }
 
-	@AfterEach
-	public void tearDown() {
+    @AfterEach
+    public void tearDown() {
 
-		if (nativeCommands != null) {
-			flushAll();
+        if (nativeCommands != null) {
+            flushAll();
 
-			if (nativeCommands instanceof RedisCommands valkeyCommands) {
-				nativeConnectionProvider.release((valkeyCommands).getStatefulConnection());
-			}
+            if (nativeCommands instanceof RedisCommands valkeyCommands) {
+                nativeConnectionProvider.release((valkeyCommands).getStatefulConnection());
+            }
 
-			if (nativeCommands instanceof RedisAdvancedClusterCommands valkeyAdvancedClusterCommands) {
-				nativeConnectionProvider.release((valkeyAdvancedClusterCommands).getStatefulConnection());
-			}
+            if (nativeCommands instanceof RedisAdvancedClusterCommands valkeyAdvancedClusterCommands) {
+                nativeConnectionProvider.release((valkeyAdvancedClusterCommands).getStatefulConnection());
+            }
 
-			if (nativeBinaryCommands instanceof RedisCommands valkeyCommands) {
-				nativeBinaryConnectionProvider.release((valkeyCommands).getStatefulConnection());
-			}
+            if (nativeBinaryCommands instanceof RedisCommands valkeyCommands) {
+                nativeBinaryConnectionProvider.release((valkeyCommands).getStatefulConnection());
+            }
 
-			if (nativeBinaryCommands instanceof RedisAdvancedClusterCommands valkeyAdvancedClusterCommands) {
-				nativeBinaryConnectionProvider
-						.release((valkeyAdvancedClusterCommands).getStatefulConnection());
-			}
-		}
+            if (nativeBinaryCommands
+                    instanceof RedisAdvancedClusterCommands valkeyAdvancedClusterCommands) {
+                nativeBinaryConnectionProvider.release(
+                        (valkeyAdvancedClusterCommands).getStatefulConnection());
+            }
+        }
 
-		if (connection != null) {
-			connection.close();
-		}
-	}
+        if (connection != null) {
+            connection.close();
+        }
+    }
 
-	private void flushAll() {
-		nativeCommands.flushall();
-	}
-
+    private void flushAll() {
+        nativeCommands.flushall();
+    }
 }

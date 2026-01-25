@@ -16,47 +16,49 @@
 package io.valkey.springframework.data.valkey.core;
 
 import io.valkey.springframework.data.valkey.connection.DefaultStringValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 
 /**
- * String-focused extension of ValkeyTemplate. Since most operations against Valkey are String based, this class provides
- * a dedicated class that minimizes configuration of its more generic {@link ValkeyTemplate template} especially in terms
- * of serializers.
- * <p>
- * Note that this template exposes the {@link ValkeyConnection} used by the {@link ValkeyCallback} as a
- * {@link StringValkeyConnection}.
+ * String-focused extension of ValkeyTemplate. Since most operations against Valkey are String
+ * based, this class provides a dedicated class that minimizes configuration of its more generic
+ * {@link ValkeyTemplate template} especially in terms of serializers.
+ *
+ * <p>Note that this template exposes the {@link ValkeyConnection} used by the {@link
+ * ValkeyCallback} as a {@link StringValkeyConnection}.
  *
  * @author Costin Leau
  * @author Mark Paluch
  */
 public class StringValkeyTemplate extends ValkeyTemplate<String, String> {
 
-	/**
-	 * Constructs a new <code>StringValkeyTemplate</code> instance. {@link #setConnectionFactory(ValkeyConnectionFactory)}
-	 * and {@link #afterPropertiesSet()} still need to be called.
-	 */
-	public StringValkeyTemplate() {
-		setKeySerializer(ValkeySerializer.string());
-		setValueSerializer(ValkeySerializer.string());
-		setHashKeySerializer(ValkeySerializer.string());
-		setHashValueSerializer(ValkeySerializer.string());
-	}
+    /**
+     * Constructs a new <code>StringValkeyTemplate</code> instance. {@link
+     * #setConnectionFactory(ValkeyConnectionFactory)} and {@link #afterPropertiesSet()} still need to
+     * be called.
+     */
+    public StringValkeyTemplate() {
+        setKeySerializer(ValkeySerializer.string());
+        setValueSerializer(ValkeySerializer.string());
+        setHashKeySerializer(ValkeySerializer.string());
+        setHashValueSerializer(ValkeySerializer.string());
+    }
 
-	/**
-	 * Constructs a new <code>StringValkeyTemplate</code> instance ready to be used.
-	 *
-	 * @param connectionFactory connection factory for creating new connections
-	 */
-	public StringValkeyTemplate(ValkeyConnectionFactory connectionFactory) {
-		this();
-		setConnectionFactory(connectionFactory);
-		afterPropertiesSet();
-	}
+    /**
+     * Constructs a new <code>StringValkeyTemplate</code> instance ready to be used.
+     *
+     * @param connectionFactory connection factory for creating new connections
+     */
+    public StringValkeyTemplate(ValkeyConnectionFactory connectionFactory) {
+        this();
+        setConnectionFactory(connectionFactory);
+        afterPropertiesSet();
+    }
 
-	protected ValkeyConnection preProcessConnection(ValkeyConnection connection, boolean existingConnection) {
-		return new DefaultStringValkeyConnection(connection);
-	}
+    protected ValkeyConnection preProcessConnection(
+            ValkeyConnection connection, boolean existingConnection) {
+        return new DefaultStringValkeyConnection(connection);
+    }
 }

@@ -26,18 +26,6 @@ import io.lettuce.core.cluster.SlotHash;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.pubsub.StatefulRedisClusterPubSubConnection;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
-
-import java.time.Duration;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
-
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor;
 import io.valkey.springframework.data.valkey.connection.ClusterTopologyProvider;
@@ -46,6 +34,15 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
+import java.time.Duration;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.lang.Nullable;
 
 /**
@@ -56,149 +53,176 @@ import org.springframework.lang.Nullable;
 @EnabledOnValkeyClusterAvailable
 class LettuceClusterKeyspaceNotificationsTests {
 
-	private static CustomLettuceConnectionFactory factory;
-	private String keyspaceConfig;
+    private static CustomLettuceConnectionFactory factory;
+    private String keyspaceConfig;
 
-	// maps to 127.0.0.1:7381/slot hash 13477
-	private String key = "10923";
+    // maps to 127.0.0.1:7381/slot hash 13477
+    private String key = "10923";
 
-	@BeforeAll
-	static void beforeAll() throws Exception {
+    @BeforeAll
+    static void beforeAll() throws Exception {
 
-		factory = new CustomLettuceConnectionFactory(SettingsUtils.clusterConfiguration());
-		factory.setClientResources(LettuceTestClientResources.getSharedClientResources());
-		factory.afterPropertiesSet();
-		factory.start();
-	}
+        factory = new CustomLettuceConnectionFactory(SettingsUtils.clusterConfiguration());
+        factory.setClientResources(LettuceTestClientResources.getSharedClientResources());
+        factory.afterPropertiesSet();
+        factory.start();
+    }
 
-	@BeforeEach
-	void before() {
+    @BeforeEach
+    void before() {
 
-		// enable keyspace events on a specific node.
-		withConnection("127.0.0.1", 7381, commands -> {
+        // enable keyspace events on a specific node.
+        withConnection(
+                "127.0.0.1",
+                7381,
+                commands -> {
+                    keyspaceConfig = commands.configGet("*").get("notify-keyspace-events");
+                    commands.configSet("notify-keyspace-events", "KEx");
+                });
 
-			keyspaceConfig = commands.configGet("*").get("notify-keyspace-events");
-			commands.configSet("notify-keyspace-events", "KEx");
-		});
+        assertThat(SlotHash.getSlot(key)).isEqualTo(13477);
+    }
 
-		assertThat(SlotHash.getSlot(key)).isEqualTo(13477);
-	}
+    @AfterEach
+    void tearDown() {
 
-	@AfterEach
-	void tearDown() {
+        // Restore previous settings.
+        withConnection(
+                "127.0.0.1",
+                7381,
+                commands -> {
+                    commands.configSet("notify-keyspace-events", keyspaceConfig);
+                });
+    }
 
-		// Restore previous settings.
-		withConnection("127.0.0.1", 7381, commands -> {
-			commands.configSet("notify-keyspace-events", keyspaceConfig);
-		});
-	}
+    @AfterAll
+    static void afterAll() {
+        factory.destroy();
+    }
 
-	@AfterAll
-	static void afterAll() {
-		factory.destroy();
-	}
+    @Test // DATAREDIS-976
+    void shouldListenForKeyspaceNotifications() throws Exception {
 
-	@Test // DATAREDIS-976
-	void shouldListenForKeyspaceNotifications() throws Exception {
+        CompletableFuture<String> expiry = new CompletableFuture<>();
 
-		CompletableFuture<String> expiry = new CompletableFuture<>();
+        ValkeyClusterConnection connection = factory.getClusterConnection();
 
-		ValkeyClusterConnection connection = factory.getClusterConnection();
+        connection.pSubscribe(
+                (message, pattern) -> {
+                    expiry.complete(new String(message.getBody()) + ":" + new String(message.getChannel()));
+                },
+                "__keyspace*@*".getBytes());
 
-		connection.pSubscribe((message, pattern) -> {
-			expiry.complete(new String(message.getBody()) + ":" + new String(message.getChannel()));
-		}, "__keyspace*@*".getBytes());
+        withConnection(
+                "127.0.0.1",
+                7381,
+                commands -> {
+                    commands.set(key, "foo", SetArgs.Builder.px(1));
+                });
 
-		withConnection("127.0.0.1", 7381, commands -> {
-			commands.set(key, "foo", SetArgs.Builder.px(1));
-		});
+        assertThat(expiry.get(2, TimeUnit.SECONDS)).isEqualTo("expired:__keyspace@0__:10923");
 
-		assertThat(expiry.get(2, TimeUnit.SECONDS)).isEqualTo("expired:__keyspace@0__:10923");
+        connection.getSubscription().close();
+        connection.close();
+    }
 
-		connection.getSubscription().close();
-		connection.close();
-	}
+    private void withConnection(
+            String hostname, int port, Consumer<RedisCommands<String, String>> commandsConsumer) {
 
-	private void withConnection(String hostname, int port, Consumer<RedisCommands<String, String>> commandsConsumer) {
+        RedisClient client =
+                RedisClient.create(
+                        LettuceTestClientResources.getSharedClientResources(), RedisURI.create(hostname, port));
 
-		RedisClient client = RedisClient.create(LettuceTestClientResources.getSharedClientResources(),
-				RedisURI.create(hostname, port));
+        StatefulRedisConnection<String, String> connection = client.connect();
+        commandsConsumer.accept(connection.sync());
 
-		StatefulRedisConnection<String, String> connection = client.connect();
-		commandsConsumer.accept(connection.sync());
+        connection.close();
+        client.shutdownAsync();
+    }
 
-		connection.close();
-		client.shutdownAsync();
-	}
+    static class CustomLettuceConnectionFactory extends LettuceConnectionFactory {
 
-	static class CustomLettuceConnectionFactory extends LettuceConnectionFactory {
+        CustomLettuceConnectionFactory(ValkeyConfiguration valkeyConfiguration) {
+            super(valkeyConfiguration);
+        }
 
-		CustomLettuceConnectionFactory(ValkeyConfiguration valkeyConfiguration) {
-			super(valkeyConfiguration);
-		}
+        @Override
+        protected LettuceClusterConnection doCreateLettuceClusterConnection(
+                StatefulRedisClusterConnection<byte[], byte[]> sharedConnection,
+                LettuceConnectionProvider connectionProvider,
+                ClusterTopologyProvider topologyProvider,
+                ClusterCommandExecutor clusterCommandExecutor,
+                Duration commandTimeout) {
+            return new CustomLettuceClusterConnection(
+                    sharedConnection,
+                    connectionProvider,
+                    topologyProvider,
+                    clusterCommandExecutor,
+                    commandTimeout);
+        }
+    }
 
-		@Override
-		protected LettuceClusterConnection doCreateLettuceClusterConnection(
-				StatefulRedisClusterConnection<byte[], byte[]> sharedConnection, LettuceConnectionProvider connectionProvider,
-				ClusterTopologyProvider topologyProvider, ClusterCommandExecutor clusterCommandExecutor,
-				Duration commandTimeout) {
-			return new CustomLettuceClusterConnection(sharedConnection, connectionProvider, topologyProvider,
-					clusterCommandExecutor, commandTimeout);
-		}
-	}
+    static class CustomLettuceClusterConnection extends LettuceClusterConnection {
 
-	static class CustomLettuceClusterConnection extends LettuceClusterConnection {
+        CustomLettuceClusterConnection(
+                @Nullable StatefulRedisClusterConnection<byte[], byte[]> sharedConnection,
+                LettuceConnectionProvider connectionProvider,
+                ClusterTopologyProvider clusterTopologyProvider,
+                ClusterCommandExecutor executor,
+                Duration timeout) {
+            super(sharedConnection, connectionProvider, clusterTopologyProvider, executor, timeout);
+        }
 
-		CustomLettuceClusterConnection(@Nullable StatefulRedisClusterConnection<byte[], byte[]> sharedConnection,
-				LettuceConnectionProvider connectionProvider, ClusterTopologyProvider clusterTopologyProvider,
-				ClusterCommandExecutor executor, Duration timeout) {
-			super(sharedConnection, connectionProvider, clusterTopologyProvider, executor, timeout);
-		}
+        @Override
+        protected LettuceSubscription doCreateSubscription(
+                MessageListener listener,
+                StatefulRedisPubSubConnection<byte[], byte[]> connection,
+                LettuceConnectionProvider connectionProvider) {
+            return new CustomLettuceSubscription(
+                    listener,
+                    (StatefulRedisClusterPubSubConnection<byte[], byte[]>) connection,
+                    connectionProvider);
+        }
+    }
 
-		@Override
-		protected LettuceSubscription doCreateSubscription(MessageListener listener,
-				StatefulRedisPubSubConnection<byte[], byte[]> connection, LettuceConnectionProvider connectionProvider) {
-			return new CustomLettuceSubscription(listener, (StatefulRedisClusterPubSubConnection<byte[], byte[]>) connection,
-					connectionProvider);
-		}
-	}
+    /**
+     * Customized {@link LettuceSubscription}. Enables {@link
+     * StatefulRedisClusterPubSubConnection#setNodeMessagePropagation(boolean)} and uses {@link
+     * io.lettuce.core.cluster.api.sync.NodeSelection} to subscribe to all master nodes.
+     */
+    static class CustomLettuceSubscription extends LettuceSubscription {
 
-	/**
-	 * Customized {@link LettuceSubscription}. Enables
-	 * {@link StatefulRedisClusterPubSubConnection#setNodeMessagePropagation(boolean)} and uses
-	 * {@link io.lettuce.core.cluster.api.sync.NodeSelection} to subscribe to all master nodes.
-	 */
-	static class CustomLettuceSubscription extends LettuceSubscription {
+        private final StatefulRedisClusterPubSubConnection<byte[], byte[]> connection;
 
-		private final StatefulRedisClusterPubSubConnection<byte[], byte[]> connection;
+        CustomLettuceSubscription(
+                MessageListener listener,
+                StatefulRedisClusterPubSubConnection<byte[], byte[]> connection,
+                LettuceConnectionProvider connectionProvider) {
+            super(listener, connection, connectionProvider);
+            this.connection = connection;
 
-		CustomLettuceSubscription(MessageListener listener, StatefulRedisClusterPubSubConnection<byte[], byte[]> connection,
-				LettuceConnectionProvider connectionProvider) {
-			super(listener, connection, connectionProvider);
-			this.connection = connection;
+            // Must be enabled for keyspace notification propagation
+            this.connection.setNodeMessagePropagation(true);
+        }
 
-			// Must be enabled for keyspace notification propagation
-			this.connection.setNodeMessagePropagation(true);
-		}
+        @Override
+        protected void doPsubscribe(byte[]... patterns) {
+            connection.sync().all().commands().psubscribe(patterns);
+        }
 
-		@Override
-		protected void doPsubscribe(byte[]... patterns) {
-			connection.sync().all().commands().psubscribe(patterns);
-		}
+        @Override
+        protected void doPUnsubscribe(boolean all, byte[]... patterns) {
+            connection.sync().all().commands().punsubscribe();
+        }
 
-		@Override
-		protected void doPUnsubscribe(boolean all, byte[]... patterns) {
-			connection.sync().all().commands().punsubscribe();
-		}
+        @Override
+        protected void doSubscribe(byte[]... channels) {
+            connection.sync().all().commands().subscribe(channels);
+        }
 
-		@Override
-		protected void doSubscribe(byte[]... channels) {
-			connection.sync().all().commands().subscribe(channels);
-		}
-
-		@Override
-		protected void doUnsubscribe(boolean all, byte[]... channels) {
-			connection.sync().all().commands().unsubscribe();
-		}
-	}
+        @Override
+        protected void doUnsubscribe(boolean all, byte[]... channels) {
+            connection.sync().all().commands().unsubscribe();
+        }
+    }
 }

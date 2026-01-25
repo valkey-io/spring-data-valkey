@@ -31,9 +31,8 @@ import java.lang.annotation.Target;
 @Inherited
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.METHOD, ElementType.TYPE })
+@Target({ElementType.METHOD, ElementType.TYPE})
 public @interface WithResources {
 
-	WithResource[] value();
-
+    WithResource[] value();
 }

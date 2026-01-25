@@ -25,73 +25,72 @@ import org.springframework.lang.Nullable;
  */
 public interface SortParameters {
 
-	/**
-	 * Sorting order.
-	 */
-	enum Order {
-		ASC, DESC
-	}
+    /** Sorting order. */
+    enum Order {
+        ASC,
+        DESC
+    }
 
-	/**
-	 * Utility class wrapping the 'LIMIT' setting.
-	 */
-	class Range {
+    /** Utility class wrapping the 'LIMIT' setting. */
+    class Range {
 
-		private final long start;
-		private final long count;
+        private final long start;
+        private final long count;
 
-		public Range(long start, long count) {
-			this.start = start;
-			this.count = count;
-		}
+        public Range(long start, long count) {
+            this.start = start;
+            this.count = count;
+        }
 
-		public long getStart() {
-			return start;
-		}
+        public long getStart() {
+            return start;
+        }
 
-		public long getCount() {
-			return count;
-		}
-	}
+        public long getCount() {
+            return count;
+        }
+    }
 
-	/**
-	 * Returns the sorting order. Can be null if nothing is specified.
-	 *
-	 * @return sorting order. {@literal null} if not set.
-	 */
-	@Nullable
-	Order getOrder();
+    /**
+     * Returns the sorting order. Can be null if nothing is specified.
+     *
+     * @return sorting order. {@literal null} if not set.
+     */
+    @Nullable
+    Order getOrder();
 
-	/**
-	 * Indicates if the sorting is numeric (default) or alphabetical (lexicographical). Can be null if nothing is
-	 * specified.
-	 *
-	 * @return the type of sorting. {@literal null} if not set.
-	 */
-	@Nullable
-	Boolean isAlphabetic();
+    /**
+     * Indicates if the sorting is numeric (default) or alphabetical (lexicographical). Can be null if
+     * nothing is specified.
+     *
+     * @return the type of sorting. {@literal null} if not set.
+     */
+    @Nullable
+    Boolean isAlphabetic();
 
-	/**
-	 * Returns the pattern (if set) for sorting by external keys ({@code BY}). Can be null if nothing is specified.
-	 *
-	 * @return {@code BY} pattern. {@literal null} if not set.
-	 */
-	@Nullable
-	byte[] getByPattern();
+    /**
+     * Returns the pattern (if set) for sorting by external keys ({@code BY}). Can be null if nothing
+     * is specified.
+     *
+     * @return {@code BY} pattern. {@literal null} if not set.
+     */
+    @Nullable
+    byte[] getByPattern();
 
-	/**
-	 * Returns the pattern (if set) for retrieving external keys ({@code GET}). Can be null if nothing is specified.
-	 *
-	 * @return {@code GET} pattern. {@literal null} if not set.
-	 */
-	@Nullable
-	byte[][] getGetPattern();
+    /**
+     * Returns the pattern (if set) for retrieving external keys ({@code GET}). Can be null if nothing
+     * is specified.
+     *
+     * @return {@code GET} pattern. {@literal null} if not set.
+     */
+    @Nullable
+    byte[][] getGetPattern();
 
-	/**
-	 * Returns the sorting limit (range or pagination). Can be null if nothing is specified.
-	 *
-	 * @return sorting limit/range. {@literal null} if not set.
-	 */
-	@Nullable
-	Range getLimit();
+    /**
+     * Returns the sorting limit (range or pagination). Can be null if nothing is specified.
+     *
+     * @return sorting limit/range. {@literal null} if not set.
+     */
+    @Nullable
+    Range getLimit();
 }

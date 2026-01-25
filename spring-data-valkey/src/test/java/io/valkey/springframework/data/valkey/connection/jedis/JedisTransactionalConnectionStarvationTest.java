@@ -15,84 +15,82 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.JedisPoolConfig;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.AbstractTransactionalTestBase;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisTransactionalConnectionStarvationTest.PooledJedisContextConfiguration;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.ValueOperations;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.transaction.annotation.Transactional;
+import redis.clients.jedis.JedisPoolConfig;
 
 /**
  * @author Thomas Darimont
  * @author Christoph Strobl
  */
-@ContextConfiguration(classes = { PooledJedisContextConfiguration.class })
+@ContextConfiguration(classes = {PooledJedisContextConfiguration.class})
 public class JedisTransactionalConnectionStarvationTest extends AbstractTransactionalTestBase {
 
-	private static final int MAX_CONNECTIONS = 5;
+    private static final int MAX_CONNECTIONS = 5;
 
-	@Autowired StringValkeyTemplate template;
+    @Autowired StringValkeyTemplate template;
 
-	void tryOperations(int numOperationsToTry) {
+    void tryOperations(int numOperationsToTry) {
 
-		ValueOperations<String, String> ops = template.opsForValue();
+        ValueOperations<String, String> ops = template.opsForValue();
 
-		for (int i = 0; i < numOperationsToTry; i++) {
-			ops.set("test-key-" + i, "test-value-" + i);
-		}
-	}
+        for (int i = 0; i < numOperationsToTry; i++) {
+            ops.set("test-key-" + i, "test-value-" + i);
+        }
+    }
 
-	@Test // DATAREDIS-332
-	@Rollback
-	void testNumberOfOperationsIsOne() {
-		tryOperations(1);
-	}
+    @Test // DATAREDIS-332
+    @Rollback
+    void testNumberOfOperationsIsOne() {
+        tryOperations(1);
+    }
 
-	@Test // DATAREDIS-332
-	@Rollback
-	void testNumberOfOperationsEqualToNumberOfConnections() {
-		tryOperations(MAX_CONNECTIONS);
-	}
+    @Test // DATAREDIS-332
+    @Rollback
+    void testNumberOfOperationsEqualToNumberOfConnections() {
+        tryOperations(MAX_CONNECTIONS);
+    }
 
-	@Test // DATAREDIS-332
-	@Rollback
-	void testNumberOfOperationsGreaterThanNumberOfConnections() {
-		tryOperations(MAX_CONNECTIONS + 1);
-	}
+    @Test // DATAREDIS-332
+    @Rollback
+    void testNumberOfOperationsGreaterThanNumberOfConnections() {
+        tryOperations(MAX_CONNECTIONS + 1);
+    }
 
-	@Test // DATAREDIS-548
-	@Transactional(readOnly = true)
-	public void readonlyTransactionSyncShouldNotExcceedMaxConnections() {
-		tryOperations(MAX_CONNECTIONS + 1);
-	}
+    @Test // DATAREDIS-548
+    @Transactional(readOnly = true)
+    public void readonlyTransactionSyncShouldNotExcceedMaxConnections() {
+        tryOperations(MAX_CONNECTIONS + 1);
+    }
 
-	@Configuration
-	public static class PooledJedisContextConfiguration extends ValkeyContextConfiguration {
+    @Configuration
+    public static class PooledJedisContextConfiguration extends ValkeyContextConfiguration {
 
-		@Bean
-		public JedisConnectionFactory valkeyConnectionFactory() {
+        @Bean
+        public JedisConnectionFactory valkeyConnectionFactory() {
 
-			JedisConnectionFactory connectionFactory = new JedisConnectionFactory();
-			connectionFactory.setHostName(SettingsUtils.getHost());
-			connectionFactory.setPort(SettingsUtils.getPort());
+            JedisConnectionFactory connectionFactory = new JedisConnectionFactory();
+            connectionFactory.setHostName(SettingsUtils.getHost());
+            connectionFactory.setPort(SettingsUtils.getPort());
 
-			JedisPoolConfig poolConfig = new JedisPoolConfig();
-			poolConfig.setMaxTotal(MAX_CONNECTIONS);
-			poolConfig.setMaxIdle(MAX_CONNECTIONS);
-			poolConfig.setMaxWaitMillis(2000L);
-			connectionFactory.setPoolConfig(poolConfig);
-			connectionFactory.afterPropertiesSet();
+            JedisPoolConfig poolConfig = new JedisPoolConfig();
+            poolConfig.setMaxTotal(MAX_CONNECTIONS);
+            poolConfig.setMaxIdle(MAX_CONNECTIONS);
+            poolConfig.setMaxWaitMillis(2000L);
+            connectionFactory.setPoolConfig(poolConfig);
+            connectionFactory.afterPropertiesSet();
 
-			return connectionFactory;
-		}
-	}
+            return connectionFactory;
+        }
+    }
 }

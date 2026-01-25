@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -29,47 +28,47 @@ import org.junit.jupiter.api.Test;
  */
 class DefaultValkeyElementWriterUnitTests {
 
-	@Test // DATAREDIS-602
-	void shouldSerializeInputCorrectly() {
+    @Test // DATAREDIS-602
+    void shouldSerializeInputCorrectly() {
 
-		String input = "123ü?™";
-		byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
+        String input = "123ü?™";
+        byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
 
-		DefaultValkeyElementWriter<String> writer = new DefaultValkeyElementWriter<>(
-				new StringValkeySerializer(StandardCharsets.UTF_8));
+        DefaultValkeyElementWriter<String> writer =
+                new DefaultValkeyElementWriter<>(new StringValkeySerializer(StandardCharsets.UTF_8));
 
-		ByteBuffer result = writer.write(input);
+        ByteBuffer result = writer.write(input);
 
-		assertThat(result.array()).isEqualTo(bytes);
-	}
+        assertThat(result.array()).isEqualTo(bytes);
+    }
 
-	@Test // DATAREDIS-602
-	void shouldWrapByteArrayForAbsentSerializer() {
+    @Test // DATAREDIS-602
+    void shouldWrapByteArrayForAbsentSerializer() {
 
-		DefaultValkeyElementWriter<Object> writer = new DefaultValkeyElementWriter<>(null);
+        DefaultValkeyElementWriter<Object> writer = new DefaultValkeyElementWriter<>(null);
 
-		byte[] input = { 1, 2, 3 };
-		ByteBuffer result = writer.write(input);
+        byte[] input = {1, 2, 3};
+        ByteBuffer result = writer.write(input);
 
-		assertThat(result.array()).isEqualTo(input);
-	}
+        assertThat(result.array()).isEqualTo(input);
+    }
 
-	@Test // DATAREDIS-602
-	void shouldPassThroughByteBufferForAbsentSerializer() {
+    @Test // DATAREDIS-602
+    void shouldPassThroughByteBufferForAbsentSerializer() {
 
-		DefaultValkeyElementWriter<Object> writer = new DefaultValkeyElementWriter<>(null);
+        DefaultValkeyElementWriter<Object> writer = new DefaultValkeyElementWriter<>(null);
 
-		byte[] input = { 1, 2, 3 };
-		ByteBuffer result = writer.write(ByteBuffer.wrap(input));
+        byte[] input = {1, 2, 3};
+        ByteBuffer result = writer.write(ByteBuffer.wrap(input));
 
-		assertThat(result.array()).isEqualTo(input);
-	}
+        assertThat(result.array()).isEqualTo(input);
+    }
 
-	@Test // DATAREDIS-602
-	void shouldFailForUnsupportedTypeWithAbsentSerializer() {
+    @Test // DATAREDIS-602
+    void shouldFailForUnsupportedTypeWithAbsentSerializer() {
 
-		DefaultValkeyElementWriter<Object> writer = new DefaultValkeyElementWriter<>(null);
+        DefaultValkeyElementWriter<Object> writer = new DefaultValkeyElementWriter<>(null);
 
-		assertThatIllegalStateException().isThrownBy(() -> writer.write(new Object()));
-	}
+        assertThatIllegalStateException().isThrownBy(() -> writer.write(new Object()));
+    }
 }

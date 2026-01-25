@@ -25,7 +25,7 @@ import java.util.UUID;
  */
 public class ByteBufferObjectFactory implements ObjectFactory<ByteBuffer> {
 
-	public ByteBuffer instance() {
-		return ByteBuffer.wrap(UUID.randomUUID().toString().getBytes());
-	}
+    public ByteBuffer instance() {
+        return ByteBuffer.wrap(UUID.randomUUID().toString().getBytes());
+    }
 }

@@ -19,34 +19,34 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * Delegating hash mapper used for flattening objects into Strings. Suitable when dealing with mappers that support
- * Strings and type conversion.
+ * Delegating hash mapper used for flattening objects into Strings. Suitable when dealing with
+ * mappers that support Strings and type conversion.
  *
  * @author Costin Leau
  */
 public class DecoratingStringHashMapper<T> implements HashMapper<T, String, String> {
 
-	private final HashMapper<T, ?, ?> delegate;
+    private final HashMapper<T, ?, ?> delegate;
 
-	public DecoratingStringHashMapper(HashMapper<T, ?, ?> mapper) {
-		this.delegate = mapper;
-	}
+    public DecoratingStringHashMapper(HashMapper<T, ?, ?> mapper) {
+        this.delegate = mapper;
+    }
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	@Override
-	public T fromHash(Map hash) {
-		return (T) delegate.fromHash(hash);
-	}
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    @Override
+    public T fromHash(Map hash) {
+        return (T) delegate.fromHash(hash);
+    }
 
-	@Override
-	public Map<String, String> toHash(T object) {
+    @Override
+    public Map<String, String> toHash(T object) {
 
-		Map<?, ?> hash = delegate.toHash(object);
-		Map<String, String> flatten = new LinkedHashMap<>(hash.size());
-		for (Map.Entry<?, ?> entry : hash.entrySet()) {
-			flatten.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
-		}
+        Map<?, ?> hash = delegate.toHash(object);
+        Map<String, String> flatten = new LinkedHashMap<>(hash.size());
+        for (Map.Entry<?, ?> entry : hash.entrySet()) {
+            flatten.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+        }
 
-		return flatten;
-	}
+        return flatten;
+    }
 }

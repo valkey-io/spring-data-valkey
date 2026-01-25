@@ -16,16 +16,15 @@
 package example.springboot;
 
 import java.util.List;
-
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface UserRepository extends CrudRepository<User, String> {
 
-	List<User> findByName(String name);
+    List<User> findByName(String name);
 
-	List<User> findByAge(int age);
+    List<User> findByAge(int age);
 
-	List<User> findByEmail(String email);
+    List<User> findByEmail(String email);
 }

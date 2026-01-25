@@ -15,17 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
-
 import glide.api.models.GlideString;
 import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
@@ -33,10 +22,19 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterServerCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyNode;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 
 /**
- * Implementation of {@link ValkeyClusterServerCommands} for Valkey-Glide.
- * Uses the elegant execute(Route, ...) pattern for cluster command routing.
+ * Implementation of {@link ValkeyClusterServerCommands} for Valkey-Glide. Uses the elegant
+ * execute(Route, ...) pattern for cluster command routing.
  *
  * @author Ilia Kolominsky
  * @since 2.0
@@ -60,26 +58,32 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
     @Override
     public void bgReWriteAof() {
         // valkey-glide default route is bogus - by first key, so we specify ALL_PRIMARIES
-        connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "BGREWRITEAOF", (Map<String, ?> rawResult) -> null);
+        connection.execute(
+                SimpleMultiNodeRoute.ALL_PRIMARIES, "BGREWRITEAOF", (Map<String, ?> rawResult) -> null);
     }
 
     @Override
     public void bgSave() {
         // valkey-glide default route is - random, so we specify ALL_PRIMARIES
-        connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "BGSAVE", (Map<String, ?> rawResult) -> null);
+        connection.execute(
+                SimpleMultiNodeRoute.ALL_PRIMARIES, "BGSAVE", (Map<String, ?> rawResult) -> null);
     }
 
     @Override
     public Long lastSave() {
         // valkey-glide default route is "random", so we specify ALL_PRIMARIES
         // Return the most recent LASTSAVE timestamp across all nodes
-        return connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "LASTSAVE",
-            (Map<String, Long> rawResult) -> rawResult.isEmpty() ? null : Collections.max(rawResult.values()));
+        return connection.execute(
+                SimpleMultiNodeRoute.ALL_PRIMARIES,
+                "LASTSAVE",
+                (Map<String, Long> rawResult) ->
+                        rawResult.isEmpty() ? null : Collections.max(rawResult.values()));
     }
 
     public void save() {
         // valkey-glide default route is "random", so we specify ALL_PRIMARIES
-        connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "SAVE", (Map<String, ?> rawResult) -> null);
+        connection.execute(
+                SimpleMultiNodeRoute.ALL_PRIMARIES, "SAVE", (Map<String, ?> rawResult) -> null);
     }
 
     @Override
@@ -103,23 +107,25 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
 
     @Override
     public void flushAll() {
-        // valkey-glide default route is "all primaries" and response policy is "all succeeded", as expected
+        // valkey-glide default route is "all primaries" and response policy is "all succeeded", as
+        // expected
         connection.execute("FLUSHALL", rawResult -> null);
     }
 
     @Override
     public void flushAll(FlushOption option) {
         Assert.notNull(option, "FlushOption must not be null");
-        // valkey-glide default route is "all primaries" and response policy is "all succeeded", as expected
+        // valkey-glide default route is "all primaries" and response policy is "all succeeded", as
+        // expected
         connection.execute("FLUSHALL", rawResult -> null, option.name());
     }
 
     @Override
     public Properties info() {
         // valkey-glide default route is "all primaries", as expected
-        Map<String, GlideString> results = connection.execute("INFO", 
-            (Map<String, GlideString> rawResult) -> rawResult);
-        
+        Map<String, GlideString> results =
+                connection.execute("INFO", (Map<String, GlideString> rawResult) -> rawResult);
+
         return aggregateInfoResults(results);
     }
 
@@ -127,9 +133,9 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
     public Properties info(String section) {
         Assert.notNull(section, "Section must not be null");
         // valkey-glide default route is "all primaries", as expected
-        Map<String, GlideString> results = connection.execute("INFO", 
-            (Map<String, GlideString> rawResult) -> rawResult, section);
-        
+        Map<String, GlideString> results =
+                connection.execute("INFO", (Map<String, GlideString> rawResult) -> rawResult, section);
+
         return aggregateInfoResults(results);
     }
 
@@ -144,15 +150,21 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
             shutdown();
             return;
         }
-        connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "SHUTDOWN", rawResult -> null, option.name());
+        connection.execute(
+                SimpleMultiNodeRoute.ALL_PRIMARIES, "SHUTDOWN", rawResult -> null, option.name());
     }
 
     @Override
     public Properties getConfig(String pattern) {
         Assert.notNull(pattern, "Pattern must not be null");
-        Map<String, Object> results = connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "CONFIG", 
-            (Map<String, Object> rawResult) -> rawResult, "GET", pattern);
-        
+        Map<String, Object> results =
+                connection.execute(
+                        SimpleMultiNodeRoute.ALL_PRIMARIES,
+                        "CONFIG",
+                        (Map<String, Object> rawResult) -> rawResult,
+                        "GET",
+                        pattern);
+
         return aggregateConfigResults(results);
     }
 
@@ -183,15 +195,21 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
         Assert.notNull(timeUnit, "TimeUnit must not be null");
 
         // valkey-glide default route is Random, as expected
-        return connection.execute("TIME", (Object[] rawResult) -> ValkeyGlideConverters.parseTimeResponse(rawResult, timeUnit));
+        return connection.execute(
+                "TIME",
+                (Object[] rawResult) -> ValkeyGlideConverters.parseTimeResponse(rawResult, timeUnit));
     }
 
     @Override
     public List<ValkeyClientInfo> getClientList() {
         // valkey-glide default route is bogus - by first key, so we specify ALL_PRIMARIES
-        Map<String, GlideString> results = connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "CLIENT", 
-            (Map<String, GlideString> rawResult) -> rawResult, "LIST");
-        
+        Map<String, GlideString> results =
+                connection.execute(
+                        SimpleMultiNodeRoute.ALL_PRIMARIES,
+                        "CLIENT",
+                        (Map<String, GlideString> rawResult) -> rawResult,
+                        "LIST");
+
         List<ValkeyClientInfo> clientInfos = new ArrayList<>();
         for (GlideString clientList : results.values()) {
             clientInfos.addAll(parseClientListResponse(clientList.toString()));
@@ -203,8 +221,13 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
     public void killClient(String host, int port) {
         Assert.hasText(host, "Host must not be empty");
         String hostAndPort = String.format("%s:%d", host, port);
-        
-        connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "CLIENT", (Map<String, ?> rawResult) -> null, "KILL", hostAndPort);
+
+        connection.execute(
+                SimpleMultiNodeRoute.ALL_PRIMARIES,
+                "CLIENT",
+                (Map<String, ?> rawResult) -> null,
+                "KILL",
+                hostAndPort);
     }
 
     // ========== Node-specific operations ==========
@@ -212,63 +235,88 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
     @Override
     public void bgReWriteAof(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "BGREWRITEAOF", glideResult -> glideResult);
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "BGREWRITEAOF",
+                glideResult -> glideResult);
     }
 
     @Override
     public void bgSave(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "BGSAVE", glideResult -> glideResult);
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()), "BGSAVE", glideResult -> glideResult);
     }
 
     @Override
     public Long lastSave(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        return connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "LASTSAVE", (Long rawResult) -> rawResult);
+        return connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "LASTSAVE",
+                (Long rawResult) -> rawResult);
     }
 
     @Override
     public void save(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "SAVE", glideResult -> glideResult);
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()), "SAVE", glideResult -> glideResult);
     }
 
     @Override
     public Long dbSize(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        return connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "DBSIZE", (Long rawResult) -> rawResult);
+        return connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "DBSIZE",
+                (Long rawResult) -> rawResult);
     }
 
     @Override
     public void flushDb(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "FLUSHDB", glideResult -> glideResult);
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()), "FLUSHDB", glideResult -> glideResult);
     }
 
     @Override
     public void flushDb(ValkeyClusterNode node, FlushOption option) {
         Assert.notNull(node, "Node must not be null");
         Assert.notNull(option, "FlushOption must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "FLUSHDB", glideResult -> glideResult, option.name());
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "FLUSHDB",
+                glideResult -> glideResult,
+                option.name());
     }
 
     @Override
     public void flushAll(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "FLUSHALL", glideResult -> glideResult);
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()), "FLUSHALL", glideResult -> glideResult);
     }
 
     @Override
     public void flushAll(ValkeyClusterNode node, FlushOption option) {
         Assert.notNull(node, "Node must not be null");
         Assert.notNull(option, "FlushOption must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "FLUSHALL", glideResult -> glideResult, option.name());
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "FLUSHALL",
+                glideResult -> glideResult,
+                option.name());
     }
 
     @Override
     public Properties info(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        GlideString result = connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "INFO", (GlideString rawResult) -> rawResult);
+        GlideString result =
+                connection.execute(
+                        new ByAddressRoute(node.getHost(), node.getPort()),
+                        "INFO",
+                        (GlideString rawResult) -> rawResult);
         return parseInfoResponse(result != null ? result.toString() : null);
     }
 
@@ -276,21 +324,33 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
     public Properties info(ValkeyClusterNode node, String section) {
         Assert.notNull(node, "Node must not be null");
         Assert.notNull(section, "Section must not be null");
-        GlideString result = connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "INFO", (GlideString rawResult) -> rawResult, section);
+        GlideString result =
+                connection.execute(
+                        new ByAddressRoute(node.getHost(), node.getPort()),
+                        "INFO",
+                        (GlideString rawResult) -> rawResult,
+                        section);
         return parseInfoResponse(result != null ? result.toString() : null);
     }
 
     @Override
     public void shutdown(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "SHUTDOWN", glideResult -> glideResult);
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()), "SHUTDOWN", glideResult -> glideResult);
     }
 
     @Override
     public Properties getConfig(ValkeyClusterNode node, String pattern) {
         Assert.notNull(node, "Node must not be null");
         Assert.notNull(pattern, "Pattern must not be null");
-        Object result = connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "CONFIG", (Object rawResult) -> rawResult, "GET", pattern);
+        Object result =
+                connection.execute(
+                        new ByAddressRoute(node.getHost(), node.getPort()),
+                        "CONFIG",
+                        (Object rawResult) -> rawResult,
+                        "GET",
+                        pattern);
         return parseConfigResponse(result);
     }
 
@@ -299,32 +359,54 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
         Assert.notNull(node, "Node must not be null");
         Assert.notNull(param, "Parameter must not be null");
         Assert.notNull(value, "Value must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "CONFIG", glideResult -> glideResult, "SET", param, value);
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "CONFIG",
+                glideResult -> glideResult,
+                "SET",
+                param,
+                value);
     }
 
     @Override
     public void resetConfigStats(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "CONFIG", glideResult -> glideResult, "RESETSTAT");
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "CONFIG",
+                glideResult -> glideResult,
+                "RESETSTAT");
     }
 
     @Override
     public void rewriteConfig(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "CONFIG", glideResult -> glideResult, "REWRITE");
+        connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "CONFIG",
+                glideResult -> glideResult,
+                "REWRITE");
     }
 
     @Override
     public Long time(ValkeyClusterNode node, TimeUnit timeUnit) {
         Assert.notNull(node, "Node must not be null");
         Assert.notNull(timeUnit, "TimeUnit must not be null");
-        return connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "TIME", (Object[] rawResult) -> ValkeyGlideConverters.parseTimeResponse(rawResult, timeUnit));
+        return connection.execute(
+                new ByAddressRoute(node.getHost(), node.getPort()),
+                "TIME",
+                (Object[] rawResult) -> ValkeyGlideConverters.parseTimeResponse(rawResult, timeUnit));
     }
 
     @Override
     public List<ValkeyClientInfo> getClientList(ValkeyClusterNode node) {
         Assert.notNull(node, "Node must not be null");
-        GlideString result = connection.execute(new ByAddressRoute(node.getHost(), node.getPort()), "CLIENT", (GlideString rawResult) -> rawResult, "LIST");
+        GlideString result =
+                connection.execute(
+                        new ByAddressRoute(node.getHost(), node.getPort()),
+                        "CLIENT",
+                        (GlideString rawResult) -> rawResult,
+                        "LIST");
         return parseClientListResponse(result.toString());
     }
 
@@ -332,12 +414,14 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
 
     @Override
     public void setClientName(byte[] name) {
-        throw new InvalidDataAccessApiUsageException("CLIENT SETNAME is not supported in cluster environment");
+        throw new InvalidDataAccessApiUsageException(
+                "CLIENT SETNAME is not supported in cluster environment");
     }
 
     @Override
     public String getClientName() {
-        throw new InvalidDataAccessApiUsageException("CLIENT GETNAME is not supported in cluster environment");
+        throw new InvalidDataAccessApiUsageException(
+                "CLIENT GETNAME is not supported in cluster environment");
     }
 
     @Override
@@ -358,14 +442,15 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
     }
 
     @Override
-    public void migrate(byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option, long timeout) {
+    public void migrate(
+            byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option, long timeout) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(target, "Target must not be null");
-        
+
         // Find the source node where the key currently resides
         ValkeyClusterNode sourceNode = connection.clusterCommands().clusterGetNodeForKey(key);
         Assert.notNull(sourceNode, "Could not determine source node for key");
-        
+
         // Build MIGRATE command arguments
         List<Object> args = new ArrayList<>();
         args.add(target.getHost());
@@ -373,33 +458,32 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
         args.add(key);
         args.add(String.valueOf(dbIndex));
         args.add(String.valueOf(timeout));
-        
+
         if (option != null) {
             args.add(option.name());
         }
-        
+
         // Execute MIGRATE on the source node
         connection.execute(
-            new ByAddressRoute(sourceNode.getHost(), sourceNode.getPort()),
-            "MIGRATE",
-            glideResult -> glideResult,
-            args.toArray()
-        );
+                new ByAddressRoute(sourceNode.getHost(), sourceNode.getPort()),
+                "MIGRATE",
+                glideResult -> glideResult,
+                args.toArray());
     }
 
     // ========== Helper methods ==========
 
     /**
-     * Aggregates INFO results from multiple nodes into a single Properties object.
-     * Each property is prefixed with the node address.
+     * Aggregates INFO results from multiple nodes into a single Properties object. Each property is
+     * prefixed with the node address.
      */
     private Properties aggregateInfoResults(Map<String, GlideString> results) {
         Properties aggregated = new Properties();
-        
+
         if (results == null) {
             return aggregated;
         }
-        
+
         for (Map.Entry<String, GlideString> entry : results.entrySet()) {
             String nodeAddress = entry.getKey();
             Properties nodeInfo = parseInfoResponse(entry.getValue().toString());
@@ -408,28 +492,26 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
                 aggregated.setProperty(key, prop.getValue().toString());
             }
         }
-        
+
         return aggregated;
     }
 
-    /**
-     * Parses INFO command response into Properties.
-     */
+    /** Parses INFO command response into Properties. */
     private Properties parseInfoResponse(String infoResponse) {
         Properties properties = new Properties();
-        
+
         if (infoResponse == null || infoResponse.isEmpty()) {
             return properties;
         }
-        
+
         for (String line : infoResponse.split("\r?\n")) {
             line = line.trim();
-            
+
             // Skip empty lines and comments
             if (line.isEmpty() || line.startsWith("#")) {
                 continue;
             }
-            
+
             int colonIndex = line.indexOf(':');
             if (colonIndex > 0 && colonIndex < line.length() - 1) {
                 String key = line.substring(0, colonIndex).trim();
@@ -437,21 +519,21 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
                 properties.setProperty(key, value);
             }
         }
-        
+
         return properties;
     }
 
     /**
-     * Aggregates CONFIG GET results from multiple nodes into a single Properties object.
-     * Each property is prefixed with the node address.
+     * Aggregates CONFIG GET results from multiple nodes into a single Properties object. Each
+     * property is prefixed with the node address.
      */
     private Properties aggregateConfigResults(Map<String, Object> results) {
         Properties aggregated = new Properties();
-        
+
         if (results == null) {
             return aggregated;
         }
-        
+
         for (Map.Entry<String, Object> entry : results.entrySet()) {
             String nodeAddress = entry.getKey();
             Properties nodeConfig = parseConfigResponse(entry.getValue());
@@ -460,20 +542,18 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
                 aggregated.setProperty(key, prop.getValue().toString());
             }
         }
-        
+
         return aggregated;
     }
 
-    /**
-     * Parses CONFIG GET command response into Properties.
-     */
+    /** Parses CONFIG GET command response into Properties. */
     private Properties parseConfigResponse(Object result) {
         Properties properties = new Properties();
-        
+
         if (result == null) {
             return properties;
         }
-        
+
         // CONFIG GET can return Map or List
         if (result instanceof Map) {
             Map<?, ?> map = (Map<?, ?>) result;
@@ -493,20 +573,18 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
                 }
             }
         }
-        
+
         return properties;
     }
 
-    /**
-     * Parses CLIENT LIST command response into a list of ValkeyClientInfo objects.
-     */
+    /** Parses CLIENT LIST command response into a list of ValkeyClientInfo objects. */
     private List<ValkeyClientInfo> parseClientListResponse(String clientListResponse) {
         List<ValkeyClientInfo> clientInfos = new ArrayList<>();
-        
+
         if (clientListResponse == null || clientListResponse.isEmpty()) {
             return clientInfos;
         }
-        
+
         for (String line : clientListResponse.split("\r?\n")) {
             line = line.trim();
             Properties properties = new Properties();
@@ -518,12 +596,12 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
                     properties.setProperty(key, value);
                 }
             }
-            
+
             if (!properties.isEmpty()) {
                 clientInfos.add(new ValkeyClientInfo(properties));
             }
         }
-        
+
         return clientInfos;
     }
 }

@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.connection;
 
 import java.util.List;
-
 import org.springframework.lang.Nullable;
 
 /**
@@ -29,79 +28,79 @@ import org.springframework.lang.Nullable;
  */
 public interface ValkeyScriptingCommands {
 
-	/**
-	 * Flush lua script cache.
-	 *
-	 * @see <a href="https://valkey.io/commands/script-flush">Valkey Documentation: SCRIPT FLUSH</a>
-	 */
-	void scriptFlush();
+    /**
+     * Flush lua script cache.
+     *
+     * @see <a href="https://valkey.io/commands/script-flush">Valkey Documentation: SCRIPT FLUSH</a>
+     */
+    void scriptFlush();
 
-	/**
-	 * Kill current lua script execution.
-	 *
-	 * @see <a href="https://valkey.io/commands/script-kill">Valkey Documentation: SCRIPT KILL</a>
-	 */
-	void scriptKill();
+    /**
+     * Kill current lua script execution.
+     *
+     * @see <a href="https://valkey.io/commands/script-kill">Valkey Documentation: SCRIPT KILL</a>
+     */
+    void scriptKill();
 
-	/**
-	 * Load lua script into scripts cache, without executing it.<br>
-	 * Execute the script by calling {@link #evalSha(byte[], ReturnType, int, byte[]...)}.
-	 *
-	 * @param script must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/script-load">Valkey Documentation: SCRIPT LOAD</a>
-	 */
-	@Nullable
-	String scriptLoad(byte[] script);
+    /**
+     * Load lua script into scripts cache, without executing it.<br>
+     * Execute the script by calling {@link #evalSha(byte[], ReturnType, int, byte[]...)}.
+     *
+     * @param script must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/script-load">Valkey Documentation: SCRIPT LOAD</a>
+     */
+    @Nullable
+    String scriptLoad(byte[] script);
 
-	/**
-	 * Check if given {@code scriptShas} exist in script cache.
-	 *
-	 * @param scriptShas
-	 * @return one entry per given scriptSha in returned {@link List} or {@literal null} when used in pipeline /
-	 *         transaction.
-	 * @see <a href="https://valkey.io/commands/script-exists">Valkey Documentation: SCRIPT EXISTS</a>
-	 */
-	@Nullable
-	List<Boolean> scriptExists(String... scriptShas);
+    /**
+     * Check if given {@code scriptShas} exist in script cache.
+     *
+     * @param scriptShas
+     * @return one entry per given scriptSha in returned {@link List} or {@literal null} when used in
+     *     pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/script-exists">Valkey Documentation: SCRIPT EXISTS</a>
+     */
+    @Nullable
+    List<Boolean> scriptExists(String... scriptShas);
 
-	/**
-	 * Evaluate given {@code script}.
-	 *
-	 * @param script must not be {@literal null}.
-	 * @param returnType must not be {@literal null}.
-	 * @param numKeys
-	 * @param keysAndArgs must not be {@literal null}.
-	 * @return script result. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/eval">Valkey Documentation: EVAL</a>
-	 */
-	@Nullable
-	<T> T eval(byte[] script, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
+    /**
+     * Evaluate given {@code script}.
+     *
+     * @param script must not be {@literal null}.
+     * @param returnType must not be {@literal null}.
+     * @param numKeys
+     * @param keysAndArgs must not be {@literal null}.
+     * @return script result. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/eval">Valkey Documentation: EVAL</a>
+     */
+    @Nullable
+    <T> T eval(byte[] script, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
 
-	/**
-	 * Evaluate given {@code scriptSha}.
-	 *
-	 * @param scriptSha must not be {@literal null}.
-	 * @param returnType must not be {@literal null}.
-	 * @param numKeys
-	 * @param keysAndArgs must not be {@literal null}.
-	 * @return script result. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/evalsha">Valkey Documentation: EVALSHA</a>
-	 */
-	@Nullable
-	<T> T evalSha(String scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
+    /**
+     * Evaluate given {@code scriptSha}.
+     *
+     * @param scriptSha must not be {@literal null}.
+     * @param returnType must not be {@literal null}.
+     * @param numKeys
+     * @param keysAndArgs must not be {@literal null}.
+     * @return script result. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/evalsha">Valkey Documentation: EVALSHA</a>
+     */
+    @Nullable
+    <T> T evalSha(String scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
 
-	/**
-	 * Evaluate given {@code scriptSha}.
-	 *
-	 * @param scriptSha must not be {@literal null}.
-	 * @param returnType must not be {@literal null}.
-	 * @param numKeys
-	 * @param keysAndArgs must not be {@literal null}.
-	 * @return script result. {@literal null} when used in pipeline / transaction.
-	 * @since 1.5
-	 * @see <a href="https://valkey.io/commands/evalsha">Valkey Documentation: EVALSHA</a>
-	 */
-	@Nullable
-	<T> T evalSha(byte[] scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
+    /**
+     * Evaluate given {@code scriptSha}.
+     *
+     * @param scriptSha must not be {@literal null}.
+     * @param returnType must not be {@literal null}.
+     * @param numKeys
+     * @param keysAndArgs must not be {@literal null}.
+     * @return script result. {@literal null} when used in pipeline / transaction.
+     * @since 1.5
+     * @see <a href="https://valkey.io/commands/evalsha">Valkey Documentation: EVALSHA</a>
+     */
+    @Nullable
+    <T> T evalSha(byte[] scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
 }

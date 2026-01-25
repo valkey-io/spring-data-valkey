@@ -17,22 +17,21 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.connection.AbstractConnectionTransactionIntegrationTests;
+import io.valkey.springframework.data.valkey.connection.ReturnType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.connection.AbstractConnectionTransactionIntegrationTests;
-import io.valkey.springframework.data.valkey.connection.ReturnType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
  * Integration test of {@link JedisConnection} transaction functionality.
- * <p>
- * Each method of {@link JedisConnection} behaves differently if executed with a transaction (i.e. between multi and
- * exec or discard calls), so this test covers those branching points
+ *
+ * <p>Each method of {@link JedisConnection} behaves differently if executed with a transaction
+ * (i.e. between multi and exec or discard calls), so this test covers those branching points
  *
  * @author Jennifer Hickey
  * @author Mark Paluch
@@ -40,169 +39,174 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration("JedisConnectionIntegrationTests-context.xml")
-public class JedisConnectionTransactionIntegrationTests extends AbstractConnectionTransactionIntegrationTests {
+public class JedisConnectionTransactionIntegrationTests
+        extends AbstractConnectionTransactionIntegrationTests {
 
-	@AfterEach
-	public void tearDown() {
-		try {
-			connection.flushAll();
-			connection.close();
-		} catch (Exception ignore) {
-			// Jedis leaves some incomplete data in OutputStream on NPE caused by null key/value tests
-			// Attempting to close the connection will result in error on sending QUIT to Valkey
-		}
-		connection = null;
-	}
+    @AfterEach
+    public void tearDown() {
+        try {
+            connection.flushAll();
+            connection.close();
+        } catch (Exception ignore) {
+            // Jedis leaves some incomplete data in OutputStream on NPE caused by null key/value tests
+            // Attempting to close the connection will result in error on sending QUIT to Valkey
+        }
+        connection = null;
+    }
 
-	@Disabled("Jedis issue: Transaction tries to return String instead of List<String>")
-	public void testGetConfig() {}
+    @Disabled("Jedis issue: Transaction tries to return String instead of List<String>")
+    public void testGetConfig() {}
 
-	@Test
-	public void testEvalShaNotFound() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> {
-					connection.evalSha("somefakesha", ReturnType.VALUE, 2, "key1", "key2");
-					getResults();
-				});
-	}
+    @Test
+    public void testEvalShaNotFound() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(
+                        () -> {
+                            connection.evalSha("somefakesha", ReturnType.VALUE, 2, "key1", "key2");
+                            getResults();
+                        });
+    }
 
-	@Test
-	public void testEvalShaArrayError() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> {
-					connection.evalSha("notasha", ReturnType.MULTI, 1, "key1", "arg1");
-					getResults();
-				});
-	}
+    @Test
+    public void testEvalShaArrayError() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(
+                        () -> {
+                            connection.evalSha("notasha", ReturnType.MULTI, 1, "key1", "arg1");
+                            getResults();
+                        });
+    }
 
-	@Test
-	public void testEvalArrayScriptError() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> {
-					connection.eval("return {1,2", ReturnType.MULTI, 1, "foo", "bar");
-					getResults();
-				});
-	}
+    @Test
+    public void testEvalArrayScriptError() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(
+                        () -> {
+                            connection.eval("return {1,2", ReturnType.MULTI, 1, "foo", "bar");
+                            getResults();
+                        });
+    }
 
-	@Test
-	public void testEvalReturnSingleError() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(()-> {
-					connection.eval("return redis.call('expire','foo')", ReturnType.BOOLEAN, 0);
-					getResults();
-				});
-	}
+    @Test
+    public void testEvalReturnSingleError() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(
+                        () -> {
+                            connection.eval("return redis.call('expire','foo')", ReturnType.BOOLEAN, 0);
+                            getResults();
+                        });
+    }
 
+    // Unsupported Ops
+    @Test
+    @Disabled
+    public void testInfoBySection() {}
 
-	// Unsupported Ops
-	@Test
-	@Disabled
-	public void testInfoBySection() {}
+    @Test
+    @Disabled
+    public void testRestoreBadData() {}
 
-	@Test
-	@Disabled
-	public void testRestoreBadData() {}
+    @Test
+    @Disabled
+    public void testRestoreExistingKey() {}
 
-	@Test
-	@Disabled
-	public void testRestoreExistingKey() {}
+    @Test // DATAREDIS-269
+    @Disabled
+    public void clientSetNameWorksCorrectly() {}
 
-	@Test // DATAREDIS-269
-	@Disabled
-	public void clientSetNameWorksCorrectly() {}
+    @Test
+    @Override
+    // DATAREDIS-268
+    public void testListClientsContainsAtLeastOneElement() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(super::testListClientsContainsAtLeastOneElement);
+    }
 
-	@Test
-	@Override
-	// DATAREDIS-268
-	public void testListClientsContainsAtLeastOneElement() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(super::testListClientsContainsAtLeastOneElement);
-	}
+    @Test // DATAREDIS-296
+    @Disabled
+    public void testExecWithoutMulti() {}
 
-	@Test // DATAREDIS-296
-	@Disabled
-	public void testExecWithoutMulti() {}
+    @Test
+    @Override
+    @Disabled
+    public void testMultiExec() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testMultiExec() {}
+    @Test
+    @Override
+    @Disabled
+    public void testMultiDiscard() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testMultiDiscard() {}
+    @Test
+    @Override
+    @Disabled
+    public void testErrorInTx() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testErrorInTx() {}
+    @Test
+    @Override
+    @Disabled
+    public void testWatch() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testWatch() {}
+    @Test
+    @Override
+    @Disabled
+    public void testUnwatch() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testUnwatch() {}
+    @Test
+    @Override
+    @Disabled
+    public void testMultiAlreadyInTx() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testMultiAlreadyInTx() {}
+    @Test
+    @Override
+    @Disabled
+    public void testPingPong() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testPingPong() {}
+    @Test
+    @Override
+    @Disabled
+    public void testFlushDb() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testFlushDb() {}
+    @Override
+    @Disabled
+    public void testEcho() {}
 
-	@Override
-	@Disabled
-	public void testEcho() {}
+    @Override
+    @Disabled
+    public void testInfo() {}
 
-	@Override
-	@Disabled
-	public void testInfo() {}
+    @Override
+    @Disabled
+    public void testMove() {}
 
-	@Override
-	@Disabled
-	public void testMove() {}
+    @Test
+    @Override
+    @Disabled
+    public void testLastSave() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testLastSave() {}
+    @Test
+    @Override
+    @Disabled
+    public void testGetTimeShouldRequestServerTime() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testGetTimeShouldRequestServerTime() {}
+    @Test
+    @Override
+    @Disabled
+    public void testGetTimeShouldRequestServerTimeAsMicros() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testGetTimeShouldRequestServerTimeAsMicros() {}
+    @Test
+    @Override
+    @Disabled
+    public void testDbSize() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testDbSize() {}
+    @Test
+    @Override
+    @Disabled
+    public void testSelect() {}
 
-	@Test
-	@Override
-	@Disabled
-	public void testSelect() {}
-
-	@Test
-	@Override
-	@Disabled("Parameter ordering in zrevrangeByLex(byte[] key, byte[] max, byte[] min) is swapped so transactions use inverse parameter order")
-	public void zRevRangeByLexTest() {}
-
+    @Test
+    @Override
+    @Disabled(
+            "Parameter ordering in zrevrangeByLex(byte[] key, byte[] max, byte[] min) is swapped so"
+                    + " transactions use inverse parameter order")
+    public void zRevRangeByLexTest() {}
 }

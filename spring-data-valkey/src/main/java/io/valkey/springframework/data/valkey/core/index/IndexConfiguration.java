@@ -20,14 +20,13 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 
 /**
- * {@link IndexConfiguration} allows programmatic setup of indexes. This is suitable for cases where there is no option
- * to use the equivalent {@link Indexed} annotation.
+ * {@link IndexConfiguration} allows programmatic setup of indexes. This is suitable for cases where
+ * there is no option to use the equivalent {@link Indexed} annotation.
  *
  * @author Christoph Strobl
  * @author Rob Winch
@@ -35,77 +34,77 @@ import org.springframework.util.ObjectUtils;
  */
 public class IndexConfiguration implements ConfigurableIndexDefinitionProvider {
 
-	private final Set<IndexDefinition> definitions;
+    private final Set<IndexDefinition> definitions;
 
-	/**
-	 * Creates new empty {@link IndexConfiguration}.
-	 */
-	public IndexConfiguration() {
+    /** Creates new empty {@link IndexConfiguration}. */
+    public IndexConfiguration() {
 
-		this.definitions = new CopyOnWriteArraySet<>();
-		for (IndexDefinition initial : initialConfiguration()) {
-			addIndexDefinition(initial);
-		}
-	}
+        this.definitions = new CopyOnWriteArraySet<>();
+        for (IndexDefinition initial : initialConfiguration()) {
+            addIndexDefinition(initial);
+        }
+    }
 
-	@Override
-	public boolean hasIndexFor(Serializable keyspace) {
-		return !getIndexDefinitionsFor(keyspace).isEmpty();
-	}
+    @Override
+    public boolean hasIndexFor(Serializable keyspace) {
+        return !getIndexDefinitionsFor(keyspace).isEmpty();
+    }
 
-	public boolean hasIndexFor(Serializable keyspace, String path) {
-		return !getIndexDefinitionsFor(keyspace, path).isEmpty();
-	}
+    public boolean hasIndexFor(Serializable keyspace, String path) {
+        return !getIndexDefinitionsFor(keyspace, path).isEmpty();
+    }
 
-	public Set<IndexDefinition> getIndexDefinitionsFor(Serializable keyspace, String path) {
-		return getIndexDefinitions(keyspace, path, Object.class);
-	}
+    public Set<IndexDefinition> getIndexDefinitionsFor(Serializable keyspace, String path) {
+        return getIndexDefinitions(keyspace, path, Object.class);
+    }
 
-	public Set<IndexDefinition> getIndexDefinitionsFor(Serializable keyspace) {
+    public Set<IndexDefinition> getIndexDefinitionsFor(Serializable keyspace) {
 
-		Set<IndexDefinition> indexDefinitions = new LinkedHashSet<>();
+        Set<IndexDefinition> indexDefinitions = new LinkedHashSet<>();
 
-		for (IndexDefinition indexDef : definitions) {
-			if (indexDef.getKeyspace().equals(keyspace)) {
-				indexDefinitions.add(indexDef);
-			}
-		}
+        for (IndexDefinition indexDef : definitions) {
+            if (indexDef.getKeyspace().equals(keyspace)) {
+                indexDefinitions.add(indexDef);
+            }
+        }
 
-		return indexDefinitions;
-	}
+        return indexDefinitions;
+    }
 
-	public void addIndexDefinition(IndexDefinition indexDefinition) {
+    public void addIndexDefinition(IndexDefinition indexDefinition) {
 
-		Assert.notNull(indexDefinition, "ValkeyIndexDefinition must not be null in order to be added");
-		this.definitions.add(indexDefinition);
-	}
+        Assert.notNull(indexDefinition, "ValkeyIndexDefinition must not be null in order to be added");
+        this.definitions.add(indexDefinition);
+    }
 
-	private Set<IndexDefinition> getIndexDefinitions(Serializable keyspace, String path, Class<?> type) {
+    private Set<IndexDefinition> getIndexDefinitions(
+            Serializable keyspace, String path, Class<?> type) {
 
-		Set<IndexDefinition> def = new LinkedHashSet<>();
-		for (IndexDefinition indexDef : definitions) {
-			if (ClassUtils.isAssignable(type, indexDef.getClass()) && indexDef.getKeyspace().equals(keyspace)) {
+        Set<IndexDefinition> def = new LinkedHashSet<>();
+        for (IndexDefinition indexDef : definitions) {
+            if (ClassUtils.isAssignable(type, indexDef.getClass())
+                    && indexDef.getKeyspace().equals(keyspace)) {
 
-				if (indexDef instanceof PathBasedValkeyIndexDefinition) {
-					if (ObjectUtils.nullSafeEquals(((PathBasedValkeyIndexDefinition) indexDef).getPath(), path)) {
-						def.add(indexDef);
-					}
-				} else {
-					def.add(indexDef);
-				}
-			}
-		}
+                if (indexDef instanceof PathBasedValkeyIndexDefinition) {
+                    if (ObjectUtils.nullSafeEquals(
+                            ((PathBasedValkeyIndexDefinition) indexDef).getPath(), path)) {
+                        def.add(indexDef);
+                    }
+                } else {
+                    def.add(indexDef);
+                }
+            }
+        }
 
-		return def;
-	}
+        return def;
+    }
 
-	/**
-	 * Customization hook.
-	 *
-	 * @return must not return {@literal null}.
-	 */
-	protected Iterable<? extends IndexDefinition> initialConfiguration() {
-		return Collections.emptySet();
-	}
-
+    /**
+     * Customization hook.
+     *
+     * @return must not return {@literal null}.
+     */
+    protected Iterable<? extends IndexDefinition> initialConfiguration() {
+        return Collections.emptySet();
+    }
 }

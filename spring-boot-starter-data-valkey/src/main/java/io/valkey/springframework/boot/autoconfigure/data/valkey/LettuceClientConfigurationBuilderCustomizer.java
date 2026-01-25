@@ -20,12 +20,11 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientCon
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientConfiguration.LettuceClientConfigurationBuilder;
 
 /**
- * Callback interface that can be implemented by beans wishing to customize the
- * {@link LettuceClientConfiguration} through a {@link LettuceClientConfigurationBuilder
+ * Callback interface that can be implemented by beans wishing to customize the {@link
+ * LettuceClientConfiguration} through a {@link LettuceClientConfigurationBuilder
  * LettuceClientConfiguration.LettuceClientConfigurationBuilder} whilst retaining default
- * auto-configuration. To customize only the
- * {@link LettuceClientConfiguration#getClientOptions() client options} of the
- * configuration, use {@link LettuceClientOptionsBuilderCustomizer} instead.
+ * auto-configuration. To customize only the {@link LettuceClientConfiguration#getClientOptions()
+ * client options} of the configuration, use {@link LettuceClientOptionsBuilderCustomizer} instead.
  *
  * @author Mark Paluch
  * @since 2.0.0
@@ -33,10 +32,10 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientCon
 @FunctionalInterface
 public interface LettuceClientConfigurationBuilderCustomizer {
 
-	/**
-	 * Customize the {@link LettuceClientConfigurationBuilder}.
-	 * @param clientConfigurationBuilder the builder to customize
-	 */
-	void customize(LettuceClientConfigurationBuilder clientConfigurationBuilder);
-
+    /**
+     * Customize the {@link LettuceClientConfigurationBuilder}.
+     *
+     * @param clientConfigurationBuilder the builder to customize
+     */
+    void customize(LettuceClientConfigurationBuilder clientConfigurationBuilder);
 }

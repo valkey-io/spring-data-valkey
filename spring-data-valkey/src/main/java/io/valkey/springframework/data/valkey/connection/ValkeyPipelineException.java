@@ -18,73 +18,74 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.Collections;
 import java.util.List;
-
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import org.springframework.lang.Nullable;
 
 /**
- * Exception thrown when executing/closing a pipeline that contains one or multiple invalid/incorrect statements. The
- * exception might also contain the pipeline result (if the driver returns it), allowing for analysis and tracing.
- * <p>
- * Typically, the first exception returned by the pipeline is used as the <i>cause</i> of this exception for easier
- * debugging.
+ * Exception thrown when executing/closing a pipeline that contains one or multiple
+ * invalid/incorrect statements. The exception might also contain the pipeline result (if the driver
+ * returns it), allowing for analysis and tracing.
+ *
+ * <p>Typically, the first exception returned by the pipeline is used as the <i>cause</i> of this
+ * exception for easier debugging.
  *
  * @author Costin Leau
  */
 public class ValkeyPipelineException extends InvalidDataAccessResourceUsageException {
 
-	private final List<Object> results;
+    private final List<Object> results;
 
-	/**
-	 * Constructs a new <code>ValkeyPipelineException</code> instance.
-	 *
-	 * @param msg the message
-	 * @param cause the cause
-	 * @param pipelineResult the pipeline result
-	 */
-	public ValkeyPipelineException(@Nullable String msg, @Nullable Throwable cause, List<Object> pipelineResult) {
-		super(msg, cause);
-		results = Collections.unmodifiableList(pipelineResult);
-	}
+    /**
+     * Constructs a new <code>ValkeyPipelineException</code> instance.
+     *
+     * @param msg the message
+     * @param cause the cause
+     * @param pipelineResult the pipeline result
+     */
+    public ValkeyPipelineException(
+            @Nullable String msg, @Nullable Throwable cause, List<Object> pipelineResult) {
+        super(msg, cause);
+        results = Collections.unmodifiableList(pipelineResult);
+    }
 
-	/**
-	 * Constructs a new <code>ValkeyPipelineException</code> instance using a default message.
-	 *
-	 * @param cause the cause
-	 * @param pipelineResult the pipeline result
-	 */
-	public ValkeyPipelineException(Exception cause, List<Object> pipelineResult) {
-		this("Pipeline contained one or more invalid commands", cause, pipelineResult);
-	}
+    /**
+     * Constructs a new <code>ValkeyPipelineException</code> instance using a default message.
+     *
+     * @param cause the cause
+     * @param pipelineResult the pipeline result
+     */
+    public ValkeyPipelineException(Exception cause, List<Object> pipelineResult) {
+        this("Pipeline contained one or more invalid commands", cause, pipelineResult);
+    }
 
-	/**
-	 * Constructs a new <code>ValkeyPipelineException</code> instance using a default message and an empty pipeline result
-	 * list.
-	 *
-	 * @param cause the cause
-	 */
-	public ValkeyPipelineException(Exception cause) {
-		this("Pipeline contained one or more invalid commands", cause, Collections.emptyList());
-	}
+    /**
+     * Constructs a new <code>ValkeyPipelineException</code> instance using a default message and an
+     * empty pipeline result list.
+     *
+     * @param cause the cause
+     */
+    public ValkeyPipelineException(Exception cause) {
+        this("Pipeline contained one or more invalid commands", cause, Collections.emptyList());
+    }
 
-	/**
-	 * Constructs a new <code>ValkeyPipelineException</code> instance.
-	 *
-	 * @param msg message
-	 * @param pipelineResult pipeline partial results
-	 */
-	public ValkeyPipelineException(String msg, List<Object> pipelineResult) {
-		super(msg);
-		results = Collections.unmodifiableList(pipelineResult);
-	}
+    /**
+     * Constructs a new <code>ValkeyPipelineException</code> instance.
+     *
+     * @param msg message
+     * @param pipelineResult pipeline partial results
+     */
+    public ValkeyPipelineException(String msg, List<Object> pipelineResult) {
+        super(msg);
+        results = Collections.unmodifiableList(pipelineResult);
+    }
 
-	/**
-	 * Optionally returns the result of the pipeline that caused the exception. Typically contains both the results of the
-	 * successful statements but also the exceptions of the incorrect ones.
-	 *
-	 * @return result of the pipeline
-	 */
-	public List<Object> getPipelineResult() {
-		return results;
-	}
+    /**
+     * Optionally returns the result of the pipeline that caused the exception. Typically contains
+     * both the results of the successful statements but also the exceptions of the incorrect ones.
+     *
+     * @return result of the pipeline
+     */
+    public List<Object> getPipelineResult() {
+        return results;
+    }
 }

@@ -18,6 +18,16 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 import static org.assertj.core.api.Assertions.*;
 import static org.awaitility.Awaitility.*;
 
+import io.valkey.springframework.data.valkey.SettingsUtils;
+import io.valkey.springframework.data.valkey.connection.Message;
+import io.valkey.springframework.data.valkey.connection.MessageListener;
+import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,33 +40,21 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import io.valkey.springframework.data.valkey.SettingsUtils;
-import io.valkey.springframework.data.valkey.connection.Message;
-import io.valkey.springframework.data.valkey.connection.MessageListener;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
-import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
-import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.lang.Nullable;
 
 /**
- * Integration tests for Valkey Glide pub/sub with connection pooling.
- * These tests specifically target issues that can arise when clients are pooled
- * and their state may persist between uses.
+ * Integration tests for Valkey Glide pub/sub with connection pooling. These tests specifically
+ * target issues that can arise when clients are pooled and their state may persist between uses.
  */
 @MethodSource("testParams")
 class ValkeyGlidePubSubPoolingIntegrationTests {
 
-    private static final Logger logger = LoggerFactory.getLogger(ValkeyGlidePubSubPoolingIntegrationTests.class);
+    private static final Logger logger =
+            LoggerFactory.getLogger(ValkeyGlidePubSubPoolingIntegrationTests.class);
 
     private static final Duration AWAIT_TIMEOUT = Duration.ofSeconds(2);
     private static final long TERMINATION_TIMEOUT_SECONDS = 10;
@@ -77,11 +75,11 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         List<Object[]> params = new ArrayList<>();
 
         // Always test standalone
-        params.add(new Object[] { false });
+        params.add(new Object[] {false});
 
         // Also test cluster if available
         if (clusterAvailable()) {
-            params.add(new Object[] { true });
+            params.add(new Object[] {true});
         }
 
         return params;
@@ -107,9 +105,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         destroyFactory(publisherFactory);
     }
 
-    /**
-     * Creates a connection factory with the specified pool size and registers it for cleanup.
-     */
+    /** Creates a connection factory with the specified pool size and registers it for cleanup. */
     private ValkeyGlideConnectionFactory createTestFactory(int poolSize) {
         ValkeyGlideConnectionFactory factory = createConnectionFactory(poolSize);
         testFactories.add(factory);
@@ -117,9 +113,8 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
     }
 
     private ValkeyGlideConnectionFactory createConnectionFactory(int poolSize) {
-        ValkeyGlideClientConfiguration clientConfig = ValkeyGlideClientConfiguration.builder()
-                .maxPoolSize(poolSize)
-                .build();
+        ValkeyGlideClientConfiguration clientConfig =
+                ValkeyGlideClientConfiguration.builder().maxPoolSize(poolSize).build();
 
         ValkeyGlideConnectionFactory factory;
         if (useCluster) {
@@ -169,7 +164,8 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         ValkeyConnection conn1 = connectionFactory.getConnection();
         Object nativeClient1 = conn1.getNativeConnection();
 
-        conn1.subscribe((message, pattern) -> listener1Messages.add(new String(message.getBody())),
+        conn1.subscribe(
+                (message, pattern) -> listener1Messages.add(new String(message.getBody())),
                 channel1.getBytes());
 
         publish(channel1, "message1");
@@ -182,7 +178,8 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         ValkeyConnection conn2 = connectionFactory.getConnection();
         assertThat(conn2.getNativeConnection()).isSameAs(nativeClient1);
 
-        conn2.subscribe((message, pattern) -> listener2Messages.add(new String(message.getBody())),
+        conn2.subscribe(
+                (message, pattern) -> listener2Messages.add(new String(message.getBody())),
                 channel2.getBytes());
 
         publish(channel1, "message_to_old_channel");
@@ -248,22 +245,23 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
                 assertThat(conn.getNativeConnection()).isSameAs(firstClient);
             }
 
-            CompositeListener listener = new CompositeListener() {
-                @Override
-                public void onMessage(Message message, @Nullable byte[] pattern) {}
+            CompositeListener listener =
+                    new CompositeListener() {
+                        @Override
+                        public void onMessage(Message message, @Nullable byte[] pattern) {}
 
-                @Override
-                public void onChannelSubscribed(byte[] ch, long count) {
-                    subscribedChannel.set(ch);
-                    subscribed.complete(null);
-                }
+                        @Override
+                        public void onChannelSubscribed(byte[] ch, long count) {
+                            subscribedChannel.set(ch);
+                            subscribed.complete(null);
+                        }
 
-                @Override
-                public void onChannelUnsubscribed(byte[] ch, long count) {
-                    unsubscribedChannel.set(ch);
-                    unsubscribed.complete(null);
-                }
-            };
+                        @Override
+                        public void onChannelUnsubscribed(byte[] ch, long count) {
+                            unsubscribedChannel.set(ch);
+                            unsubscribed.complete(null);
+                        }
+                    };
 
             conn.subscribe(listener, channel.getBytes());
 
@@ -290,9 +288,12 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         ValkeyConnection conn1 = connectionFactory.getConnection();
         Object nativeClient = conn1.getNativeConnection();
 
-        conn1.subscribe((message, pattern) -> {
-            messages.add(new String(message.getChannel()) + ":" + new String(message.getBody()));
-        }, channel1.getBytes(), channel2.getBytes());
+        conn1.subscribe(
+                (message, pattern) -> {
+                    messages.add(new String(message.getChannel()) + ":" + new String(message.getBody()));
+                },
+                channel1.getBytes(),
+                channel2.getBytes());
 
         publish(channel1, "msg1");
         publish(channel2, "msg2");
@@ -307,9 +308,11 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         ValkeyConnection conn2 = connectionFactory.getConnection();
         assertThat(conn2.getNativeConnection()).isSameAs(nativeClient);
 
-        conn2.subscribe((message, pattern) -> {
-            messages.add(new String(message.getChannel()) + ":" + new String(message.getBody()));
-        }, channel3.getBytes());
+        conn2.subscribe(
+                (message, pattern) -> {
+                    messages.add(new String(message.getChannel()) + ":" + new String(message.getBody()));
+                },
+                channel3.getBytes());
 
         publish(channel1, "should_not_receive1");
         publish(channel2, "should_not_receive2");
@@ -337,8 +340,8 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         assertThat(conn2.getNativeConnection()).isSameAs(nativeClient);
 
         AtomicReference<String> received = new AtomicReference<>();
-        conn2.subscribe((message, pattern) -> received.set(new String(message.getBody())),
-                channel.getBytes());
+        conn2.subscribe(
+                (message, pattern) -> received.set(new String(message.getBody())), channel.getBytes());
 
         publish(channel, "test_msg");
 
@@ -363,21 +366,24 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         ValkeyConnection conn = connectionFactory.getConnection();
         Object nativeClient = conn.getNativeConnection();
 
-        conn.subscribe((message, pat) -> {
-            if (pat == null) {
-                receivedFromChannel.add(new String(message.getBody()));
-            } else {
-                receivedFromPattern.add(new String(message.getBody()));
-            }
-        }, channel.getBytes());
+        conn.subscribe(
+                (message, pat) -> {
+                    if (pat == null) {
+                        receivedFromChannel.add(new String(message.getBody()));
+                    } else {
+                        receivedFromPattern.add(new String(message.getBody()));
+                    }
+                },
+                channel.getBytes());
 
         conn.getSubscription().pSubscribe(pattern.getBytes());
 
         publish(channel, "channel_msg");
         publish(patternMatch, "pattern_msg");
 
-        await().atMost(AWAIT_TIMEOUT).until(() ->
-                receivedFromChannel.size() >= 1 && receivedFromPattern.size() >= 1);
+        await()
+                .atMost(AWAIT_TIMEOUT)
+                .until(() -> receivedFromChannel.size() >= 1 && receivedFromPattern.size() >= 1);
 
         assertThat(receivedFromChannel).contains("channel_msg");
         assertThat(receivedFromPattern).contains("pattern_msg");
@@ -390,8 +396,8 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         List<String> newMessages = Collections.synchronizedList(new ArrayList<>());
         String newChannel = "test:pool:mixed:new";
 
-        conn2.subscribe((message, pat) -> newMessages.add(new String(message.getBody())),
-                newChannel.getBytes());
+        conn2.subscribe(
+                (message, pat) -> newMessages.add(new String(message.getBody())), newChannel.getBytes());
 
         publish(channel, "old_channel");
         publish(patternMatch, "old_pattern");
@@ -423,36 +429,39 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         for (int t = 0; t < threadCount; t++) {
             final int threadId = t;
 
-            executor.submit(() -> {
-                try {
-                    for (int iter = 0; iter < iterationsPerThread; iter++) {
-                        String myChannel = channelBase + ":t" + threadId + ":i" + iter;
-                        String expectedMsg = "t" + threadId + "_i" + iter;
-                        AtomicReference<String> received = new AtomicReference<>();
-
-                        connectionLimiter.acquire();
+            executor.submit(
+                    () -> {
                         try {
-                            ValkeyConnection conn = connectionFactory.getConnection();
+                            for (int iter = 0; iter < iterationsPerThread; iter++) {
+                                String myChannel = channelBase + ":t" + threadId + ":i" + iter;
+                                String expectedMsg = "t" + threadId + "_i" + iter;
+                                AtomicReference<String> received = new AtomicReference<>();
 
-                            conn.subscribe((message, pattern) -> {
-                                received.set(new String(message.getBody()));
-                            }, myChannel.getBytes());
+                                connectionLimiter.acquire();
+                                try {
+                                    ValkeyConnection conn = connectionFactory.getConnection();
 
-                            publish(myChannel, expectedMsg);
+                                    conn.subscribe(
+                                            (message, pattern) -> {
+                                                received.set(new String(message.getBody()));
+                                            },
+                                            myChannel.getBytes());
 
-                            await().atMost(AWAIT_TIMEOUT).until(() -> received.get() != null);
-                            assertThat(received.get()).isEqualTo(expectedMsg);
+                                    publish(myChannel, expectedMsg);
 
-                            conn.close();
-                        } finally {
-                            connectionLimiter.release();
+                                    await().atMost(AWAIT_TIMEOUT).until(() -> received.get() != null);
+                                    assertThat(received.get()).isEqualTo(expectedMsg);
+
+                                    conn.close();
+                                } finally {
+                                    connectionLimiter.release();
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
+                            errorCount.incrementAndGet();
                         }
-                    }
-                } catch (Exception e) {
-                    logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
-                    errorCount.incrementAndGet();
-                }
-            });
+                    });
         }
 
         executor.shutdown();
@@ -476,37 +485,40 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         for (int t = 0; t < threadCount; t++) {
             final int threadId = t;
 
-            executor.submit(() -> {
-                try {
-                    for (int iter = 0; iter < iterationsPerThread; iter++) {
-                        String myPattern = patternBase + ":t" + threadId + ":*";
-                        String myChannel = patternBase + ":t" + threadId + ":i" + iter;
-                        String expectedMsg = "t" + threadId + "_iter" + iter;
-                        AtomicReference<String> received = new AtomicReference<>();
-
-                        connectionLimiter.acquire();
+            executor.submit(
+                    () -> {
                         try {
-                            ValkeyConnection conn = connectionFactory.getConnection();
+                            for (int iter = 0; iter < iterationsPerThread; iter++) {
+                                String myPattern = patternBase + ":t" + threadId + ":*";
+                                String myChannel = patternBase + ":t" + threadId + ":i" + iter;
+                                String expectedMsg = "t" + threadId + "_iter" + iter;
+                                AtomicReference<String> received = new AtomicReference<>();
 
-                            conn.pSubscribe((message, pattern) -> {
-                                received.set(new String(message.getBody()));
-                            }, myPattern.getBytes());
+                                connectionLimiter.acquire();
+                                try {
+                                    ValkeyConnection conn = connectionFactory.getConnection();
 
-                            publish(myChannel, expectedMsg);
+                                    conn.pSubscribe(
+                                            (message, pattern) -> {
+                                                received.set(new String(message.getBody()));
+                                            },
+                                            myPattern.getBytes());
 
-                            await().atMost(AWAIT_TIMEOUT).until(() -> received.get() != null);
-                            assertThat(received.get()).isEqualTo(expectedMsg);
+                                    publish(myChannel, expectedMsg);
 
-                            conn.close();
-                        } finally {
-                            connectionLimiter.release();
+                                    await().atMost(AWAIT_TIMEOUT).until(() -> received.get() != null);
+                                    assertThat(received.get()).isEqualTo(expectedMsg);
+
+                                    conn.close();
+                                } finally {
+                                    connectionLimiter.release();
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
+                            errorCount.incrementAndGet();
                         }
-                    }
-                } catch (Exception e) {
-                    logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
-                    errorCount.incrementAndGet();
-                }
-            });
+                    });
         }
 
         executor.shutdown();
@@ -531,41 +543,45 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         for (int t = 0; t < threadCount; t++) {
             final int threadId = t;
 
-            executor.submit(() -> {
-                try {
-                    for (int cycle = 0; cycle < cyclesPerThread; cycle++) {
-                        String channel = channelBase + ":t" + threadId + ":c" + cycle;
-                        String expectedMsg = "t" + threadId + "_c" + cycle;
-                        AtomicReference<String> received = new AtomicReference<>();
-
-                        connectionLimiter.acquire();
+            executor.submit(
+                    () -> {
                         try {
-                            ValkeyConnection conn = connectionFactory.getConnection();
+                            for (int cycle = 0; cycle < cyclesPerThread; cycle++) {
+                                String channel = channelBase + ":t" + threadId + ":c" + cycle;
+                                String expectedMsg = "t" + threadId + "_c" + cycle;
+                                AtomicReference<String> received = new AtomicReference<>();
 
-                            conn.subscribe((message, pattern) -> {
-                                received.set(new String(message.getBody()));
-                            }, channel.getBytes());
+                                connectionLimiter.acquire();
+                                try {
+                                    ValkeyConnection conn = connectionFactory.getConnection();
 
-                            publish(channel, expectedMsg);
+                                    conn.subscribe(
+                                            (message, pattern) -> {
+                                                received.set(new String(message.getBody()));
+                                            },
+                                            channel.getBytes());
 
-                            await().atMost(AWAIT_TIMEOUT).until(() -> received.get() != null);
-                            assertThat(received.get()).isEqualTo(expectedMsg);
+                                    publish(channel, expectedMsg);
 
-                            conn.close();
-                            successCount.incrementAndGet();
-                        } finally {
-                            connectionLimiter.release();
+                                    await().atMost(AWAIT_TIMEOUT).until(() -> received.get() != null);
+                                    assertThat(received.get()).isEqualTo(expectedMsg);
+
+                                    conn.close();
+                                    successCount.incrementAndGet();
+                                } finally {
+                                    connectionLimiter.release();
+                                }
+                            }
+                        } catch (Exception e) {
+                            logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
+                            errorCount.incrementAndGet();
                         }
-                    }
-                } catch (Exception e) {
-                    logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
-                    errorCount.incrementAndGet();
-                }
-            });
+                    });
         }
 
         executor.shutdown();
-        assertThat(executor.awaitTermination(2 * TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)).isTrue();
+        assertThat(executor.awaitTermination(2 * TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS))
+                .isTrue();
         assertThat(errorCount.get()).isZero();
         assertThat(successCount.get()).isEqualTo(threadCount * cyclesPerThread);
     }
@@ -586,52 +602,56 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         for (int t = 0; t < threadCount; t++) {
             final int threadId = t;
 
-            executor.submit(() -> {
-                try {
-                    for (int iter = 0; iter < iterationsPerThread; iter++) {
-                        String myChannel = base + ":channel:t" + threadId + ":i" + iter;
-                        String myPattern = base + ":pattern:t" + threadId + ":*";
-                        String myPatternChannel = base + ":pattern:t" + threadId + ":i" + iter;
-
-                        AtomicReference<String> channelMsg = new AtomicReference<>();
-                        AtomicReference<String> patternMsg = new AtomicReference<>();
-
-                        connectionLimiter.acquire();
+            executor.submit(
+                    () -> {
                         try {
-                            ValkeyConnection conn = connectionFactory.getConnection();
+                            for (int iter = 0; iter < iterationsPerThread; iter++) {
+                                String myChannel = base + ":channel:t" + threadId + ":i" + iter;
+                                String myPattern = base + ":pattern:t" + threadId + ":*";
+                                String myPatternChannel = base + ":pattern:t" + threadId + ":i" + iter;
 
-                            conn.subscribe((message, pattern) -> {
-                                String body = new String(message.getBody());
-                                if (pattern != null) {
-                                    patternMsg.set(body);
-                                } else {
-                                    channelMsg.set(body);
+                                AtomicReference<String> channelMsg = new AtomicReference<>();
+                                AtomicReference<String> patternMsg = new AtomicReference<>();
+
+                                connectionLimiter.acquire();
+                                try {
+                                    ValkeyConnection conn = connectionFactory.getConnection();
+
+                                    conn.subscribe(
+                                            (message, pattern) -> {
+                                                String body = new String(message.getBody());
+                                                if (pattern != null) {
+                                                    patternMsg.set(body);
+                                                } else {
+                                                    channelMsg.set(body);
+                                                }
+                                            },
+                                            myChannel.getBytes());
+
+                                    conn.getSubscription().pSubscribe(myPattern.getBytes());
+
+                                    Thread.sleep(50);
+
+                                    publish(myChannel, "channel_" + threadId);
+                                    publish(myPatternChannel, "pattern_" + threadId);
+
+                                    await()
+                                            .atMost(AWAIT_TIMEOUT)
+                                            .until(() -> channelMsg.get() != null && patternMsg.get() != null);
+
+                                    assertThat(channelMsg.get()).isEqualTo("channel_" + threadId);
+                                    assertThat(patternMsg.get()).isEqualTo("pattern_" + threadId);
+
+                                    conn.close();
+                                } finally {
+                                    connectionLimiter.release();
                                 }
-                            }, myChannel.getBytes());
-
-                            conn.getSubscription().pSubscribe(myPattern.getBytes());
-
-                            Thread.sleep(50);
-
-                            publish(myChannel, "channel_" + threadId);
-                            publish(myPatternChannel, "pattern_" + threadId);
-
-                            await().atMost(AWAIT_TIMEOUT).until(() ->
-                                    channelMsg.get() != null && patternMsg.get() != null);
-
-                            assertThat(channelMsg.get()).isEqualTo("channel_" + threadId);
-                            assertThat(patternMsg.get()).isEqualTo("pattern_" + threadId);
-
-                            conn.close();
-                        } finally {
-                            connectionLimiter.release();
+                            }
+                        } catch (Exception e) {
+                            logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
+                            errorCount.incrementAndGet();
                         }
-                    }
-                } catch (Exception e) {
-                    logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
-                    errorCount.incrementAndGet();
-                }
-            });
+                    });
         }
 
         executor.shutdown();
@@ -655,39 +675,43 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         for (int t = 0; t < threadCount; t++) {
             final int threadId = t;
 
-            executor.submit(() -> {
-                try {
-                    String myChannel = channelBase + ":t" + threadId;
-                    AtomicInteger receivedCount = new AtomicInteger(0);
+            executor.submit(
+                    () -> {
+                        try {
+                            String myChannel = channelBase + ":t" + threadId;
+                            AtomicInteger receivedCount = new AtomicInteger(0);
 
-                    connectionLimiter.acquire();
-                    try {
-                        ValkeyConnection conn = connectionFactory.getConnection();
+                            connectionLimiter.acquire();
+                            try {
+                                ValkeyConnection conn = connectionFactory.getConnection();
 
-                        conn.subscribe((message, pattern) -> {
-                            receivedCount.incrementAndGet();
-                        }, myChannel.getBytes());
+                                conn.subscribe(
+                                        (message, pattern) -> {
+                                            receivedCount.incrementAndGet();
+                                        },
+                                        myChannel.getBytes());
 
-                        try (ValkeyConnection pub = publisherFactory.getConnection()) {
-                            for (int m = 0; m < messagesPerThread; m++) {
-                                pub.publish(myChannel.getBytes(), ("msg" + m).getBytes());
+                                try (ValkeyConnection pub = publisherFactory.getConnection()) {
+                                    for (int m = 0; m < messagesPerThread; m++) {
+                                        pub.publish(myChannel.getBytes(), ("msg" + m).getBytes());
+                                    }
+                                }
+
+                                await()
+                                        .atMost(Duration.ofSeconds(10))
+                                        .until(() -> receivedCount.get() >= messagesPerThread);
+
+                                assertThat(receivedCount.get()).isEqualTo(messagesPerThread);
+
+                                conn.close();
+                            } finally {
+                                connectionLimiter.release();
                             }
+                        } catch (Exception e) {
+                            logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
+                            errorCount.incrementAndGet();
                         }
-
-                        await().atMost(Duration.ofSeconds(10))
-                                .until(() -> receivedCount.get() >= messagesPerThread);
-
-                        assertThat(receivedCount.get()).isEqualTo(messagesPerThread);
-
-                        conn.close();
-                    } finally {
-                        connectionLimiter.release();
-                    }
-                } catch (Exception e) {
-                    logger.error("Thread {} failed: {}", threadId, e.getMessage(), e);
-                    errorCount.incrementAndGet();
-                }
-            });
+                    });
         }
 
         executor.shutdown();

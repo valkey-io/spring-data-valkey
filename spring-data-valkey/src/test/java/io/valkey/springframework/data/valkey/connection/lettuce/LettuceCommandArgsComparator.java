@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import io.lettuce.core.CompositeArgument;
 import io.lettuce.core.codec.StringCodec;
 import io.lettuce.core.protocol.CommandArgs;
-
 import org.assertj.core.api.Assertions;
 
 /**
@@ -26,31 +25,31 @@ import org.assertj.core.api.Assertions;
  */
 public class LettuceCommandArgsComparator {
 
-	static void argsEqual(CompositeArgument args1, CompositeArgument args2) {
+    static void argsEqual(CompositeArgument args1, CompositeArgument args2) {
 
-		CommandArgs<String, String> stringStringCommandArgs1 = new CommandArgs<>(StringCodec.UTF8);
-		args1.build(stringStringCommandArgs1);
+        CommandArgs<String, String> stringStringCommandArgs1 = new CommandArgs<>(StringCodec.UTF8);
+        args1.build(stringStringCommandArgs1);
 
-		CommandArgs<String, String> stringStringCommandArgs2 = new CommandArgs<>(StringCodec.UTF8);
-		args2.build(stringStringCommandArgs2);
+        CommandArgs<String, String> stringStringCommandArgs2 = new CommandArgs<>(StringCodec.UTF8);
+        args2.build(stringStringCommandArgs2);
 
-		Assertions.assertThat(stringStringCommandArgs1.toCommandString())
-				.isEqualTo(stringStringCommandArgs2.toCommandString());
-	}
+        Assertions.assertThat(stringStringCommandArgs1.toCommandString())
+                .isEqualTo(stringStringCommandArgs2.toCommandString());
+    }
 
-	static LettuceCompositeArgumentAssert assertThatCommandArgument(CompositeArgument command) {
-		return new LettuceCompositeArgumentAssert() {
+    static LettuceCompositeArgumentAssert assertThatCommandArgument(CompositeArgument command) {
+        return new LettuceCompositeArgumentAssert() {
 
-			@Override
-			public LettuceCompositeArgumentAssert isEqualTo(CompositeArgument expected) {
+            @Override
+            public LettuceCompositeArgumentAssert isEqualTo(CompositeArgument expected) {
 
-				argsEqual(command, expected);
-				return this;
-			}
-		};
-	}
+                argsEqual(command, expected);
+                return this;
+            }
+        };
+    }
 
-	interface LettuceCompositeArgumentAssert {
-		LettuceCompositeArgumentAssert isEqualTo(CompositeArgument command);
-	}
+    interface LettuceCompositeArgumentAssert {
+        LettuceCompositeArgumentAssert isEqualTo(CompositeArgument command);
+    }
 }

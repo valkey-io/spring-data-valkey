@@ -15,9 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import java.util.StringJoiner;
-
 import io.valkey.springframework.data.valkey.connection.DataType;
+import java.util.StringJoiner;
 import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
@@ -30,48 +29,51 @@ import org.springframework.util.StringUtils;
  */
 public class KeyScanOptions extends ScanOptions {
 
-	/**
-	 * Constant to apply default {@link KeyScanOptions} without setting a limit or matching a pattern.
-	 */
-	public static KeyScanOptions NONE = new KeyScanOptions(null, null, null, null);
+    /**
+     * Constant to apply default {@link KeyScanOptions} without setting a limit or matching a pattern.
+     */
+    public static KeyScanOptions NONE = new KeyScanOptions(null, null, null, null);
 
-	private final @Nullable String type;
+    private final @Nullable String type;
 
-	KeyScanOptions(@Nullable Long count, @Nullable String pattern, @Nullable byte[] bytePattern,
-			@Nullable String type) {
+    KeyScanOptions(
+            @Nullable Long count,
+            @Nullable String pattern,
+            @Nullable byte[] bytePattern,
+            @Nullable String type) {
 
-		super(count, pattern, bytePattern);
-		this.type = type;
-	}
+        super(count, pattern, bytePattern);
+        this.type = type;
+    }
 
-	/**
-	 * Static factory method that returns a new {@link ScanOptionsBuilder}.
-	 *
-	 * @param type 
-	 * @return
-	 */
-	public static ScanOptionsBuilder scanOptions(DataType type) {
-		return new ScanOptionsBuilder().type(type);
-	}
+    /**
+     * Static factory method that returns a new {@link ScanOptionsBuilder}.
+     *
+     * @param type
+     * @return
+     */
+    public static ScanOptionsBuilder scanOptions(DataType type) {
+        return new ScanOptionsBuilder().type(type);
+    }
 
-	@Nullable
-	public String getType() {
-		return type;
-	}
+    @Nullable
+    public String getType() {
+        return type;
+    }
 
-	@Override
-	public String toOptionString() {
+    @Override
+    public String toOptionString() {
 
-		if (this.equals(KeyScanOptions.NONE)) {
-			return "";
-		}
+        if (this.equals(KeyScanOptions.NONE)) {
+            return "";
+        }
 
-		StringJoiner joiner = new StringJoiner(", ").add(super.toOptionString());
+        StringJoiner joiner = new StringJoiner(", ").add(super.toOptionString());
 
-		if (StringUtils.hasText(type)) {
-			joiner.add("'type' '" + type + "'");
-		}
+        if (StringUtils.hasText(type)) {
+            joiner.add("'type' '" + type + "'");
+        }
 
-		return joiner.toString();
-	}
+        return joiner.toString();
+    }
 }

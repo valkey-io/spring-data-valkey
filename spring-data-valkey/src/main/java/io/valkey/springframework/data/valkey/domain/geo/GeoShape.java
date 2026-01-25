@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.domain.geo;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.DistanceUnit;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Metric;
 import org.springframework.data.geo.Shape;
-import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.DistanceUnit;
 
 /**
  * Search predicate for {@code GEOSEARCH} and {@code GEOSEARCHSTORE} commands.
@@ -28,43 +27,44 @@ import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.Distan
  */
 public interface GeoShape extends Shape {
 
-	/**
-	 * Create a shape used as predicate for geo queries from a {@link Distance radius} around the query center point.
-	 *
-	 * @param radius
-	 * @return
-	 */
-	static GeoShape byRadius(Distance radius) {
-		return new RadiusShape(radius);
-	}
+    /**
+     * Create a shape used as predicate for geo queries from a {@link Distance radius} around the
+     * query center point.
+     *
+     * @param radius
+     * @return
+     */
+    static GeoShape byRadius(Distance radius) {
+        return new RadiusShape(radius);
+    }
 
-	/**
-	 * Create a shape used as predicate for geo queries from a bounding box with specified by {@code width} and
-	 * {@code height}.
-	 *
-	 * @param width must not be {@literal null}.
-	 * @param height must not be {@literal null}.
-	 * @param distanceUnit must not be {@literal null}.
-	 * @return
-	 */
-	static GeoShape byBox(double width, double height, DistanceUnit distanceUnit) {
-		return byBox(new BoundingBox(width, height, distanceUnit));
-	}
+    /**
+     * Create a shape used as predicate for geo queries from a bounding box with specified by {@code
+     * width} and {@code height}.
+     *
+     * @param width must not be {@literal null}.
+     * @param height must not be {@literal null}.
+     * @param distanceUnit must not be {@literal null}.
+     * @return
+     */
+    static GeoShape byBox(double width, double height, DistanceUnit distanceUnit) {
+        return byBox(new BoundingBox(width, height, distanceUnit));
+    }
 
-	/**
-	 * Create a shape used as predicate for geo queries from a {@link BoundingBox}.
-	 *
-	 * @param boundingBox must not be {@literal null}.
-	 * @return
-	 */
-	static GeoShape byBox(BoundingBox boundingBox) {
-		return new BoxShape(boundingBox);
-	}
+    /**
+     * Create a shape used as predicate for geo queries from a {@link BoundingBox}.
+     *
+     * @param boundingBox must not be {@literal null}.
+     * @return
+     */
+    static GeoShape byBox(BoundingBox boundingBox) {
+        return new BoxShape(boundingBox);
+    }
 
-	/**
-	 * The metric used for this geo predicate.
-	 *
-	 * @return
-	 */
-	Metric getMetric();
+    /**
+     * The metric used for this geo predicate.
+     *
+     * @return
+     */
+    Metric getMetric();
 }

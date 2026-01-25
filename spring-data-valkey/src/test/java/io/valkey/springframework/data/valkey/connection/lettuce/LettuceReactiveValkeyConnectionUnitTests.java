@@ -23,14 +23,14 @@ import io.lettuce.core.XAddArgs;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.reactive.RedisReactiveCommands;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
+import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
+import io.valkey.springframework.data.valkey.connection.ReactiveStreamCommands.AddStreamRecord;
+import io.valkey.springframework.data.valkey.connection.stream.ByteBufferRecord;
+import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,11 +40,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-
-import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
-import io.valkey.springframework.data.valkey.connection.ReactiveStreamCommands.AddStreamRecord;
-import io.valkey.springframework.data.valkey.connection.stream.ByteBufferRecord;
-import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 /**
  * Unit tests for {@link LettuceReactiveValkeyConnection}.
@@ -55,208 +52,266 @@ import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class LettuceReactiveValkeyConnectionUnitTests {
 
-	@Mock(answer = Answers.RETURNS_MOCKS) StatefulRedisConnection<ByteBuffer, ByteBuffer> sharedConnection;
+    @Mock(answer = Answers.RETURNS_MOCKS)
+    StatefulRedisConnection<ByteBuffer, ByteBuffer> sharedConnection;
 
-	@Mock RedisReactiveCommands<ByteBuffer, ByteBuffer> reactiveCommands;
-	@Mock LettuceConnectionProvider connectionProvider;
+    @Mock RedisReactiveCommands<ByteBuffer, ByteBuffer> reactiveCommands;
+    @Mock LettuceConnectionProvider connectionProvider;
 
-	@BeforeEach
-	void before() {
-		when(connectionProvider.getConnectionAsync(any())).thenReturn(CompletableFuture.completedFuture(sharedConnection));
-		when(connectionProvider.releaseAsync(any())).thenReturn(CompletableFuture.completedFuture(null));
-		when(sharedConnection.reactive()).thenReturn(reactiveCommands);
-	}
+    @BeforeEach
+    void before() {
+        when(connectionProvider.getConnectionAsync(any()))
+                .thenReturn(CompletableFuture.completedFuture(sharedConnection));
+        when(connectionProvider.releaseAsync(any()))
+                .thenReturn(CompletableFuture.completedFuture(null));
+        when(sharedConnection.reactive()).thenReturn(reactiveCommands);
+    }
 
-	@Test // DATAREDIS-720
-	void shouldLazilyInitializeConnection() {
+    @Test // DATAREDIS-720
+    void shouldLazilyInitializeConnection() {
 
-		new LettuceReactiveValkeyConnection(connectionProvider);
+        new LettuceReactiveValkeyConnection(connectionProvider);
 
-		verifyNoInteractions(connectionProvider);
-	}
+        verifyNoInteractions(connectionProvider);
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	void shouldExecuteUsingConnectionProvider() {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    void shouldExecuteUsingConnectionProvider() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		connection.execute(cmd -> Mono.just("foo")).as(StepVerifier::create).expectNext("foo").verifyComplete();
+        connection
+                .execute(cmd -> Mono.just("foo"))
+                .as(StepVerifier::create)
+                .expectNext("foo")
+                .verifyComplete();
 
-		verify(connectionProvider).getConnectionAsync(StatefulConnection.class);
-	}
+        verify(connectionProvider).getConnectionAsync(StatefulConnection.class);
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	void shouldExecuteDedicatedUsingConnectionProvider() {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    void shouldExecuteDedicatedUsingConnectionProvider() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		connection.executeDedicated(cmd -> Mono.just("foo")).as(StepVerifier::create).expectNext("foo").verifyComplete();
+        connection
+                .executeDedicated(cmd -> Mono.just("foo"))
+                .as(StepVerifier::create)
+                .expectNext("foo")
+                .verifyComplete();
 
-		verify(connectionProvider).getConnectionAsync(StatefulConnection.class);
-	}
+        verify(connectionProvider).getConnectionAsync(StatefulConnection.class);
+    }
 
-	@Test // DATAREDIS-720
-	void shouldExecuteOnSharedConnection() {
+    @Test // DATAREDIS-720
+    void shouldExecuteOnSharedConnection() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(sharedConnection,
-				connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(sharedConnection, connectionProvider);
 
-		connection.execute(cmd -> Mono.just("foo")).as(StepVerifier::create).expectNext("foo").verifyComplete();
+        connection
+                .execute(cmd -> Mono.just("foo"))
+                .as(StepVerifier::create)
+                .expectNext("foo")
+                .verifyComplete();
 
-		verifyNoInteractions(connectionProvider);
-	}
+        verifyNoInteractions(connectionProvider);
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	void shouldExecuteDedicatedWithSharedConnection() {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    void shouldExecuteDedicatedWithSharedConnection() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(sharedConnection,
-				connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(sharedConnection, connectionProvider);
 
-		connection.executeDedicated(cmd -> Mono.just("foo")).as(StepVerifier::create).expectNext("foo").verifyComplete();
+        connection
+                .executeDedicated(cmd -> Mono.just("foo"))
+                .as(StepVerifier::create)
+                .expectNext("foo")
+                .verifyComplete();
 
-		verify(connectionProvider).getConnectionAsync(StatefulConnection.class);
-	}
+        verify(connectionProvider).getConnectionAsync(StatefulConnection.class);
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	void shouldOperateOnDedicatedConnection() {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    void shouldOperateOnDedicatedConnection() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		connection.getConnection().as(StepVerifier::create).expectNextCount(1).verifyComplete();
+        connection.getConnection().as(StepVerifier::create).expectNextCount(1).verifyComplete();
 
-		verify(connectionProvider).getConnectionAsync(StatefulConnection.class);
-	}
+        verify(connectionProvider).getConnectionAsync(StatefulConnection.class);
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	void shouldCloseOnlyDedicatedConnection() {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    void shouldCloseOnlyDedicatedConnection() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(sharedConnection,
-				connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(sharedConnection, connectionProvider);
 
-		connection.getConnection().as(StepVerifier::create).expectNextCount(1).verifyComplete();
-		connection.getDedicatedConnection().as(StepVerifier::create).expectNextCount(1).verifyComplete();
+        connection.getConnection().as(StepVerifier::create).expectNextCount(1).verifyComplete();
+        connection
+                .getDedicatedConnection()
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
 
-		connection.close();
+        connection.close();
 
-		verify(sharedConnection, never()).closeAsync();
-		verify(connectionProvider, times(1)).releaseAsync(sharedConnection);
-	}
+        verify(sharedConnection, never()).closeAsync();
+        verify(connectionProvider, times(1)).releaseAsync(sharedConnection);
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	void shouldCloseConnectionOnlyOnce() {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    void shouldCloseConnectionOnlyOnce() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		connection.getConnection().as(StepVerifier::create).expectNextCount(1).verifyComplete();
+        connection.getConnection().as(StepVerifier::create).expectNextCount(1).verifyComplete();
 
-		connection.close();
-		connection.close();
+        connection.close();
+        connection.close();
 
-		verify(connectionProvider, times(1)).releaseAsync(sharedConnection);
-	}
+        verify(connectionProvider, times(1)).releaseAsync(sharedConnection);
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	@SuppressWarnings("unchecked")
-	void multipleCallsInProgressShouldConnectOnlyOnce() throws Exception {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    @SuppressWarnings("unchecked")
+    void multipleCallsInProgressShouldConnectOnlyOnce() throws Exception {
 
-		CompletableFuture<StatefulConnection<?, ?>> connectionFuture = new CompletableFuture<>();
-		reset(connectionProvider);
-		when(connectionProvider.getConnectionAsync(any())).thenReturn(connectionFuture);
+        CompletableFuture<StatefulConnection<?, ?>> connectionFuture = new CompletableFuture<>();
+        reset(connectionProvider);
+        when(connectionProvider.getConnectionAsync(any())).thenReturn(connectionFuture);
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		CompletableFuture<StatefulConnection<ByteBuffer, ByteBuffer>> first = (CompletableFuture) connection.getConnection()
-				.toFuture();
-		CompletableFuture<StatefulConnection<ByteBuffer, ByteBuffer>> second = (CompletableFuture) connection
-				.getConnection().toFuture();
+        CompletableFuture<StatefulConnection<ByteBuffer, ByteBuffer>> first =
+                (CompletableFuture) connection.getConnection().toFuture();
+        CompletableFuture<StatefulConnection<ByteBuffer, ByteBuffer>> second =
+                (CompletableFuture) connection.getConnection().toFuture();
 
-		assertThat(first).isNotDone();
-		assertThat(second).isNotDone();
+        assertThat(first).isNotDone();
+        assertThat(second).isNotDone();
 
-		verify(connectionProvider, times(1)).getConnectionAsync(StatefulConnection.class);
+        verify(connectionProvider, times(1)).getConnectionAsync(StatefulConnection.class);
 
-		connectionFuture.complete(sharedConnection);
+        connectionFuture.complete(sharedConnection);
 
-		first.get(10, TimeUnit.SECONDS);
-		second.get(10, TimeUnit.SECONDS);
+        first.get(10, TimeUnit.SECONDS);
+        second.get(10, TimeUnit.SECONDS);
 
-		assertThat(first).isCompletedWithValue(sharedConnection);
-		assertThat(second).isCompletedWithValue(sharedConnection);
-	}
+        assertThat(first).isCompletedWithValue(sharedConnection);
+        assertThat(second).isCompletedWithValue(sharedConnection);
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	void shouldPropagateConnectionFailures() {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    void shouldPropagateConnectionFailures() {
 
-		reset(connectionProvider);
-		when(connectionProvider.getConnectionAsync(any()))
-				.thenReturn(LettuceFutureUtils.failed(new RedisConnectionException("something went wrong")));
+        reset(connectionProvider);
+        when(connectionProvider.getConnectionAsync(any()))
+                .thenReturn(
+                        LettuceFutureUtils.failed(new RedisConnectionException("something went wrong")));
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		connection.getConnection().as(StepVerifier::create).expectError(ValkeyConnectionFailureException.class).verify();
-	}
+        connection
+                .getConnection()
+                .as(StepVerifier::create)
+                .expectError(ValkeyConnectionFailureException.class)
+                .verify();
+    }
 
-	@Test // DATAREDIS-720, DATAREDIS-721
-	void shouldRejectCommandsAfterClose() {
+    @Test // DATAREDIS-720, DATAREDIS-721
+    void shouldRejectCommandsAfterClose() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
-		connection.close();
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
+        connection.close();
 
-		connection.getConnection().as(StepVerifier::create).expectError(IllegalStateException.class).verify();
-	}
+        connection
+                .getConnection()
+                .as(StepVerifier::create)
+                .expectError(IllegalStateException.class)
+                .verify();
+    }
 
-	@Test // DATAREDIS-659, DATAREDIS-708
-	void bgReWriteAofShouldRespondCorrectly() {
+    @Test // DATAREDIS-659, DATAREDIS-708
+    void bgReWriteAofShouldRespondCorrectly() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		when(reactiveCommands.bgrewriteaof()).thenReturn(Mono.just("OK"));
+        when(reactiveCommands.bgrewriteaof()).thenReturn(Mono.just("OK"));
 
-		connection.serverCommands().bgReWriteAof().as(StepVerifier::create).expectNextCount(1).verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .bgReWriteAof()
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659, DATAREDIS-667, DATAREDIS-708
-	void bgSaveShouldRespondCorrectly() {
+    @Test // DATAREDIS-659, DATAREDIS-667, DATAREDIS-708
+    void bgSaveShouldRespondCorrectly() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		when(reactiveCommands.bgsave()).thenReturn(Mono.just("OK"));
+        when(reactiveCommands.bgsave()).thenReturn(Mono.just("OK"));
 
-		connection.serverCommands().bgSave().as(StepVerifier::create).expectNextCount(1).verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .bgSave()
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-1122
-	void xaddShouldHonorMaxlen() {
+    @Test // DATAREDIS-1122
+    void xaddShouldHonorMaxlen() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		ArgumentCaptor<XAddArgs> args = ArgumentCaptor.forClass(XAddArgs.class);
-		when(reactiveCommands.xadd(any(ByteBuffer.class), args.capture(), anyMap())).thenReturn(Mono.just("1-1"));
+        ArgumentCaptor<XAddArgs> args = ArgumentCaptor.forClass(XAddArgs.class);
+        when(reactiveCommands.xadd(any(ByteBuffer.class), args.capture(), anyMap()))
+                .thenReturn(Mono.just("1-1"));
 
-		MapRecord<ByteBuffer, ByteBuffer, ByteBuffer> record = MapRecord.create(ByteBuffer.wrap("key".getBytes()),
-				Collections.emptyMap());
+        MapRecord<ByteBuffer, ByteBuffer, ByteBuffer> record =
+                MapRecord.create(ByteBuffer.wrap("key".getBytes()), Collections.emptyMap());
 
-		connection.streamCommands().xAdd(Mono.just(AddStreamRecord.of(ByteBufferRecord.of(record)).maxlen(100)))
-				.subscribe();
+        connection
+                .streamCommands()
+                .xAdd(Mono.just(AddStreamRecord.of(ByteBufferRecord.of(record)).maxlen(100)))
+                .subscribe();
 
-		assertThat(args.getValue()).extracting("maxlen").isEqualTo(100L);
-	}
+        assertThat(args.getValue()).extracting("maxlen").isEqualTo(100L);
+    }
 
-	@Test // GH-2047
-	void xaddShouldHonorNoMkStream() {
+    @Test // GH-2047
+    void xaddShouldHonorNoMkStream() {
 
-		LettuceReactiveValkeyConnection connection = new LettuceReactiveValkeyConnection(connectionProvider);
+        LettuceReactiveValkeyConnection connection =
+                new LettuceReactiveValkeyConnection(connectionProvider);
 
-		ArgumentCaptor<XAddArgs> args = ArgumentCaptor.forClass(XAddArgs.class);
-		when(reactiveCommands.xadd(any(ByteBuffer.class), args.capture(), anyMap())).thenReturn(Mono.just("1-1"));
+        ArgumentCaptor<XAddArgs> args = ArgumentCaptor.forClass(XAddArgs.class);
+        when(reactiveCommands.xadd(any(ByteBuffer.class), args.capture(), anyMap()))
+                .thenReturn(Mono.just("1-1"));
 
-		MapRecord<ByteBuffer, ByteBuffer, ByteBuffer> record = MapRecord.create(ByteBuffer.wrap("key".getBytes()),
-				Collections.emptyMap());
+        MapRecord<ByteBuffer, ByteBuffer, ByteBuffer> record =
+                MapRecord.create(ByteBuffer.wrap("key".getBytes()), Collections.emptyMap());
 
-		connection.streamCommands().xAdd(Mono.just(AddStreamRecord.of(ByteBufferRecord.of(record)).makeNoStream()))
-				.subscribe();
+        connection
+                .streamCommands()
+                .xAdd(Mono.just(AddStreamRecord.of(ByteBufferRecord.of(record)).makeNoStream()))
+                .subscribe();
 
-		assertThat(args.getValue()).extracting("nomkstream").isEqualTo(true);
-	}
-
+        assertThat(args.getValue()).extracting("nomkstream").isEqualTo(true);
+    }
 }

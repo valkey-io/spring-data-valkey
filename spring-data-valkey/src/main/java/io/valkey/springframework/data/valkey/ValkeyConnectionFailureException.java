@@ -24,19 +24,18 @@ import org.springframework.dao.DataAccessResourceFailureException;
  */
 public class ValkeyConnectionFailureException extends DataAccessResourceFailureException {
 
-	/**
-	 * @param msg the detail message.
-	 */
-	public ValkeyConnectionFailureException(String msg) {
-		super(msg);
-	}
+    /**
+     * @param msg the detail message.
+     */
+    public ValkeyConnectionFailureException(String msg) {
+        super(msg);
+    }
 
-	/**
-	 * @param msg the detail message.
-	 * @param cause the nested exception.
-	 */
-	public ValkeyConnectionFailureException(String msg, Throwable cause) {
-		super(msg, cause);
-	}
-
+    /**
+     * @param msg the detail message.
+     * @param cause the nested exception.
+     */
+    public ValkeyConnectionFailureException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

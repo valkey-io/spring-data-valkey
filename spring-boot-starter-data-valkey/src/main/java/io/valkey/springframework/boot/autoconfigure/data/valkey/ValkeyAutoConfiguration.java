@@ -16,6 +16,10 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
+import io.valkey.springframework.data.valkey.core.ValkeyOperations;
+import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -26,10 +30,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.ssl.SslBundles;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.core.ValkeyOperations;
-import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 
 /**
  * {@link EnableAutoConfiguration Auto-configuration} for Spring Data's Valkey support.
@@ -48,30 +48,35 @@ import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 @AutoConfiguration
 @ConditionalOnClass(ValkeyOperations.class)
 @EnableConfigurationProperties(ValkeyProperties.class)
-@Import({ ValkeyGlideConnectionConfiguration.class, LettuceConnectionConfiguration.class, JedisConnectionConfiguration.class })
+@Import({
+    ValkeyGlideConnectionConfiguration.class,
+    LettuceConnectionConfiguration.class,
+    JedisConnectionConfiguration.class
+})
 public class ValkeyAutoConfiguration {
 
-	@Bean
-	@ConditionalOnMissingBean(ValkeyConnectionDetails.class)
-	PropertiesValkeyConnectionDetails valkeyConnectionDetails(ValkeyProperties properties,
-			ObjectProvider<SslBundles> sslBundles) {
-		return new PropertiesValkeyConnectionDetails(properties, sslBundles.getIfAvailable());
-	}
+    @Bean
+    @ConditionalOnMissingBean(ValkeyConnectionDetails.class)
+    PropertiesValkeyConnectionDetails valkeyConnectionDetails(
+            ValkeyProperties properties, ObjectProvider<SslBundles> sslBundles) {
+        return new PropertiesValkeyConnectionDetails(properties, sslBundles.getIfAvailable());
+    }
 
-	@Bean
-	@ConditionalOnMissingBean(name = "valkeyTemplate")
-	@ConditionalOnSingleCandidate(ValkeyConnectionFactory.class)
-	public ValkeyTemplate<Object, Object> valkeyTemplate(ValkeyConnectionFactory valkeyConnectionFactory) {
-		ValkeyTemplate<Object, Object> template = new ValkeyTemplate<>();
-		template.setConnectionFactory(valkeyConnectionFactory);
-		return template;
-	}
+    @Bean
+    @ConditionalOnMissingBean(name = "valkeyTemplate")
+    @ConditionalOnSingleCandidate(ValkeyConnectionFactory.class)
+    public ValkeyTemplate<Object, Object> valkeyTemplate(
+            ValkeyConnectionFactory valkeyConnectionFactory) {
+        ValkeyTemplate<Object, Object> template = new ValkeyTemplate<>();
+        template.setConnectionFactory(valkeyConnectionFactory);
+        return template;
+    }
 
-	@Bean
-	@ConditionalOnMissingBean
-	@ConditionalOnSingleCandidate(ValkeyConnectionFactory.class)
-	public StringValkeyTemplate stringValkeyTemplate(ValkeyConnectionFactory valkeyConnectionFactory) {
-		return new StringValkeyTemplate(valkeyConnectionFactory);
-	}
-
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnSingleCandidate(ValkeyConnectionFactory.class)
+    public StringValkeyTemplate stringValkeyTemplate(
+            ValkeyConnectionFactory valkeyConnectionFactory) {
+        return new StringValkeyTemplate(valkeyConnectionFactory);
+    }
 }

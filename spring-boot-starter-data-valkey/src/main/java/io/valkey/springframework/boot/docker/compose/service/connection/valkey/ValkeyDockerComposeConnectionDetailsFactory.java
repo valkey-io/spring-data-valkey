@@ -22,8 +22,8 @@ import org.springframework.boot.docker.compose.service.connection.DockerComposeC
 import org.springframework.boot.docker.compose.service.connection.DockerComposeConnectionSource;
 
 /**
- * {@link DockerComposeConnectionDetailsFactory} to create {@link ValkeyConnectionDetails}
- * for a {@code valkey} service.
+ * {@link DockerComposeConnectionDetailsFactory} to create {@link ValkeyConnectionDetails} for a
+ * {@code valkey} service.
  *
  * @author Moritz Halbritter
  * @author Andy Wilkinson
@@ -32,39 +32,37 @@ import org.springframework.boot.docker.compose.service.connection.DockerComposeC
  * @author Eddú Meléndez
  */
 class ValkeyDockerComposeConnectionDetailsFactory
-		extends DockerComposeConnectionDetailsFactory<ValkeyConnectionDetails> {
+        extends DockerComposeConnectionDetailsFactory<ValkeyConnectionDetails> {
 
-	private static final String[] VALKEY_CONTAINER_NAMES = { "valkey/valkey" };
+    private static final String[] VALKEY_CONTAINER_NAMES = {"valkey/valkey"};
 
-	private static final int VALKEY_PORT = 6379;
+    private static final int VALKEY_PORT = 6379;
 
-	ValkeyDockerComposeConnectionDetailsFactory() {
-		super(VALKEY_CONTAINER_NAMES);
-	}
+    ValkeyDockerComposeConnectionDetailsFactory() {
+        super(VALKEY_CONTAINER_NAMES);
+    }
 
-	@Override
-	protected ValkeyConnectionDetails getDockerComposeConnectionDetails(DockerComposeConnectionSource source) {
-		return new ValkeyDockerComposeConnectionDetails(source.getRunningService());
-	}
+    @Override
+    protected ValkeyConnectionDetails getDockerComposeConnectionDetails(
+            DockerComposeConnectionSource source) {
+        return new ValkeyDockerComposeConnectionDetails(source.getRunningService());
+    }
 
-	/**
-	 * {@link ValkeyConnectionDetails} backed by a {@code valkey} {@link RunningService}.
-	 */
-	static class ValkeyDockerComposeConnectionDetails extends DockerComposeConnectionDetails
-			implements ValkeyConnectionDetails {
+    /** {@link ValkeyConnectionDetails} backed by a {@code valkey} {@link RunningService}. */
+    static class ValkeyDockerComposeConnectionDetails extends DockerComposeConnectionDetails
+            implements ValkeyConnectionDetails {
 
-		private final Standalone standalone;
+        private final Standalone standalone;
 
-		ValkeyDockerComposeConnectionDetails(RunningService service) {
-			super(service);
-			this.standalone = Standalone.of(service.host(), service.ports().get(VALKEY_PORT), getSslBundle(service));
-		}
+        ValkeyDockerComposeConnectionDetails(RunningService service) {
+            super(service);
+            this.standalone =
+                    Standalone.of(service.host(), service.ports().get(VALKEY_PORT), getSslBundle(service));
+        }
 
-		@Override
-		public Standalone getStandalone() {
-			return this.standalone;
-		}
-
-	}
-
+        @Override
+        public Standalone getStandalone() {
+            return this.standalone;
+        }
+    }
 }

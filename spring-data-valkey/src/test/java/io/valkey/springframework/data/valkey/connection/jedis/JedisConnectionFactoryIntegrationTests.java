@@ -18,14 +18,14 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Test;
-import org.springframework.core.task.AsyncTaskExecutor;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.lang.Nullable;
 
 /**
@@ -36,81 +36,85 @@ import org.springframework.lang.Nullable;
  */
 class JedisConnectionFactoryIntegrationTests {
 
-	private @Nullable JedisConnectionFactory factory;
+    private @Nullable JedisConnectionFactory factory;
 
-	@AfterEach
-	void tearDown() {
+    @AfterEach
+    void tearDown() {
 
-		if (factory != null) {
-			factory.destroy();
-		}
-	}
+        if (factory != null) {
+            factory.destroy();
+        }
+    }
 
-	@Test // DATAREDIS-574
-	void shouldInitializeWithStandaloneConfiguration() {
+    @Test // DATAREDIS-574
+    void shouldInitializeWithStandaloneConfiguration() {
 
-		factory = new JedisConnectionFactory(
-				new ValkeyStandaloneConfiguration(SettingsUtils.getHost(), SettingsUtils.getPort()),
-				JedisClientConfiguration.defaultConfiguration());
-		factory.afterPropertiesSet();
-		factory.start();
+        factory =
+                new JedisConnectionFactory(
+                        new ValkeyStandaloneConfiguration(SettingsUtils.getHost(), SettingsUtils.getPort()),
+                        JedisClientConfiguration.defaultConfiguration());
+        factory.afterPropertiesSet();
+        factory.start();
 
-		try (ValkeyConnection connection = factory.getConnection()) {
-			assertThat(connection.ping()).isEqualTo("PONG");
-		}
-	}
+        try (ValkeyConnection connection = factory.getConnection()) {
+            assertThat(connection.ping()).isEqualTo("PONG");
+        }
+    }
 
-	@Test // DATAREDIS-575
-	void connectionAppliesClientName() {
+    @Test // DATAREDIS-575
+    void connectionAppliesClientName() {
 
-		factory = new JedisConnectionFactory(
-				new ValkeyStandaloneConfiguration(SettingsUtils.getHost(), SettingsUtils.getPort()),
-				JedisClientConfiguration.builder().clientName("clientName").build());
-		factory.afterPropertiesSet();
-		factory.start();
+        factory =
+                new JedisConnectionFactory(
+                        new ValkeyStandaloneConfiguration(SettingsUtils.getHost(), SettingsUtils.getPort()),
+                        JedisClientConfiguration.builder().clientName("clientName").build());
+        factory.afterPropertiesSet();
+        factory.start();
 
-		ValkeyConnection connection = factory.getConnection();
+        ValkeyConnection connection = factory.getConnection();
 
-		assertThat(connection.getClientName()).isEqualTo("clientName");
-	}
+        assertThat(connection.getClientName()).isEqualTo("clientName");
+    }
 
-	@Test // GH-2503
-	void startStopStartConnectionFactory() {
+    @Test // GH-2503
+    void startStopStartConnectionFactory() {
 
-		factory = new JedisConnectionFactory(
-				new ValkeyStandaloneConfiguration(SettingsUtils.getHost(), SettingsUtils.getPort()),
-				JedisClientConfiguration.defaultConfiguration());
-		factory.afterPropertiesSet();
+        factory =
+                new JedisConnectionFactory(
+                        new ValkeyStandaloneConfiguration(SettingsUtils.getHost(), SettingsUtils.getPort()),
+                        JedisClientConfiguration.defaultConfiguration());
+        factory.afterPropertiesSet();
 
-		factory.start();
-		assertThat(factory.isRunning()).isTrue();
+        factory.start();
+        assertThat(factory.isRunning()).isTrue();
 
-		factory.stop();
-		assertThat(factory.isRunning()).isFalse();
-		assertThatIllegalStateException().isThrownBy(() -> factory.getConnection());
+        factory.stop();
+        assertThat(factory.isRunning()).isFalse();
+        assertThatIllegalStateException().isThrownBy(() -> factory.getConnection());
 
-		factory.start();
-		assertThat(factory.isRunning()).isTrue();
-		try (ValkeyConnection connection = factory.getConnection()) {
-			assertThat(connection.ping()).isEqualTo("PONG");
-		}
+        factory.start();
+        assertThat(factory.isRunning()).isTrue();
+        try (ValkeyConnection connection = factory.getConnection()) {
+            assertThat(connection.ping()).isEqualTo("PONG");
+        }
 
-		factory.destroy();
-	}
+        factory.destroy();
+    }
 
-	@Test // GH-2594
-	@EnabledOnValkeyClusterAvailable
-	void configuresExecutorCorrectly() {
+    @Test // GH-2594
+    @EnabledOnValkeyClusterAvailable
+    void configuresExecutorCorrectly() {
 
-		AsyncTaskExecutor mockTaskExecutor = mock(AsyncTaskExecutor.class);
+        AsyncTaskExecutor mockTaskExecutor = mock(AsyncTaskExecutor.class);
 
-		JedisConnectionFactory factory = new JedisConnectionFactory(SettingsUtils.clusterConfiguration());
-		factory.setExecutor(mockTaskExecutor);
-		factory.start();
+        JedisConnectionFactory factory =
+                new JedisConnectionFactory(SettingsUtils.clusterConfiguration());
+        factory.setExecutor(mockTaskExecutor);
+        factory.start();
 
-		ClusterCommandExecutor clusterCommandExecutor = factory.getRequiredClusterCommandExecutor();
-		assertThat(clusterCommandExecutor).extracting("executor").isEqualTo(mockTaskExecutor);
+        ClusterCommandExecutor clusterCommandExecutor = factory.getRequiredClusterCommandExecutor();
+        assertThat(clusterCommandExecutor).extracting("executor").isEqualTo(mockTaskExecutor);
 
-		factory.destroy();
-	}
+        factory.destroy();
+    }
 }

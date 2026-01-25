@@ -16,12 +16,11 @@
 package io.valkey.springframework.data.valkey.core.index;
 
 /**
- * {@link IndexDefinitionProvider} that allows registering new {@link IndexDefinition} via
- * {@link IndexDefinitionRegistry}.
+ * {@link IndexDefinitionProvider} that allows registering new {@link IndexDefinition} via {@link
+ * IndexDefinitionRegistry}.
  *
  * @author Christoph Strobl
  * @since 1.7
  */
-public interface ConfigurableIndexDefinitionProvider extends IndexDefinitionProvider, IndexDefinitionRegistry {
-
-}
+public interface ConfigurableIndexDefinitionProvider
+        extends IndexDefinitionProvider, IndexDefinitionRegistry {}

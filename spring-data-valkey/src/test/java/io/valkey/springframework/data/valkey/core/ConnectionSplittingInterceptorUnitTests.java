@@ -17,8 +17,10 @@ package io.valkey.springframework.data.valkey.core;
 
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.core.ValkeyConnectionUtils.ConnectionSplittingInterceptor;
 import java.lang.reflect.Method;
-
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,11 +29,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.core.ValkeyConnectionUtils.ConnectionSplittingInterceptor;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -41,56 +39,59 @@ import org.springframework.util.ClassUtils;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ConnectionSplittingInterceptorUnitTests {
 
-	private static final Method WRITE_METHOD, READONLY_METHOD;
+    private static final Method WRITE_METHOD, READONLY_METHOD;
 
-	private ConnectionSplittingInterceptor interceptor;
+    private ConnectionSplittingInterceptor interceptor;
 
-	private @Mock ValkeyConnectionFactory connectionFactoryMock;
+    private @Mock ValkeyConnectionFactory connectionFactoryMock;
 
-	private @Mock ValkeyConnection freshConnectionMock;
+    private @Mock ValkeyConnection freshConnectionMock;
 
-	private @Mock ValkeyConnection boundConnectionMock;
+    private @Mock ValkeyConnection boundConnectionMock;
 
-	static {
-		try {
-			WRITE_METHOD = ClassUtils.getMethod(ValkeyConnection.class, "expire", byte[].class, long.class);
-			READONLY_METHOD = ClassUtils.getMethod(ValkeyConnection.class, "keys", byte[].class);
-		} catch (Exception ex) {
-			throw new RuntimeException(ex);
-		}
-	}
+    static {
+        try {
+            WRITE_METHOD =
+                    ClassUtils.getMethod(ValkeyConnection.class, "expire", byte[].class, long.class);
+            READONLY_METHOD = ClassUtils.getMethod(ValkeyConnection.class, "keys", byte[].class);
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
 
-	@BeforeEach
-	void setUp() {
-		interceptor = new ConnectionSplittingInterceptor(connectionFactoryMock);
-		when(connectionFactoryMock.getConnection()).thenReturn(freshConnectionMock);
-	}
+    @BeforeEach
+    void setUp() {
+        interceptor = new ConnectionSplittingInterceptor(connectionFactoryMock);
+        when(connectionFactoryMock.getConnection()).thenReturn(freshConnectionMock);
+    }
 
-	@Test // DATAREDIS-73
-	void interceptorShouldRequestFreshConnectionForReadonlyCommand() throws Throwable {
+    @Test // DATAREDIS-73
+    void interceptorShouldRequestFreshConnectionForReadonlyCommand() throws Throwable {
 
-		interceptor.intercept(boundConnectionMock, READONLY_METHOD, new Object[] { new byte[] {} });
-		verify(connectionFactoryMock, times(1)).getConnection();
-		verifyNoInteractions(boundConnectionMock);
-	}
+        interceptor.intercept(boundConnectionMock, READONLY_METHOD, new Object[] {new byte[] {}});
+        verify(connectionFactoryMock, times(1)).getConnection();
+        verifyNoInteractions(boundConnectionMock);
+    }
 
-	@Test // DATAREDIS-73
-	void interceptorShouldUseBoundConnectionForWriteOperations() throws Throwable {
+    @Test // DATAREDIS-73
+    void interceptorShouldUseBoundConnectionForWriteOperations() throws Throwable {
 
-		interceptor.intercept(boundConnectionMock, WRITE_METHOD, new Object[] { new byte[] {}, 0L });
-		verify(boundConnectionMock, times(1)).expire(any(byte[].class), anyLong());
-		verifyNoInteractions(connectionFactoryMock);
-	}
+        interceptor.intercept(boundConnectionMock, WRITE_METHOD, new Object[] {new byte[] {}, 0L});
+        verify(boundConnectionMock, times(1)).expire(any(byte[].class), anyLong());
+        verifyNoInteractions(connectionFactoryMock);
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test // DATAREDIS-73
-	void interceptorShouldNotWrapException() {
+    @SuppressWarnings("unchecked")
+    @Test // DATAREDIS-73
+    void interceptorShouldNotWrapException() {
 
-		when(freshConnectionMock.keys(any(byte[].class))).thenThrow(
-				InvalidDataAccessApiUsageException.class);
+        when(freshConnectionMock.keys(any(byte[].class)))
+                .thenThrow(InvalidDataAccessApiUsageException.class);
 
-		Assertions.assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(
-				() -> interceptor.intercept(boundConnectionMock, READONLY_METHOD, new Object[] { new byte[] {} }));
-	}
-
+        Assertions.assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(
+                        () ->
+                                interceptor.intercept(
+                                        boundConnectionMock, READONLY_METHOD, new Object[] {new byte[] {}}));
+    }
 }

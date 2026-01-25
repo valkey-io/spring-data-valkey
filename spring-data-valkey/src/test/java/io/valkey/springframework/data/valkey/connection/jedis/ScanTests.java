@@ -17,16 +17,6 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.jupiter.api.BeforeEach;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
@@ -35,12 +25,20 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.core.BoundHashOperations;
 import io.valkey.springframework.data.valkey.core.Cursor;
-import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
+import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map.Entry;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * @author Mark Paluch
@@ -49,76 +47,80 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("params")
 public class ScanTests {
 
-	private ValkeyConnectionFactory factory;
-	private ValkeyTemplate<String, String> valkeyOperations;
+    private ValkeyConnectionFactory factory;
+    private ValkeyTemplate<String, String> valkeyOperations;
 
-	private ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 10, 1, TimeUnit.MINUTES,
-			new LinkedBlockingDeque<>());
+    private ThreadPoolExecutor executor =
+            new ThreadPoolExecutor(10, 10, 1, TimeUnit.MINUTES, new LinkedBlockingDeque<>());
 
-	public ScanTests(ValkeyConnectionFactory factory) {
-		this.factory = factory;
-	}
+    public ScanTests(ValkeyConnectionFactory factory) {
+        this.factory = factory;
+    }
 
-	public static List<ValkeyConnectionFactory> params() {
+    public static List<ValkeyConnectionFactory> params() {
 
-		JedisConnectionFactory jedisConnectionFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        JedisConnectionFactory jedisConnectionFactory =
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		LettuceConnectionFactory lettuceConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        LettuceConnectionFactory lettuceConnectionFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		// Pretty strange that Lettuce is used in Jedis-tree test - adding Valkey-Glide as well
-		ValkeyGlideConnectionFactory valkeyGlideConnectionFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // Pretty strange that Lettuce is used in Jedis-tree test - adding Valkey-Glide as well
+        ValkeyGlideConnectionFactory valkeyGlideConnectionFactory =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		return Arrays.asList(jedisConnectionFactory, lettuceConnectionFactory, valkeyGlideConnectionFactory);
-	}
+        return Arrays.asList(
+                jedisConnectionFactory, lettuceConnectionFactory, valkeyGlideConnectionFactory);
+    }
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		valkeyOperations = new StringValkeyTemplate(factory);
-		valkeyOperations.afterPropertiesSet();
-	}
+        valkeyOperations = new StringValkeyTemplate(factory);
+        valkeyOperations.afterPropertiesSet();
+    }
 
-	@ParameterizedValkeyTest
-	void contextLoads() throws InterruptedException {
+    @ParameterizedValkeyTest
+    void contextLoads() throws InterruptedException {
 
-		BoundHashOperations<String, String, String> hash = valkeyOperations.boundHashOps("hash");
-		final AtomicReference<Exception> exception = new AtomicReference<>();
+        BoundHashOperations<String, String, String> hash = valkeyOperations.boundHashOps("hash");
+        final AtomicReference<Exception> exception = new AtomicReference<>();
 
-		// Create some keys so that SCAN requires a while to return all data.
-		for (int i = 0; i < 10000; i++) {
-			hash.put("key-" + i, "value");
-		}
+        // Create some keys so that SCAN requires a while to return all data.
+        for (int i = 0; i < 10000; i++) {
+            hash.put("key-" + i, "value");
+        }
 
-		// Concurrent access
-		for (int i = 0; i < 10; i++) {
+        // Concurrent access
+        for (int i = 0; i < 10; i++) {
 
-			executor.submit(() -> {
-				try {
+            executor.submit(
+                    () -> {
+                        try {
 
-					Cursor<Entry<Object, Object>> cursorMap = valkeyOperations.boundHashOps("hash")
-							.scan(ScanOptions.scanOptions().match("*").count(100).build());
+                            Cursor<Entry<Object, Object>> cursorMap =
+                                    valkeyOperations
+                                            .boundHashOps("hash")
+                                            .scan(ScanOptions.scanOptions().match("*").count(100).build());
 
-					// This line invokes the lazy SCAN invocation
-					while (cursorMap.hasNext()) {
-						cursorMap.next();
-					}
-					cursorMap.close();
-				} catch (Exception ex) {
-					exception.set(ex);
-				}
-			});
-		}
+                            // This line invokes the lazy SCAN invocation
+                            while (cursorMap.hasNext()) {
+                                cursorMap.next();
+                            }
+                            cursorMap.close();
+                        } catch (Exception ex) {
+                            exception.set(ex);
+                        }
+                    });
+        }
 
-		// Wait until work is finished
-		while (executor.getActiveCount() > 0) {
-			Thread.sleep(100);
-		}
+        // Wait until work is finished
+        while (executor.getActiveCount() > 0) {
+            Thread.sleep(100);
+        }
 
-		executor.shutdown();
+        executor.shutdown();
 
-		assertThat(exception.get()).isNull();
-	}
+        assertThat(exception.get()).isNull();
+    }
 }
