@@ -15,10 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.connection.util;
 
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-
-import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.lang.Nullable;
 
 /**
@@ -28,46 +27,46 @@ import org.springframework.lang.Nullable;
  */
 public class ByteArrayWrapper implements Comparable<ByteArrayWrapper> {
 
-	private final byte[] array;
-	private final int hashCode;
+    private final byte[] array;
+    private final int hashCode;
 
-	public ByteArrayWrapper(ByteBuffer buffer) {
-		this(ByteUtils.getBytes(buffer.asReadOnlyBuffer()));
-	}
+    public ByteArrayWrapper(ByteBuffer buffer) {
+        this(ByteUtils.getBytes(buffer.asReadOnlyBuffer()));
+    }
 
-	public ByteArrayWrapper(byte[] array) {
-		this.array = array;
-		this.hashCode = Arrays.hashCode(array);
-	}
+    public ByteArrayWrapper(byte[] array) {
+        this.array = array;
+        this.hashCode = Arrays.hashCode(array);
+    }
 
-	public boolean equals(@Nullable Object obj) {
-		if (obj instanceof ByteArrayWrapper other) {
-			return Arrays.equals(array, other.array);
-		}
+    public boolean equals(@Nullable Object obj) {
+        if (obj instanceof ByteArrayWrapper other) {
+            return Arrays.equals(array, other.array);
+        }
 
-		return false;
-	}
+        return false;
+    }
 
-	public int hashCode() {
-		return hashCode;
-	}
+    public int hashCode() {
+        return hashCode;
+    }
 
-	/**
-	 * Returns the array.
-	 *
-	 * @return Returns the array
-	 */
-	public byte[] getArray() {
-		return array;
-	}
+    /**
+     * Returns the array.
+     *
+     * @return Returns the array
+     */
+    public byte[] getArray() {
+        return array;
+    }
 
-	@Override
-	public String toString() {
-		return new String(array);
-	}
+    @Override
+    public String toString() {
+        return new String(array);
+    }
 
-	@Override
-	public int compareTo(ByteArrayWrapper o) {
-		return Arrays.compare(this.array, o.array);
-	}
+    @Override
+    public int compareTo(ByteArrayWrapper o) {
+        return Arrays.compare(this.array, o.array);
+    }
 }

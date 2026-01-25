@@ -21,7 +21,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -35,377 +34,377 @@ import org.springframework.util.CollectionUtils;
  */
 public class ValkeyClusterNode extends ValkeyNode {
 
-	/**
-	 * Get {@link ValkeyClusterNodeBuilder} for creating new {@link ValkeyClusterNode}.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public static ValkeyClusterNodeBuilder newValkeyClusterNode() {
-		return new ValkeyClusterNodeBuilder();
-	}
-
-	private @Nullable LinkState linkState;
-
-	private Set<Flag> flags;
-
-	private final SlotRange slotRange;
-
-	protected ValkeyClusterNode() {
-
-		this.flags = Collections.emptySet();
-		this.slotRange = SlotRange.empty();
-	}
-
-	/**
-	 * Creates new {@link ValkeyClusterNode} with empty {@link SlotRange}.
-	 *
-	 * @param host must not be {@literal null}.
-	 * @param port
-	 */
-	public ValkeyClusterNode(String host, int port) {
-		this(host, port, SlotRange.empty());
-	}
-
-	/**
-	 * Creates new {@link ValkeyClusterNode} with an id and empty {@link SlotRange}.
-	 *
-	 * @param id must not be {@literal null}.
-	 */
-	public ValkeyClusterNode(String id) {
-
-		this(SlotRange.empty());
-
-		Assert.notNull(id, "Id must not be null");
-
-		this.id = id;
-	}
-
-	/**
-	 * Creates new {@link ValkeyClusterNode} with given {@link SlotRange}.
-	 *
-	 * @param slotRange must not be {@literal null}.
-	 */
-	public ValkeyClusterNode(SlotRange slotRange) {
-
-		Assert.notNull(slotRange, "SlotRange must not be null");
-
-		this.flags = Collections.emptySet();
-		this.slotRange = slotRange;
-	}
-
-	/**
-	 * Creates new {@link ValkeyClusterNode} with given {@link SlotRange}.
-	 *
-	 * @param host must not be {@literal null}.
-	 * @param port
-	 * @param slotRange must not be {@literal null}.
-	 */
-	public ValkeyClusterNode(String host, int port, SlotRange slotRange) {
-
-		super(host, port);
-
-		Assert.notNull(slotRange, "SlotRange must not be null");
-
-		this.flags = Collections.emptySet();
-		this.slotRange = slotRange;
-	}
-
-	/**
-	 * Get the served {@link SlotRange}.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public SlotRange getSlotRange() {
-		return this.slotRange;
-	}
-
-	/**
-	 * Determines whether this {@link ValkeyClusterNode} manages the identified {@link Integer slot} in the cluster.
-	 *
-	 * @param slot {@link Integer} identifying the slot to evaluate.
-	 * @return {@literal true} if slot is covered.
-	 */
-	public boolean servesSlot(int slot) {
-		return getSlotRange().contains(slot);
-	}
-
-	/**
-	 * @return can be {@literal null}
-	 */
-	@Nullable
-	public LinkState getLinkState() {
-		return this.linkState;
-	}
-
-	/**
-	 * @return true if node is connected to cluster.
-	 */
-	public boolean isConnected() {
-		return LinkState.CONNECTED.equals(getLinkState());
-	}
-
-	/**
-	 * @return never {@literal null}.
-	 */
-	@SuppressWarnings("all")
-	public Set<Flag> getFlags() {
-		return this.flags != null ? this.flags : Collections.emptySet();
-	}
-
-	/**
-	 * @return true if node is marked as failing.
-	 */
-	public boolean isMarkedAsFail() {
-		return CollectionUtils.containsAny(getFlags(), Arrays.asList(Flag.FAIL, Flag.PFAIL));
-	}
-
-	@Override
-	public String toString() {
-		return super.toString();
-	}
-
-	/**
-	 * @author Christoph Strobl
-	 * @author daihuabin
-	 * @author John Blum
-	 * @since 1.7
-	 */
-	public static class SlotRange {
-
-		/**
-		 * Factory method used to construct a new, empty {@link SlotRange}.
-		 *
-		 * @return a new, empty {@link SlotRange}.
-		 */
-		public static SlotRange empty() {
-			return new SlotRange(Collections.emptySet());
-		}
-
-		private final BitSet range;
-
-		/**
-		 * @param lowerBound must not be {@literal null}.
-		 * @param upperBound must not be {@literal null}.
-		 */
-		public SlotRange(Integer lowerBound, Integer upperBound) {
-
-			Assert.notNull(lowerBound, "LowerBound must not be null");
-			Assert.notNull(upperBound, "UpperBound must not be null");
-
-			this.range = new BitSet(upperBound + 1);
-
-			for (int bitindex = lowerBound; bitindex <= upperBound; bitindex++) {
-				this.range.set(bitindex);
-			}
-		}
-
-		public SlotRange(Collection<Integer> range) {
-
-			if (CollectionUtils.isEmpty(range)) {
-				this.range = new BitSet(0);
-			} else {
-				this.range = new BitSet(ClusterSlotHashUtil.SLOT_COUNT);
-				for (Integer bitindex : range) {
-					this.range.set(bitindex);
-				}
-			}
-		}
-
-		public SlotRange(BitSet range) {
-			this.range = (BitSet) range.clone();
-		}
-
-		/**
-		 * Determines whether this {@link SlotRange} contains the given {@link Integer slot}, which implies
-		 * this cluster nodes manages the slot holding data stored in Valkey.
-		 *
-		 * @param slot {@link Integer slot} to evaluate.
-		 * @return true when slot is part of the range.
-		 */
-		public boolean contains(int slot) {
-			return this.range.get(slot);
-		}
-
-		/**
-		 * Gets all slots in this {@link SlotRange} managed by this cluster node.
-		 *
-		 * @return all slots in this {@link SlotRange}.
-		 */
-		public Set<Integer> getSlots() {
-
-			if (this.range.isEmpty()) {
-				return Collections.emptySet();
-			}
-
-			Set<Integer> slots = new LinkedHashSet<>(Math.max(2 * this.range.cardinality(), 11));
-
-			for (int bitindex = 0; bitindex < this.range.length(); bitindex++) {
-				if (this.range.get(bitindex)) {
-					slots.add(bitindex);
-				}
-			}
-
-			return Collections.unmodifiableSet(slots);
-		}
-
-		public int[] getSlotsArray() {
-
-			if (this.range.isEmpty()) {
-				return new int[0];
-			}
-
-			int[] slots = new int[this.range.cardinality()];
-			int arrayIndex = 0;
-
-			for (int slot = 0; slot < ClusterSlotHashUtil.SLOT_COUNT; slot++) {
-				if (this.range.get(slot)) {
-					slots[arrayIndex++] = slot;
-				}
-			}
-
-			return slots;
-		}
-
-		@Override
-		public String toString() {
-			return Arrays.toString(getSlotsArray());
-		}
-	}
-
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	public enum LinkState {
-		CONNECTED, DISCONNECTED
-	}
-
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	public enum Flag {
-
-		MYSELF("myself"),
-		MASTER("master"),
-		REPLICA("slave"),
-		FAIL("fail"),
-		PFAIL("fail?"),
-		HANDSHAKE("handshake"),
-		NOADDR("noaddr"),
-		NOFLAGS("noflags");
-
-		private String raw;
-
-		Flag(String raw) {
-			this.raw = raw;
-		}
-
-		public String getRaw() {
-			return this.raw;
-		}
-	}
-
-	/**
-	 * Builder for creating new {@link ValkeyClusterNode}.
-	 *
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	public static class ValkeyClusterNodeBuilder extends ValkeyNodeBuilder {
-
-		@Nullable Set<Flag> flags;
-		@Nullable LinkState linkState;
-		SlotRange slotRange;
-
-		public ValkeyClusterNodeBuilder() {
-			this.slotRange = SlotRange.empty();
-		}
-
-		@Override
-		public ValkeyClusterNodeBuilder listeningAt(String host, int port) {
-			super.listeningAt(host, port);
-			return this;
-		}
-
-		@Override
-		public ValkeyClusterNodeBuilder withName(String name) {
-			super.withName(name);
-			return this;
-		}
-
-		@Override
-		public ValkeyClusterNodeBuilder withId(String id) {
-			super.withId(id);
-			return this;
-		}
-
-		@Override
-		public ValkeyClusterNodeBuilder promotedAs(NodeType nodeType) {
-			super.promotedAs(nodeType);
-			return this;
-		}
-
-		@Override
-		public ValkeyClusterNodeBuilder replicaOf(String masterId) {
-			super.replicaOf(masterId);
-			return this;
-		}
-
-		/**
-		 * Set flags for node.
-		 *
-		 * @param flags
-		 * @return
-		 */
-		public ValkeyClusterNodeBuilder withFlags(Set<Flag> flags) {
-
-			this.flags = flags;
-			return this;
-		}
-
-		/**
-		 * Set {@link SlotRange}.
-		 *
-		 * @param range
-		 * @return
-		 */
-		public ValkeyClusterNodeBuilder serving(SlotRange range) {
-
-			this.slotRange = range;
-			return this;
-		}
-
-		/**
-		 * Set {@link LinkState}.
-		 *
-		 * @param linkState
-		 * @return
-		 */
-		public ValkeyClusterNodeBuilder linkState(LinkState linkState) {
-			this.linkState = linkState;
-			return this;
-		}
-
-		@Override
-		public ValkeyClusterNode build() {
-
-			ValkeyNode base = super.build();
-
-			ValkeyClusterNode node;
-			if (base.host != null) {
-				node = new ValkeyClusterNode(base.getHost(), base.getPort(), slotRange);
-			} else {
-				node = new ValkeyClusterNode(slotRange);
-			}
-			node.id = base.id;
-			node.type = base.type;
-			node.masterId = base.masterId;
-			node.name = base.name;
-			node.flags = flags;
-			node.linkState = linkState;
-			return node;
-		}
-	}
-
+    /**
+     * Get {@link ValkeyClusterNodeBuilder} for creating new {@link ValkeyClusterNode}.
+     *
+     * @return never {@literal null}.
+     */
+    public static ValkeyClusterNodeBuilder newValkeyClusterNode() {
+        return new ValkeyClusterNodeBuilder();
+    }
+
+    private @Nullable LinkState linkState;
+
+    private Set<Flag> flags;
+
+    private final SlotRange slotRange;
+
+    protected ValkeyClusterNode() {
+
+        this.flags = Collections.emptySet();
+        this.slotRange = SlotRange.empty();
+    }
+
+    /**
+     * Creates new {@link ValkeyClusterNode} with empty {@link SlotRange}.
+     *
+     * @param host must not be {@literal null}.
+     * @param port
+     */
+    public ValkeyClusterNode(String host, int port) {
+        this(host, port, SlotRange.empty());
+    }
+
+    /**
+     * Creates new {@link ValkeyClusterNode} with an id and empty {@link SlotRange}.
+     *
+     * @param id must not be {@literal null}.
+     */
+    public ValkeyClusterNode(String id) {
+
+        this(SlotRange.empty());
+
+        Assert.notNull(id, "Id must not be null");
+
+        this.id = id;
+    }
+
+    /**
+     * Creates new {@link ValkeyClusterNode} with given {@link SlotRange}.
+     *
+     * @param slotRange must not be {@literal null}.
+     */
+    public ValkeyClusterNode(SlotRange slotRange) {
+
+        Assert.notNull(slotRange, "SlotRange must not be null");
+
+        this.flags = Collections.emptySet();
+        this.slotRange = slotRange;
+    }
+
+    /**
+     * Creates new {@link ValkeyClusterNode} with given {@link SlotRange}.
+     *
+     * @param host must not be {@literal null}.
+     * @param port
+     * @param slotRange must not be {@literal null}.
+     */
+    public ValkeyClusterNode(String host, int port, SlotRange slotRange) {
+
+        super(host, port);
+
+        Assert.notNull(slotRange, "SlotRange must not be null");
+
+        this.flags = Collections.emptySet();
+        this.slotRange = slotRange;
+    }
+
+    /**
+     * Get the served {@link SlotRange}.
+     *
+     * @return never {@literal null}.
+     */
+    public SlotRange getSlotRange() {
+        return this.slotRange;
+    }
+
+    /**
+     * Determines whether this {@link ValkeyClusterNode} manages the identified {@link Integer slot}
+     * in the cluster.
+     *
+     * @param slot {@link Integer} identifying the slot to evaluate.
+     * @return {@literal true} if slot is covered.
+     */
+    public boolean servesSlot(int slot) {
+        return getSlotRange().contains(slot);
+    }
+
+    /**
+     * @return can be {@literal null}
+     */
+    @Nullable
+    public LinkState getLinkState() {
+        return this.linkState;
+    }
+
+    /**
+     * @return true if node is connected to cluster.
+     */
+    public boolean isConnected() {
+        return LinkState.CONNECTED.equals(getLinkState());
+    }
+
+    /**
+     * @return never {@literal null}.
+     */
+    @SuppressWarnings("all")
+    public Set<Flag> getFlags() {
+        return this.flags != null ? this.flags : Collections.emptySet();
+    }
+
+    /**
+     * @return true if node is marked as failing.
+     */
+    public boolean isMarkedAsFail() {
+        return CollectionUtils.containsAny(getFlags(), Arrays.asList(Flag.FAIL, Flag.PFAIL));
+    }
+
+    @Override
+    public String toString() {
+        return super.toString();
+    }
+
+    /**
+     * @author Christoph Strobl
+     * @author daihuabin
+     * @author John Blum
+     * @since 1.7
+     */
+    public static class SlotRange {
+
+        /**
+         * Factory method used to construct a new, empty {@link SlotRange}.
+         *
+         * @return a new, empty {@link SlotRange}.
+         */
+        public static SlotRange empty() {
+            return new SlotRange(Collections.emptySet());
+        }
+
+        private final BitSet range;
+
+        /**
+         * @param lowerBound must not be {@literal null}.
+         * @param upperBound must not be {@literal null}.
+         */
+        public SlotRange(Integer lowerBound, Integer upperBound) {
+
+            Assert.notNull(lowerBound, "LowerBound must not be null");
+            Assert.notNull(upperBound, "UpperBound must not be null");
+
+            this.range = new BitSet(upperBound + 1);
+
+            for (int bitindex = lowerBound; bitindex <= upperBound; bitindex++) {
+                this.range.set(bitindex);
+            }
+        }
+
+        public SlotRange(Collection<Integer> range) {
+
+            if (CollectionUtils.isEmpty(range)) {
+                this.range = new BitSet(0);
+            } else {
+                this.range = new BitSet(ClusterSlotHashUtil.SLOT_COUNT);
+                for (Integer bitindex : range) {
+                    this.range.set(bitindex);
+                }
+            }
+        }
+
+        public SlotRange(BitSet range) {
+            this.range = (BitSet) range.clone();
+        }
+
+        /**
+         * Determines whether this {@link SlotRange} contains the given {@link Integer slot}, which
+         * implies this cluster nodes manages the slot holding data stored in Valkey.
+         *
+         * @param slot {@link Integer slot} to evaluate.
+         * @return true when slot is part of the range.
+         */
+        public boolean contains(int slot) {
+            return this.range.get(slot);
+        }
+
+        /**
+         * Gets all slots in this {@link SlotRange} managed by this cluster node.
+         *
+         * @return all slots in this {@link SlotRange}.
+         */
+        public Set<Integer> getSlots() {
+
+            if (this.range.isEmpty()) {
+                return Collections.emptySet();
+            }
+
+            Set<Integer> slots = new LinkedHashSet<>(Math.max(2 * this.range.cardinality(), 11));
+
+            for (int bitindex = 0; bitindex < this.range.length(); bitindex++) {
+                if (this.range.get(bitindex)) {
+                    slots.add(bitindex);
+                }
+            }
+
+            return Collections.unmodifiableSet(slots);
+        }
+
+        public int[] getSlotsArray() {
+
+            if (this.range.isEmpty()) {
+                return new int[0];
+            }
+
+            int[] slots = new int[this.range.cardinality()];
+            int arrayIndex = 0;
+
+            for (int slot = 0; slot < ClusterSlotHashUtil.SLOT_COUNT; slot++) {
+                if (this.range.get(slot)) {
+                    slots[arrayIndex++] = slot;
+                }
+            }
+
+            return slots;
+        }
+
+        @Override
+        public String toString() {
+            return Arrays.toString(getSlotsArray());
+        }
+    }
+
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    public enum LinkState {
+        CONNECTED,
+        DISCONNECTED
+    }
+
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    public enum Flag {
+        MYSELF("myself"),
+        MASTER("master"),
+        REPLICA("slave"),
+        FAIL("fail"),
+        PFAIL("fail?"),
+        HANDSHAKE("handshake"),
+        NOADDR("noaddr"),
+        NOFLAGS("noflags");
+
+        private String raw;
+
+        Flag(String raw) {
+            this.raw = raw;
+        }
+
+        public String getRaw() {
+            return this.raw;
+        }
+    }
+
+    /**
+     * Builder for creating new {@link ValkeyClusterNode}.
+     *
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    public static class ValkeyClusterNodeBuilder extends ValkeyNodeBuilder {
+
+        @Nullable Set<Flag> flags;
+        @Nullable LinkState linkState;
+        SlotRange slotRange;
+
+        public ValkeyClusterNodeBuilder() {
+            this.slotRange = SlotRange.empty();
+        }
+
+        @Override
+        public ValkeyClusterNodeBuilder listeningAt(String host, int port) {
+            super.listeningAt(host, port);
+            return this;
+        }
+
+        @Override
+        public ValkeyClusterNodeBuilder withName(String name) {
+            super.withName(name);
+            return this;
+        }
+
+        @Override
+        public ValkeyClusterNodeBuilder withId(String id) {
+            super.withId(id);
+            return this;
+        }
+
+        @Override
+        public ValkeyClusterNodeBuilder promotedAs(NodeType nodeType) {
+            super.promotedAs(nodeType);
+            return this;
+        }
+
+        @Override
+        public ValkeyClusterNodeBuilder replicaOf(String masterId) {
+            super.replicaOf(masterId);
+            return this;
+        }
+
+        /**
+         * Set flags for node.
+         *
+         * @param flags
+         * @return
+         */
+        public ValkeyClusterNodeBuilder withFlags(Set<Flag> flags) {
+
+            this.flags = flags;
+            return this;
+        }
+
+        /**
+         * Set {@link SlotRange}.
+         *
+         * @param range
+         * @return
+         */
+        public ValkeyClusterNodeBuilder serving(SlotRange range) {
+
+            this.slotRange = range;
+            return this;
+        }
+
+        /**
+         * Set {@link LinkState}.
+         *
+         * @param linkState
+         * @return
+         */
+        public ValkeyClusterNodeBuilder linkState(LinkState linkState) {
+            this.linkState = linkState;
+            return this;
+        }
+
+        @Override
+        public ValkeyClusterNode build() {
+
+            ValkeyNode base = super.build();
+
+            ValkeyClusterNode node;
+            if (base.host != null) {
+                node = new ValkeyClusterNode(base.getHost(), base.getPort(), slotRange);
+            } else {
+                node = new ValkeyClusterNode(slotRange);
+            }
+            node.id = base.id;
+            node.type = base.type;
+            node.masterId = base.masterId;
+            node.name = base.name;
+            node.flags = flags;
+            node.linkState = linkState;
+            return node;
+        }
+    }
 }

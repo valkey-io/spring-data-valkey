@@ -17,15 +17,14 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.connection.AbstractConnectionPipelineIntegrationTests;
+import io.valkey.springframework.data.valkey.connection.DefaultStringValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
 import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.connection.AbstractConnectionPipelineIntegrationTests;
-import io.valkey.springframework.data.valkey.connection.DefaultStringValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
-import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -39,35 +38,37 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration("LettuceConnectionIntegrationTests-context.xml")
-public class LettuceConnectionPipelineIntegrationTests extends AbstractConnectionPipelineIntegrationTests {
+public class LettuceConnectionPipelineIntegrationTests
+        extends AbstractConnectionPipelineIntegrationTests {
 
-	@Test
-	public void testSelect() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() -> super.testSelect());
-	}
+    @Test
+    public void testSelect() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(() -> super.testSelect());
+    }
 
-	@Test
-	public void testMove() {
+    @Test
+    public void testMove() {
 
-		actual.add(connection.set("foo", "bar"));
-		actual.add(connection.move("foo", 1));
-		verifyResults(Arrays.asList(new Object[] { true, true }));
-		// Lettuce does not support select when using shared conn, use a new conn factory
-		LettuceConnectionFactory factory2 = new LettuceConnectionFactory(new ValkeyStandaloneConfiguration(),
-				LettuceTestClientConfiguration.builder().build());
-		factory2.setDatabase(1);
-		factory2.afterPropertiesSet();
-		factory2.start();
-		StringValkeyConnection conn2 = new DefaultStringValkeyConnection(factory2.getConnection());
-		try {
-			assertThat(conn2.get("foo")).isEqualTo("bar");
-		} finally {
-			if (conn2.exists("foo")) {
-				conn2.del("foo");
-			}
-			conn2.close();
-			factory2.destroy();
-		}
-	}
-
+        actual.add(connection.set("foo", "bar"));
+        actual.add(connection.move("foo", 1));
+        verifyResults(Arrays.asList(new Object[] {true, true}));
+        // Lettuce does not support select when using shared conn, use a new conn factory
+        LettuceConnectionFactory factory2 =
+                new LettuceConnectionFactory(
+                        new ValkeyStandaloneConfiguration(), LettuceTestClientConfiguration.builder().build());
+        factory2.setDatabase(1);
+        factory2.afterPropertiesSet();
+        factory2.start();
+        StringValkeyConnection conn2 = new DefaultStringValkeyConnection(factory2.getConnection());
+        try {
+            assertThat(conn2.get("foo")).isEqualTo("bar");
+        } finally {
+            if (conn2.exists("foo")) {
+                conn2.del("foo");
+            }
+            conn2.close();
+            factory2.destroy();
+        }
+    }
 }

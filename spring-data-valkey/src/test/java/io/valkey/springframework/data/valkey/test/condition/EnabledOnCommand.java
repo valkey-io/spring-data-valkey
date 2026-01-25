@@ -21,26 +21,23 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * {@code @EnabledOnCommand} is used to signal that the annotated test class or test method is only <em>enabled</em> if
- * the specified command is available.
- * <p>
- * When applied at the class level, all test methods within that class will be enabled.
+ * {@code @EnabledOnCommand} is used to signal that the annotated test class or test method is only
+ * <em>enabled</em> if the specified command is available.
+ *
+ * <p>When applied at the class level, all test methods within that class will be enabled.
  *
  * @author Mark Paluch
  */
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
 @ExtendWith(EnabledOnCommandCondition.class)
 public @interface EnabledOnCommand {
 
-	/**
-	 * Name of the Valkey command to be available.
-	 */
-	String value();
+    /** Name of the Valkey command to be available. */
+    String value();
 }

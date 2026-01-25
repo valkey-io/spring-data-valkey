@@ -23,9 +23,9 @@ import org.springframework.lang.Nullable;
  */
 public interface NamedNode {
 
-	/**
-	 * @return the node name. Can be {@literal null}.
-	 */
-	@Nullable
-	String getName();
+    /**
+     * @return the node name. Can be {@literal null}.
+     */
+    @Nullable
+    String getName();
 }

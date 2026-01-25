@@ -15,6 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import glide.api.GlideClusterClient;
+import glide.api.models.ClusterValue;
+import glide.api.models.GlideString;
+import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
+import glide.api.models.configuration.RequestRoutingConfiguration.Route;
+import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
+import io.micrometer.common.lang.Nullable;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Iterator;
@@ -22,19 +30,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
-import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
-import glide.api.models.configuration.RequestRoutingConfiguration.Route;
-import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
-import glide.api.models.ClusterValue;
-import glide.api.models.GlideString;
-import io.micrometer.common.lang.Nullable;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
-import glide.api.GlideClusterClient;
-
 /**
- * Unified interface that abstracts both GlideClient and GlideClusterClient
- * to enable code reuse between standalone and cluster modes.
- * 
+ * Unified interface that abstracts both GlideClient and GlideClusterClient to enable code reuse
+ * between standalone and cluster modes.
+ *
  * @author Ilia Kolominsky
  * @since 2.0
  */
@@ -48,22 +47,23 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
     }
 
     /**
-     * A zero-copy map view that reconstructs GlideString keys from String keys while preserving value types.
-     * This avoids copying values when working around ClusterValue.of() bug.
-     * 
-     * <p>ClusterValue.ofMultiValueBinary() incorrectly converts Map<GlideString, V> to
-     * Map<String, V> by calling getString() on the keys. This view reverses that
-     * transformation without copying the values.
-     * 
-     * @param <V> The value type (e.g., GlideString for HASH commands, Double for Z commands with scores)
+     * A zero-copy map view that reconstructs GlideString keys from String keys while preserving value
+     * types. This avoids copying values when working around ClusterValue.of() bug.
+     *
+     * <p>ClusterValue.ofMultiValueBinary() incorrectly converts Map<GlideString, V> to Map<String, V>
+     * by calling getString() on the keys. This view reverses that transformation without copying the
+     * values.
+     *
+     * @param <V> The value type (e.g., GlideString for HASH commands, Double for Z commands with
+     *     scores)
      */
     private static class ReconstructedKeyMap<V> extends AbstractMap<GlideString, V> {
         private final Map<String, V> sourceMap;
-        
+
         ReconstructedKeyMap(Map<String, V> sourceMap) {
             this.sourceMap = sourceMap;
         }
-        
+
         @Override
         public Set<Entry<GlideString, V>> entrySet() {
             return new AbstractSet<Entry<GlideString, V>>() {
@@ -75,26 +75,24 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
                         public boolean hasNext() {
                             return sourceIterator.hasNext();
                         }
-                        
+
                         @Override
                         public Entry<GlideString, V> next() {
                             Entry<String, V> sourceEntry = sourceIterator.next();
                             // Reconstruct GlideString key, preserve original value type
                             return new SimpleEntry<>(
-                                GlideString.of(sourceEntry.getKey()),
-                                sourceEntry.getValue()
-                            );
+                                    GlideString.of(sourceEntry.getKey()), sourceEntry.getValue());
                         }
                     };
                 }
-                
+
                 @Override
                 public int size() {
                     return sourceMap.size();
                 }
             };
         }
-        
+
         @Override
         public int size() {
             return sourceMap.size();
@@ -102,7 +100,8 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
     }
 
     private boolean needToAggregateResult(@Nullable Route route) {
-        // TODO: implement more sophisticated logic to determine if aggregation is needed based on command and route type
+        // TODO: implement more sophisticated logic to determine if aggregation is needed based on
+        // command and route type
         if (route == null) {
             // we need to look at the valkey-glide default route for the command
             // for now, assume no aggregation is needed
@@ -115,14 +114,15 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
 
     /**
      * Determines if a command returns a nested Map structure that should bypass ReconstructedKeyMap.
-     * 
-     * <p>Stream commands (XREAD, XRANGE, etc.) return nested Maps where the outer map keys are stream keys
-     * and the values are LinkedHashMap objects containing the actual stream records. These should not go
-     * through ReconstructedKeyMap because:
+     *
+     * <p>Stream commands (XREAD, XRANGE, etc.) return nested Maps where the outer map keys are stream
+     * keys and the values are LinkedHashMap objects containing the actual stream records. These
+     * should not go through ReconstructedKeyMap because:
+     *
      * <ul>
-     *   <li>The outer map is just a container, not the actual data to be returned</li>
-     *   <li>The GlideString types are preserved in the nested field-value arrays</li>
-     *   <li>The parseByteRecords() method already handles the nested structure correctly</li>
+     *   <li>The outer map is just a container, not the actual data to be returned
+     *   <li>The GlideString types are preserved in the nested field-value arrays
+     *   <li>The parseByteRecords() method already handles the nested structure correctly
      * </ul>
      *
      * @param args The command arguments, where args[0] is the command name
@@ -130,9 +130,9 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
      */
     private boolean isNestedMapCommand(GlideString[] args) {
         if (args == null || args.length == 0) return false;
-        
+
         String cmd = args[0].getString().toUpperCase();
-        
+
         // Stream commands that return nested Map structures
         switch (cmd) {
             case "XREAD":
@@ -150,34 +150,37 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
 
     /**
      * Determines if a command has a default multi-node route in Valkey Glide's cluster routing.
-     * 
-     * <p>This method identifies commands that Glide routes to multiple nodes by default (when no explicit
-     * route is provided). The routing rules are defined in Glide's Rust implementation at:
-     * <code>valkey-glide/glide-core/redis-rs/redis/src/cluster_routing.rs</code> in the <code>base_routing()</code> function.
-     * 
-     * <p><b>Background:</b> Glide has a bug where <code>ClusterValue.of()</code> incorrectly treats any Map result
-     * as a multi-node response (where keys = node addresses). For commands returning Map results (like HGETALL),
-     * this causes the Map to be placed in <code>multiValue</code> instead of <code>singleValue</code>.
-     * 
+     *
+     * <p>This method identifies commands that Glide routes to multiple nodes by default (when no
+     * explicit route is provided). The routing rules are defined in Glide's Rust implementation at:
+     * <code>valkey-glide/glide-core/redis-rs/redis/src/cluster_routing.rs</code> in the <code>
+     * base_routing()</code> function.
+     *
+     * <p><b>Background:</b> Glide has a bug where <code>ClusterValue.of()</code> incorrectly treats
+     * any Map result as a multi-node response (where keys = node addresses). For commands returning
+     * Map results (like HGETALL), this causes the Map to be placed in <code>multiValue</code> instead
+     * of <code>singleValue</code>.
+     *
      * <p>To work around this bug, we need to distinguish between:
+     *
      * <ul>
      *   <li><b>True multi-node results:</b> Commands that Glide routes to multiple nodes by default,
-     *       where <code>multiValue</code> IS a map of {node-address → result}</li>
-     *   <li><b>False-positive multiValue:</b> Single-node commands returning Map results (like HGETALL),
-     *       where <code>multiValue</code> contains the actual result incorrectly</li>
+     *       where <code>multiValue</code> IS a map of {node-address → result}
+     *   <li><b>False-positive multiValue:</b> Single-node commands returning Map results (like
+     *       HGETALL), where <code>multiValue</code> contains the actual result incorrectly
      * </ul>
      *
      * @param args The command arguments, where args[0] is the command name
      * @return true if this command routes to multiple nodes by default in Glide's implementation
-     * 
-     * @see <a href="https://github.com/valkey-io/valkey-glide/blob/main/glide-core/redis-rs/redis/src/cluster_routing.rs">
-     *      Valkey Glide cluster_routing.rs</a>
+     * @see <a
+     *     href="https://github.com/valkey-io/valkey-glide/blob/main/glide-core/redis-rs/redis/src/cluster_routing.rs">
+     *     Valkey Glide cluster_routing.rs</a>
      */
     private boolean isDefaultMultiNodeCommand(GlideString[] args) {
         if (args == null || args.length == 0) return false;
-        
+
         String cmd = args[0].getString().toUpperCase();
-        
+
         // Commands from RouteBy::AllNodes in cluster_routing.rs
         // These are routed to ALL cluster nodes (primaries and replicas)
         if (cmd.startsWith("ACL ")) {
@@ -204,7 +207,7 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
         if (cmd.startsWith("FUNCTION ")) {
             return cmd.matches("FUNCTION (KILL|STATS)");
         }
-        
+
         // Commands from RouteBy::AllPrimaries in cluster_routing.rs
         // These are routed to all PRIMARY nodes in the cluster
         switch (cmd) {
@@ -224,29 +227,30 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
             case "WAITAOF":
                 return true;
         }
-        
+
         if (cmd.startsWith("FUNCTION ")) {
             return cmd.matches("FUNCTION (DELETE|FLUSH|LOAD|RESTORE)");
         }
         if (cmd.startsWith("MEMORY ")) {
             return cmd.matches("MEMORY (DOCTOR|MALLOC-STATS|PURGE|STATS)");
         }
-        
+
         return false;
     }
 
     @Override
     public Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException {
         try {
-            ClusterValue<?> clusterValue = nextCommandRoute == null
-                ? glideClusterClient.customCommand(args).get()
-                : glideClusterClient.customCommand(args, nextCommandRoute).get();
+            ClusterValue<?> clusterValue =
+                    nextCommandRoute == null
+                            ? glideClusterClient.customCommand(args).get()
+                            : glideClusterClient.customCommand(args, nextCommandRoute).get();
 
             // Case 1: Explicit multi-node route - return multiValue for aggregation
             if (needToAggregateResult(nextCommandRoute)) {
                 return clusterValue.getMultiValue();
             }
-            
+
             // Case 2: Default multi-node command (route is null but command routes to multiple nodes)
             // These commands need special handling by the framework, so return multiValue
             if (nextCommandRoute == null && isDefaultMultiNodeCommand(args)) {
@@ -256,7 +260,7 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
                 }
                 // If not, fall through to single-value handling
             }
-            
+
             // Case 3: Single-node command, but ClusterValue.of() bug placed result in multiValue
             // This happens for commands that return Map<GlideString, V> where V can be:
             //   - GlideString for HASH commands (HGETALL)
@@ -268,17 +272,19 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
             // https://github.com/valkey-io/valkey-glide/issues/4963
             //
             // EXCEPTION: Stream commands return nested Maps and should NOT go through ReconstructedKeyMap
-            if (clusterValue.hasMultiData() && !isDefaultMultiNodeCommand(args) && !isNestedMapCommand(args)) {
+            if (clusterValue.hasMultiData()
+                    && !isDefaultMultiNodeCommand(args)
+                    && !isNestedMapCommand(args)) {
                 Map<String, ?> multiValue = clusterValue.getMultiValue();
                 // Return a zero-copy view that reconstructs GlideString keys while preserving value types
                 return new ReconstructedKeyMap<>(multiValue);
             }
-            
+
             // Case 3b: Nested map commands (like streams) that have multiData but should return it as-is
             if (clusterValue.hasMultiData() && isNestedMapCommand(args)) {
                 return clusterValue.getMultiValue();
             }
-            
+
             // Case 4: Normal single-value result
             Object singleValue = clusterValue.getSingleValue();
             return singleValue;
@@ -325,8 +331,12 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
     public void setOneShotRouteForNextCommand(Route glideRoute) {
         nextCommandRoute = glideRoute;
     }
-    
-    public Object customCommand(GlideString[] args, ValkeyClusterNode node) throws InterruptedException, ExecutionException {
-        return glideClusterClient.customCommand(args, new ByAddressRoute(node.getHost(), node.getPort())).get().getSingleValue();
+
+    public Object customCommand(GlideString[] args, ValkeyClusterNode node)
+            throws InterruptedException, ExecutionException {
+        return glideClusterClient
+                .customCommand(args, new ByAddressRoute(node.getHost(), node.getPort()))
+                .get()
+                .getSingleValue();
     }
 }

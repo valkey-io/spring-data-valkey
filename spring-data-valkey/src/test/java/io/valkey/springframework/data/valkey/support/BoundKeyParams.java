@@ -15,9 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.support;
 
-import java.util.Arrays;
-import java.util.Collection;
-
 import io.valkey.springframework.data.valkey.StringObjectFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
@@ -32,6 +29,8 @@ import io.valkey.springframework.data.valkey.support.collections.DefaultValkeyMa
 import io.valkey.springframework.data.valkey.support.collections.DefaultValkeySet;
 import io.valkey.springframework.data.valkey.support.collections.ValkeyList;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * @author Costin Leau
@@ -40,45 +39,53 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
  */
 public class BoundKeyParams {
 
-	public static Collection<Object[]> testParams() {
-		// Jedis
-		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+    public static Collection<Object[]> testParams() {
+        // Jedis
+        JedisConnectionFactory jedisConnFactory =
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		StringValkeyTemplate templateJS = new StringValkeyTemplate(jedisConnFactory);
-		DefaultValkeyMap mapJS = new DefaultValkeyMap("bound:key:map", templateJS);
-		DefaultValkeySet setJS = new DefaultValkeySet("bound:key:set", templateJS);
-		ValkeyList list = ValkeyList.create("bound:key:list", templateJS);
+        StringValkeyTemplate templateJS = new StringValkeyTemplate(jedisConnFactory);
+        DefaultValkeyMap mapJS = new DefaultValkeyMap("bound:key:map", templateJS);
+        DefaultValkeySet setJS = new DefaultValkeySet("bound:key:set", templateJS);
+        ValkeyList list = ValkeyList.create("bound:key:list", templateJS);
 
-		// Lettuce
-		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // Lettuce
+        LettuceConnectionFactory lettuceConnFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		StringValkeyTemplate templateLT = new StringValkeyTemplate(lettuceConnFactory);
-		DefaultValkeyMap mapLT = new DefaultValkeyMap("bound:key:mapLT", templateLT);
-		DefaultValkeySet setLT = new DefaultValkeySet("bound:key:setLT", templateLT);
-		ValkeyList listLT = ValkeyList.create("bound:key:listLT", templateLT);
+        StringValkeyTemplate templateLT = new StringValkeyTemplate(lettuceConnFactory);
+        DefaultValkeyMap mapLT = new DefaultValkeyMap("bound:key:mapLT", templateLT);
+        DefaultValkeySet setLT = new DefaultValkeySet("bound:key:setLT", templateLT);
+        ValkeyList listLT = ValkeyList.create("bound:key:listLT", templateLT);
 
-		// ValkeyGlide
-		ValkeyGlideConnectionFactory vgConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // ValkeyGlide
+        ValkeyGlideConnectionFactory vgConnFactory =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		StringValkeyTemplate templateVG = new StringValkeyTemplate(vgConnFactory);
-		DefaultValkeyMap mapVG = new DefaultValkeyMap("bound:key:mapVG", templateLT);
-		DefaultValkeySet setVG = new DefaultValkeySet("bound:key:setVG", templateLT);
-		ValkeyList listVG = ValkeyList.create("bound:key:listVG", templateLT);		
+        StringValkeyTemplate templateVG = new StringValkeyTemplate(vgConnFactory);
+        DefaultValkeyMap mapVG = new DefaultValkeyMap("bound:key:mapVG", templateLT);
+        DefaultValkeySet setVG = new DefaultValkeySet("bound:key:setVG", templateLT);
+        ValkeyList listVG = ValkeyList.create("bound:key:listVG", templateLT);
 
-		StringObjectFactory sof = new StringObjectFactory();
+        StringObjectFactory sof = new StringObjectFactory();
 
-		return Arrays
-				.asList(new Object[][] { { new ValkeyAtomicInteger("bound:key:int", jedisConnFactory), sof, templateJS },
-						{ new ValkeyAtomicLong("bound:key:long", jedisConnFactory), sof, templateJS }, { list, sof, templateJS },
-						{ setJS, sof, templateJS }, { mapJS, sof, templateJS },
-						{ new ValkeyAtomicInteger("bound:key:intLT", lettuceConnFactory), sof, templateLT },
-						{ new ValkeyAtomicLong("bound:key:longLT", lettuceConnFactory), sof, templateLT },
-						{ listLT, sof, templateLT }, { setLT, sof, templateLT }, { mapLT, sof, templateLT },
-						{ new ValkeyAtomicInteger("bound:key:intVG", vgConnFactory), sof, templateVG },
-						{ new ValkeyAtomicLong("bound:key:longVG", vgConnFactory), sof, templateVG },
-						{ listVG, sof, templateVG }, { setVG, sof, templateVG }, { mapVG, sof, templateVG } });
-	}
+        return Arrays.asList(
+                new Object[][] {
+                    {new ValkeyAtomicInteger("bound:key:int", jedisConnFactory), sof, templateJS},
+                    {new ValkeyAtomicLong("bound:key:long", jedisConnFactory), sof, templateJS},
+                    {list, sof, templateJS},
+                    {setJS, sof, templateJS},
+                    {mapJS, sof, templateJS},
+                    {new ValkeyAtomicInteger("bound:key:intLT", lettuceConnFactory), sof, templateLT},
+                    {new ValkeyAtomicLong("bound:key:longLT", lettuceConnFactory), sof, templateLT},
+                    {listLT, sof, templateLT},
+                    {setLT, sof, templateLT},
+                    {mapLT, sof, templateLT},
+                    {new ValkeyAtomicInteger("bound:key:intVG", vgConnFactory), sof, templateVG},
+                    {new ValkeyAtomicLong("bound:key:longVG", vgConnFactory), sof, templateVG},
+                    {listVG, sof, templateVG},
+                    {setVG, sof, templateVG},
+                    {mapVG, sof, templateVG}
+                });
+    }
 }

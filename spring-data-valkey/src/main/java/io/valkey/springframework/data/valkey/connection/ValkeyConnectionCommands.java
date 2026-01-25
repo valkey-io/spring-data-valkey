@@ -26,30 +26,31 @@ import org.springframework.lang.Nullable;
  */
 public interface ValkeyConnectionCommands {
 
-	/**
-	 * Select the DB with given positive {@code dbIndex}.
-	 *
-	 * @param dbIndex the database index.
-	 * @see <a href="https://valkey.io/commands/select">Valkey Documentation: SELECT</a>
-	 */
-	void select(int dbIndex);
+    /**
+     * Select the DB with given positive {@code dbIndex}.
+     *
+     * @param dbIndex the database index.
+     * @see <a href="https://valkey.io/commands/select">Valkey Documentation: SELECT</a>
+     */
+    void select(int dbIndex);
 
-	/**
-	 * Returns {@code message} via server roundtrip.
-	 *
-	 * @param message the message to echo.
-	 * @return the message or {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/echo">Valkey Documentation: ECHO</a>
-	 */
-	@Nullable
-	byte[] echo(byte[] message);
+    /**
+     * Returns {@code message} via server roundtrip.
+     *
+     * @param message the message to echo.
+     * @return the message or {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/echo">Valkey Documentation: ECHO</a>
+     */
+    @Nullable
+    byte[] echo(byte[] message);
 
-	/**
-	 * Test connection.
-	 *
-	 * @return Server response message - usually {@literal PONG}. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/ping">Valkey Documentation: PING</a>
-	 */
-	@Nullable
-	String ping();
+    /**
+     * Test connection.
+     *
+     * @return Server response message - usually {@literal PONG}. {@literal null} when used in
+     *     pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/ping">Valkey Documentation: PING</a>
+     */
+    @Nullable
+    String ping();
 }

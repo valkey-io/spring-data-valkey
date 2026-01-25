@@ -23,41 +23,42 @@ import java.util.Arrays;
  * @param <K>
  * @param <V>
  */
-class DefaultHyperLogLogOperations<K, V> extends AbstractOperations<K, V> implements HyperLogLogOperations<K, V> {
+class DefaultHyperLogLogOperations<K, V> extends AbstractOperations<K, V>
+        implements HyperLogLogOperations<K, V> {
 
-	DefaultHyperLogLogOperations(ValkeyTemplate<K, V> template) {
-		super(template);
-	}
+    DefaultHyperLogLogOperations(ValkeyTemplate<K, V> template) {
+        super(template);
+    }
 
-	@Override
-	public Long add(K key, V... values) {
+    @Override
+    public Long add(K key, V... values) {
 
-		byte[] rawKey = rawKey(key);
-		byte[][] rawValues = rawValues(values);
-		return execute(connection -> connection.pfAdd(rawKey, rawValues));
-	}
+        byte[] rawKey = rawKey(key);
+        byte[][] rawValues = rawValues(values);
+        return execute(connection -> connection.pfAdd(rawKey, rawValues));
+    }
 
-	@Override
-	public Long size(K... keys) {
+    @Override
+    public Long size(K... keys) {
 
-		byte[][] rawKeys = rawKeys(Arrays.asList(keys));
-		return execute(connection -> connection.pfCount(rawKeys));
-	}
+        byte[][] rawKeys = rawKeys(Arrays.asList(keys));
+        return execute(connection -> connection.pfCount(rawKeys));
+    }
 
-	@Override
-	public Long union(K destination, K... sourceKeys) {
+    @Override
+    public Long union(K destination, K... sourceKeys) {
 
-		byte[] rawDestinationKey = rawKey(destination);
-		byte[][] rawSourceKeys = rawKeys(Arrays.asList(sourceKeys));
-		return execute(connection -> {
+        byte[] rawDestinationKey = rawKey(destination);
+        byte[][] rawSourceKeys = rawKeys(Arrays.asList(sourceKeys));
+        return execute(
+                connection -> {
+                    connection.pfMerge(rawDestinationKey, rawSourceKeys);
+                    return connection.pfCount(rawDestinationKey);
+                });
+    }
 
-			connection.pfMerge(rawDestinationKey, rawSourceKeys);
-			return connection.pfCount(rawDestinationKey);
-		});
-	}
-
-	@Override
-	public void delete(K key) {
-		template.delete(key);
-	}
+    @Override
+    public void delete(K key) {
+        template.delete(key);
+    }
 }

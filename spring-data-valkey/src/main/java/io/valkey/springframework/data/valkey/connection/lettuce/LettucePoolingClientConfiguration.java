@@ -19,16 +19,13 @@ import io.lettuce.core.ClientOptions;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.resource.ClientResources;
-
 import java.time.Duration;
-
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-
 import org.springframework.util.Assert;
 
 /**
- * Valkey client configuration for lettuce using a driver level pooled connection by adding pooling specific
- * configuration to {@link LettuceClientConfiguration}.
+ * Valkey client configuration for lettuce using a driver level pooled connection by adding pooling
+ * specific configuration to {@link LettuceClientConfiguration}.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -37,179 +34,183 @@ import org.springframework.util.Assert;
  */
 public interface LettucePoolingClientConfiguration extends LettuceClientConfiguration {
 
-	/**
-	 * @return the {@link GenericObjectPoolConfig}. Never {@literal null}.
-	 */
-	GenericObjectPoolConfig<StatefulConnection<?, ?>> getPoolConfig();
+    /**
+     * @return the {@link GenericObjectPoolConfig}. Never {@literal null}.
+     */
+    GenericObjectPoolConfig<StatefulConnection<?, ?>> getPoolConfig();
 
-	/**
-	 * Creates a new {@link LettucePoolingClientConfigurationBuilder} to build {@link LettucePoolingClientConfiguration}
-	 * to be used with the Lettuce client.
-	 *
-	 * @return a new {@link LettucePoolingClientConfigurationBuilder} to build {@link LettucePoolingClientConfiguration}.
-	 */
-	static LettucePoolingClientConfigurationBuilder builder() {
-		return new LettucePoolingClientConfigurationBuilder();
-	}
+    /**
+     * Creates a new {@link LettucePoolingClientConfigurationBuilder} to build {@link
+     * LettucePoolingClientConfiguration} to be used with the Lettuce client.
+     *
+     * @return a new {@link LettucePoolingClientConfigurationBuilder} to build {@link
+     *     LettucePoolingClientConfiguration}.
+     */
+    static LettucePoolingClientConfigurationBuilder builder() {
+        return new LettucePoolingClientConfigurationBuilder();
+    }
 
-	/**
-	 * Creates a default {@link LettucePoolingClientConfiguration} with
-	 * <dl>
-	 * <dt>SSL</dt>
-	 * <dd>no</dd>
-	 * <dt>Peer Verification</dt>
-	 * <dd>yes</dd>
-	 * <dt>Start TLS</dt>
-	 * <dd>no</dd>
-	 * <dt>Client Options</dt>
-	 * <dd>{@link ClientOptions} with enabled {@link io.lettuce.core.TimeoutOptions}</dd>
-	 * <dt>Client Resources</dt>
-	 * <dd>none</dd>
-	 * <dt>Client name</dt>
-	 * <dd>none</dd>
-	 * <dt>Read From</dt>
-	 * <dd>none</dd>
-	 * <dt>Connect Timeout</dt>
-	 * <dd>60 Seconds</dd>
-	 * <dt>Shutdown Timeout</dt>
-	 * <dd>100 Milliseconds</dd>
-	 * <dt>Shutdown Quiet Period</dt>
-	 * <dd>100 Milliseconds</dd>
-	 * <dt>pool config</dt>
-	 * <dd>default {@link GenericObjectPoolConfig}</dd>
-	 * </dl>
-	 *
-	 * @return a {@link LettucePoolingClientConfiguration} with defaults.
-	 */
-	static LettucePoolingClientConfiguration defaultConfiguration() {
-		return builder().build();
-	}
+    /**
+     * Creates a default {@link LettucePoolingClientConfiguration} with
+     *
+     * <dl>
+     *   <dt>SSL
+     *   <dd>no
+     *   <dt>Peer Verification
+     *   <dd>yes
+     *   <dt>Start TLS
+     *   <dd>no
+     *   <dt>Client Options
+     *   <dd>{@link ClientOptions} with enabled {@link io.lettuce.core.TimeoutOptions}
+     *   <dt>Client Resources
+     *   <dd>none
+     *   <dt>Client name
+     *   <dd>none
+     *   <dt>Read From
+     *   <dd>none
+     *   <dt>Connect Timeout
+     *   <dd>60 Seconds
+     *   <dt>Shutdown Timeout
+     *   <dd>100 Milliseconds
+     *   <dt>Shutdown Quiet Period
+     *   <dd>100 Milliseconds
+     *   <dt>pool config
+     *   <dd>default {@link GenericObjectPoolConfig}
+     * </dl>
+     *
+     * @return a {@link LettucePoolingClientConfiguration} with defaults.
+     */
+    static LettucePoolingClientConfiguration defaultConfiguration() {
+        return builder().build();
+    }
 
-	/**
-	 * @author Mark Paluch
-	 * @author Christoph Strobl
-	 * @author Longlong Zhao
-	 */
-	class LettucePoolingClientConfigurationBuilder extends LettuceClientConfigurationBuilder {
+    /**
+     * @author Mark Paluch
+     * @author Christoph Strobl
+     * @author Longlong Zhao
+     */
+    class LettucePoolingClientConfigurationBuilder extends LettuceClientConfigurationBuilder {
 
-		GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig = new GenericObjectPoolConfig<>();
+        GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig = new GenericObjectPoolConfig<>();
 
-		LettucePoolingClientConfigurationBuilder() {
-			super();
-		}
+        LettucePoolingClientConfigurationBuilder() {
+            super();
+        }
 
-		@Override
-		public LettucePoolingSslClientConfigurationBuilder useSsl() {
+        @Override
+        public LettucePoolingSslClientConfigurationBuilder useSsl() {
 
-			super.useSsl();
-			return new LettucePoolingSslClientConfigurationBuilder(this);
-		}
+            super.useSsl();
+            return new LettucePoolingSslClientConfigurationBuilder(this);
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder clientResources(ClientResources clientResources) {
+        @Override
+        public LettucePoolingClientConfigurationBuilder clientResources(
+                ClientResources clientResources) {
 
-			super.clientResources(clientResources);
-			return this;
-		}
+            super.clientResources(clientResources);
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder clientOptions(ClientOptions clientOptions) {
+        @Override
+        public LettucePoolingClientConfigurationBuilder clientOptions(ClientOptions clientOptions) {
 
-			super.clientOptions(clientOptions);
-			return this;
-		}
+            super.clientOptions(clientOptions);
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder commandTimeout(Duration timeout) {
+        @Override
+        public LettucePoolingClientConfigurationBuilder commandTimeout(Duration timeout) {
 
-			super.commandTimeout(timeout);
-			return this;
-		}
+            super.commandTimeout(timeout);
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder shutdownTimeout(Duration shutdownTimeout) {
+        @Override
+        public LettucePoolingClientConfigurationBuilder shutdownTimeout(Duration shutdownTimeout) {
 
-			super.shutdownTimeout(shutdownTimeout);
-			return this;
-		}
+            super.shutdownTimeout(shutdownTimeout);
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder shutdownQuietPeriod(Duration shutdownQuietPeriod) {
+        @Override
+        public LettucePoolingClientConfigurationBuilder shutdownQuietPeriod(
+                Duration shutdownQuietPeriod) {
 
-			super.shutdownQuietPeriod(shutdownQuietPeriod);
-			return this;
-		}
+            super.shutdownQuietPeriod(shutdownQuietPeriod);
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder readFrom(ReadFrom readFrom) {
-			super.readFrom(readFrom);
-			return this;
-		}
+        @Override
+        public LettucePoolingClientConfigurationBuilder readFrom(ReadFrom readFrom) {
+            super.readFrom(readFrom);
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder valkeyCredentialsProviderFactory(
-				ValkeyCredentialsProviderFactory valkeyCredentialsProviderFactory) {
-			super.valkeyCredentialsProviderFactory(valkeyCredentialsProviderFactory);
-			return this;
-		}
+        @Override
+        public LettucePoolingClientConfigurationBuilder valkeyCredentialsProviderFactory(
+                ValkeyCredentialsProviderFactory valkeyCredentialsProviderFactory) {
+            super.valkeyCredentialsProviderFactory(valkeyCredentialsProviderFactory);
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder clientName(String clientName) {
-			super.clientName(clientName);
-			return this;
-		}
+        @Override
+        public LettucePoolingClientConfigurationBuilder clientName(String clientName) {
+            super.clientName(clientName);
+            return this;
+        }
 
-		/**
-		 * Set the {@link GenericObjectPoolConfig} used by the driver.
-		 *
-		 * @param poolConfig must not be {@literal null}.
-		 */
-		public LettucePoolingClientConfigurationBuilder poolConfig(
-				GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig) {
+        /**
+         * Set the {@link GenericObjectPoolConfig} used by the driver.
+         *
+         * @param poolConfig must not be {@literal null}.
+         */
+        public LettucePoolingClientConfigurationBuilder poolConfig(
+                GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig) {
 
-			Assert.notNull(poolConfig, "PoolConfig must not be null");
+            Assert.notNull(poolConfig, "PoolConfig must not be null");
 
-			this.poolConfig = poolConfig;
-			return this;
-		}
+            this.poolConfig = poolConfig;
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfiguration build() {
-			return new DefaultLettucePoolingClientConfiguration(super.build(), poolConfig);
-		}
-	}
+        @Override
+        public LettucePoolingClientConfiguration build() {
+            return new DefaultLettucePoolingClientConfiguration(super.build(), poolConfig);
+        }
+    }
 
-	/**
-	 * @author Christoph Strobl
-	 */
-	class LettucePoolingSslClientConfigurationBuilder extends LettuceSslClientConfigurationBuilder {
+    /**
+     * @author Christoph Strobl
+     */
+    class LettucePoolingSslClientConfigurationBuilder extends LettuceSslClientConfigurationBuilder {
 
-		LettucePoolingSslClientConfigurationBuilder(LettucePoolingClientConfigurationBuilder delegate) {
-			super(delegate);
-		}
+        LettucePoolingSslClientConfigurationBuilder(LettucePoolingClientConfigurationBuilder delegate) {
+            super(delegate);
+        }
 
-		@Override
-		public LettucePoolingClientConfigurationBuilder and() {
-			return (LettucePoolingClientConfigurationBuilder) super.and();
-		}
+        @Override
+        public LettucePoolingClientConfigurationBuilder and() {
+            return (LettucePoolingClientConfigurationBuilder) super.and();
+        }
 
-		@Override
-		public LettucePoolingSslClientConfigurationBuilder disablePeerVerification() {
+        @Override
+        public LettucePoolingSslClientConfigurationBuilder disablePeerVerification() {
 
-			super.disablePeerVerification();
-			return this;
-		}
+            super.disablePeerVerification();
+            return this;
+        }
 
-		@Override
-		public LettucePoolingSslClientConfigurationBuilder startTls() {
+        @Override
+        public LettucePoolingSslClientConfigurationBuilder startTls() {
 
-			super.startTls();
-			return this;
-		}
+            super.startTls();
+            return this;
+        }
 
-		@Override
-		public LettucePoolingClientConfiguration build() {
-			return (LettucePoolingClientConfiguration) super.build();
-		}
-	}
+        @Override
+        public LettucePoolingClientConfiguration build() {
+            return (LettucePoolingClientConfiguration) super.build();
+        }
+    }
 }

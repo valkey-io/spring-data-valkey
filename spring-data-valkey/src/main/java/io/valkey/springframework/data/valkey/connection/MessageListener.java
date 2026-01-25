@@ -18,8 +18,8 @@ package io.valkey.springframework.data.valkey.connection;
 import org.springframework.lang.Nullable;
 
 /**
- * Listener of messages published in Valkey. A MessageListener can implement {@link SubscriptionListener} to receive
- * notifications for subscription states.
+ * Listener of messages published in Valkey. A MessageListener can implement {@link
+ * SubscriptionListener} to receive notifications for subscription states.
  *
  * @author Costin Leau
  * @author Christoph Strobl
@@ -28,11 +28,11 @@ import org.springframework.lang.Nullable;
 @FunctionalInterface
 public interface MessageListener {
 
-	/**
-	 * Callback for processing received objects through Valkey.
-	 *
-	 * @param message message must not be {@literal null}.
-	 * @param pattern pattern matching the channel (if specified) - can be {@literal null}.
-	 */
-	void onMessage(Message message, @Nullable byte[] pattern);
+    /**
+     * Callback for processing received objects through Valkey.
+     *
+     * @param message message must not be {@literal null}.
+     * @param pattern pattern matching the channel (if specified) - can be {@literal null}.
+     */
+    void onMessage(Message message, @Nullable byte[] pattern);
 }

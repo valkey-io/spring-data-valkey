@@ -23,99 +23,99 @@ package io.valkey.springframework.data.valkey.connection;
  */
 public interface ValkeyCommandsProvider {
 
-	/**
-	 * Get {@link ValkeyCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 3.0
-	 */
-	ValkeyCommands commands();
+    /**
+     * Get {@link ValkeyCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 3.0
+     */
+    ValkeyCommands commands();
 
-	/**
-	 * Get {@link ValkeyGeoCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyGeoCommands geoCommands();
+    /**
+     * Get {@link ValkeyGeoCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyGeoCommands geoCommands();
 
-	/**
-	 * Get {@link ValkeyHashCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyHashCommands hashCommands();
+    /**
+     * Get {@link ValkeyHashCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyHashCommands hashCommands();
 
-	/**
-	 * Get {@link ValkeyHyperLogLogCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyHyperLogLogCommands hyperLogLogCommands();
+    /**
+     * Get {@link ValkeyHyperLogLogCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyHyperLogLogCommands hyperLogLogCommands();
 
-	/**
-	 * Get {@link ValkeyKeyCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyKeyCommands keyCommands();
+    /**
+     * Get {@link ValkeyKeyCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyKeyCommands keyCommands();
 
-	/**
-	 * Get {@link ValkeyListCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyListCommands listCommands();
+    /**
+     * Get {@link ValkeyListCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyListCommands listCommands();
 
-	/**
-	 * Get {@link ValkeySetCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeySetCommands setCommands();
+    /**
+     * Get {@link ValkeySetCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeySetCommands setCommands();
 
-	/**
-	 * Get {@link ValkeyScriptingCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyScriptingCommands scriptingCommands();
+    /**
+     * Get {@link ValkeyScriptingCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyScriptingCommands scriptingCommands();
 
-	/**
-	 * Get {@link ValkeyServerCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyServerCommands serverCommands();
+    /**
+     * Get {@link ValkeyServerCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyServerCommands serverCommands();
 
-	/**
-	 * Get {@link ValkeyStreamCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.2
-	 */
-	ValkeyStreamCommands streamCommands();
+    /**
+     * Get {@link ValkeyStreamCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.2
+     */
+    ValkeyStreamCommands streamCommands();
 
-	/**
-	 * Get {@link ValkeyStringCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyStringCommands stringCommands();
+    /**
+     * Get {@link ValkeyStringCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyStringCommands stringCommands();
 
-	/**
-	 * Get {@link ValkeyZSetCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyZSetCommands zSetCommands();
+    /**
+     * Get {@link ValkeyZSetCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyZSetCommands zSetCommands();
 }

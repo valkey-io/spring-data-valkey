@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Actuator metrics support for Valkey caches.
- */
+/** Actuator metrics support for Valkey caches. */
 package io.valkey.springframework.boot.actuate.metrics.cache;

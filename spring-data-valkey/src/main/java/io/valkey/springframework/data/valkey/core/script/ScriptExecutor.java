@@ -15,9 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core.script;
 
-import java.util.List;
-
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
+import java.util.List;
 
 /**
  * Executes {@link ValkeyScript}s
@@ -27,30 +26,36 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
  */
 public interface ScriptExecutor<K> {
 
-	/**
-	 * Executes the given {@link ValkeyScript}
-	 *
-	 * @param script the script to execute.
-	 * @param keys any keys that need to be passed to the script.
-	 * @param args any args that need to be passed to the script.
-	 * @return The return value of the script or {@literal null} if {@link ValkeyScript#getResultType()} is
-	 *         {@literal null}, likely indicating a throw-away status reply (i.e. "OK")
-	 */
-	<T> T execute(ValkeyScript<T> script, List<K> keys, Object... args);
+    /**
+     * Executes the given {@link ValkeyScript}
+     *
+     * @param script the script to execute.
+     * @param keys any keys that need to be passed to the script.
+     * @param args any args that need to be passed to the script.
+     * @return The return value of the script or {@literal null} if {@link
+     *     ValkeyScript#getResultType()} is {@literal null}, likely indicating a throw-away status
+     *     reply (i.e. "OK")
+     */
+    <T> T execute(ValkeyScript<T> script, List<K> keys, Object... args);
 
-	/**
-	 * Executes the given {@link ValkeyScript}, using the provided {@link ValkeySerializer}s to serialize the script
-	 * arguments and result.
-	 *
-	 * @param script the script to execute.
-	 * @param argsSerializer The {@link ValkeySerializer} to use for serializing args.
-	 * @param resultSerializer The {@link ValkeySerializer} to use for serializing the script return value.
-	 * @param keys any keys that need to be passed to the script.
-	 * @param args any args that need to be passed to the script.
-	 * @return The return value of the script or {@literal null} if {@link ValkeyScript#getResultType()} is
-	 *         {@literal null}, likely indicating a throw-away status reply (i.e. "OK")
-	 */
-	<T> T execute(ValkeyScript<T> script, ValkeySerializer<?> argsSerializer, ValkeySerializer<T> resultSerializer,
-			List<K> keys, Object... args);
-
+    /**
+     * Executes the given {@link ValkeyScript}, using the provided {@link ValkeySerializer}s to
+     * serialize the script arguments and result.
+     *
+     * @param script the script to execute.
+     * @param argsSerializer The {@link ValkeySerializer} to use for serializing args.
+     * @param resultSerializer The {@link ValkeySerializer} to use for serializing the script return
+     *     value.
+     * @param keys any keys that need to be passed to the script.
+     * @param args any args that need to be passed to the script.
+     * @return The return value of the script or {@literal null} if {@link
+     *     ValkeyScript#getResultType()} is {@literal null}, likely indicating a throw-away status
+     *     reply (i.e. "OK")
+     */
+    <T> T execute(
+            ValkeyScript<T> script,
+            ValkeySerializer<?> argsSerializer,
+            ValkeySerializer<T> resultSerializer,
+            List<K> keys,
+            Object... args);
 }

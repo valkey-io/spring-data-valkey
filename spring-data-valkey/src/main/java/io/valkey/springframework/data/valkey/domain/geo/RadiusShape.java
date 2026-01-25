@@ -27,21 +27,21 @@ import org.springframework.util.Assert;
  */
 public class RadiusShape implements GeoShape {
 
-	private final Distance radius;
+    private final Distance radius;
 
-	public RadiusShape(Distance radius) {
+    public RadiusShape(Distance radius) {
 
-		Assert.notNull(radius, "Distance must not be null");
+        Assert.notNull(radius, "Distance must not be null");
 
-		this.radius = radius;
-	}
+        this.radius = radius;
+    }
 
-	public Distance getRadius() {
-		return radius;
-	}
+    public Distance getRadius() {
+        return radius;
+    }
 
-	@Override
-	public Metric getMetric() {
-		return radius.getMetric();
-	}
+    @Override
+    public Metric getMetric() {
+        return radius.getMetric();
+    }
 }

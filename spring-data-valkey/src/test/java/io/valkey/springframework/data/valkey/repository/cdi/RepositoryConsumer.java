@@ -22,21 +22,20 @@ import jakarta.inject.Inject;
  */
 class RepositoryConsumer {
 
-	@Inject PersonRepository unqualifiedRepo;
-	@Inject @PersonDB PersonRepository qualifiedRepo;
+    @Inject PersonRepository unqualifiedRepo;
+    @Inject @PersonDB PersonRepository qualifiedRepo;
 
-	public PersonRepository getUnqualifiedRepo() {
-		return unqualifiedRepo;
-	}
+    public PersonRepository getUnqualifiedRepo() {
+        return unqualifiedRepo;
+    }
 
-	public PersonRepository getQualifiedRepo() {
-		return qualifiedRepo;
-	}
+    public PersonRepository getQualifiedRepo() {
+        return qualifiedRepo;
+    }
 
-	public void deleteAll() {
+    public void deleteAll() {
 
-		unqualifiedRepo.deleteAll();
-		qualifiedRepo.deleteAll();
-	}
-
+        unqualifiedRepo.deleteAll();
+        qualifiedRepo.deleteAll();
+    }
 }

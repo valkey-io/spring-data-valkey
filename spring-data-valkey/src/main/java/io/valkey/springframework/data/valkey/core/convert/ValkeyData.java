@@ -21,13 +21,12 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Data object holding {@link Bucket} representing the domain object to be stored in a Valkey hash. Index information
- * points to additional structures holding the objects is for searching.
+ * Data object holding {@link Bucket} representing the domain object to be stored in a Valkey hash.
+ * Index information points to additional structures holding the objects is for searching.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -35,142 +34,139 @@ import org.springframework.util.Assert;
  */
 public class ValkeyData {
 
-	private final Bucket bucket;
-	private final Set<IndexedData> indexedData;
+    private final Bucket bucket;
+    private final Set<IndexedData> indexedData;
 
-	private @Nullable String keyspace;
-	private @Nullable String id;
-	private @Nullable Long timeToLive;
+    private @Nullable String keyspace;
+    private @Nullable String id;
+    private @Nullable Long timeToLive;
 
-	/**
-	 * Creates new {@link ValkeyData} with empty {@link Bucket}.
-	 */
-	public ValkeyData() {
-		this(Collections.emptyMap());
-	}
+    /** Creates new {@link ValkeyData} with empty {@link Bucket}. */
+    public ValkeyData() {
+        this(Collections.emptyMap());
+    }
 
-	/**
-	 * Creates new {@link ValkeyData} with {@link Bucket} holding provided values.
-	 *
-	 * @param raw should not be {@literal null}.
-	 */
-	public ValkeyData(Map<byte[], byte[]> raw) {
-		this(Bucket.newBucketFromRawMap(raw));
-	}
+    /**
+     * Creates new {@link ValkeyData} with {@link Bucket} holding provided values.
+     *
+     * @param raw should not be {@literal null}.
+     */
+    public ValkeyData(Map<byte[], byte[]> raw) {
+        this(Bucket.newBucketFromRawMap(raw));
+    }
 
-	/**
-	 * Creates new {@link ValkeyData} with {@link Bucket}
-	 *
-	 * @param bucket must not be {@literal null}.
-	 */
-	public ValkeyData(Bucket bucket) {
+    /**
+     * Creates new {@link ValkeyData} with {@link Bucket}
+     *
+     * @param bucket must not be {@literal null}.
+     */
+    public ValkeyData(Bucket bucket) {
 
-		Assert.notNull(bucket, "Bucket must not be null");
+        Assert.notNull(bucket, "Bucket must not be null");
 
-		this.bucket = bucket;
-		this.indexedData = new HashSet<>();
-	}
+        this.bucket = bucket;
+        this.indexedData = new HashSet<>();
+    }
 
-	/**
-	 * Set the id to be used as part of the key.
-	 *
-	 * @param id
-	 */
-	public void setId(@Nullable String id) {
-		this.id = id;
-	}
+    /**
+     * Set the id to be used as part of the key.
+     *
+     * @param id
+     */
+    public void setId(@Nullable String id) {
+        this.id = id;
+    }
 
-	/**
-	 * @return
-	 */
-	@Nullable
-	public String getId() {
-		return this.id;
-	}
+    /**
+     * @return
+     */
+    @Nullable
+    public String getId() {
+        return this.id;
+    }
 
-	/**
-	 * Get the time before expiration in seconds.
-	 *
-	 * @return {@literal null} if not set.
-	 */
-	@Nullable
-	public Long getTimeToLive() {
-		return timeToLive;
-	}
+    /**
+     * Get the time before expiration in seconds.
+     *
+     * @return {@literal null} if not set.
+     */
+    @Nullable
+    public Long getTimeToLive() {
+        return timeToLive;
+    }
 
-	/**
-	 * @param index must not be {@literal null}.
-	 */
-	public void addIndexedData(IndexedData index) {
+    /**
+     * @param index must not be {@literal null}.
+     */
+    public void addIndexedData(IndexedData index) {
 
-		Assert.notNull(index, "IndexedData to add must not be null");
-		this.indexedData.add(index);
-	}
+        Assert.notNull(index, "IndexedData to add must not be null");
+        this.indexedData.add(index);
+    }
 
-	/**
-	 * @param indexes must not be {@literal null}.
-	 */
-	public void addIndexedData(Collection<IndexedData> indexes) {
+    /**
+     * @param indexes must not be {@literal null}.
+     */
+    public void addIndexedData(Collection<IndexedData> indexes) {
 
-		Assert.notNull(indexes, "IndexedData to add must not be null");
-		this.indexedData.addAll(indexes);
-	}
+        Assert.notNull(indexes, "IndexedData to add must not be null");
+        this.indexedData.addAll(indexes);
+    }
 
-	/**
-	 * @return never {@literal null}.
-	 */
-	public Set<IndexedData> getIndexedData() {
-		return Collections.unmodifiableSet(this.indexedData);
-	}
+    /**
+     * @return never {@literal null}.
+     */
+    public Set<IndexedData> getIndexedData() {
+        return Collections.unmodifiableSet(this.indexedData);
+    }
 
-	/**
-	 * @return
-	 */
-	@Nullable
-	public String getKeyspace() {
-		return keyspace;
-	}
+    /**
+     * @return
+     */
+    @Nullable
+    public String getKeyspace() {
+        return keyspace;
+    }
 
-	/**
-	 * @param keyspace
-	 */
-	public void setKeyspace(@Nullable String keyspace) {
-		this.keyspace = keyspace;
-	}
+    /**
+     * @param keyspace
+     */
+    public void setKeyspace(@Nullable String keyspace) {
+        this.keyspace = keyspace;
+    }
 
-	/**
-	 * @return
-	 */
-	public Bucket getBucket() {
-		return bucket;
-	}
+    /**
+     * @return
+     */
+    public Bucket getBucket() {
+        return bucket;
+    }
 
-	/**
-	 * Set the time before expiration in {@link TimeUnit#SECONDS}.
-	 *
-	 * @param timeToLive can be {@literal null}.
-	 */
-	public void setTimeToLive(Long timeToLive) {
-		this.timeToLive = timeToLive;
-	}
+    /**
+     * Set the time before expiration in {@link TimeUnit#SECONDS}.
+     *
+     * @param timeToLive can be {@literal null}.
+     */
+    public void setTimeToLive(Long timeToLive) {
+        this.timeToLive = timeToLive;
+    }
 
-	/**
-	 * Set the time before expiration converting the given arguments to {@link TimeUnit#SECONDS}.
-	 *
-	 * @param timeToLive must not be {@literal null}
-	 * @param timeUnit must not be {@literal null}
-	 */
-	public void setTimeToLive(Long timeToLive, TimeUnit timeUnit) {
+    /**
+     * Set the time before expiration converting the given arguments to {@link TimeUnit#SECONDS}.
+     *
+     * @param timeToLive must not be {@literal null}
+     * @param timeUnit must not be {@literal null}
+     */
+    public void setTimeToLive(Long timeToLive, TimeUnit timeUnit) {
 
-		Assert.notNull(timeToLive, "TimeToLive must not be null when used with TimeUnit");
-		Assert.notNull(timeToLive, "TimeUnit must not be null");
+        Assert.notNull(timeToLive, "TimeToLive must not be null when used with TimeUnit");
+        Assert.notNull(timeToLive, "TimeUnit must not be null");
 
-		setTimeToLive(TimeUnit.SECONDS.convert(timeToLive, timeUnit));
-	}
+        setTimeToLive(TimeUnit.SECONDS.convert(timeToLive, timeUnit));
+    }
 
-	@Override
-	public String toString() {
-		return "ValkeyDataObject [key=" + keyspace + ":" + id + ", hash=" + bucket + "]";
-	}
-
+    @Override
+    public String toString() {
+        return "ValkeyDataObject [key=" + keyspace + ":" + id + ", hash=" + bucket + "]";
+    }
 }

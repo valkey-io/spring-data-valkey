@@ -17,13 +17,11 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import static org.assertj.core.api.Assertions.*;
 
-import reactor.test.StepVerifier;
-
-import java.util.Arrays;
-
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Arrays;
+import reactor.test.StepVerifier;
 
 /**
  * Integration tests for {@link LettuceReactiveSetCommands}.
@@ -31,245 +29,308 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Christoph Strobl
  * @author Mark Paluch
  */
-public class LettuceReactiveSetCommandsIntegrationIntegrationTests extends LettuceReactiveCommandsTestSupport {
+public class LettuceReactiveSetCommandsIntegrationIntegrationTests
+        extends LettuceReactiveCommandsTestSupport {
+
+    public LettuceReactiveSetCommandsIntegrationIntegrationTests(Fixture fixture) {
+        super(fixture);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sAddShouldAddSingleValue() {
+        assertThat(connection.setCommands().sAdd(KEY_1_BBUFFER, VALUE_1_BBUFFER).block()).isEqualTo(1L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sAddShouldAddValues() {
+        assertThat(
+                        connection
+                                .setCommands()
+                                .sAdd(KEY_1_BBUFFER, Arrays.asList(VALUE_1_BBUFFER, VALUE_2_BBUFFER))
+                                .block())
+                .isEqualTo(2L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sRemShouldRemoveSingleValue() {
 
-	public LettuceReactiveSetCommandsIntegrationIntegrationTests(Fixture fixture) {
-		super(fixture);
-	}
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sAddShouldAddSingleValue() {
-		assertThat(connection.setCommands().sAdd(KEY_1_BBUFFER, VALUE_1_BBUFFER).block()).isEqualTo(1L);
-	}
+        assertThat(connection.setCommands().sRem(KEY_1_BBUFFER, VALUE_1_BBUFFER).block()).isEqualTo(1L);
+        assertThat(nativeCommands.sismember(KEY_1, VALUE_1)).isFalse();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sAddShouldAddValues() {
-		assertThat(connection.setCommands().sAdd(KEY_1_BBUFFER, Arrays.asList(VALUE_1_BBUFFER, VALUE_2_BBUFFER)).block())
-				.isEqualTo(2L);
-	}
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sRemShouldRemoveValues() {
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sRemShouldRemoveSingleValue() {
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
 
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        assertThat(
+                        connection
+                                .setCommands()
+                                .sRem(KEY_1_BBUFFER, Arrays.asList(VALUE_1_BBUFFER, VALUE_2_BBUFFER))
+                                .block())
+                .isEqualTo(2L);
+        assertThat(nativeCommands.sismember(KEY_1, VALUE_1)).isFalse();
+        assertThat(nativeCommands.sismember(KEY_1, VALUE_2)).isFalse();
+    }
 
-		assertThat(connection.setCommands().sRem(KEY_1_BBUFFER, VALUE_1_BBUFFER).block()).isEqualTo(1L);
-		assertThat(nativeCommands.sismember(KEY_1, VALUE_1)).isFalse();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sPopShouldRetrieveRandomValue() {
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sRemShouldRemoveValues() {
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
 
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        assertThat(connection.setCommands().sPop(KEY_1_BBUFFER).block()).isNotNull();
+    }
 
-		assertThat(connection.setCommands().sRem(KEY_1_BBUFFER, Arrays.asList(VALUE_1_BBUFFER, VALUE_2_BBUFFER)).block())
-				.isEqualTo(2L);
-		assertThat(nativeCommands.sismember(KEY_1, VALUE_1)).isFalse();
-		assertThat(nativeCommands.sismember(KEY_1, VALUE_2)).isFalse();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-668
+    void sPopCountShouldRetrieveValues() {
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sPopShouldRetrieveRandomValue() {
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
 
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-
-		assertThat(connection.setCommands().sPop(KEY_1_BBUFFER).block()).isNotNull();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-668
-	void sPopCountShouldRetrieveValues() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-
-		connection.setCommands().sPop(KEY_1_BBUFFER, 2).as(StepVerifier::create).expectNextCount(2).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sPopShouldReturnNullWhenNotPresent() {
-		assertThat(connection.setCommands().sPop(KEY_1_BBUFFER).block()).isNull();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sMoveShouldMoveValueCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-		nativeCommands.sadd(KEY_2, VALUE_1);
-
-		assertThat(connection.setCommands().sMove(KEY_1_BBUFFER, KEY_2_BBUFFER, VALUE_3_BBUFFER).block()).isTrue();
-		assertThat(nativeCommands.sismember(KEY_2, VALUE_3)).isTrue();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sMoveShouldReturnFalseIfValueIsNotAMember() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.sadd(KEY_2, VALUE_1);
-
-		assertThat(connection.setCommands().sMove(KEY_1_BBUFFER, KEY_2_BBUFFER, VALUE_3_BBUFFER).block()).isFalse();
-		assertThat(nativeCommands.sismember(KEY_2, VALUE_3)).isFalse();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sMoveShouldReturnOperateCorrectlyWhenValueAlreadyPresentInTarget() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-		nativeCommands.sadd(KEY_2, VALUE_1, VALUE_3);
-
-		assertThat(connection.setCommands().sMove(KEY_1_BBUFFER, KEY_2_BBUFFER, VALUE_3_BBUFFER).block()).isTrue();
-		assertThat(nativeCommands.sismember(KEY_1, VALUE_3)).isFalse();
-		assertThat(nativeCommands.sismember(KEY_2, VALUE_3)).isTrue();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sCardShouldCountValuesCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-
-		assertThat(connection.setCommands().sCard(KEY_1_BBUFFER).block()).isEqualTo(3L);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sIsMemberShouldReturnTrueWhenValueContainedInKey() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-
-		assertThat(connection.setCommands().sIsMember(KEY_1_BBUFFER, VALUE_1_BBUFFER).block()).isTrue();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sIsMemberShouldReturnFalseWhenValueNotContainedInKey() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-
-		assertThat(connection.setCommands().sIsMember(KEY_1_BBUFFER, VALUE_3_BBUFFER).block()).isFalse();
-	}
-
-	@ParameterizedValkeyTest // GH-2037
-	@EnabledOnCommand("SMISMEMBER")
-	void sMIsMemberShouldReturnCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-
-		connection.setCommands().sMIsMember(KEY_1_BBUFFER, Arrays.asList(VALUE_1_BBUFFER, VALUE_3_BBUFFER)) //
-				.as(StepVerifier::create) //
-				.expectNext(Arrays.asList(true, false)) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525, DATAREDIS-647
-	void sInterShouldIntersectSetsCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
-		nativeCommands.sadd(KEY_3, VALUE_1, VALUE_3);
-
-		connection.setCommands().sInter(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNext(VALUE_2_BBUFFER) //
-				.verifyComplete();
-
-		connection.setCommands().sInter(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER)).as(StepVerifier::create) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sInterStoreShouldReturnSizeCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
-
-		assertThat(connection.setCommands().sInterStore(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).block())
-				.isEqualTo(1L);
-		assertThat(nativeCommands.sismember(KEY_3, VALUE_2)).isTrue();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sUnionShouldCombineSetsCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
-
-		connection.setCommands().sUnion(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNextCount(3) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sUnionStoreShouldReturnSizeCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
-
-		assertThat(connection.setCommands().sUnionStore(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).block())
-				.isEqualTo(3L);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525, DATAREDIS-647
-	void sDiffShouldBeExcecutedCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
-		nativeCommands.sadd(KEY_3, VALUE_2, VALUE_1);
-
-		connection.setCommands().sDiff(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNext(VALUE_1_BBUFFER) //
-				.verifyComplete();
-
-		connection.setCommands().sDiff(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER)).as(StepVerifier::create) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sDiffStoreShouldBeExcecutedCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
-
-		assertThat(connection.setCommands().sDiffStore(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).block())
-				.isEqualTo(1L);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sMembersReadsValuesFromSetCorrectly() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-
-		connection.setCommands().sMembers(KEY_1_BBUFFER).buffer(3).as(StepVerifier::create) //
-				.consumeNextWith(list -> assertThat(list).contains(VALUE_1_BBUFFER, VALUE_2_BBUFFER, VALUE_3_BBUFFER)) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-743
-	void sScanShouldIterateOverSet() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-
-		connection.setCommands().sScan(KEY_1_BBUFFER).as(StepVerifier::create) //
-				.expectNextCount(3) //
-				.verifyComplete();
-
-		connection.setCommands().sScan(KEY_1_BBUFFER, ScanOptions.scanOptions().match("value-3").build())
-				.as(StepVerifier::create) //
-				.expectNext(VALUE_3_BBUFFER) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sRandMemberReturnsRandomMember() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-
-		assertThat(connection.setCommands().sRandMember(KEY_1_BBUFFER).block()).isIn(VALUE_1_BBUFFER, VALUE_2_BBUFFER,
-				VALUE_3_BBUFFER);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void sRandMemberReturnsRandomMembers() {
-
-		nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
-
-		connection.setCommands().sRandMember(KEY_1_BBUFFER, 2L).as(StepVerifier::create) //
-				.expectNextCount(2) //
-				.verifyComplete();
-	}
-
+        connection
+                .setCommands()
+                .sPop(KEY_1_BBUFFER, 2)
+                .as(StepVerifier::create)
+                .expectNextCount(2)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sPopShouldReturnNullWhenNotPresent() {
+        assertThat(connection.setCommands().sPop(KEY_1_BBUFFER).block()).isNull();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sMoveShouldMoveValueCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        nativeCommands.sadd(KEY_2, VALUE_1);
+
+        assertThat(
+                        connection.setCommands().sMove(KEY_1_BBUFFER, KEY_2_BBUFFER, VALUE_3_BBUFFER).block())
+                .isTrue();
+        assertThat(nativeCommands.sismember(KEY_2, VALUE_3)).isTrue();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sMoveShouldReturnFalseIfValueIsNotAMember() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.sadd(KEY_2, VALUE_1);
+
+        assertThat(
+                        connection.setCommands().sMove(KEY_1_BBUFFER, KEY_2_BBUFFER, VALUE_3_BBUFFER).block())
+                .isFalse();
+        assertThat(nativeCommands.sismember(KEY_2, VALUE_3)).isFalse();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sMoveShouldReturnOperateCorrectlyWhenValueAlreadyPresentInTarget() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        nativeCommands.sadd(KEY_2, VALUE_1, VALUE_3);
+
+        assertThat(
+                        connection.setCommands().sMove(KEY_1_BBUFFER, KEY_2_BBUFFER, VALUE_3_BBUFFER).block())
+                .isTrue();
+        assertThat(nativeCommands.sismember(KEY_1, VALUE_3)).isFalse();
+        assertThat(nativeCommands.sismember(KEY_2, VALUE_3)).isTrue();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sCardShouldCountValuesCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+
+        assertThat(connection.setCommands().sCard(KEY_1_BBUFFER).block()).isEqualTo(3L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sIsMemberShouldReturnTrueWhenValueContainedInKey() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+
+        assertThat(connection.setCommands().sIsMember(KEY_1_BBUFFER, VALUE_1_BBUFFER).block()).isTrue();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sIsMemberShouldReturnFalseWhenValueNotContainedInKey() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+
+        assertThat(connection.setCommands().sIsMember(KEY_1_BBUFFER, VALUE_3_BBUFFER).block())
+                .isFalse();
+    }
+
+    @ParameterizedValkeyTest // GH-2037
+    @EnabledOnCommand("SMISMEMBER")
+    void sMIsMemberShouldReturnCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+
+        connection
+                .setCommands()
+                .sMIsMember(KEY_1_BBUFFER, Arrays.asList(VALUE_1_BBUFFER, VALUE_3_BBUFFER)) //
+                .as(StepVerifier::create) //
+                .expectNext(Arrays.asList(true, false)) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525, DATAREDIS-647
+    void sInterShouldIntersectSetsCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
+        nativeCommands.sadd(KEY_3, VALUE_1, VALUE_3);
+
+        connection
+                .setCommands()
+                .sInter(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNext(VALUE_2_BBUFFER) //
+                .verifyComplete();
+
+        connection
+                .setCommands()
+                .sInter(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER))
+                .as(StepVerifier::create) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sInterStoreShouldReturnSizeCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
+
+        assertThat(
+                        connection
+                                .setCommands()
+                                .sInterStore(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                                .block())
+                .isEqualTo(1L);
+        assertThat(nativeCommands.sismember(KEY_3, VALUE_2)).isTrue();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sUnionShouldCombineSetsCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
+
+        connection
+                .setCommands()
+                .sUnion(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNextCount(3) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sUnionStoreShouldReturnSizeCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
+
+        assertThat(
+                        connection
+                                .setCommands()
+                                .sUnionStore(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                                .block())
+                .isEqualTo(3L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525, DATAREDIS-647
+    void sDiffShouldBeExcecutedCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
+        nativeCommands.sadd(KEY_3, VALUE_2, VALUE_1);
+
+        connection
+                .setCommands()
+                .sDiff(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNext(VALUE_1_BBUFFER) //
+                .verifyComplete();
+
+        connection
+                .setCommands()
+                .sDiff(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER))
+                .as(StepVerifier::create) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sDiffStoreShouldBeExcecutedCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.sadd(KEY_2, VALUE_2, VALUE_3);
+
+        assertThat(
+                        connection
+                                .setCommands()
+                                .sDiffStore(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                                .block())
+                .isEqualTo(1L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sMembersReadsValuesFromSetCorrectly() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+
+        connection
+                .setCommands()
+                .sMembers(KEY_1_BBUFFER)
+                .buffer(3)
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        list ->
+                                assertThat(list).contains(VALUE_1_BBUFFER, VALUE_2_BBUFFER, VALUE_3_BBUFFER)) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-743
+    void sScanShouldIterateOverSet() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+
+        connection
+                .setCommands()
+                .sScan(KEY_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNextCount(3) //
+                .verifyComplete();
+
+        connection
+                .setCommands()
+                .sScan(KEY_1_BBUFFER, ScanOptions.scanOptions().match("value-3").build())
+                .as(StepVerifier::create) //
+                .expectNext(VALUE_3_BBUFFER) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sRandMemberReturnsRandomMember() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+
+        assertThat(connection.setCommands().sRandMember(KEY_1_BBUFFER).block())
+                .isIn(VALUE_1_BBUFFER, VALUE_2_BBUFFER, VALUE_3_BBUFFER);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void sRandMemberReturnsRandomMembers() {
+
+        nativeCommands.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+
+        connection
+                .setCommands()
+                .sRandMember(KEY_1_BBUFFER, 2L)
+                .as(StepVerifier::create) //
+                .expectNextCount(2) //
+                .verifyComplete();
+    }
 }

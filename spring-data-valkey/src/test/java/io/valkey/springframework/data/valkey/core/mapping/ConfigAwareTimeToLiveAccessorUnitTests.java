@@ -17,15 +17,14 @@ package io.valkey.springframework.data.valkey.core.mapping;
 
 import static org.assertj.core.api.Assertions.*;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.core.PartialUpdate;
-import io.valkey.springframework.data.valkey.core.ValkeyHash;
 import io.valkey.springframework.data.valkey.core.TimeToLive;
+import io.valkey.springframework.data.valkey.core.ValkeyHash;
 import io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration;
 import io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration.KeyspaceSettings;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext.ConfigAwareTimeToLiveAccessor;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ConfigAwareTimeToLiveAccessor}.
@@ -35,210 +34,218 @@ import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext.C
  */
 class ConfigAwareTimeToLiveAccessorUnitTests {
 
-	private ConfigAwareTimeToLiveAccessor accessor;
-	private KeyspaceConfiguration config;
+    private ConfigAwareTimeToLiveAccessor accessor;
+    private KeyspaceConfiguration config;
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		config = new KeyspaceConfiguration();
-		accessor = new ConfigAwareTimeToLiveAccessor(config, new ValkeyMappingContext());
-	}
+        config = new KeyspaceConfiguration();
+        accessor = new ConfigAwareTimeToLiveAccessor(config, new ValkeyMappingContext());
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldThrowExceptionWhenSourceObjectIsNull() {
-		assertThatIllegalArgumentException().isThrownBy(() -> accessor.getTimeToLive(null));
-	}
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldThrowExceptionWhenSourceObjectIsNull() {
+        assertThatIllegalArgumentException().isThrownBy(() -> accessor.getTimeToLive(null));
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnNullIfNothingConfiguredOrAnnotated() {
-		assertThat(accessor.getTimeToLive(new SimpleType())).isNull();
-	}
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnNullIfNothingConfiguredOrAnnotated() {
+        assertThat(accessor.getTimeToLive(new SimpleType())).isNull();
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnConfiguredValueForSimpleType() {
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnConfiguredValueForSimpleType() {
 
-		KeyspaceSettings setting = new KeyspaceSettings(SimpleType.class, null);
-		setting.setTimeToLive(10L);
-		config.addKeyspaceSettings(setting);
+        KeyspaceSettings setting = new KeyspaceSettings(SimpleType.class, null);
+        setting.setTimeToLive(10L);
+        config.addKeyspaceSettings(setting);
 
-		assertThat(accessor.getTimeToLive(new SimpleType())).isEqualTo(10L);
-	}
+        assertThat(accessor.getTimeToLive(new SimpleType())).isEqualTo(10L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnValueWhenTypeIsAnnotated() {
-		assertThat(accessor.getTimeToLive(new TypeWithValkeyHashAnnotation())).isEqualTo(5L);
-	}
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnValueWhenTypeIsAnnotated() {
+        assertThat(accessor.getTimeToLive(new TypeWithValkeyHashAnnotation())).isEqualTo(5L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveConsidersAnnotationOverConfig() {
+    @Test // DATAREDIS-425
+    void getTimeToLiveConsidersAnnotationOverConfig() {
 
-		KeyspaceSettings setting = new KeyspaceSettings(TypeWithValkeyHashAnnotation.class, null);
-		setting.setTimeToLive(10L);
-		config.addKeyspaceSettings(setting);
+        KeyspaceSettings setting = new KeyspaceSettings(TypeWithValkeyHashAnnotation.class, null);
+        setting.setTimeToLive(10L);
+        config.addKeyspaceSettings(setting);
 
-		assertThat(accessor.getTimeToLive(new TypeWithValkeyHashAnnotation())).isEqualTo(5L);
-	}
+        assertThat(accessor.getTimeToLive(new TypeWithValkeyHashAnnotation())).isEqualTo(5L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnValueWhenPropertyIsAnnotatedAndHasValue() {
-		assertThat(accessor.getTimeToLive(new TypeWithValkeyHashAnnotationAndTTLProperty(20L))).isEqualTo(20L);
-	}
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnValueWhenPropertyIsAnnotatedAndHasValue() {
+        assertThat(accessor.getTimeToLive(new TypeWithValkeyHashAnnotationAndTTLProperty(20L)))
+                .isEqualTo(20L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnValueFromTypeAnnotationWhenPropertyIsAnnotatedAndHasNullValue() {
-		assertThat(accessor.getTimeToLive(new TypeWithValkeyHashAnnotationAndTTLProperty())).isEqualTo(10L);
-	}
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnValueFromTypeAnnotationWhenPropertyIsAnnotatedAndHasNullValue() {
+        assertThat(accessor.getTimeToLive(new TypeWithValkeyHashAnnotationAndTTLProperty()))
+                .isEqualTo(10L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnNullWhenPropertyIsAnnotatedAndHasNullValue() {
-		assertThat(accessor.getTimeToLive(new SimpleTypeWithTTLProperty())).isNull();
-	}
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnNullWhenPropertyIsAnnotatedAndHasNullValue() {
+        assertThat(accessor.getTimeToLive(new SimpleTypeWithTTLProperty())).isNull();
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnConfiguredValueWhenPropertyIsAnnotatedAndHasNullValue() {
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnConfiguredValueWhenPropertyIsAnnotatedAndHasNullValue() {
 
-		KeyspaceSettings setting = new KeyspaceSettings(SimpleTypeWithTTLProperty.class, null);
-		setting.setTimeToLive(10L);
-		config.addKeyspaceSettings(setting);
+        KeyspaceSettings setting = new KeyspaceSettings(SimpleTypeWithTTLProperty.class, null);
+        setting.setTimeToLive(10L);
+        config.addKeyspaceSettings(setting);
 
-		assertThat(accessor.getTimeToLive(new SimpleTypeWithTTLProperty())).isEqualTo(10L);
-	}
+        assertThat(accessor.getTimeToLive(new SimpleTypeWithTTLProperty())).isEqualTo(10L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldFavorAnnotatedNotNullPropertyValueOverConfiguredOne() {
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldFavorAnnotatedNotNullPropertyValueOverConfiguredOne() {
 
-		KeyspaceSettings setting = new KeyspaceSettings(SimpleTypeWithTTLProperty.class, null);
-		setting.setTimeToLive(10L);
-		config.addKeyspaceSettings(setting);
+        KeyspaceSettings setting = new KeyspaceSettings(SimpleTypeWithTTLProperty.class, null);
+        setting.setTimeToLive(10L);
+        config.addKeyspaceSettings(setting);
 
-		assertThat(accessor.getTimeToLive(new SimpleTypeWithTTLProperty(25L))).isEqualTo(25L);
-	}
+        assertThat(accessor.getTimeToLive(new SimpleTypeWithTTLProperty(25L))).isEqualTo(25L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnMethodLevelTimeToLiveIfPresent() {
-		assertThat(accessor.getTimeToLive(new TypeWithTtlOnMethod(10L))).isEqualTo(10L);
-	}
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnMethodLevelTimeToLiveIfPresent() {
+        assertThat(accessor.getTimeToLive(new TypeWithTtlOnMethod(10L))).isEqualTo(10L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnConfiguredValueWhenMethodLevelTimeToLiveIfPresentButHasNullValue() {
+    @Test // DATAREDIS-425
+    void getTimeToLiveShouldReturnConfiguredValueWhenMethodLevelTimeToLiveIfPresentButHasNullValue() {
 
-		KeyspaceSettings setting = new KeyspaceSettings(TypeWithTtlOnMethod.class, null);
-		setting.setTimeToLive(10L);
-		config.addKeyspaceSettings(setting);
+        KeyspaceSettings setting = new KeyspaceSettings(TypeWithTtlOnMethod.class, null);
+        setting.setTimeToLive(10L);
+        config.addKeyspaceSettings(setting);
 
-		assertThat(accessor.getTimeToLive(new TypeWithTtlOnMethod(null))).isEqualTo(10L);
-	}
+        assertThat(accessor.getTimeToLive(new TypeWithTtlOnMethod(null))).isEqualTo(10L);
+    }
 
-	@Test // DATAREDIS-425
-	void getTimeToLiveShouldReturnValueWhenMethodLevelTimeToLiveIfPresentAlthoughConfiguredValuePresent() {
+    @Test // DATAREDIS-425
+    void
+            getTimeToLiveShouldReturnValueWhenMethodLevelTimeToLiveIfPresentAlthoughConfiguredValuePresent() {
 
-		KeyspaceSettings setting = new KeyspaceSettings(TypeWithTtlOnMethod.class, null);
-		setting.setTimeToLive(10L);
-		config.addKeyspaceSettings(setting);
+        KeyspaceSettings setting = new KeyspaceSettings(TypeWithTtlOnMethod.class, null);
+        setting.setTimeToLive(10L);
+        config.addKeyspaceSettings(setting);
 
-		assertThat(accessor.getTimeToLive(new TypeWithTtlOnMethod(100L))).isEqualTo(100L);
-	}
+        assertThat(accessor.getTimeToLive(new TypeWithTtlOnMethod(100L))).isEqualTo(100L);
+    }
 
-	@Test // DATAREDIS-538
-	void getTimeToLiveShouldReturnMethodLevelTimeToLiveOfNonPublicTypeIfPresent() {
-		assertThat(accessor.getTimeToLive(new PrivateTypeWithTtlOnMethod(10L))).isEqualTo(10L);
-	}
+    @Test // DATAREDIS-538
+    void getTimeToLiveShouldReturnMethodLevelTimeToLiveOfNonPublicTypeIfPresent() {
+        assertThat(accessor.getTimeToLive(new PrivateTypeWithTtlOnMethod(10L))).isEqualTo(10L);
+    }
 
-	@Test // DATAREDIS-471
-	void getTimeToLiveShouldReturnDefaultValue() {
+    @Test // DATAREDIS-471
+    void getTimeToLiveShouldReturnDefaultValue() {
 
-		Long ttl = accessor
-				.getTimeToLive(new PartialUpdate<>("123", new TypeWithValkeyHashAnnotation()));
+        Long ttl =
+                accessor.getTimeToLive(new PartialUpdate<>("123", new TypeWithValkeyHashAnnotation()));
 
-		assertThat(ttl).isEqualTo(5L);
-	}
+        assertThat(ttl).isEqualTo(5L);
+    }
 
-	@Test // DATAREDIS-471
-	void getTimeToLiveShouldReturnValueWhenUpdateModifiesTtlProperty() {
+    @Test // DATAREDIS-471
+    void getTimeToLiveShouldReturnValueWhenUpdateModifiesTtlProperty() {
 
-		Long ttl = accessor
-				.getTimeToLive(new PartialUpdate<>("123", new SimpleTypeWithTTLProperty())
-						.set("ttl", 100).refreshTtl(true));
+        Long ttl =
+                accessor.getTimeToLive(
+                        new PartialUpdate<>("123", new SimpleTypeWithTTLProperty())
+                                .set("ttl", 100)
+                                .refreshTtl(true));
 
-		assertThat(ttl).isEqualTo(100L);
-	}
+        assertThat(ttl).isEqualTo(100L);
+    }
 
-	@Test // DATAREDIS-471
-	void getTimeToLiveShouldReturnPropertyValueWhenUpdateModifiesTtlProperty() {
+    @Test // DATAREDIS-471
+    void getTimeToLiveShouldReturnPropertyValueWhenUpdateModifiesTtlProperty() {
 
-		Long ttl = accessor.getTimeToLive(
-				new PartialUpdate<>("123",
-				new TypeWithValkeyHashAnnotationAndTTLProperty()).set("ttl", 100).refreshTtl(true));
+        Long ttl =
+                accessor.getTimeToLive(
+                        new PartialUpdate<>("123", new TypeWithValkeyHashAnnotationAndTTLProperty())
+                                .set("ttl", 100)
+                                .refreshTtl(true));
 
-		assertThat(ttl).isEqualTo(100L);
-	}
+        assertThat(ttl).isEqualTo(100L);
+    }
 
-	@Test // DATAREDIS-471
-	void getTimeToLiveShouldReturnDefaultValueWhenUpdateDoesNotModifyTtlProperty() {
+    @Test // DATAREDIS-471
+    void getTimeToLiveShouldReturnDefaultValueWhenUpdateDoesNotModifyTtlProperty() {
 
-		Long ttl = accessor
-				.getTimeToLive(new PartialUpdate<>("123",
-				new TypeWithValkeyHashAnnotationAndTTLProperty()).refreshTtl(true));
+        Long ttl =
+                accessor.getTimeToLive(
+                        new PartialUpdate<>("123", new TypeWithValkeyHashAnnotationAndTTLProperty())
+                                .refreshTtl(true));
 
-		assertThat(ttl).isEqualTo(10L);
-	}
+        assertThat(ttl).isEqualTo(10L);
+    }
 
-	private static class SimpleType {}
+    private static class SimpleType {}
 
-	static class SimpleTypeWithTTLProperty {
+    static class SimpleTypeWithTTLProperty {
 
-		@TimeToLive Long ttl;
+        @TimeToLive Long ttl;
 
-		SimpleTypeWithTTLProperty() {}
+        SimpleTypeWithTTLProperty() {}
 
-		SimpleTypeWithTTLProperty(Long ttl) {
-			this.ttl = ttl;
-		}
-	}
+        SimpleTypeWithTTLProperty(Long ttl) {
+            this.ttl = ttl;
+        }
+    }
 
-	@ValkeyHash(timeToLive = 5)
-	private static class TypeWithValkeyHashAnnotation {}
+    @ValkeyHash(timeToLive = 5)
+    private static class TypeWithValkeyHashAnnotation {}
 
-	@ValkeyHash(timeToLive = 10)
-	static class TypeWithValkeyHashAnnotationAndTTLProperty {
+    @ValkeyHash(timeToLive = 10)
+    static class TypeWithValkeyHashAnnotationAndTTLProperty {
 
-		@TimeToLive Long ttl;
+        @TimeToLive Long ttl;
 
-		TypeWithValkeyHashAnnotationAndTTLProperty() {}
+        TypeWithValkeyHashAnnotationAndTTLProperty() {}
 
-		TypeWithValkeyHashAnnotationAndTTLProperty(Long ttl) {
-			this.ttl = ttl;
-		}
-	}
+        TypeWithValkeyHashAnnotationAndTTLProperty(Long ttl) {
+            this.ttl = ttl;
+        }
+    }
 
-	static class TypeWithTtlOnMethod {
+    static class TypeWithTtlOnMethod {
 
-		Long value;
+        Long value;
 
-		TypeWithTtlOnMethod(Long value) {
-			this.value = value;
-		}
+        TypeWithTtlOnMethod(Long value) {
+            this.value = value;
+        }
 
-		@TimeToLive
-		private Long getTimeToLive() {
-			return value;
-		}
-	}
+        @TimeToLive
+        private Long getTimeToLive() {
+            return value;
+        }
+    }
 
-	// Type must be private so it does not fall in the
-	// package-default scope like the types from above
-	private static class PrivateTypeWithTtlOnMethod {
+    // Type must be private so it does not fall in the
+    // package-default scope like the types from above
+    private static class PrivateTypeWithTtlOnMethod {
 
-		Long value;
+        Long value;
 
-		PrivateTypeWithTtlOnMethod(Long value) {
-			this.value = value;
-		}
+        PrivateTypeWithTtlOnMethod(Long value) {
+            this.value = value;
+        }
 
-		@TimeToLive
-		Long getTimeToLive() {
-			return value;
-		}
-	}
+        @TimeToLive
+        Long getTimeToLive() {
+            return value;
+        }
+    }
 }

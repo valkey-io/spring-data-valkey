@@ -18,12 +18,11 @@ package io.valkey.springframework.data.valkey.core.convert;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.springframework.data.mapping.model.SimpleTypeHolder;
 
 /**
- * Value object to capture custom conversion. That is essentially a {@link List} of converters and some additional logic
- * around them.
+ * Value object to capture custom conversion. That is essentially a {@link List} of converters and
+ * some additional logic around them.
  *
  * @author Mark Paluch
  * @since 2.0
@@ -32,33 +31,30 @@ import org.springframework.data.mapping.model.SimpleTypeHolder;
  */
 public class ValkeyCustomConversions extends org.springframework.data.convert.CustomConversions {
 
-	private static final StoreConversions STORE_CONVERSIONS;
-	private static final List<Object> STORE_CONVERTERS;
+    private static final StoreConversions STORE_CONVERSIONS;
+    private static final List<Object> STORE_CONVERTERS;
 
-	static {
+    static {
+        List<Object> converters = new ArrayList<>(35);
 
-		List<Object> converters = new ArrayList<>(35);
+        converters.addAll(BinaryConverters.getConvertersToRegister());
+        converters.addAll(Jsr310Converters.getConvertersToRegister());
 
-		converters.addAll(BinaryConverters.getConvertersToRegister());
-		converters.addAll(Jsr310Converters.getConvertersToRegister());
+        STORE_CONVERTERS = Collections.unmodifiableList(converters);
+        STORE_CONVERSIONS = StoreConversions.of(SimpleTypeHolder.DEFAULT, STORE_CONVERTERS);
+    }
 
-		STORE_CONVERTERS = Collections.unmodifiableList(converters);
-		STORE_CONVERSIONS = StoreConversions.of(SimpleTypeHolder.DEFAULT, STORE_CONVERTERS);
-	}
+    /** Creates an empty {@link ValkeyCustomConversions} object. */
+    public ValkeyCustomConversions() {
+        this(Collections.emptyList());
+    }
 
-	/**
-	 * Creates an empty {@link ValkeyCustomConversions} object.
-	 */
-	public ValkeyCustomConversions() {
-		this(Collections.emptyList());
-	}
-
-	/**
-	 * Creates a new {@link ValkeyCustomConversions} instance registering the given converters.
-	 *
-	 * @param converters
-	 */
-	public ValkeyCustomConversions(List<?> converters) {
-		super(STORE_CONVERSIONS, converters);
-	}
+    /**
+     * Creates a new {@link ValkeyCustomConversions} instance registering the given converters.
+     *
+     * @param converters
+     */
+    public ValkeyCustomConversions(List<?> converters) {
+        super(STORE_CONVERSIONS, converters);
+    }
 }

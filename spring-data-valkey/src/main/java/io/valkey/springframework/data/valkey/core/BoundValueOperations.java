@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.core;
 
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -32,318 +31,324 @@ import org.springframework.util.Assert;
  */
 public interface BoundValueOperations<K, V> extends BoundKeyOperations<K> {
 
-	/**
-	 * Set {@code value} for the bound key.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 */
-	void set(V value);
+    /**
+     * Set {@code value} for the bound key.
+     *
+     * @param value must not be {@literal null}.
+     * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+     */
+    void set(V value);
 
-	/**
-	 * Set the {@code value} and expiration {@code timeout} for the bound key.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param timeout
-	 * @param unit must not be {@literal null}.
-	 * @see <a href="https://valkey.io/commands/setex">Valkey Documentation: SETEX</a>
-	 */
-	void set(V value, long timeout, TimeUnit unit);
+    /**
+     * Set the {@code value} and expiration {@code timeout} for the bound key.
+     *
+     * @param value must not be {@literal null}.
+     * @param timeout
+     * @param unit must not be {@literal null}.
+     * @see <a href="https://valkey.io/commands/setex">Valkey Documentation: SETEX</a>
+     */
+    void set(V value, long timeout, TimeUnit unit);
 
-	/**
-	 * Set the {@code value} and expiration {@code timeout} for the bound key. Return the old string stored at key, or
-	 * {@literal null} if key did not exist. An error is returned and SET aborted if the value stored at key is not a
-	 * string.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param timeout
-	 * @param unit must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 * @since 3.5
-	 */
-	V setGet(V value, long timeout, TimeUnit unit);
+    /**
+     * Set the {@code value} and expiration {@code timeout} for the bound key. Return the old string
+     * stored at key, or {@literal null} if key did not exist. An error is returned and SET aborted if
+     * the value stored at key is not a string.
+     *
+     * @param value must not be {@literal null}.
+     * @param timeout
+     * @param unit must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+     * @since 3.5
+     */
+    V setGet(V value, long timeout, TimeUnit unit);
 
-	/**
-	 * Set the {@code value} and expiration {@code timeout} for the bound key. Return the old string stored at key, or
-	 * {@literal null} if key did not exist. An error is returned and SET aborted if the value stored at key is not a
-	 * string.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param duration expiration duration
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 * @since 3.5
-	 */
-	V setGet(V value, Duration duration);
+    /**
+     * Set the {@code value} and expiration {@code timeout} for the bound key. Return the old string
+     * stored at key, or {@literal null} if key did not exist. An error is returned and SET aborted if
+     * the value stored at key is not a string.
+     *
+     * @param value must not be {@literal null}.
+     * @param duration expiration duration
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+     * @since 3.5
+     */
+    V setGet(V value, Duration duration);
 
-	/**
-	 * Set the {@code value} and expiration {@code timeout} for the bound key.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param timeout must not be {@literal null}.
-	 * @throws IllegalArgumentException if either {@code value} or {@code timeout} is not present.
-	 * @see <a href="https://valkey.io/commands/setex">Valkey Documentation: SETEX</a>
-	 * @since 2.1
-	 */
-	default void set(V value, Duration timeout) {
+    /**
+     * Set the {@code value} and expiration {@code timeout} for the bound key.
+     *
+     * @param value must not be {@literal null}.
+     * @param timeout must not be {@literal null}.
+     * @throws IllegalArgumentException if either {@code value} or {@code timeout} is not present.
+     * @see <a href="https://valkey.io/commands/setex">Valkey Documentation: SETEX</a>
+     * @since 2.1
+     */
+    default void set(V value, Duration timeout) {
 
-		Assert.notNull(timeout, "Timeout must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
 
-		if (TimeoutUtils.hasMillis(timeout)) {
-			set(value, timeout.toMillis(), TimeUnit.MILLISECONDS);
-		} else {
-			set(value, timeout.getSeconds(), TimeUnit.SECONDS);
-		}
-	}
+        if (TimeoutUtils.hasMillis(timeout)) {
+            set(value, timeout.toMillis(), TimeUnit.MILLISECONDS);
+        } else {
+            set(value, timeout.getSeconds(), TimeUnit.SECONDS);
+        }
+    }
 
-	/**
-	 * Set the bound key to hold the string {@code value} if the bound key is absent.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/setnx">Valkey Documentation: SETNX</a>
-	 */
-	@Nullable
-	Boolean setIfAbsent(V value);
+    /**
+     * Set the bound key to hold the string {@code value} if the bound key is absent.
+     *
+     * @param value must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/setnx">Valkey Documentation: SETNX</a>
+     */
+    @Nullable
+    Boolean setIfAbsent(V value);
 
-	/**
-	 * Set the bound key to hold the string {@code value} and expiration {@code timeout} if the bound key is absent.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param timeout
-	 * @param unit must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @since 2.1
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 */
-	@Nullable
-	Boolean setIfAbsent(V value, long timeout, TimeUnit unit);
+    /**
+     * Set the bound key to hold the string {@code value} and expiration {@code timeout} if the bound
+     * key is absent.
+     *
+     * @param value must not be {@literal null}.
+     * @param timeout
+     * @param unit must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @since 2.1
+     * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+     */
+    @Nullable
+    Boolean setIfAbsent(V value, long timeout, TimeUnit unit);
 
-	/**
-	 * Set bound key to hold the string {@code value} and expiration {@code timeout} if the bound key is absent.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param timeout must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @throws IllegalArgumentException if either {@code value} or {@code timeout} is not present.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 * @since 2.1
-	 */
-	@Nullable
-	default Boolean setIfAbsent(V value, Duration timeout) {
+    /**
+     * Set bound key to hold the string {@code value} and expiration {@code timeout} if the bound key
+     * is absent.
+     *
+     * @param value must not be {@literal null}.
+     * @param timeout must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @throws IllegalArgumentException if either {@code value} or {@code timeout} is not present.
+     * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+     * @since 2.1
+     */
+    @Nullable
+    default Boolean setIfAbsent(V value, Duration timeout) {
 
-		Assert.notNull(timeout, "Timeout must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
 
-		if (TimeoutUtils.hasMillis(timeout)) {
-			return setIfAbsent(value, timeout.toMillis(), TimeUnit.MILLISECONDS);
-		}
+        if (TimeoutUtils.hasMillis(timeout)) {
+            return setIfAbsent(value, timeout.toMillis(), TimeUnit.MILLISECONDS);
+        }
 
-		return setIfAbsent(value, timeout.getSeconds(), TimeUnit.SECONDS);
-	}
+        return setIfAbsent(value, timeout.getSeconds(), TimeUnit.SECONDS);
+    }
 
-	/**
-	 * Set the bound key to hold the string {@code value} if the bound key is present.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @return command result indicating if the key has been set.
-	 * @throws IllegalArgumentException if {@code value} is not present.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 * @since 2.1
-	 */
-	@Nullable
-	Boolean setIfPresent(V value);
+    /**
+     * Set the bound key to hold the string {@code value} if the bound key is present.
+     *
+     * @param value must not be {@literal null}.
+     * @return command result indicating if the key has been set.
+     * @throws IllegalArgumentException if {@code value} is not present.
+     * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+     * @since 2.1
+     */
+    @Nullable
+    Boolean setIfPresent(V value);
 
-	/**
-	 * Set the bound key to hold the string {@code value} and expiration {@code timeout} if the bound key is present.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param timeout the key expiration timeout.
-	 * @param unit must not be {@literal null}.
-	 * @return command result indicating if the key has been set.
-	 * @throws IllegalArgumentException if either {@code value} or {@code timeout} is not present.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 * @since 2.1
-	 */
-	@Nullable
-	Boolean setIfPresent(V value, long timeout, TimeUnit unit);
+    /**
+     * Set the bound key to hold the string {@code value} and expiration {@code timeout} if the bound
+     * key is present.
+     *
+     * @param value must not be {@literal null}.
+     * @param timeout the key expiration timeout.
+     * @param unit must not be {@literal null}.
+     * @return command result indicating if the key has been set.
+     * @throws IllegalArgumentException if either {@code value} or {@code timeout} is not present.
+     * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+     * @since 2.1
+     */
+    @Nullable
+    Boolean setIfPresent(V value, long timeout, TimeUnit unit);
 
-	/**
-	 * Set the bound key to hold the string {@code value} and expiration {@code timeout} if the bound key is present.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param timeout must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @throws IllegalArgumentException if either {@code value} or {@code timeout} is not present.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 * @since 2.1
-	 */
-	@Nullable
-	default Boolean setIfPresent(V value, Duration timeout) {
+    /**
+     * Set the bound key to hold the string {@code value} and expiration {@code timeout} if the bound
+     * key is present.
+     *
+     * @param value must not be {@literal null}.
+     * @param timeout must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @throws IllegalArgumentException if either {@code value} or {@code timeout} is not present.
+     * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+     * @since 2.1
+     */
+    @Nullable
+    default Boolean setIfPresent(V value, Duration timeout) {
 
-		Assert.notNull(timeout, "Timeout must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
 
-		if (TimeoutUtils.hasMillis(timeout)) {
-			return setIfPresent(value, timeout.toMillis(), TimeUnit.MILLISECONDS);
-		}
+        if (TimeoutUtils.hasMillis(timeout)) {
+            return setIfPresent(value, timeout.toMillis(), TimeUnit.MILLISECONDS);
+        }
 
-		return setIfPresent(value, timeout.getSeconds(), TimeUnit.SECONDS);
-	}
+        return setIfPresent(value, timeout.getSeconds(), TimeUnit.SECONDS);
+    }
 
-	/**
-	 * Get the value of the bound key.
-	 *
-	 * @return {@literal null} when key does not exist or used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/get">Valkey Documentation: GET</a>
-	 */
-	@Nullable
-	V get();
+    /**
+     * Get the value of the bound key.
+     *
+     * @return {@literal null} when key does not exist or used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/get">Valkey Documentation: GET</a>
+     */
+    @Nullable
+    V get();
 
-	/**
-	 * Return the value at the bound key and delete the key.
-	 *
-	 * @return {@literal null} when key does not exist or used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/getdel">Valkey Documentation: GETDEL</a>
-	 * @since 2.6
-	 */
-	@Nullable
-	V getAndDelete();
+    /**
+     * Return the value at the bound key and delete the key.
+     *
+     * @return {@literal null} when key does not exist or used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/getdel">Valkey Documentation: GETDEL</a>
+     * @since 2.6
+     */
+    @Nullable
+    V getAndDelete();
 
-	/**
-	 * Return the value at the bound key and expire the key by applying {@code timeout}.
-	 *
-	 * @param timeout
-	 * @param unit must not be {@literal null}.
-	 * @return {@literal null} when key does not exist or used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/getex">Valkey Documentation: GETEX</a>
-	 * @since 2.6
-	 */
-	@Nullable
-	V getAndExpire(long timeout, TimeUnit unit);
+    /**
+     * Return the value at the bound key and expire the key by applying {@code timeout}.
+     *
+     * @param timeout
+     * @param unit must not be {@literal null}.
+     * @return {@literal null} when key does not exist or used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/getex">Valkey Documentation: GETEX</a>
+     * @since 2.6
+     */
+    @Nullable
+    V getAndExpire(long timeout, TimeUnit unit);
 
-	/**
-	 * Return the value at the bound key and expire the key by applying {@code timeout}.
-	 *
-	 * @param timeout must not be {@literal null}.
-	 * @return {@literal null} when key does not exist or used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/getex">Valkey Documentation: GETEX</a>
-	 * @since 2.6
-	 */
-	@Nullable
-	V getAndExpire(Duration timeout);
+    /**
+     * Return the value at the bound key and expire the key by applying {@code timeout}.
+     *
+     * @param timeout must not be {@literal null}.
+     * @return {@literal null} when key does not exist or used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/getex">Valkey Documentation: GETEX</a>
+     * @since 2.6
+     */
+    @Nullable
+    V getAndExpire(Duration timeout);
 
-	/**
-	 * Return the value at the bound key and persist the key. This operation removes any TTL that is associated with the
-	 * bound key.
-	 *
-	 * @return {@literal null} when key does not exist or used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/getex">Valkey Documentation: GETEX</a>
-	 * @since 2.6
-	 */
-	@Nullable
-	V getAndPersist();
+    /**
+     * Return the value at the bound key and persist the key. This operation removes any TTL that is
+     * associated with the bound key.
+     *
+     * @return {@literal null} when key does not exist or used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/getex">Valkey Documentation: GETEX</a>
+     * @since 2.6
+     */
+    @Nullable
+    V getAndPersist();
 
-	/**
-	 * Set {@code value} of the bound key and return its old value.
-	 *
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/getset">Valkey Documentation: GETSET</a>
-	 */
-	@Nullable
-	V getAndSet(V value);
+    /**
+     * Set {@code value} of the bound key and return its old value.
+     *
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/getset">Valkey Documentation: GETSET</a>
+     */
+    @Nullable
+    V getAndSet(V value);
 
-	/**
-	 * Increment an integer value stored as string value under the bound key by one.
-	 *
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @since 2.1
-	 * @see <a href="https://valkey.io/commands/incr">Valkey Documentation: INCR</a>
-	 */
-	@Nullable
-	Long increment();
+    /**
+     * Increment an integer value stored as string value under the bound key by one.
+     *
+     * @return {@literal null} when used in pipeline / transaction.
+     * @since 2.1
+     * @see <a href="https://valkey.io/commands/incr">Valkey Documentation: INCR</a>
+     */
+    @Nullable
+    Long increment();
 
-	/**
-	 * Increment an integer value stored as string value under the bound key by {@code delta}.
-	 *
-	 * @param delta
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
-	 */
-	@Nullable
-	Long increment(long delta);
+    /**
+     * Increment an integer value stored as string value under the bound key by {@code delta}.
+     *
+     * @param delta
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
+     */
+    @Nullable
+    Long increment(long delta);
 
-	/**
-	 * Increment a floating point number value stored as string value under the bound key by {@code delta}.
-	 *
-	 * @param delta
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/incrbyfloat">Valkey Documentation: INCRBYFLOAT</a>
-	 */
-	@Nullable
-	Double increment(double delta);
+    /**
+     * Increment a floating point number value stored as string value under the bound key by {@code
+     * delta}.
+     *
+     * @param delta
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/incrbyfloat">Valkey Documentation: INCRBYFLOAT</a>
+     */
+    @Nullable
+    Double increment(double delta);
 
-	/**
-	 * Decrement an integer value stored as string value under the bound key by one.
-	 *
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @since 2.1
-	 * @see <a href="https://valkey.io/commands/decr">Valkey Documentation: DECR</a>
-	 */
-	@Nullable
-	Long decrement();
+    /**
+     * Decrement an integer value stored as string value under the bound key by one.
+     *
+     * @return {@literal null} when used in pipeline / transaction.
+     * @since 2.1
+     * @see <a href="https://valkey.io/commands/decr">Valkey Documentation: DECR</a>
+     */
+    @Nullable
+    Long decrement();
 
-	/**
-	 * Decrement an integer value stored as string value under the bound key by {@code delta}.
-	 *
-	 * @param delta
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @since 2.1
-	 * @see <a href="https://valkey.io/commands/decrby">Valkey Documentation: DECRBY</a>
-	 */
-	@Nullable
-	Long decrement(long delta);
+    /**
+     * Decrement an integer value stored as string value under the bound key by {@code delta}.
+     *
+     * @param delta
+     * @return {@literal null} when used in pipeline / transaction.
+     * @since 2.1
+     * @see <a href="https://valkey.io/commands/decrby">Valkey Documentation: DECRBY</a>
+     */
+    @Nullable
+    Long decrement(long delta);
 
-	/**
-	 * Append a {@code value} to the bound key.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/append">Valkey Documentation: APPEND</a>
-	 */
-	@Nullable
-	Integer append(String value);
+    /**
+     * Append a {@code value} to the bound key.
+     *
+     * @param value must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/append">Valkey Documentation: APPEND</a>
+     */
+    @Nullable
+    Integer append(String value);
 
-	/**
-	 * Get a substring of value of the bound key between {@code begin} and {@code end}.
-	 *
-	 * @param start
-	 * @param end
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/getrange">Valkey Documentation: GETRANGE</a>
-	 */
-	@Nullable
-	String get(long start, long end);
+    /**
+     * Get a substring of value of the bound key between {@code begin} and {@code end}.
+     *
+     * @param start
+     * @param end
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/getrange">Valkey Documentation: GETRANGE</a>
+     */
+    @Nullable
+    String get(long start, long end);
 
-	/**
-	 * Overwrite parts of the bound key starting at the specified {@code offset} with given {@code value}.
-	 *
-	 * @param value must not be {@literal null}.
-	 * @param offset
-	 * @see <a href="https://valkey.io/commands/setrange">Valkey Documentation: SETRANGE</a>
-	 */
-	void set(V value, long offset);
+    /**
+     * Overwrite parts of the bound key starting at the specified {@code offset} with given {@code
+     * value}.
+     *
+     * @param value must not be {@literal null}.
+     * @param offset
+     * @see <a href="https://valkey.io/commands/setrange">Valkey Documentation: SETRANGE</a>
+     */
+    void set(V value, long offset);
 
-	/**
-	 * Get the length of the value stored at the bound key.
-	 *
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/strlen">Valkey Documentation: STRLEN</a>
-	 */
-	@Nullable
-	Long size();
+    /**
+     * Get the length of the value stored at the bound key.
+     *
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/strlen">Valkey Documentation: STRLEN</a>
+     */
+    @Nullable
+    Long size();
 
-	/**
-	 * @return never {@literal null}.
-	 */
-	ValkeyOperations<K, V> getOperations();
+    /**
+     * @return never {@literal null}.
+     */
+    ValkeyOperations<K, V> getOperations();
 }

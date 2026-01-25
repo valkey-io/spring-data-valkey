@@ -18,15 +18,6 @@ package io.valkey.springframework.data.valkey.repository.configuration;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mockito;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyHash;
@@ -34,6 +25,14 @@ import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.convert.ReferenceResolver;
 import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.data.repository.Repository;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
@@ -48,123 +47,140 @@ import org.springframework.test.util.ReflectionTestUtils;
  */
 public class ValkeyRepositoryConfigurationUnitTests {
 
-	static ValkeyTemplate<?, ?> createTemplateMock() {
+    static ValkeyTemplate<?, ?> createTemplateMock() {
 
-		ValkeyTemplate<?, ?> template = mock(ValkeyTemplate.class);
-		ValkeyConnectionFactory connectionFactory = mock(ValkeyConnectionFactory.class);
-		ValkeyConnection connection = mock(ValkeyConnection.class);
+        ValkeyTemplate<?, ?> template = mock(ValkeyTemplate.class);
+        ValkeyConnectionFactory connectionFactory = mock(ValkeyConnectionFactory.class);
+        ValkeyConnection connection = mock(ValkeyConnection.class);
 
-		when(template.getConnectionFactory()).thenReturn(connectionFactory);
-		when(connectionFactory.getConnection()).thenReturn(connection);
+        when(template.getConnectionFactory()).thenReturn(connectionFactory);
+        when(connectionFactory.getConnection()).thenReturn(connection);
 
-		return template;
-	}
+        return template;
+    }
 
-	@ExtendWith(SpringExtension.class)
-	@DirtiesContext
-	@ContextConfiguration(classes = { ContextWithCustomReferenceResolverUnitTests.Config.class })
-	public static class ContextWithCustomReferenceResolverUnitTests {
+    @ExtendWith(SpringExtension.class)
+    @DirtiesContext
+    @ContextConfiguration(classes = {ContextWithCustomReferenceResolverUnitTests.Config.class})
+    public static class ContextWithCustomReferenceResolverUnitTests {
 
-		@EnableValkeyRepositories(considerNestedRepositories = true,
-				includeFilters = { @ComponentScan.Filter(type = FilterType.REGEX, pattern = { ".*ContextSampleRepository" }) })
-		static class Config {
+        @EnableValkeyRepositories(
+                considerNestedRepositories = true,
+                includeFilters = {
+                    @ComponentScan.Filter(
+                            type = FilterType.REGEX,
+                            pattern = {".*ContextSampleRepository"})
+                })
+        static class Config {
 
-			@Bean
-			ValkeyTemplate<?, ?> valkeyTemplate() {
-				return createTemplateMock();
-			}
+            @Bean
+            ValkeyTemplate<?, ?> valkeyTemplate() {
+                return createTemplateMock();
+            }
 
-			@Bean
-			ReferenceResolver valkeyReferenceResolver() {
-				return mock(ReferenceResolver.class);
-			}
+            @Bean
+            ReferenceResolver valkeyReferenceResolver() {
+                return mock(ReferenceResolver.class);
+            }
+        }
 
-		}
+        @Autowired ApplicationContext ctx;
 
-		@Autowired ApplicationContext ctx;
+        @Test // DATAREDIS-425
+        public void shouldPickUpReferenceResolver() {
 
-		@Test // DATAREDIS-425
-		public void shouldPickUpReferenceResolver() {
+            ValkeyKeyValueAdapter adapter = (ValkeyKeyValueAdapter) ctx.getBean("valkeyKeyValueAdapter");
 
-			ValkeyKeyValueAdapter adapter = (ValkeyKeyValueAdapter) ctx.getBean("valkeyKeyValueAdapter");
+            Object referenceResolver =
+                    ReflectionTestUtils.getField(adapter.getConverter(), "referenceResolver");
 
-			Object referenceResolver = ReflectionTestUtils.getField(adapter.getConverter(), "referenceResolver");
+            assertThat(referenceResolver).isEqualTo((ctx.getBean("valkeyReferenceResolver")));
+            assertThat(mockingDetails(referenceResolver).isMock()).isTrue();
+        }
+    }
 
-			assertThat(referenceResolver).isEqualTo((ctx.getBean("valkeyReferenceResolver")));
-			assertThat(mockingDetails(referenceResolver).isMock()).isTrue();
-		}
-	}
+    @ExtendWith(SpringExtension.class)
+    @DirtiesContext
+    @ContextConfiguration(classes = {ContextWithoutCustomizationUnitTests.Config.class})
+    public static class ContextWithoutCustomizationUnitTests {
 
-	@ExtendWith(SpringExtension.class)
-	@DirtiesContext
-	@ContextConfiguration(classes = { ContextWithoutCustomizationUnitTests.Config.class })
-	public static class ContextWithoutCustomizationUnitTests {
+        @EnableValkeyRepositories(
+                considerNestedRepositories = true,
+                includeFilters = {
+                    @ComponentScan.Filter(
+                            type = FilterType.REGEX,
+                            pattern = {".*ContextSampleRepository"})
+                })
+        static class Config {
 
-		@EnableValkeyRepositories(considerNestedRepositories = true,
-				includeFilters = { @ComponentScan.Filter(type = FilterType.REGEX, pattern = { ".*ContextSampleRepository" }) })
-		static class Config {
+            @Bean
+            ValkeyTemplate<?, ?> valkeyTemplate() {
+                return createTemplateMock();
+            }
+        }
 
-			@Bean
-			ValkeyTemplate<?, ?> valkeyTemplate() {
-				return createTemplateMock();
-			}
-		}
+        @Autowired ApplicationContext ctx;
 
-		@Autowired ApplicationContext ctx;
+        @Test // DATAREDIS-425
+        public void shouldInitWithDefaults() {
+            assertThat(ctx.getBean(ContextSampleRepository.class)).isNotNull();
+        }
 
-		@Test // DATAREDIS-425
-		public void shouldInitWithDefaults() {
-			assertThat(ctx.getBean(ContextSampleRepository.class)).isNotNull();
+        @Test // DATAREDIS-425
+        public void shouldRegisterDefaultBeans() {
 
-		}
+            assertThat(ctx.getBean(ContextSampleRepository.class)).isNotNull();
+            assertThat(ctx.getBean("valkeyKeyValueAdapter")).isNotNull();
+            assertThat(ctx.getBean("valkeyCustomConversions")).isNotNull();
+            assertThat(ctx.getBean("valkeyReferenceResolver")).isNotNull();
+        }
+    }
 
-		@Test // DATAREDIS-425
-		public void shouldRegisterDefaultBeans() {
+    @ExtendWith(SpringExtension.class)
+    @DirtiesContext
+    @ContextConfiguration(classes = {WithMessageListenerConfigurationUnitTests.Config.class})
+    public static class WithMessageListenerConfigurationUnitTests {
 
-			assertThat(ctx.getBean(ContextSampleRepository.class)).isNotNull();
-			assertThat(ctx.getBean("valkeyKeyValueAdapter")).isNotNull();
-			assertThat(ctx.getBean("valkeyCustomConversions")).isNotNull();
-			assertThat(ctx.getBean("valkeyReferenceResolver")).isNotNull();
-		}
-	}
+        @EnableValkeyRepositories(
+                considerNestedRepositories = true,
+                includeFilters = {
+                    @ComponentScan.Filter(
+                            type = FilterType.REGEX,
+                            pattern = {".*ContextSampleRepository"})
+                },
+                keyspaceNotificationsConfigParameter = "",
+                messageListenerContainerRef = "myContainer")
+        static class Config {
 
-	@ExtendWith(SpringExtension.class)
-	@DirtiesContext
-	@ContextConfiguration(classes = { WithMessageListenerConfigurationUnitTests.Config.class })
-	public static class WithMessageListenerConfigurationUnitTests {
+            @Bean
+            ValkeyMessageListenerContainer myContainer() {
+                return mock(ValkeyMessageListenerContainer.class);
+            }
 
-		@EnableValkeyRepositories(considerNestedRepositories = true,
-				includeFilters = { @ComponentScan.Filter(type = FilterType.REGEX, pattern = { ".*ContextSampleRepository" }) },
-				keyspaceNotificationsConfigParameter = "", messageListenerContainerRef = "myContainer")
-		static class Config {
+            @Bean
+            ValkeyTemplate<?, ?> valkeyTemplate() {
+                return createTemplateMock();
+            }
+        }
 
-			@Bean
-			ValkeyMessageListenerContainer myContainer() {
-				return mock(ValkeyMessageListenerContainer.class);
-			}
+        @Autowired ApplicationContext ctx;
 
-			@Bean
-			ValkeyTemplate<?, ?> valkeyTemplate() {
-				return createTemplateMock();
-			}
-		}
+        @Test // DATAREDIS-425
+        public void shouldConfigureMessageListenerContainer() {
 
-		@Autowired ApplicationContext ctx;
+            ValkeyKeyValueAdapter adapter =
+                    ctx.getBean("valkeyKeyValueAdapter", ValkeyKeyValueAdapter.class);
+            Object messageListenerContainer =
+                    ReflectionTestUtils.getField(adapter, "messageListenerContainer");
 
-		@Test // DATAREDIS-425
-		public void shouldConfigureMessageListenerContainer() {
+            assertThat(Mockito.mockingDetails(messageListenerContainer).isMock()).isTrue();
+        }
+    }
 
-			ValkeyKeyValueAdapter adapter = ctx.getBean("valkeyKeyValueAdapter", ValkeyKeyValueAdapter.class);
-			Object messageListenerContainer = ReflectionTestUtils.getField(adapter, "messageListenerContainer");
+    @ValkeyHash
+    static class Sample {
+        String id;
+    }
 
-			assertThat(Mockito.mockingDetails(messageListenerContainer).isMock()).isTrue();
-		}
-	}
-
-	@ValkeyHash
-	static class Sample {
-		String id;
-	}
-
-	interface ContextSampleRepository extends Repository<Sample, Long> {}
+    interface ContextSampleRepository extends Repository<Sample, Long> {}
 }

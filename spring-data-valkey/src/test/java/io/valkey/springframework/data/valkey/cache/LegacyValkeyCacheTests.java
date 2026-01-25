@@ -20,7 +20,12 @@ import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assumptions.*;
 
 import edu.umd.cs.mtc.MultithreadedTestCase;
-
+import io.valkey.springframework.data.valkey.ObjectFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.core.AbstractOperationsTestParams;
+import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,22 +33,14 @@ import java.util.Collection;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.junit.jupiter.api.Disabled;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.Cache.ValueRetrievalException;
 import org.springframework.cache.Cache.ValueWrapper;
-import io.valkey.springframework.data.valkey.ObjectFactory;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.core.AbstractOperationsTestParams;
-import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
- * Tests moved over from 1.x line ValkeyCache implementation. Just removed somme of the limitations/assumptions
- * previously required.
+ * Tests moved over from 1.x line ValkeyCache implementation. Just removed somme of the
+ * limitations/assumptions previously required.
  *
  * @author Costin Leau
  * @author Jennifer Hickey
@@ -54,373 +51,396 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("testParams")
 public class LegacyValkeyCacheTests {
 
-	private static final String CACHE_NAME = "testCache";
+    private static final String CACHE_NAME = "testCache";
 
-	private final boolean allowCacheNullValues;
+    private final boolean allowCacheNullValues;
 
-	private ObjectFactory<Object> keyFactory;
-	private ObjectFactory<Object> valueFactory;
+    private ObjectFactory<Object> keyFactory;
+    private ObjectFactory<Object> valueFactory;
 
-	private ValkeyCache cache;
+    private ValkeyCache cache;
 
-	private ValkeyConnectionFactory connectionFactory;
+    private ValkeyConnectionFactory connectionFactory;
 
-	public LegacyValkeyCacheTests(ValkeyTemplate template, ObjectFactory<Object> keyFactory,
-			ObjectFactory<Object> valueFactory, boolean allowCacheNullValues) {
+    public LegacyValkeyCacheTests(
+            ValkeyTemplate template,
+            ObjectFactory<Object> keyFactory,
+            ObjectFactory<Object> valueFactory,
+            boolean allowCacheNullValues) {
 
-		this.connectionFactory = template.getConnectionFactory();
-		this.keyFactory = keyFactory;
-		this.valueFactory = valueFactory;
-		this.allowCacheNullValues = allowCacheNullValues;
-		this.cache = createCache();
-	}
+        this.connectionFactory = template.getConnectionFactory();
+        this.keyFactory = keyFactory;
+        this.valueFactory = valueFactory;
+        this.allowCacheNullValues = allowCacheNullValues;
+        this.cache = createCache();
+    }
 
-	public static Collection<Object[]> testParams() {
+    public static Collection<Object[]> testParams() {
 
-		Collection<Object[]> params = AbstractOperationsTestParams.testParams();
+        Collection<Object[]> params = AbstractOperationsTestParams.testParams();
 
-		Collection<Object[]> target = new ArrayList<>();
-		for (Object[] source : params) {
+        Collection<Object[]> target = new ArrayList<>();
+        for (Object[] source : params) {
 
-			Object[] cacheNullDisabled = Arrays.copyOf(source, source.length + 1);
-			Object[] cacheNullEnabled = Arrays.copyOf(source, source.length + 1);
+            Object[] cacheNullDisabled = Arrays.copyOf(source, source.length + 1);
+            Object[] cacheNullEnabled = Arrays.copyOf(source, source.length + 1);
 
-			cacheNullDisabled[source.length] = false;
-			cacheNullEnabled[source.length] = true;
+            cacheNullDisabled[source.length] = false;
+            cacheNullEnabled[source.length] = true;
 
-			target.add(cacheNullDisabled);
-			target.add(cacheNullEnabled);
-		}
+            target.add(cacheNullDisabled);
+            target.add(cacheNullEnabled);
+        }
 
-		return target;
-	}
+        return target;
+    }
 
-	private ValkeyCache createCache() {
+    private ValkeyCache createCache() {
 
-		ValkeyCacheConfiguration cacheConfiguration = ValkeyCacheConfiguration.defaultCacheConfig()
-				.entryTtl(Duration.ofSeconds(10));
+        ValkeyCacheConfiguration cacheConfiguration =
+                ValkeyCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofSeconds(10));
 
-		if (!allowCacheNullValues) {
-			cacheConfiguration = cacheConfiguration.disableCachingNullValues();
-		}
+        if (!allowCacheNullValues) {
+            cacheConfiguration = cacheConfiguration.disableCachingNullValues();
+        }
 
-		return new ValkeyCache(CACHE_NAME, ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory),
-				cacheConfiguration);
-	}
+        return new ValkeyCache(
+                CACHE_NAME,
+                ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory),
+                cacheConfiguration);
+    }
+
+    protected Object getValue() {
+        return valueFactory.instance();
+    }
+
+    protected Object getKey() {
+        return keyFactory.instance();
+    }
+
+    @ParameterizedValkeyTest
+    void testCachePut() {
+
+        Object key = getKey();
+        Object value = getValue();
+
+        assertThat(value).isNotNull();
+        assertThat(cache.get(key)).isNull();
+        cache.put(key, value);
+        ValueWrapper valueWrapper = cache.get(key);
+        if (valueWrapper != null) {
+            assertThat(valueWrapper.get()).isEqualTo(value);
+        }
+    }
+
+    @ParameterizedValkeyTest
+    void testCacheClear() {
+
+        Object key1 = getKey();
+        Object value1 = getValue();
+
+        Object key2 = getKey();
+        Object value2 = getValue();
+
+        assertThat(cache.get(key1)).isNull();
+        cache.put(key1, value1);
+        assertThat(cache.get(key2)).isNull();
+        cache.put(key2, value2);
+        cache.clear();
+        assertThat(cache.get(key2)).isNull();
+        assertThat(cache.get(key1)).isNull();
+    }
+
+    @ParameterizedValkeyTest
+    void testConcurrentRead() throws Exception {
+
+        final Object key1 = getKey();
+        final Object value1 = getValue();
+
+        final Object k1 = getKey();
+        final Object v1 = getValue();
+
+        final Object key2 = getKey();
+        final Object value2 = getValue();
+
+        final Object k2 = getKey();
+        final Object v2 = getValue();
+
+        final AtomicBoolean failed = new AtomicBoolean(true);
+        cache.put(key1, value1);
+        cache.put(key2, value2);
+
+        Thread th =
+                new Thread(
+                        () -> {
+                            cache.clear();
+                            cache.put(k1, v1);
+                            cache.put(k2, v2);
+                            failed.set(v1.equals(cache.get(k1)));
+                        },
+                        "concurrent-cache-access");
+        th.start();
+        th.join();
+
+        assertThat(failed.get()).isFalse();
+
+        final Object key3 = getKey();
+        final Object key4 = getKey();
+        final Object value3 = getValue();
+        final Object value4 = getValue();
+
+        cache.put(key3, value3);
+        cache.put(key4, value4);
+
+        assertThat(cache.get(key1)).isNull();
+        assertThat(cache.get(key2)).isNull();
+        ValueWrapper valueWrapper = cache.get(k1);
+        assertThat(valueWrapper).isNotNull();
+        assertThat(valueWrapper.get()).isEqualTo(v1);
+    }
+
+    @ParameterizedValkeyTest
+    void testGetWhileClear() throws InterruptedException {
+
+        final Object key1 = getKey();
+        final Object value1 = getValue();
+        int numTries = 10;
+        final AtomicBoolean monitorStateException = new AtomicBoolean(false);
+        final CountDownLatch latch = new CountDownLatch(numTries);
+        Runnable clearCache = cache::clear;
+        Runnable putCache =
+                () -> {
+                    try {
+                        cache.put(key1, value1);
+                    } catch (IllegalMonitorStateException ex) {
+                        monitorStateException.set(true);
+                    } finally {
+                        latch.countDown();
+                    }
+                };
+        for (int i = 0; i < numTries; i++) {
+            new Thread(clearCache).start();
+            new Thread(putCache).start();
+        }
+        latch.await();
+        assertThat(monitorStateException.get()).isFalse();
+    }
 
-	protected Object getValue() {
-		return valueFactory.instance();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-243
+    void testCacheGetShouldReturnCachedInstance() {
 
-	protected Object getKey() {
-		return keyFactory.instance();
-	}
-
-	@ParameterizedValkeyTest
-	void testCachePut() {
-
-		Object key = getKey();
-		Object value = getValue();
-
-		assertThat(value).isNotNull();
-		assertThat(cache.get(key)).isNull();
-		cache.put(key, value);
-		ValueWrapper valueWrapper = cache.get(key);
-		if (valueWrapper != null) {
-			assertThat(valueWrapper.get()).isEqualTo(value);
-		}
-	}
-
-	@ParameterizedValkeyTest
-	void testCacheClear() {
-
-		Object key1 = getKey();
-		Object value1 = getValue();
-
-		Object key2 = getKey();
-		Object value2 = getValue();
-
-		assertThat(cache.get(key1)).isNull();
-		cache.put(key1, value1);
-		assertThat(cache.get(key2)).isNull();
-		cache.put(key2, value2);
-		cache.clear();
-		assertThat(cache.get(key2)).isNull();
-		assertThat(cache.get(key1)).isNull();
-	}
+        Object key = getKey();
+        Object value = getValue();
+        cache.put(key, value);
 
-	@ParameterizedValkeyTest
-	void testConcurrentRead() throws Exception {
+        assertThat(value).isEqualTo(cache.get(key, Object.class));
+    }
 
-		final Object key1 = getKey();
-		final Object value1 = getValue();
+    @ParameterizedValkeyTest // DATAREDIS-243
+    void testCacheGetShouldRetunInstanceOfCorrectType() {
 
-		final Object k1 = getKey();
-		final Object v1 = getValue();
-
-		final Object key2 = getKey();
-		final Object value2 = getValue();
-
-		final Object k2 = getKey();
-		final Object v2 = getValue();
-
-		final AtomicBoolean failed = new AtomicBoolean(true);
-		cache.put(key1, value1);
-		cache.put(key2, value2);
-
-		Thread th = new Thread(() -> {
-			cache.clear();
-			cache.put(k1, v1);
-			cache.put(k2, v2);
-			failed.set(v1.equals(cache.get(k1)));
+        Object key = getKey();
+        Object value = getValue();
+        cache.put(key, value);
 
-		}, "concurrent-cache-access");
-		th.start();
-		th.join();
+        assertThat(cache.get(key, value.getClass())).isInstanceOf(value.getClass());
+    }
 
-		assertThat(failed.get()).isFalse();
-
-		final Object key3 = getKey();
-		final Object key4 = getKey();
-		final Object value3 = getValue();
-		final Object value4 = getValue();
+    @ParameterizedValkeyTest // DATAREDIS-243
+    void testCacheGetShouldThrowExceptionOnInvalidType() {
 
-		cache.put(key3, value3);
-		cache.put(key4, value4);
+        Object key = getKey();
+        Object value = getValue();
+        cache.put(key, value);
 
-		assertThat(cache.get(key1)).isNull();
-		assertThat(cache.get(key2)).isNull();
-		ValueWrapper valueWrapper = cache.get(k1);
-		assertThat(valueWrapper).isNotNull();
-		assertThat(valueWrapper.get()).isEqualTo(v1);
-	}
+        assertThatIllegalStateException().isThrownBy(() -> cache.get(key, Cache.class));
+    }
 
-	@ParameterizedValkeyTest
-	void testGetWhileClear() throws InterruptedException {
+    @ParameterizedValkeyTest // DATAREDIS-243
+    void testCacheGetShouldReturnNullIfNoCachedValueFound() {
 
-		final Object key1 = getKey();
-		final Object value1 = getValue();
-		int numTries = 10;
-		final AtomicBoolean monitorStateException = new AtomicBoolean(false);
-		final CountDownLatch latch = new CountDownLatch(numTries);
-		Runnable clearCache = cache::clear;
-		Runnable putCache = () -> {
-			try {
-				cache.put(key1, value1);
-			} catch (IllegalMonitorStateException ex) {
-				monitorStateException.set(true);
-			} finally {
-				latch.countDown();
-			}
-		};
-		for (int i = 0; i < numTries; i++) {
-			new Thread(clearCache).start();
-			new Thread(putCache).start();
-		}
-		latch.await();
-		assertThat(monitorStateException.get()).isFalse();
-	}
+        Object key = getKey();
+        Object value = getValue();
+        cache.put(key, value);
 
-	@ParameterizedValkeyTest // DATAREDIS-243
-	void testCacheGetShouldReturnCachedInstance() {
+        Object invalidKey = "spring-data-valkey".getBytes();
+        assertThat(cache.get(invalidKey, value.getClass())).isNull();
+    }
 
-		Object key = getKey();
-		Object value = getValue();
-		cache.put(key, value);
+    @ParameterizedValkeyTest // DATAREDIS-344, DATAREDIS-416
+    void putIfAbsentShouldSetValueOnlyIfNotPresent() {
 
-		assertThat(value).isEqualTo(cache.get(key, Object.class));
-	}
+        Object key = getKey();
 
-	@ParameterizedValkeyTest // DATAREDIS-243
-	void testCacheGetShouldRetunInstanceOfCorrectType() {
+        Object value = getValue();
 
-		Object key = getKey();
-		Object value = getValue();
-		cache.put(key, value);
+        assertThat(cache.putIfAbsent(key, value)).isNull();
 
-		assertThat(cache.get(key, value.getClass())).isInstanceOf(value.getClass());
-	}
+        ValueWrapper wrapper = cache.putIfAbsent(key, value);
 
-	@ParameterizedValkeyTest // DATAREDIS-243
-	void testCacheGetShouldThrowExceptionOnInvalidType() {
+        if (!(value instanceof Number)) {
+            assertThat(wrapper.get()).isNotSameAs(value);
+        }
 
-		Object key = getKey();
-		Object value = getValue();
-		cache.put(key, value);
+        assertThat(wrapper.get()).isEqualTo(value);
+    }
 
-		assertThatIllegalStateException().isThrownBy(() -> cache.get(key, Cache.class));
-	}
+    @ParameterizedValkeyTest // DATAREDIS-510, DATAREDIS-606
+    void cachePutWithNullShouldNotAddStuffToValkey() {
 
-	@ParameterizedValkeyTest // DATAREDIS-243
-	void testCacheGetShouldReturnNullIfNoCachedValueFound() {
+        assumeThat(allowCacheNullValues)
+                .as("Only suitable when cache does NOT allow null values.")
+                .isFalse();
 
-		Object key = getKey();
-		Object value = getValue();
-		cache.put(key, value);
+        Object key = getKey();
 
-		Object invalidKey = "spring-data-valkey".getBytes();
-		assertThat(cache.get(invalidKey, value.getClass())).isNull();
-	}
+        assertThatIllegalArgumentException().isThrownBy(() -> cache.put(key, null));
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-344, DATAREDIS-416
-	void putIfAbsentShouldSetValueOnlyIfNotPresent() {
+    @ParameterizedValkeyTest // DATAREDIS-510, DATAREDIS-606
+    void cachePutWithNullShouldErrorAndLeaveExistingKeyUntouched() {
 
-		Object key = getKey();
+        assumeThat(allowCacheNullValues)
+                .as("Only suitable when cache does NOT allow null values.")
+                .isFalse();
 
-		Object value = getValue();
+        Object key = getKey();
+        Object value = getValue();
 
-		assertThat(cache.putIfAbsent(key, value)).isNull();
+        cache.put(key, value);
 
-		ValueWrapper wrapper = cache.putIfAbsent(key, value);
+        assertThat(cache.get(key).get()).isEqualTo(value);
 
-		if (!(value instanceof Number)) {
-			assertThat(wrapper.get()).isNotSameAs(value);
-		}
+        try {
+            cache.put(key, null);
+        } catch (IllegalArgumentException expected) {
+        }
 
-		assertThat(wrapper.get()).isEqualTo(value);
-	}
+        assertThat(cache.get(key).get()).isEqualTo(value);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-510, DATAREDIS-606
-	void cachePutWithNullShouldNotAddStuffToValkey() {
+    @ParameterizedValkeyTest // DATAREDIS-443, DATAREDIS-452
+    @Disabled("junit.framework.AssertionFailedError: expected:<2> but was:<1>")
+    void testCacheGetSynchronized() throws Throwable {
+        runOnce(new CacheGetWithValueLoaderIsThreadSafe(cache));
+    }
 
-		assumeThat(allowCacheNullValues).as("Only suitable when cache does NOT allow null values.").isFalse();
+    @ParameterizedValkeyTest // DATAREDIS-553
+    void cachePutWithNullShouldAddStuffToValkeyWhenCachingNullIsEnabled() {
 
-		Object key = getKey();
+        assumeThat(allowCacheNullValues)
+                .as("Only suitable when cache does allow null values.")
+                .isTrue();
 
-		assertThatIllegalArgumentException().isThrownBy(() -> cache.put(key, null));
-	}
+        Object key = getKey();
+        Object value = getValue();
 
-	@ParameterizedValkeyTest // DATAREDIS-510, DATAREDIS-606
-	void cachePutWithNullShouldErrorAndLeaveExistingKeyUntouched() {
+        cache.put(key, null);
 
-		assumeThat(allowCacheNullValues).as("Only suitable when cache does NOT allow null values.").isFalse();
+        assertThat(cache.get(key, String.class)).isNull();
+    }
 
-		Object key = getKey();
-		Object value = getValue();
+    @ParameterizedValkeyTest // DATAREDIS-553
+    void testCacheGetSynchronizedNullAllowingNull() {
 
-		cache.put(key, value);
+        assumeThat(allowCacheNullValues)
+                .as("Only suitable when cache does allow null values.")
+                .isTrue();
 
-		assertThat(cache.get(key).get()).isEqualTo(value);
+        Object key = getKey();
+        Object value = cache.get(key, () -> null);
 
-		try {
-			cache.put(key, null);
-		} catch (IllegalArgumentException expected) {
-		}
+        assertThat(value).isNull();
+        assertThat(cache.get(key).get()).isNull();
+    }
 
-		assertThat(cache.get(key).get()).isEqualTo(value);
-	}
+    @ParameterizedValkeyTest // DATAREDIS-553, DATAREDIS-606
+    void testCacheGetSynchronizedNullNotAllowingNull() {
 
-	@ParameterizedValkeyTest // DATAREDIS-443, DATAREDIS-452
-	@Disabled("junit.framework.AssertionFailedError: expected:<2> but was:<1>")
-	void testCacheGetSynchronized() throws Throwable {
-		runOnce(new CacheGetWithValueLoaderIsThreadSafe(cache));
-	}
+        assumeThat(allowCacheNullValues)
+                .as("Only suitable when cache does NOT allow null values.")
+                .isFalse();
 
-	@ParameterizedValkeyTest // DATAREDIS-553
-	void cachePutWithNullShouldAddStuffToValkeyWhenCachingNullIsEnabled() {
+        Object key = getKey();
+        assertThatIllegalArgumentException().isThrownBy(() -> cache.get(key, () -> null));
+    }
 
-		assumeThat(allowCacheNullValues).as("Only suitable when cache does allow null values.").isTrue();
+    @ParameterizedValkeyTest
+    void testCacheGetSynchronizedThrowsExceptionInValueLoader() {
 
-		Object key = getKey();
-		Object value = getValue();
+        Object key = getKey();
 
-		cache.put(key, null);
+        assertThatExceptionOfType(ValueRetrievalException.class)
+                .isThrownBy(
+                        () -> {
+                            cache.get(
+                                    key,
+                                    () -> {
+                                        throw new RuntimeException("doh");
+                                    });
+                        });
+    }
 
-		assertThat(cache.get(key, String.class)).isNull();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-553
+    void testCacheGetSynchronizedNullWithStoredNull() {
 
-	@ParameterizedValkeyTest // DATAREDIS-553
-	void testCacheGetSynchronizedNullAllowingNull() {
+        assumeThat(allowCacheNullValues).as("Only suitable when cache does allow null values").isTrue();
 
-		assumeThat(allowCacheNullValues).as("Only suitable when cache does allow null values.").isTrue();
+        Object key = getKey();
+        cache.put(key, null);
 
-		Object key = getKey();
-		Object value = cache.get(key, () -> null);
+        Object cachedValue = cache.get(key, () -> null);
 
-		assertThat(value).isNull();
-		assertThat(cache.get(key).get()).isNull();
-	}
+        assertThat(cachedValue).isNull();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-553, DATAREDIS-606
-	void testCacheGetSynchronizedNullNotAllowingNull() {
+    @SuppressWarnings("unused")
+    private static class CacheGetWithValueLoaderIsThreadSafe extends MultithreadedTestCase {
 
-		assumeThat(allowCacheNullValues).as("Only suitable when cache does NOT allow null values.").isFalse();
+        Cache valkeyCache;
+        TestCacheLoader<String> cacheLoader;
 
-		Object key = getKey();
-		assertThatIllegalArgumentException().isThrownBy(() -> cache.get(key, () -> null));
-	}
+        CacheGetWithValueLoaderIsThreadSafe(Cache valkeyCache) {
 
-	@ParameterizedValkeyTest
-	void testCacheGetSynchronizedThrowsExceptionInValueLoader() {
+            this.valkeyCache = valkeyCache;
 
-		Object key = getKey();
+            cacheLoader =
+                    new TestCacheLoader<>("test") {
 
-		assertThatExceptionOfType(ValueRetrievalException.class).isThrownBy(() -> {
-			cache.get(key, () -> {
-				throw new RuntimeException("doh");
-			});
-		});
-	}
+                        @Override
+                        public String call() {
 
-	@ParameterizedValkeyTest // DATAREDIS-553
-	void testCacheGetSynchronizedNullWithStoredNull() {
+                            waitForTick(2);
+                            return super.call();
+                        }
+                    };
+        }
 
-		assumeThat(allowCacheNullValues).as("Only suitable when cache does allow null values").isTrue();
+        public void thread1() {
 
-		Object key = getKey();
-		cache.put(key, null);
+            assertTick(0);
+            assertThat(valkeyCache.get("key", cacheLoader)).isEqualTo("test");
+        }
 
-		Object cachedValue = cache.get(key, () -> null);
+        public void thread2() {
 
-		assertThat(cachedValue).isNull();
-	}
+            waitForTick(1);
+            assertThat(valkeyCache.get("key", new TestCacheLoader<>("illegal value"))).isEqualTo("test");
+            assertTick(2);
+        }
+    }
 
-	@SuppressWarnings("unused")
-	private static class CacheGetWithValueLoaderIsThreadSafe extends MultithreadedTestCase {
+    private static class TestCacheLoader<T> implements Callable<T> {
 
-		Cache valkeyCache;
-		TestCacheLoader<String> cacheLoader;
+        private final T value;
 
-		CacheGetWithValueLoaderIsThreadSafe(Cache valkeyCache) {
+        TestCacheLoader(T value) {
+            this.value = value;
+        }
 
-			this.valkeyCache = valkeyCache;
-
-			cacheLoader = new TestCacheLoader<>("test") {
-
-				@Override
-				public String call() {
-
-					waitForTick(2);
-					return super.call();
-				}
-			};
-		}
-
-		public void thread1() {
-
-			assertTick(0);
-			assertThat(valkeyCache.get("key", cacheLoader)).isEqualTo("test");
-		}
-
-		public void thread2() {
-
-			waitForTick(1);
-			assertThat(valkeyCache.get("key", new TestCacheLoader<>("illegal value"))).isEqualTo("test");
-			assertTick(2);
-		}
-	}
-
-	private static class TestCacheLoader<T> implements Callable<T> {
-
-		private final T value;
-
-		TestCacheLoader(T value) {
-			this.value = value;
-		}
-
-		@Override
-		public T call() {
-			return value;
-		}
-	}
+        @Override
+        public T call() {
+            return value;
+        }
+    }
 }

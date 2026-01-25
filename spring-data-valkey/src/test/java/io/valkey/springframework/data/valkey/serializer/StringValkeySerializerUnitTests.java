@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.serializer;
 import static org.assertj.core.api.Assertions.*;
 
 import java.nio.charset.StandardCharsets;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -28,42 +27,48 @@ import org.junit.jupiter.api.Test;
  */
 class StringValkeySerializerUnitTests {
 
-	@Test
-	void shouldSerializeToAscii() {
+    @Test
+    void shouldSerializeToAscii() {
 
-		assertThat(StringValkeySerializer.US_ASCII.serialize("foo-bar")).isEqualTo("foo-bar".getBytes());
-		assertThat(StringValkeySerializer.US_ASCII.serialize("üßØ")).isEqualTo("???".getBytes());
-	}
+        assertThat(StringValkeySerializer.US_ASCII.serialize("foo-bar"))
+                .isEqualTo("foo-bar".getBytes());
+        assertThat(StringValkeySerializer.US_ASCII.serialize("üßØ")).isEqualTo("???".getBytes());
+    }
 
-	@Test
-	void shouldDeserializeFromAscii() {
+    @Test
+    void shouldDeserializeFromAscii() {
 
-		assertThat(StringValkeySerializer.US_ASCII.deserialize("foo-bar".getBytes())).isEqualTo("foo-bar");
-	}
+        assertThat(StringValkeySerializer.US_ASCII.deserialize("foo-bar".getBytes()))
+                .isEqualTo("foo-bar");
+    }
 
-	@Test
-	void shouldSerializeToIso88591() {
+    @Test
+    void shouldSerializeToIso88591() {
 
-		assertThat(StringValkeySerializer.ISO_8859_1.serialize("üßØ"))
-				.isEqualTo("üßØ".getBytes(StandardCharsets.ISO_8859_1));
-	}
+        assertThat(StringValkeySerializer.ISO_8859_1.serialize("üßØ"))
+                .isEqualTo("üßØ".getBytes(StandardCharsets.ISO_8859_1));
+    }
 
-	@Test
-	void shouldDeserializeFromIso88591() {
+    @Test
+    void shouldDeserializeFromIso88591() {
 
-		assertThat(StringValkeySerializer.ISO_8859_1.deserialize("üßØ".getBytes(StandardCharsets.ISO_8859_1)))
-				.isEqualTo("üßØ");
-	}
+        assertThat(
+                        StringValkeySerializer.ISO_8859_1.deserialize(
+                                "üßØ".getBytes(StandardCharsets.ISO_8859_1)))
+                .isEqualTo("üßØ");
+    }
 
-	@Test
-	void shouldSerializeToUtf8() {
+    @Test
+    void shouldSerializeToUtf8() {
 
-		assertThat(StringValkeySerializer.UTF_8.serialize("foo-bar")).isEqualTo("foo-bar".getBytes());
-		assertThat(StringValkeySerializer.UTF_8.serialize("üßØ")).isEqualTo("üßØ".getBytes(StandardCharsets.UTF_8));
-	}
+        assertThat(StringValkeySerializer.UTF_8.serialize("foo-bar")).isEqualTo("foo-bar".getBytes());
+        assertThat(StringValkeySerializer.UTF_8.serialize("üßØ"))
+                .isEqualTo("üßØ".getBytes(StandardCharsets.UTF_8));
+    }
 
-	@Test
-	void shouldDeserializeFromUtf8() {
-		assertThat(StringValkeySerializer.UTF_8.deserialize("üßØ".getBytes(StandardCharsets.UTF_8))).isEqualTo("üßØ");
-	}
+    @Test
+    void shouldDeserializeFromUtf8() {
+        assertThat(StringValkeySerializer.UTF_8.deserialize("üßØ".getBytes(StandardCharsets.UTF_8)))
+                .isEqualTo("üßØ");
+    }
 }

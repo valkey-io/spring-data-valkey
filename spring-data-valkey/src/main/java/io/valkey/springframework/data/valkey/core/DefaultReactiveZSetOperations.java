@@ -15,21 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.function.Function;
-
-import org.reactivestreams.Publisher;
-
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ReactiveZSetCommands;
 import io.valkey.springframework.data.valkey.connection.zset.Aggregate;
@@ -39,8 +24,20 @@ import io.valkey.springframework.data.valkey.connection.zset.Weights;
 import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Function;
+import org.reactivestreams.Publisher;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.domain.Range;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Default implementation of {@link ReactiveZSetOperations}.
@@ -52,709 +49,810 @@ import org.springframework.util.Assert;
  */
 class DefaultReactiveZSetOperations<K, V> implements ReactiveZSetOperations<K, V> {
 
-	private final ReactiveValkeyTemplate<?, ?> template;
-	private final ValkeySerializationContext<K, V> serializationContext;
+    private final ReactiveValkeyTemplate<?, ?> template;
+    private final ValkeySerializationContext<K, V> serializationContext;
 
-	public DefaultReactiveZSetOperations(ReactiveValkeyTemplate<?, ?> template,
-			ValkeySerializationContext<K, V> serializationContext) {
+    public DefaultReactiveZSetOperations(
+            ReactiveValkeyTemplate<?, ?> template,
+            ValkeySerializationContext<K, V> serializationContext) {
 
-		this.template = template;
-		this.serializationContext = serializationContext;
-	}
+        this.template = template;
+        this.serializationContext = serializationContext;
+    }
 
-	@Override
-	public Mono<Boolean> add(K key, V value, double score) {
+    @Override
+    public Mono<Boolean> add(K key, V value, double score) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zAdd(rawKey(key), score, rawValue(value)).map(l -> l != 0));
-	}
+        return createMono(
+                zSetCommands -> zSetCommands.zAdd(rawKey(key), score, rawValue(value)).map(l -> l != 0));
+    }
 
-	@Override
-	public Mono<Long> addAll(K key, Collection<? extends TypedTuple<V>> tuples) {
+    @Override
+    public Mono<Long> addAll(K key, Collection<? extends TypedTuple<V>> tuples) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(tuples, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(tuples, "Key must not be null");
 
-		return createMono(zSetCommands -> Flux.fromIterable(tuples) //
-				.map(t -> new DefaultTuple(ByteUtils.getBytes(rawValue(t.getValue())), t.getScore())) //
-				.collectList() //
-				.flatMap(serialized -> zSetCommands.zAdd(rawKey(key), serialized)));
-	}
+        return createMono(
+                zSetCommands ->
+                        Flux.fromIterable(tuples) //
+                                .map(
+                                        t ->
+                                                new DefaultTuple(
+                                                        ByteUtils.getBytes(rawValue(t.getValue())), t.getScore())) //
+                                .collectList() //
+                                .flatMap(serialized -> zSetCommands.zAdd(rawKey(key), serialized)));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Long> remove(K key, Object... values) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<Long> remove(K key, Object... values) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(values, "Values must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(values, "Values must not be null");
 
-		if (values.length == 1) {
-			return createMono(zSetCommands -> zSetCommands.zRem(rawKey(key), rawValue((V) values[0])));
-		}
+        if (values.length == 1) {
+            return createMono(zSetCommands -> zSetCommands.zRem(rawKey(key), rawValue((V) values[0])));
+        }
 
-		return createMono(zSetCommands -> Flux.fromArray((V[]) values) //
-				.map(this::rawValue) //
-				.collectList() //
-				.flatMap(serialized -> zSetCommands.zRem(rawKey(key), serialized)));
-	}
+        return createMono(
+                zSetCommands ->
+                        Flux.fromArray((V[]) values) //
+                                .map(this::rawValue) //
+                                .collectList() //
+                                .flatMap(serialized -> zSetCommands.zRem(rawKey(key), serialized)));
+    }
 
-	@Override
-	public Mono<Double> incrementScore(K key, V value, double delta) {
+    @Override
+    public Mono<Double> incrementScore(K key, V value, double delta) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zIncrBy(rawKey(key), delta, rawValue(value)));
-	}
+        return createMono(zSetCommands -> zSetCommands.zIncrBy(rawKey(key), delta, rawValue(value)));
+    }
 
-	@Override
-	public Mono<V> randomMember(K key) {
+    @Override
+    public Mono<V> randomMember(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zRandMember(rawKey(key))).map(this::readRequiredValue);
-	}
+        return createMono(zSetCommands -> zSetCommands.zRandMember(rawKey(key)))
+                .map(this::readRequiredValue);
+    }
 
-	@Override
-	public Flux<V> distinctRandomMembers(K key, long count) {
+    @Override
+    public Flux<V> distinctRandomMembers(K key, long count) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.isTrue(count > 0, "Negative count not supported; Use randomMembers to allow duplicate elements");
+        Assert.notNull(key, "Key must not be null");
+        Assert.isTrue(
+                count > 0, "Negative count not supported; Use randomMembers to allow duplicate elements");
 
-		return createFlux(zSetCommands -> zSetCommands.zRandMember(rawKey(key), count)).map(this::readRequiredValue);
-	}
+        return createFlux(zSetCommands -> zSetCommands.zRandMember(rawKey(key), count))
+                .map(this::readRequiredValue);
+    }
 
-	@Override
-	public Flux<V> randomMembers(K key, long count) {
+    @Override
+    public Flux<V> randomMembers(K key, long count) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.isTrue(count > 0, "Use a positive number for count; This method is already allowing duplicate elements");
+        Assert.notNull(key, "Key must not be null");
+        Assert.isTrue(
+                count > 0,
+                "Use a positive number for count; This method is already allowing duplicate elements");
 
-		return createFlux(zSetCommands -> zSetCommands.zRandMember(rawKey(key), -count)).map(this::readRequiredValue);
-	}
+        return createFlux(zSetCommands -> zSetCommands.zRandMember(rawKey(key), -count))
+                .map(this::readRequiredValue);
+    }
 
-	@Override
-	public Mono<TypedTuple<V>> randomMemberWithScore(K key) {
+    @Override
+    public Mono<TypedTuple<V>> randomMemberWithScore(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zRandMemberWithScore(rawKey(key))).map(this::readTypedTuple);
-	}
+        return createMono(zSetCommands -> zSetCommands.zRandMemberWithScore(rawKey(key)))
+                .map(this::readTypedTuple);
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> distinctRandomMembersWithScore(K key, long count) {
+    @Override
+    public Flux<TypedTuple<V>> distinctRandomMembersWithScore(K key, long count) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.isTrue(count > 0, "Negative count not supported; Use randomMembers to allow duplicate elements");
+        Assert.notNull(key, "Key must not be null");
+        Assert.isTrue(
+                count > 0, "Negative count not supported; Use randomMembers to allow duplicate elements");
 
-		return createFlux(zSetCommands -> zSetCommands.zRandMemberWithScore(rawKey(key), count)).map(this::readTypedTuple);
-	}
+        return createFlux(zSetCommands -> zSetCommands.zRandMemberWithScore(rawKey(key), count))
+                .map(this::readTypedTuple);
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> randomMembersWithScore(K key, long count) {
+    @Override
+    public Flux<TypedTuple<V>> randomMembersWithScore(K key, long count) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.isTrue(count > 0, "Use a positive number for count; This method is already allowing duplicate elements");
+        Assert.notNull(key, "Key must not be null");
+        Assert.isTrue(
+                count > 0,
+                "Use a positive number for count; This method is already allowing duplicate elements");
 
-		return createFlux(zSetCommands -> zSetCommands.zRandMemberWithScore(rawKey(key), -count)).map(this::readTypedTuple);
-	}
+        return createFlux(zSetCommands -> zSetCommands.zRandMemberWithScore(rawKey(key), -count))
+                .map(this::readTypedTuple);
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Long> rank(K key, Object o) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<Long> rank(K key, Object o) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zRank(rawKey(key), rawValue((V) o)));
-	}
+        return createMono(zSetCommands -> zSetCommands.zRank(rawKey(key), rawValue((V) o)));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Long> reverseRank(K key, Object o) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<Long> reverseRank(K key, Object o) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zRevRank(rawKey(key), rawValue((V) o)));
-	}
+        return createMono(zSetCommands -> zSetCommands.zRevRank(rawKey(key), rawValue((V) o)));
+    }
 
-	@Override
-	public Flux<V> range(K key, Range<Long> range) {
+    @Override
+    public Flux<V> range(K key, Range<Long> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRange(rawKey(key), range).map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands -> zSetCommands.zRange(rawKey(key), range).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> rangeWithScores(K key, Range<Long> range) {
+    @Override
+    public Flux<TypedTuple<V>> rangeWithScores(K key, Range<Long> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRangeWithScores(rawKey(key), range).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRangeWithScores(rawKey(key), range).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<V> rangeByScore(K key, Range<Double> range) {
+    @Override
+    public Flux<V> rangeByScore(K key, Range<Double> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRangeByScore(rawKey(key), range).map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRangeByScore(rawKey(key), range).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> rangeByScoreWithScores(K key, Range<Double> range) {
+    @Override
+    public Flux<TypedTuple<V>> rangeByScoreWithScores(K key, Range<Double> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands ->
-				zSetCommands.zRangeByScoreWithScores(rawKey(key), range).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRangeByScoreWithScores(rawKey(key), range).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<V> rangeByScore(K key, Range<Double> range, Limit limit) {
+    @Override
+    public Flux<V> rangeByScore(K key, Range<Double> range, Limit limit) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRangeByScore(rawKey(key), range, limit)
-				.map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRangeByScore(rawKey(key), range, limit).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> rangeByScoreWithScores(K key, Range<Double> range, Limit limit) {
+    @Override
+    public Flux<TypedTuple<V>> rangeByScoreWithScores(K key, Range<Double> range, Limit limit) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createFlux(zSetCommands ->
-				zSetCommands.zRangeByScoreWithScores(rawKey(key), range, limit).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands
+                                .zRangeByScoreWithScores(rawKey(key), range, limit)
+                                .map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<V> reverseRange(K key, Range<Long> range) {
+    @Override
+    public Flux<V> reverseRange(K key, Range<Long> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRevRange(rawKey(key), range).map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands -> zSetCommands.zRevRange(rawKey(key), range).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> reverseRangeWithScores(K key, Range<Long> range) {
+    @Override
+    public Flux<TypedTuple<V>> reverseRangeWithScores(K key, Range<Long> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands ->
-				zSetCommands.zRevRangeWithScores(rawKey(key), range).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRevRangeWithScores(rawKey(key), range).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<V> reverseRangeByScore(K key, Range<Double> range) {
+    @Override
+    public Flux<V> reverseRangeByScore(K key, Range<Double> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRevRangeByScore(rawKey(key), range)
-				.map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRevRangeByScore(rawKey(key), range).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> reverseRangeByScoreWithScores(K key, Range<Double> range) {
+    @Override
+    public Flux<TypedTuple<V>> reverseRangeByScoreWithScores(K key, Range<Double> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands ->
-				zSetCommands.zRevRangeByScoreWithScores(rawKey(key), range).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRevRangeByScoreWithScores(rawKey(key), range).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<V> reverseRangeByScore(K key, Range<Double> range, Limit limit) {
+    @Override
+    public Flux<V> reverseRangeByScore(K key, Range<Double> range, Limit limit) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRevRangeByScore(rawKey(key), range, limit)
-				.map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRevRangeByScore(rawKey(key), range, limit).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> reverseRangeByScoreWithScores(K key, Range<Double> range, Limit limit) {
+    @Override
+    public Flux<TypedTuple<V>> reverseRangeByScoreWithScores(
+            K key, Range<Double> range, Limit limit) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createFlux(zSetCommands ->
-				zSetCommands.zRevRangeByScoreWithScores(rawKey(key), range, limit).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands
+                                .zRevRangeByScoreWithScores(rawKey(key), range, limit)
+                                .map(this::readTypedTuple));
+    }
 
-	@Override
-	public Mono<Long> rangeAndStoreByLex(K srcKey, K dstKey, Range<String> range, Limit limit) {
+    @Override
+    public Mono<Long> rangeAndStoreByLex(K srcKey, K dstKey, Range<String> range, Limit limit) {
 
-		Assert.notNull(srcKey, "Source key must not be null");
-		Assert.notNull(dstKey, "Destination key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(srcKey, "Source key must not be null");
+        Assert.notNull(dstKey, "Destination key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zRangeStoreByLex(rawKey(srcKey), rawKey(dstKey), range, limit));
-	}
+        return createMono(
+                zSetCommands ->
+                        zSetCommands.zRangeStoreByLex(rawKey(srcKey), rawKey(dstKey), range, limit));
+    }
 
-	@Override
-	public Mono<Long> reverseRangeAndStoreByLex(K srcKey, K dstKey, Range<String> range, Limit limit) {
+    @Override
+    public Mono<Long> reverseRangeAndStoreByLex(
+            K srcKey, K dstKey, Range<String> range, Limit limit) {
 
-		Assert.notNull(srcKey, "Source key must not be null");
-		Assert.notNull(dstKey, "Destination key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(srcKey, "Source key must not be null");
+        Assert.notNull(dstKey, "Destination key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createMono(zSetCommands ->
-				zSetCommands.zRangeStoreRevByLex(rawKey(srcKey), rawKey(dstKey), range, limit));
-	}
+        return createMono(
+                zSetCommands ->
+                        zSetCommands.zRangeStoreRevByLex(rawKey(srcKey), rawKey(dstKey), range, limit));
+    }
 
-	@Override
-	public Mono<Long> rangeAndStoreByScore(K srcKey, K dstKey, Range<Double> range, Limit limit) {
+    @Override
+    public Mono<Long> rangeAndStoreByScore(K srcKey, K dstKey, Range<Double> range, Limit limit) {
 
-		Assert.notNull(srcKey, "Source key must not be null");
-		Assert.notNull(dstKey, "Destination key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(srcKey, "Source key must not be null");
+        Assert.notNull(dstKey, "Destination key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createMono(zSetCommands ->
-				zSetCommands.zRangeStoreByScore(rawKey(srcKey), rawKey(dstKey), range, limit));
-	}
+        return createMono(
+                zSetCommands ->
+                        zSetCommands.zRangeStoreByScore(rawKey(srcKey), rawKey(dstKey), range, limit));
+    }
 
-	@Override
-	public Mono<Long> reverseRangeAndStoreByScore(K srcKey, K dstKey, Range<Double> range, Limit limit) {
+    @Override
+    public Mono<Long> reverseRangeAndStoreByScore(
+            K srcKey, K dstKey, Range<Double> range, Limit limit) {
 
-		Assert.notNull(srcKey, "Source key must not be null");
-		Assert.notNull(dstKey, "Destination key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(srcKey, "Source key must not be null");
+        Assert.notNull(dstKey, "Destination key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createMono(zSetCommands ->
-				zSetCommands.zRangeStoreRevByScore(rawKey(srcKey), rawKey(dstKey), range, limit));
-	}
+        return createMono(
+                zSetCommands ->
+                        zSetCommands.zRangeStoreRevByScore(rawKey(srcKey), rawKey(dstKey), range, limit));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> scan(K key, ScanOptions options) {
+    @Override
+    public Flux<TypedTuple<V>> scan(K key, ScanOptions options) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(options, "ScanOptions must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(options, "ScanOptions must not be null");
 
-		return createFlux(zSetCommands ->
-				zSetCommands.zScan(rawKey(key), options).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands -> zSetCommands.zScan(rawKey(key), options).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Mono<Long> count(K key, Range<Double> range) {
+    @Override
+    public Mono<Long> count(K key, Range<Double> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zCount(rawKey(key), range));
-	}
+        return createMono(zSetCommands -> zSetCommands.zCount(rawKey(key), range));
+    }
 
-	@Override
-	public Mono<Long> lexCount(K key, Range<String> range) {
+    @Override
+    public Mono<Long> lexCount(K key, Range<String> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zLexCount(rawKey(key), range));
-	}
+        return createMono(zSetCommands -> zSetCommands.zLexCount(rawKey(key), range));
+    }
 
-	@Override
-	public Mono<TypedTuple<V>> popMin(K key) {
+    @Override
+    public Mono<TypedTuple<V>> popMin(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zPopMin(rawKey(key)).map(this::readTypedTuple));
-	}
+        return createMono(zSetCommands -> zSetCommands.zPopMin(rawKey(key)).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> popMin(K key, long count) {
+    @Override
+    public Flux<TypedTuple<V>> popMin(K key, long count) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zPopMin(rawKey(key), count).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands -> zSetCommands.zPopMin(rawKey(key), count).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Mono<TypedTuple<V>> popMin(K key, Duration timeout) {
+    @Override
+    public Mono<TypedTuple<V>> popMin(K key, Duration timeout) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Timeout must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.bZPopMin(rawKey(key), timeout).map(this::readTypedTuple));
-	}
+        return createMono(
+                zSetCommands -> zSetCommands.bZPopMin(rawKey(key), timeout).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Mono<TypedTuple<V>> popMax(K key) {
+    @Override
+    public Mono<TypedTuple<V>> popMax(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zPopMax(rawKey(key)).map(this::readTypedTuple));
-	}
+        return createMono(zSetCommands -> zSetCommands.zPopMax(rawKey(key)).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> popMax(K key, long count) {
+    @Override
+    public Flux<TypedTuple<V>> popMax(K key, long count) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zPopMax(rawKey(key), count).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands -> zSetCommands.zPopMax(rawKey(key), count).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Mono<TypedTuple<V>> popMax(K key, Duration timeout) {
+    @Override
+    public Mono<TypedTuple<V>> popMax(K key, Duration timeout) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Timeout must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.bZPopMax(rawKey(key), timeout).map(this::readTypedTuple));
-	}
+        return createMono(
+                zSetCommands -> zSetCommands.bZPopMax(rawKey(key), timeout).map(this::readTypedTuple));
+    }
 
-	@Override
-	public Mono<Long> size(K key) {
+    @Override
+    public Mono<Long> size(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zCard(rawKey(key)));
-	}
+        return createMono(zSetCommands -> zSetCommands.zCard(rawKey(key)));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Double> score(K key, Object o) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<Double> score(K key, Object o) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zScore(rawKey(key), rawValue((V) o)));
-	}
+        return createMono(zSetCommands -> zSetCommands.zScore(rawKey(key), rawValue((V) o)));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<List<Double>> score(K key, Object... o) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<List<Double>> score(K key, Object... o) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(zSetCommands -> Flux.fromArray((V[]) o) //
-				.map(this::rawValue) //
-				.collectList() //
-				.flatMap(values -> zSetCommands.zMScore(rawKey(key), values)));
-	}
+        return createMono(
+                zSetCommands ->
+                        Flux.fromArray((V[]) o) //
+                                .map(this::rawValue) //
+                                .collectList() //
+                                .flatMap(values -> zSetCommands.zMScore(rawKey(key), values)));
+    }
 
-	@Override
-	public Mono<Long> removeRange(K key, Range<Long> range) {
+    @Override
+    public Mono<Long> removeRange(K key, Range<Long> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zRemRangeByRank(rawKey(key), range));
-	}
+        return createMono(zSetCommands -> zSetCommands.zRemRangeByRank(rawKey(key), range));
+    }
 
-	@Override
-	public Mono<Long> removeRangeByLex(K key, Range<String> range) {
+    @Override
+    public Mono<Long> removeRangeByLex(K key, Range<String> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zRemRangeByLex(rawKey(key), range));
-	}
+        return createMono(zSetCommands -> zSetCommands.zRemRangeByLex(rawKey(key), range));
+    }
 
-	@Override
-	public Mono<Long> removeRangeByScore(K key, Range<Double> range) {
+    @Override
+    public Mono<Long> removeRangeByScore(K key, Range<Double> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createMono(zSetCommands -> zSetCommands.zRemRangeByScore(rawKey(key), range));
-	}
+        return createMono(zSetCommands -> zSetCommands.zRemRangeByScore(rawKey(key), range));
+    }
 
-	@Override
-	public Flux<V> difference(K key, Collection<K> otherKeys) {
+    @Override
+    public Flux<V> difference(K key, Collection<K> otherKeys) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-		return createFlux(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(zSetCommands::zDiff).map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(zSetCommands::zDiff)
+                                .map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> differenceWithScores(K key, Collection<K> otherKeys) {
+    @Override
+    public Flux<TypedTuple<V>> differenceWithScores(K key, Collection<K> otherKeys) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-		return createFlux(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(zSetCommands::zDiffWithScores).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(zSetCommands::zDiffWithScores)
+                                .map(this::readTypedTuple));
+    }
 
-	@Override
-	public Mono<Long> differenceAndStore(K key, Collection<K> otherKeys, K destKey) {
+    @Override
+    public Mono<Long> differenceAndStore(K key, Collection<K> otherKeys, K destKey) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		return createMono(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(serialized -> zSetCommands.zDiffStore(rawKey(destKey), serialized)));
+        return createMono(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(serialized -> zSetCommands.zDiffStore(rawKey(destKey), serialized)));
+    }
 
-	}
+    @Override
+    public Flux<V> intersect(K key, Collection<K> otherKeys) {
 
-	@Override
-	public Flux<V> intersect(K key, Collection<K> otherKeys) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        return createFlux(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(zSetCommands::zInter)
+                                .map(this::readRequiredValue));
+    }
 
-		return createFlux(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(zSetCommands::zInter).map(this::readRequiredValue));
-	}
+    @Override
+    public Flux<TypedTuple<V>> intersectWithScores(K key, Collection<K> otherKeys) {
 
-	@Override
-	public Flux<TypedTuple<V>> intersectWithScores(K key, Collection<K> otherKeys) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        return createFlux(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(zSetCommands::zInterWithScores)
+                                .map(this::readTypedTuple));
+    }
 
-		return createFlux(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(zSetCommands::zInterWithScores).map(this::readTypedTuple));
-	}
+    @Override
+    public Flux<TypedTuple<V>> intersectWithScores(
+            K key, Collection<K> otherKeys, Aggregate aggregate, Weights weights) {
 
-	@Override
-	public Flux<TypedTuple<V>> intersectWithScores(K key, Collection<K> otherKeys, Aggregate aggregate, Weights weights) {
+        // TODO: Inconsistent method signatures Aggregate/Weights vs Weights/Aggregate in Connection API
 
-		// TODO: Inconsistent method signatures Aggregate/Weights vs Weights/Aggregate in Connection API
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(aggregate, "Aggregate must not be null");
+        Assert.notNull(weights, "Weights must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(aggregate, "Aggregate must not be null");
-		Assert.notNull(weights, "Weights must not be null");
+        return createFlux(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(sets -> zSetCommands.zInterWithScores(sets, weights, aggregate))
+                                .map(this::readTypedTuple));
+    }
 
-		return createFlux(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(sets -> zSetCommands.zInterWithScores(sets, weights, aggregate)).map(this::readTypedTuple));
-	}
+    @Override
+    public Mono<Long> intersectAndStore(K key, Collection<K> otherKeys, K destKey) {
 
-	@Override
-	public Mono<Long> intersectAndStore(K key, Collection<K> otherKeys, K destKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return createMono(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(serialized -> zSetCommands.zInterStore(rawKey(destKey), serialized)));
+    }
 
-		return createMono(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(serialized -> zSetCommands.zInterStore(rawKey(destKey), serialized)));
-	}
+    @Override
+    public Mono<Long> intersectAndStore(
+            K key, Collection<K> otherKeys, K destKey, Aggregate aggregate, Weights weights) {
 
-	@Override
-	public Mono<Long> intersectAndStore(K key, Collection<K> otherKeys, K destKey, Aggregate aggregate, Weights weights) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
+        Assert.notNull(aggregate, "Aggregate must not be null");
+        Assert.notNull(weights, "Weights must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
-		Assert.notNull(aggregate, "Aggregate must not be null");
-		Assert.notNull(weights, "Weights must not be null");
+        return createMono(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(
+                                        serialized ->
+                                                zSetCommands.zInterStore(rawKey(destKey), serialized, weights, aggregate)));
+    }
 
-		return createMono(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(serialized -> zSetCommands.zInterStore(rawKey(destKey), serialized, weights, aggregate)));
-	}
+    @Override
+    public Flux<V> union(K key, Collection<K> otherKeys) {
+
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-	@Override
-	public Flux<V> union(K key, Collection<K> otherKeys) {
+        return createFlux(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(zSetCommands::zUnion) //
+                                .map(this::readRequiredValue));
+    }
+
+    @Override
+    public Flux<TypedTuple<V>> unionWithScores(K key, Collection<K> otherKeys) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-		return createFlux(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(zSetCommands::zUnion) //
-				.map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(zSetCommands::zUnionWithScores)
+                                .map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> unionWithScores(K key, Collection<K> otherKeys) {
+    @Override
+    public Flux<TypedTuple<V>> unionWithScores(
+            K key, Collection<K> otherKeys, Aggregate aggregate, Weights weights) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(aggregate, "Aggregate must not be null");
+        Assert.notNull(weights, "Weights must not be null");
 
-		return createFlux(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(zSetCommands::zUnionWithScores).map(this::readTypedTuple));
-	}
+        return createFlux(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(sets -> zSetCommands.zUnionWithScores(sets, weights, aggregate))
+                                .map(this::readTypedTuple));
+    }
 
-	@Override
-	public Flux<TypedTuple<V>> unionWithScores(K key, Collection<K> otherKeys, Aggregate aggregate, Weights weights) {
+    @Override
+    public Mono<Long> unionAndStore(K key, K otherKey, K destKey) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(aggregate, "Aggregate must not be null");
-		Assert.notNull(weights, "Weights must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKey, "Other key must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		return createFlux(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(sets -> zSetCommands.zUnionWithScores(sets, weights, aggregate)).map(this::readTypedTuple));
-	}
+        return unionAndStore(key, Collections.singleton(otherKey), destKey);
+    }
 
-	@Override
-	public Mono<Long> unionAndStore(K key, K otherKey, K destKey) {
+    @Override
+    public Mono<Long> unionAndStore(K key, Collection<K> otherKeys, K destKey) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKey, "Other key must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		return unionAndStore(key, Collections.singleton(otherKey), destKey);
-	}
+        return createMono(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(serialized -> zSetCommands.zUnionStore(rawKey(destKey), serialized)));
+    }
 
-	@Override
-	public Mono<Long> unionAndStore(K key, Collection<K> otherKeys, K destKey) {
+    @Override
+    public Mono<Long> unionAndStore(
+            K key, Collection<K> otherKeys, K destKey, Aggregate aggregate, Weights weights) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
+        Assert.notNull(aggregate, "Aggregate must not be null");
+        Assert.notNull(weights, "Weights must not be null");
 
-		return createMono(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(serialized -> zSetCommands.zUnionStore(rawKey(destKey), serialized)));
-	}
+        return createMono(
+                zSetCommands ->
+                        Flux.fromIterable(getKeys(key, otherKeys)) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(
+                                        serialized ->
+                                                zSetCommands.zUnionStore(rawKey(destKey), serialized, weights, aggregate)));
+    }
 
-	@Override
-	public Mono<Long> unionAndStore(K key, Collection<K> otherKeys, K destKey, Aggregate aggregate, Weights weights) {
+    @Override
+    public Flux<V> rangeByLex(K key, Range<String> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
-		Assert.notNull(aggregate, "Aggregate must not be null");
-		Assert.notNull(weights, "Weights must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createMono(zSetCommands -> Flux.fromIterable(getKeys(key, otherKeys)) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(serialized -> zSetCommands.zUnionStore(rawKey(destKey), serialized, weights, aggregate)));
-	}
+        return createFlux(
+                zSetCommands -> zSetCommands.zRangeByLex(rawKey(key), range).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<V> rangeByLex(K key, Range<String> range) {
+    @Override
+    public Flux<V> rangeByLex(K key, Range<String> range, Limit limit) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRangeByLex(rawKey(key), range).map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRangeByLex(rawKey(key), range, limit).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<V> rangeByLex(K key, Range<String> range, Limit limit) {
+    @Override
+    public Flux<V> reverseRangeByLex(K key, Range<String> range) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRangeByLex(rawKey(key), range, limit).map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRevRangeByLex(rawKey(key), range).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<V> reverseRangeByLex(K key, Range<String> range) {
+    @Override
+    public Flux<V> reverseRangeByLex(K key, Range<String> range, Limit limit) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRevRangeByLex(rawKey(key), range).map(this::readRequiredValue));
-	}
+        return createFlux(
+                zSetCommands ->
+                        zSetCommands.zRevRangeByLex(rawKey(key), range, limit).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<V> reverseRangeByLex(K key, Range<String> range, Limit limit) {
+    @Override
+    public Mono<Boolean> delete(K key) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createFlux(zSetCommands -> zSetCommands.zRevRangeByLex(rawKey(key), range, limit)
-				.map(this::readRequiredValue));
-	}
+        return template
+                .doCreateMono(connection -> connection.keyCommands().del(rawKey(key)))
+                .map(l -> l != 0);
+    }
 
-	@Override
-	public Mono<Boolean> delete(K key) {
+    private <T> Mono<T> createMono(Function<ReactiveZSetCommands, Publisher<T>> function) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(function, "Function must not be null");
 
-		return template.doCreateMono(connection -> connection.keyCommands().del(rawKey(key))).map(l -> l != 0);
-	}
+        return template.doCreateMono(connection -> function.apply(connection.zSetCommands()));
+    }
 
-	private <T> Mono<T> createMono(Function<ReactiveZSetCommands, Publisher<T>> function) {
+    private <T> Flux<T> createFlux(Function<ReactiveZSetCommands, Publisher<T>> function) {
 
-		Assert.notNull(function, "Function must not be null");
+        Assert.notNull(function, "Function must not be null");
 
-		return template.doCreateMono(connection -> function.apply(connection.zSetCommands()));
-	}
+        return template.doCreateFlux(connection -> function.apply(connection.zSetCommands()));
+    }
 
-	private <T> Flux<T> createFlux(Function<ReactiveZSetCommands, Publisher<T>> function) {
+    private ByteBuffer rawKey(K key) {
+        return serializationContext.getKeySerializationPair().write(key);
+    }
 
-		Assert.notNull(function, "Function must not be null");
+    private List<K> getKeys(K key, Collection<K> otherKeys) {
 
-		return template.doCreateFlux(connection -> function.apply(connection.zSetCommands()));
-	}
+        List<K> keys = new ArrayList<>(1 + otherKeys.size());
 
-	private ByteBuffer rawKey(K key) {
-		return serializationContext.getKeySerializationPair().write(key);
-	}
+        keys.add(key);
+        keys.addAll(otherKeys);
 
-	private List<K> getKeys(K key, Collection<K> otherKeys) {
+        return keys;
+    }
 
-		List<K> keys = new ArrayList<>(1 + otherKeys.size());
+    private ByteBuffer rawValue(V value) {
+        return serializationContext.getValueSerializationPair().write(value);
+    }
 
-		keys.add(key);
-		keys.addAll(otherKeys);
+    @Nullable
+    private V readValue(ByteBuffer buffer) {
+        return serializationContext.getValueSerializationPair().read(buffer);
+    }
 
-		return keys;
-	}
+    private V readRequiredValue(ByteBuffer buffer) {
 
-	private ByteBuffer rawValue(V value) {
-		return serializationContext.getValueSerializationPair().write(value);
-	}
+        V value = readValue(buffer);
 
-	@Nullable
-	private V readValue(ByteBuffer buffer) {
-		return serializationContext.getValueSerializationPair().read(buffer);
-	}
+        if (value == null) {
+            throw new InvalidDataAccessApiUsageException("Deserialized sorted set value is null");
+        }
 
-	private V readRequiredValue(ByteBuffer buffer) {
+        return value;
+    }
 
-		V value = readValue(buffer);
-
-		if (value == null) {
-			throw new InvalidDataAccessApiUsageException("Deserialized sorted set value is null");
-		}
-
-		return value;
-	}
-
-	private TypedTuple<V> readTypedTuple(Tuple raw) {
-		return new DefaultTypedTuple<>(readValue(ByteBuffer.wrap(raw.getValue())), raw.getScore());
-	}
+    private TypedTuple<V> readTypedTuple(Tuple raw) {
+        return new DefaultTypedTuple<>(readValue(ByteBuffer.wrap(raw.getValue())), raw.getScore());
+    }
 }

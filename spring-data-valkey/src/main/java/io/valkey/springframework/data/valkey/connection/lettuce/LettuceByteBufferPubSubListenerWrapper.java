@@ -16,10 +16,8 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.pubsub.RedisPubSubListener;
-
-import java.nio.ByteBuffer;
-
 import io.valkey.springframework.data.valkey.util.ByteUtils;
+import java.nio.ByteBuffer;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -29,53 +27,54 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @since 2.6
  */
-class LettuceByteBufferPubSubListenerWrapper implements RedisPubSubListener<ByteBuffer, ByteBuffer> {
+class LettuceByteBufferPubSubListenerWrapper
+        implements RedisPubSubListener<ByteBuffer, ByteBuffer> {
 
-	private final RedisPubSubListener<byte[], byte[]> delegate;
+    private final RedisPubSubListener<byte[], byte[]> delegate;
 
-	LettuceByteBufferPubSubListenerWrapper(RedisPubSubListener<byte[], byte[]> delegate) {
+    LettuceByteBufferPubSubListenerWrapper(RedisPubSubListener<byte[], byte[]> delegate) {
 
-		Assert.notNull(delegate, "RedisPubSubListener must not be null");
+        Assert.notNull(delegate, "RedisPubSubListener must not be null");
 
-		this.delegate = delegate;
-	}
+        this.delegate = delegate;
+    }
 
-	public void message(ByteBuffer channel, ByteBuffer message) {
-		delegate.message(getBytes(channel), getBytes(message));
-	}
+    public void message(ByteBuffer channel, ByteBuffer message) {
+        delegate.message(getBytes(channel), getBytes(message));
+    }
 
-	public void message(ByteBuffer pattern, ByteBuffer channel, ByteBuffer message) {
-		delegate.message(getBytes(channel), getBytes(message), getBytes(pattern));
-	}
+    public void message(ByteBuffer pattern, ByteBuffer channel, ByteBuffer message) {
+        delegate.message(getBytes(channel), getBytes(message), getBytes(pattern));
+    }
 
-	public void subscribed(ByteBuffer channel, long count) {
-		delegate.subscribed(getBytes(channel), count);
-	}
+    public void subscribed(ByteBuffer channel, long count) {
+        delegate.subscribed(getBytes(channel), count);
+    }
 
-	public void psubscribed(ByteBuffer pattern, long count) {
-		delegate.psubscribed(getBytes(pattern), count);
-	}
+    public void psubscribed(ByteBuffer pattern, long count) {
+        delegate.psubscribed(getBytes(pattern), count);
+    }
 
-	public void unsubscribed(ByteBuffer channel, long count) {
-		delegate.unsubscribed(getBytes(channel), count);
-	}
+    public void unsubscribed(ByteBuffer channel, long count) {
+        delegate.unsubscribed(getBytes(channel), count);
+    }
 
-	public void punsubscribed(ByteBuffer pattern, long count) {
-		delegate.punsubscribed(getBytes(pattern), count);
-	}
+    public void punsubscribed(ByteBuffer pattern, long count) {
+        delegate.punsubscribed(getBytes(pattern), count);
+    }
 
-	/**
-	 * Extract a byte array from {@link ByteBuffer} without consuming it.
-	 *
-	 * @param byteBuffer must not be {@literal null}.
-	 * @return
-	 */
-	private static byte[] getBytes(@Nullable ByteBuffer byteBuffer) {
+    /**
+     * Extract a byte array from {@link ByteBuffer} without consuming it.
+     *
+     * @param byteBuffer must not be {@literal null}.
+     * @return
+     */
+    private static byte[] getBytes(@Nullable ByteBuffer byteBuffer) {
 
-		if (byteBuffer == null) {
-			return new byte[0];
-		}
+        if (byteBuffer == null) {
+            return new byte[0];
+        }
 
-		return ByteUtils.getBytes(byteBuffer);
-	}
+        return ByteUtils.getBytes(byteBuffer);
+    }
 }

@@ -22,48 +22,49 @@ import reactor.core.publisher.Mono;
  * @author Mark Paluch
  * @since 2.0
  */
-public interface ReactiveValkeyClusterConnection extends ReactiveValkeyConnection, ReactiveClusterCommands {
+public interface ReactiveValkeyClusterConnection
+        extends ReactiveValkeyConnection, ReactiveClusterCommands {
 
-	@Override
-	ReactiveClusterKeyCommands keyCommands();
+    @Override
+    ReactiveClusterKeyCommands keyCommands();
 
-	@Override
-	ReactiveClusterStringCommands stringCommands();
+    @Override
+    ReactiveClusterStringCommands stringCommands();
 
-	@Override
-	ReactiveClusterNumberCommands numberCommands();
+    @Override
+    ReactiveClusterNumberCommands numberCommands();
 
-	@Override
-	ReactiveClusterListCommands listCommands();
+    @Override
+    ReactiveClusterListCommands listCommands();
 
-	@Override
-	ReactiveClusterSetCommands setCommands();
+    @Override
+    ReactiveClusterSetCommands setCommands();
 
-	@Override
-	ReactiveClusterZSetCommands zSetCommands();
+    @Override
+    ReactiveClusterZSetCommands zSetCommands();
 
-	@Override
-	ReactiveClusterHashCommands hashCommands();
+    @Override
+    ReactiveClusterHashCommands hashCommands();
 
-	@Override
-	ReactiveClusterGeoCommands geoCommands();
+    @Override
+    ReactiveClusterGeoCommands geoCommands();
 
-	@Override
-	ReactiveClusterHyperLogLogCommands hyperLogLogCommands();
+    @Override
+    ReactiveClusterHyperLogLogCommands hyperLogLogCommands();
 
-	@Override
-	ReactiveClusterServerCommands serverCommands();
+    @Override
+    ReactiveClusterServerCommands serverCommands();
 
-	@Override
-	ReactiveClusterStreamCommands streamCommands();
+    @Override
+    ReactiveClusterStreamCommands streamCommands();
 
-	/**
-	 * Test the connection to a specific Valkey cluster node.
-	 *
-	 * @param node must not be {@literal null}.
-	 * @return {@link Mono} wrapping server response message - usually {@literal PONG}.
-	 * @throws IllegalArgumentException when {@code node} is {@literal null}.
-	 * @see ValkeyConnectionCommands#ping()
-	 */
-	Mono<String> ping(ValkeyClusterNode node);
+    /**
+     * Test the connection to a specific Valkey cluster node.
+     *
+     * @param node must not be {@literal null}.
+     * @return {@link Mono} wrapping server response message - usually {@literal PONG}.
+     * @throws IllegalArgumentException when {@code node} is {@literal null}.
+     * @see ValkeyConnectionCommands#ping()
+     */
+    Mono<String> ping(ValkeyClusterNode node);
 }

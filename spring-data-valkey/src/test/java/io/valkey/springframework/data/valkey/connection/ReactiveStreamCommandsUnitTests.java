@@ -17,12 +17,10 @@ package io.valkey.springframework.data.valkey.connection;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.nio.ByteBuffer;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.ReactiveStreamCommands.PendingRecordsCommand;
+import java.nio.ByteBuffer;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Range;
 
 /**
  * Unit tests for {@link ReactiveStreamCommands}.
@@ -31,26 +29,26 @@ import io.valkey.springframework.data.valkey.connection.ReactiveStreamCommands.P
  */
 class ReactiveStreamCommandsUnitTests {
 
-	@Test // GH-2982
-	void pendingRecordsCommandRangeShouldThrowExceptionWhenRangeIsNull() {
+    @Test // GH-2982
+    void pendingRecordsCommandRangeShouldThrowExceptionWhenRangeIsNull() {
 
-		ByteBuffer key = ByteBuffer.wrap("my-stream".getBytes());
-		String groupName = "my-group";
+        ByteBuffer key = ByteBuffer.wrap("my-stream".getBytes());
+        String groupName = "my-group";
 
-		PendingRecordsCommand command = PendingRecordsCommand.pending(key, groupName);
+        PendingRecordsCommand command = PendingRecordsCommand.pending(key, groupName);
 
-		assertThatIllegalArgumentException().isThrownBy(() -> command.range(null, 10L));
-	}
+        assertThatIllegalArgumentException().isThrownBy(() -> command.range(null, 10L));
+    }
 
-	@Test // GH-2982
-	void pendingRecordsCommandRangeShouldThrowExceptionWhenCountIsNegative() {
+    @Test // GH-2982
+    void pendingRecordsCommandRangeShouldThrowExceptionWhenCountIsNegative() {
 
-		ByteBuffer key = ByteBuffer.wrap("my-stream".getBytes());
-		String groupName = "my-group";
+        ByteBuffer key = ByteBuffer.wrap("my-stream".getBytes());
+        String groupName = "my-group";
 
-		PendingRecordsCommand command = PendingRecordsCommand.pending(key, groupName);
-		Range<?> range = Range.closed("0", "10");
+        PendingRecordsCommand command = PendingRecordsCommand.pending(key, groupName);
+        Range<?> range = Range.closed("0", "10");
 
-		assertThatIllegalArgumentException().isThrownBy(() -> command.range(range, -1L));
-	}
+        assertThatIllegalArgumentException().isThrownBy(() -> command.range(range, -1L));
+    }
 }

@@ -18,32 +18,32 @@ package io.valkey.springframework.data.valkey.core.convert;
 import io.valkey.springframework.data.valkey.core.index.IndexDefinition;
 
 /**
- * {@link RemoveIndexedData} represents a removed index entry from a secondary index for a property path in a given keyspace.
+ * {@link RemoveIndexedData} represents a removed index entry from a secondary index for a property
+ * path in a given keyspace.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
  */
 public class RemoveIndexedData implements IndexedData {
 
-	private final IndexDefinition indexDefinition;
+    private final IndexDefinition indexDefinition;
 
-	RemoveIndexedData(IndexDefinition indexDefinition) {
-		this.indexDefinition = indexDefinition;
-	}
+    RemoveIndexedData(IndexDefinition indexDefinition) {
+        this.indexDefinition = indexDefinition;
+    }
 
-	@Override
-	public String getIndexName() {
-		return indexDefinition.getIndexName();
-	}
+    @Override
+    public String getIndexName() {
+        return indexDefinition.getIndexName();
+    }
 
-	@Override
-	public String getKeyspace() {
-		return indexDefinition.getKeyspace();
-	}
+    @Override
+    public String getKeyspace() {
+        return indexDefinition.getKeyspace();
+    }
 
-	@Override
-	public String toString() {
-		return "RemoveIndexedData [indexName=" + getIndexName() + ", keyspace()=" + getKeyspace() + "]";
-	}
-
+    @Override
+    public String toString() {
+        return "RemoveIndexedData [indexName=" + getIndexName() + ", keyspace()=" + getKeyspace() + "]";
+    }
 }

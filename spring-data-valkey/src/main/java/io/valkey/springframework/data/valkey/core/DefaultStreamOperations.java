@@ -15,15 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.core.convert.ConversionService;
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
@@ -44,6 +35,14 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamReadOptions
 import io.valkey.springframework.data.valkey.hash.HashMapper;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.support.collections.CollectionUtils;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.data.domain.Range;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -58,312 +57,331 @@ import org.springframework.util.ClassUtils;
  * @author jinkshower
  * @since 2.2
  */
-class DefaultStreamOperations<K, HK, HV> extends AbstractOperations<K, Object> implements StreamOperations<K, HK, HV> {
+class DefaultStreamOperations<K, HK, HV> extends AbstractOperations<K, Object>
+        implements StreamOperations<K, HK, HV> {
 
-	private final StreamObjectMapper objectMapper;
+    private final StreamObjectMapper objectMapper;
 
-	@SuppressWarnings("unchecked")
-	DefaultStreamOperations(ValkeyTemplate<K, ?> template,
-			@Nullable HashMapper<? super K, ? super HK, ? super HV> mapper) {
+    @SuppressWarnings("unchecked")
+    DefaultStreamOperations(
+            ValkeyTemplate<K, ?> template,
+            @Nullable HashMapper<? super K, ? super HK, ? super HV> mapper) {
 
-		super((ValkeyTemplate<K, Object>) template);
+        super((ValkeyTemplate<K, Object>) template);
 
-		this.objectMapper = new StreamObjectMapper(mapper) {
-			@Override
-			protected HashMapper<?, ?, ?> doGetHashMapper(ConversionService conversionService, Class<?> targetType) {
+        this.objectMapper =
+                new StreamObjectMapper(mapper) {
+                    @Override
+                    protected HashMapper<?, ?, ?> doGetHashMapper(
+                            ConversionService conversionService, Class<?> targetType) {
 
-				if (isSimpleType(targetType)) {
+                        if (isSimpleType(targetType)) {
 
-					return new HashMapper<Object, Object, Object>() {
+                            return new HashMapper<Object, Object, Object>() {
 
-						@Override
-						public Map<Object, Object> toHash(Object object) {
+                                @Override
+                                public Map<Object, Object> toHash(Object object) {
 
-							Object key = "payload";
-							Object value = object;
+                                    Object key = "payload";
+                                    Object value = object;
 
-							if (!template.isEnableDefaultSerializer()) {
-								if (template.getHashKeySerializer() == null) {
-									key = key.toString().getBytes(StandardCharsets.UTF_8);
-								}
-								if (template.getHashValueSerializer() == null) {
-									value = serializeHashValueIfRequires((HV) object);
-								}
-							}
+                                    if (!template.isEnableDefaultSerializer()) {
+                                        if (template.getHashKeySerializer() == null) {
+                                            key = key.toString().getBytes(StandardCharsets.UTF_8);
+                                        }
+                                        if (template.getHashValueSerializer() == null) {
+                                            value = serializeHashValueIfRequires((HV) object);
+                                        }
+                                    }
 
-							return Collections.singletonMap(key, value);
-						}
+                                    return Collections.singletonMap(key, value);
+                                }
 
-						@Override
-						public Object fromHash(Map<Object, Object> hash) {
-							Object value = hash.values().iterator().next();
-							if (ClassUtils.isAssignableValue(targetType, value)) {
-								return value;
-							}
+                                @Override
+                                public Object fromHash(Map<Object, Object> hash) {
+                                    Object value = hash.values().iterator().next();
+                                    if (ClassUtils.isAssignableValue(targetType, value)) {
+                                        return value;
+                                    }
 
-							HV deserialized = deserializeHashValue((byte[]) value);
+                                    HV deserialized = deserializeHashValue((byte[]) value);
 
-							if (ClassUtils.isAssignableValue(targetType, deserialized)) {
-								return value;
-							}
+                                    if (ClassUtils.isAssignableValue(targetType, deserialized)) {
+                                        return value;
+                                    }
 
-							return conversionService.convert(deserialized, targetType);
-						}
-					};
-				}
+                                    return conversionService.convert(deserialized, targetType);
+                                }
+                            };
+                        }
 
-				return super.doGetHashMapper(conversionService, targetType);
-			}
-		};
-	}
+                        return super.doGetHashMapper(conversionService, targetType);
+                    }
+                };
+    }
 
-	@Override
-	public Long acknowledge(K key, String group, String... recordIds) {
+    @Override
+    public Long acknowledge(K key, String group, String... recordIds) {
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xAck(rawKey, group, recordIds));
-	}
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xAck(rawKey, group, recordIds));
+    }
 
-	@Nullable
-	@Override
-	@SuppressWarnings("unchecked")
-	public RecordId add(Record<K, ?> record) {
+    @Nullable
+    @Override
+    @SuppressWarnings("unchecked")
+    public RecordId add(Record<K, ?> record) {
 
-		Assert.notNull(record, "Record must not be null");
+        Assert.notNull(record, "Record must not be null");
 
-		MapRecord<K, HK, HV> input = StreamObjectMapper.toMapRecord(this, record);
+        MapRecord<K, HK, HV> input = StreamObjectMapper.toMapRecord(this, record);
 
-		ByteRecord binaryRecord = input.serialize(keySerializer(), hashKeySerializer(), hashValueSerializer());
+        ByteRecord binaryRecord =
+                input.serialize(keySerializer(), hashKeySerializer(), hashValueSerializer());
 
-		return execute(connection -> connection.xAdd(binaryRecord));
-	}
+        return execute(connection -> connection.xAdd(binaryRecord));
+    }
 
-	@Nullable
-	@Override
-	@SuppressWarnings("unchecked")
-	public RecordId add(Record<K , ?> record, XAddOptions options) {
+    @Nullable
+    @Override
+    @SuppressWarnings("unchecked")
+    public RecordId add(Record<K, ?> record, XAddOptions options) {
 
-		Assert.notNull(record, "Record must not be null");
-		Assert.notNull(options, "XAddOptions must not be null");
+        Assert.notNull(record, "Record must not be null");
+        Assert.notNull(options, "XAddOptions must not be null");
 
-		MapRecord<K, HK, HV> input = StreamObjectMapper.toMapRecord(this, record);
+        MapRecord<K, HK, HV> input = StreamObjectMapper.toMapRecord(this, record);
 
-		ByteRecord binaryRecord = input.serialize(keySerializer(), hashKeySerializer(), hashValueSerializer());
+        ByteRecord binaryRecord =
+                input.serialize(keySerializer(), hashKeySerializer(), hashValueSerializer());
 
-		return execute(connection -> connection.streamCommands().xAdd(binaryRecord, options));
-	}
+        return execute(connection -> connection.streamCommands().xAdd(binaryRecord, options));
+    }
 
-	@Override
-	public List<MapRecord<K, HK, HV>> claim(K key, String consumerGroup, String newOwner, XClaimOptions xClaimOptions) {
+    @Override
+    public List<MapRecord<K, HK, HV>> claim(
+            K key, String consumerGroup, String newOwner, XClaimOptions xClaimOptions) {
 
-		return CollectionUtils.nullSafeList(execute(new RecordDeserializingValkeyCallback() {
+        return CollectionUtils.nullSafeList(
+                execute(
+                        new RecordDeserializingValkeyCallback() {
 
-			@Nullable
-			@Override
-			List<ByteRecord> inValkey(ValkeyConnection connection) {
-				return connection.streamCommands().xClaim(rawKey(key), consumerGroup, newOwner, xClaimOptions);
-			}
-		}));
-	}
+                            @Nullable
+                            @Override
+                            List<ByteRecord> inValkey(ValkeyConnection connection) {
+                                return connection
+                                        .streamCommands()
+                                        .xClaim(rawKey(key), consumerGroup, newOwner, xClaimOptions);
+                            }
+                        }));
+    }
 
-	@Override
-	public Long delete(K key, RecordId... recordIds) {
+    @Override
+    public Long delete(K key, RecordId... recordIds) {
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xDel(rawKey, recordIds));
-	}
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xDel(rawKey, recordIds));
+    }
 
-	@Override
-	public String createGroup(K key, ReadOffset readOffset, String group) {
+    @Override
+    public String createGroup(K key, ReadOffset readOffset, String group) {
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xGroupCreate(rawKey, group, readOffset, true));
-	}
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xGroupCreate(rawKey, group, readOffset, true));
+    }
 
-	@Override
-	public Boolean deleteConsumer(K key, Consumer consumer) {
+    @Override
+    public Boolean deleteConsumer(K key, Consumer consumer) {
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xGroupDelConsumer(rawKey, consumer));
-	}
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xGroupDelConsumer(rawKey, consumer));
+    }
+
+    @Override
+    public Boolean destroyGroup(K key, String group) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xGroupDestroy(rawKey, group));
+    }
 
-	@Override
-	public Boolean destroyGroup(K key, String group) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xGroupDestroy(rawKey, group));
-	}
-
-	@Override
-	public XInfoStream info(K key) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xInfo(rawKey));
-	}
-
-	@Override
-	public XInfoConsumers consumers(K key, String group) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xInfoConsumers(rawKey, group));
-	}
-
-	@Override
-	public XInfoGroups groups(K key) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xInfoGroups(rawKey));
-	}
-
-	@Override
-	public PendingMessages pending(K key, String group, Range<?> range, long count) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xPending(rawKey, group, range, count));
-	}
-
-	@Override
-	public PendingMessages pending(K key, Consumer consumer, Range<?> range, long count) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xPending(rawKey, consumer, range, count));
-	}
-
-	@Override
-	public PendingMessagesSummary pending(K key, String group) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xPending(rawKey, group));
-	}
-
-	@Override
-	public Long size(K key) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xLen(rawKey));
-	}
-
-	@Override
-	public List<MapRecord<K, HK, HV>> range(K key, Range<String> range, Limit limit) {
-
-		return execute(new RecordDeserializingValkeyCallback() {
-
-			@Nullable
-			@Override
-			List<ByteRecord> inValkey(ValkeyConnection connection) {
-				return connection.xRange(rawKey(key), range, limit);
-			}
-		});
-	}
-
-	@Override
-	public List<MapRecord<K, HK, HV>> read(StreamReadOptions readOptions, StreamOffset<K>... streams) {
-
-		return execute(new RecordDeserializingValkeyCallback() {
-
-			@Nullable
-			@Override
-			List<ByteRecord> inValkey(ValkeyConnection connection) {
-				return connection.xRead(readOptions, rawStreamOffsets(streams));
-			}
-		});
-	}
-
-	@Override
-	public List<MapRecord<K, HK, HV>> read(Consumer consumer, StreamReadOptions readOptions, StreamOffset<K>... streams) {
-
-		return execute(new RecordDeserializingValkeyCallback() {
-
-			@Nullable
-			@Override
-			List<ByteRecord> inValkey(ValkeyConnection connection) {
-				return connection.xReadGroup(consumer, readOptions, rawStreamOffsets(streams));
-			}
-		});
-	}
-
-	@Override
-	public List<MapRecord<K, HK, HV>> reverseRange(K key, Range<String> range, Limit limit) {
-
-		return execute(new RecordDeserializingValkeyCallback() {
-
-			@Nullable
-			@Override
-			List<ByteRecord> inValkey(ValkeyConnection connection) {
-				return connection.xRevRange(rawKey(key), range, limit);
-			}
-		});
-	}
-
-	@Override
-	public Long trim(K key, long count) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xTrim(rawKey, count));
-	}
-
-	@Override
-	public Long trim(K key, long count, boolean approximateTrimming) {
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.xTrim(rawKey, count, approximateTrimming));
-	}
-
-	@Override
-	public <V> HashMapper<V, HK, HV> getHashMapper(Class<V> targetType) {
-		return objectMapper.getHashMapper(targetType);
-	}
-
-	@Override
-	public MapRecord<K, HK, HV> deserializeRecord(ByteRecord record) {
-		return record.deserialize(keySerializer(), hashKeySerializer(), hashValueSerializer());
-	}
-
-	protected byte[] serializeHashValueIfRequires(HV value) {
-		return hashValueSerializerPresent() ? serialize(value, hashValueSerializer())
-				: objectMapper.getConversionService().convert(value, byte[].class);
-	}
-
-	protected boolean hashValueSerializerPresent() {
-		return hashValueSerializer() != null;
-	}
-
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private byte[] serialize(Object value, ValkeySerializer serializer) {
-
-		Object _value = value;
-		if (!serializer.canSerialize(value.getClass())) {
-			_value = objectMapper.getConversionService().convert(value, serializer.getTargetType());
-		}
-		return serializer.serialize(_value);
-	}
-
-	@SuppressWarnings("unchecked")
-	private StreamOffset<byte[]>[] rawStreamOffsets(StreamOffset<K>[] streams) {
-
-		return Arrays.stream(streams) //
-				.map(it -> StreamOffset.create(rawKey(it.getKey()), it.getOffset())) //
-				.toArray(it -> new StreamOffset[it]);
-	}
-
-	abstract class RecordDeserializingValkeyCallback implements ValkeyCallback<List<MapRecord<K, HK, HV>>> {
-
-		@SuppressWarnings("unchecked")
-		public final List<MapRecord<K, HK, HV>> doInValkey(ValkeyConnection connection) {
-
-			List<ByteRecord> raw = inValkey(connection);
-			if (raw == null) {
-				return Collections.emptyList();
-			}
-
-			List<MapRecord<K, HK, HV>> result = new ArrayList<>();
-			for (ByteRecord record : raw) {
-				result.add(deserializeRecord(record));
-			}
-
-			return result;
-		}
-
-		@Nullable
-		abstract List<ByteRecord> inValkey(ValkeyConnection connection);
-	}
+    @Override
+    public XInfoStream info(K key) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xInfo(rawKey));
+    }
+
+    @Override
+    public XInfoConsumers consumers(K key, String group) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xInfoConsumers(rawKey, group));
+    }
+
+    @Override
+    public XInfoGroups groups(K key) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xInfoGroups(rawKey));
+    }
+
+    @Override
+    public PendingMessages pending(K key, String group, Range<?> range, long count) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xPending(rawKey, group, range, count));
+    }
+
+    @Override
+    public PendingMessages pending(K key, Consumer consumer, Range<?> range, long count) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xPending(rawKey, consumer, range, count));
+    }
+
+    @Override
+    public PendingMessagesSummary pending(K key, String group) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xPending(rawKey, group));
+    }
+
+    @Override
+    public Long size(K key) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xLen(rawKey));
+    }
+
+    @Override
+    public List<MapRecord<K, HK, HV>> range(K key, Range<String> range, Limit limit) {
+
+        return execute(
+                new RecordDeserializingValkeyCallback() {
+
+                    @Nullable
+                    @Override
+                    List<ByteRecord> inValkey(ValkeyConnection connection) {
+                        return connection.xRange(rawKey(key), range, limit);
+                    }
+                });
+    }
+
+    @Override
+    public List<MapRecord<K, HK, HV>> read(
+            StreamReadOptions readOptions, StreamOffset<K>... streams) {
+
+        return execute(
+                new RecordDeserializingValkeyCallback() {
+
+                    @Nullable
+                    @Override
+                    List<ByteRecord> inValkey(ValkeyConnection connection) {
+                        return connection.xRead(readOptions, rawStreamOffsets(streams));
+                    }
+                });
+    }
+
+    @Override
+    public List<MapRecord<K, HK, HV>> read(
+            Consumer consumer, StreamReadOptions readOptions, StreamOffset<K>... streams) {
+
+        return execute(
+                new RecordDeserializingValkeyCallback() {
+
+                    @Nullable
+                    @Override
+                    List<ByteRecord> inValkey(ValkeyConnection connection) {
+                        return connection.xReadGroup(consumer, readOptions, rawStreamOffsets(streams));
+                    }
+                });
+    }
+
+    @Override
+    public List<MapRecord<K, HK, HV>> reverseRange(K key, Range<String> range, Limit limit) {
+
+        return execute(
+                new RecordDeserializingValkeyCallback() {
+
+                    @Nullable
+                    @Override
+                    List<ByteRecord> inValkey(ValkeyConnection connection) {
+                        return connection.xRevRange(rawKey(key), range, limit);
+                    }
+                });
+    }
+
+    @Override
+    public Long trim(K key, long count) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xTrim(rawKey, count));
+    }
+
+    @Override
+    public Long trim(K key, long count, boolean approximateTrimming) {
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.xTrim(rawKey, count, approximateTrimming));
+    }
+
+    @Override
+    public <V> HashMapper<V, HK, HV> getHashMapper(Class<V> targetType) {
+        return objectMapper.getHashMapper(targetType);
+    }
+
+    @Override
+    public MapRecord<K, HK, HV> deserializeRecord(ByteRecord record) {
+        return record.deserialize(keySerializer(), hashKeySerializer(), hashValueSerializer());
+    }
+
+    protected byte[] serializeHashValueIfRequires(HV value) {
+        return hashValueSerializerPresent()
+                ? serialize(value, hashValueSerializer())
+                : objectMapper.getConversionService().convert(value, byte[].class);
+    }
+
+    protected boolean hashValueSerializerPresent() {
+        return hashValueSerializer() != null;
+    }
+
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private byte[] serialize(Object value, ValkeySerializer serializer) {
+
+        Object _value = value;
+        if (!serializer.canSerialize(value.getClass())) {
+            _value = objectMapper.getConversionService().convert(value, serializer.getTargetType());
+        }
+        return serializer.serialize(_value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private StreamOffset<byte[]>[] rawStreamOffsets(StreamOffset<K>[] streams) {
+
+        return Arrays.stream(streams) //
+                .map(it -> StreamOffset.create(rawKey(it.getKey()), it.getOffset())) //
+                .toArray(it -> new StreamOffset[it]);
+    }
+
+    abstract class RecordDeserializingValkeyCallback
+            implements ValkeyCallback<List<MapRecord<K, HK, HV>>> {
+
+        @SuppressWarnings("unchecked")
+        public final List<MapRecord<K, HK, HV>> doInValkey(ValkeyConnection connection) {
+
+            List<ByteRecord> raw = inValkey(connection);
+            if (raw == null) {
+                return Collections.emptyList();
+            }
+
+            List<MapRecord<K, HK, HV>> result = new ArrayList<>();
+            for (ByteRecord record : raw) {
+                result.add(deserializeRecord(record));
+            }
+
+            return result;
+        }
+
+        @Nullable
+        abstract List<ByteRecord> inValkey(ValkeyConnection connection);
+    }
 }

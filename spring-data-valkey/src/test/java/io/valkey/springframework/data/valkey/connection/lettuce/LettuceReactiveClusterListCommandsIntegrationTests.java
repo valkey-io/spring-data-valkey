@@ -15,45 +15,50 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import static org.assertj.core.api.Assertions.*;
 import static io.valkey.springframework.data.valkey.connection.lettuce.LettuceReactiveCommandsTestSupport.*;
+import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.connection.ReactiveListCommands;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
-
-import io.valkey.springframework.data.valkey.connection.ReactiveListCommands;
 
 /**
  * @author Christoph Strobl
  */
 class LettuceReactiveClusterListCommandsIntegrationTests extends LettuceReactiveClusterTestSupport {
 
-	@Test // DATAREDIS-525
-	void bRPopLPushShouldWorkCorrectlyWhenAllKeysMapToSameSlot() {
+    @Test // DATAREDIS-525
+    void bRPopLPushShouldWorkCorrectlyWhenAllKeysMapToSameSlot() {
 
-		nativeCommands.rpush(SAME_SLOT_KEY_1, VALUE_1, VALUE_2, VALUE_3);
-		nativeCommands.rpush(SAME_SLOT_KEY_2, VALUE_1);
+        nativeCommands.rpush(SAME_SLOT_KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        nativeCommands.rpush(SAME_SLOT_KEY_2, VALUE_1);
 
-		ByteBuffer result = connection.listCommands()
-				.bRPopLPush(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER, Duration.ofSeconds(1)).block();
+        ByteBuffer result =
+                connection
+                        .listCommands()
+                        .bRPopLPush(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER, Duration.ofSeconds(1))
+                        .block();
 
-		assertThat(result).isEqualTo(VALUE_3_BBUFFER);
-		assertThat(nativeCommands.llen(SAME_SLOT_KEY_2)).isEqualTo(2L);
-		assertThat(nativeCommands.lindex(SAME_SLOT_KEY_2, 0)).isEqualTo(VALUE_3);
-	}
+        assertThat(result).isEqualTo(VALUE_3_BBUFFER);
+        assertThat(nativeCommands.llen(SAME_SLOT_KEY_2)).isEqualTo(2L);
+        assertThat(nativeCommands.lindex(SAME_SLOT_KEY_2, 0)).isEqualTo(VALUE_3);
+    }
 
-	@Test // DATAREDIS-525
-	void blPopShouldReturnFirstAvailableWhenAllKeysMapToTheSameSlot() {
+    @Test // DATAREDIS-525
+    void blPopShouldReturnFirstAvailableWhenAllKeysMapToTheSameSlot() {
 
-		nativeCommands.rpush(SAME_SLOT_KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        nativeCommands.rpush(SAME_SLOT_KEY_1, VALUE_1, VALUE_2, VALUE_3);
 
-		ReactiveListCommands.PopResult result = connection.listCommands()
-				.blPop(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER), Duration.ofSeconds(1L)).block();
-		assertThat(result.getKey()).isEqualTo(SAME_SLOT_KEY_1_BBUFFER);
-		assertThat(result.getValue()).isEqualTo(VALUE_1_BBUFFER);
-	}
-
+        ReactiveListCommands.PopResult result =
+                connection
+                        .listCommands()
+                        .blPop(
+                                Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
+                                Duration.ofSeconds(1L))
+                        .block();
+        assertThat(result.getKey()).isEqualTo(SAME_SLOT_KEY_1_BBUFFER);
+        assertThat(result.getValue()).isEqualTo(VALUE_1_BBUFFER);
+    }
 }

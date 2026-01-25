@@ -27,16 +27,16 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
  */
 public abstract class ConnectionUtils {
 
-	public static boolean isAsync(ValkeyConnectionFactory connectionFactory) {
-		return connectionFactory instanceof LettuceConnectionFactory
-			|| connectionFactory instanceof ValkeyGlideConnectionFactory;
-	}
+    public static boolean isAsync(ValkeyConnectionFactory connectionFactory) {
+        return connectionFactory instanceof LettuceConnectionFactory
+                || connectionFactory instanceof ValkeyGlideConnectionFactory;
+    }
 
-	public static boolean isLettuce(ValkeyConnectionFactory connectionFactory) {
-		return connectionFactory instanceof LettuceConnectionFactory;
-	}
+    public static boolean isLettuce(ValkeyConnectionFactory connectionFactory) {
+        return connectionFactory instanceof LettuceConnectionFactory;
+    }
 
-	public static boolean isJedis(ValkeyConnectionFactory connectionFactory) {
-		return connectionFactory instanceof JedisConnectionFactory;
-	}
+    public static boolean isJedis(ValkeyConnectionFactory connectionFactory) {
+        return connectionFactory instanceof JedisConnectionFactory;
+    }
 }

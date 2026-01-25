@@ -15,13 +15,12 @@
  */
 package example.repositories;
 
-import org.springframework.data.repository.CrudRepository;
-
 import java.util.List;
+import org.springframework.data.repository.CrudRepository;
 
 public interface PersonRepository extends CrudRepository<Person, String> {
 
-	List<Person> findByLastname(String lastname);
+    List<Person> findByLastname(String lastname);
 
-	List<Person> findByFirstname(String firstname);
+    List<Person> findByFirstname(String firstname);
 }

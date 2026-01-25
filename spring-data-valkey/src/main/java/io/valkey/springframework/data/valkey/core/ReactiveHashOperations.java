@@ -15,9 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
+import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
+import io.valkey.springframework.data.valkey.core.types.Expirations;
 import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.time.Instant;
@@ -25,19 +25,18 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
-import io.valkey.springframework.data.valkey.core.types.Expiration;
-import io.valkey.springframework.data.valkey.core.types.Expirations;
 import org.springframework.lang.Nullable;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Reactive Valkey operations for Hash Commands.
- * <p>
- * Streams of methods returning {@code Mono<K>} or {@code Flux<M>} are terminated with
- * {@link org.springframework.dao.InvalidDataAccessApiUsageException} when
- * {@link io.valkey.springframework.data.valkey.serializer.ValkeyElementReader#read(ByteBuffer)} returns {@literal null} for a
- * particular element as Reactive Streams prohibit the usage of {@literal null} values.
+ *
+ * <p>Streams of methods returning {@code Mono<K>} or {@code Flux<M>} are terminated with {@link
+ * org.springframework.dao.InvalidDataAccessApiUsageException} when {@link
+ * io.valkey.springframework.data.valkey.serializer.ValkeyElementReader#read(ByteBuffer)} returns
+ * {@literal null} for a particular element as Reactive Streams prohibit the usage of {@literal
+ * null} values.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -45,284 +44,295 @@ import org.springframework.lang.Nullable;
  */
 public interface ReactiveHashOperations<H, HK, HV> {
 
-	/**
-	 * Delete given hash {@code hashKeys} from the hash at {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKeys must not be {@literal null}.
-	 * @return
-	 */
-	Mono<Long> remove(H key, Object... hashKeys);
+    /**
+     * Delete given hash {@code hashKeys} from the hash at {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKeys must not be {@literal null}.
+     * @return
+     */
+    Mono<Long> remove(H key, Object... hashKeys);
 
-	/**
-	 * Determine if given hash {@code hashKey} exists.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKey must not be {@literal null}.
-	 * @return
-	 */
-	Mono<Boolean> hasKey(H key, Object hashKey);
+    /**
+     * Determine if given hash {@code hashKey} exists.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKey must not be {@literal null}.
+     * @return
+     */
+    Mono<Boolean> hasKey(H key, Object hashKey);
 
-	/**
-	 * Get value for given {@code hashKey} from hash at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKey must not be {@literal null}.
-	 * @return
-	 */
-	Mono<HV> get(H key, Object hashKey);
+    /**
+     * Get value for given {@code hashKey} from hash at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKey must not be {@literal null}.
+     * @return
+     */
+    Mono<HV> get(H key, Object hashKey);
 
-	/**
-	 * Get values for given {@code hashKeys} from hash at {@code key}. Values are in the order of the requested keys.
-	 * Absent field values are represented using {@literal null} in the resulting {@link List}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKeys must not be {@literal null}.
-	 * @return
-	 */
-	Mono<List<HV>> multiGet(H key, Collection<HK> hashKeys);
+    /**
+     * Get values for given {@code hashKeys} from hash at {@code key}. Values are in the order of the
+     * requested keys. Absent field values are represented using {@literal null} in the resulting
+     * {@link List}.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKeys must not be {@literal null}.
+     * @return
+     */
+    Mono<List<HV>> multiGet(H key, Collection<HK> hashKeys);
 
-	/**
-	 * Increment {@code value} of a hash {@code hashKey} by the given {@code delta}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKey must not be {@literal null}.
-	 * @param delta
-	 * @return
-	 */
-	Mono<Long> increment(H key, HK hashKey, long delta);
+    /**
+     * Increment {@code value} of a hash {@code hashKey} by the given {@code delta}.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKey must not be {@literal null}.
+     * @param delta
+     * @return
+     */
+    Mono<Long> increment(H key, HK hashKey, long delta);
 
-	/**
-	 * Increment {@code value} of a hash {@code hashKey} by the given {@code delta}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKey must not be {@literal null}.
-	 * @param delta
-	 * @return
-	 */
-	Mono<Double> increment(H key, HK hashKey, double delta);
+    /**
+     * Increment {@code value} of a hash {@code hashKey} by the given {@code delta}.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKey must not be {@literal null}.
+     * @param delta
+     * @return
+     */
+    Mono<Double> increment(H key, HK hashKey, double delta);
 
-	/**
-	 * Return a random hash key from the hash stored at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @since 2.6
-	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
-	 */
-	Mono<HK> randomKey(H key);
+    /**
+     * Return a random hash key from the hash stored at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @since 2.6
+     * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
+     */
+    Mono<HK> randomKey(H key);
 
-	/**
-	 * Return a random entry from the hash stored at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @since 2.6
-	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
-	 */
-	Mono<Map.Entry<HK, HV>> randomEntry(H key);
+    /**
+     * Return a random entry from the hash stored at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @since 2.6
+     * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
+     */
+    Mono<Map.Entry<HK, HV>> randomEntry(H key);
 
-	/**
-	 * Return random hash keys from the hash stored at {@code key}. If the provided {@code count} argument is positive,
-	 * return a list of distinct hash keys, capped either at {@code count} or the hash size. If {@code count} is negative,
-	 * the behavior changes and the command is allowed to return the same hash key multiple times. In this case, the
-	 * number of returned fields is the absolute value of the specified count.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param count number of fields to return.
-	 * @return
-	 * @since 2.6
-	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
-	 */
-	Flux<HK> randomKeys(H key, long count);
+    /**
+     * Return random hash keys from the hash stored at {@code key}. If the provided {@code count}
+     * argument is positive, return a list of distinct hash keys, capped either at {@code count} or
+     * the hash size. If {@code count} is negative, the behavior changes and the command is allowed to
+     * return the same hash key multiple times. In this case, the number of returned fields is the
+     * absolute value of the specified count.
+     *
+     * @param key must not be {@literal null}.
+     * @param count number of fields to return.
+     * @return
+     * @since 2.6
+     * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
+     */
+    Flux<HK> randomKeys(H key, long count);
 
-	/**
-	 * Return random entries from the hash stored at {@code key}. If the provided {@code count} argument is positive,
-	 * return a list of distinct entries, capped either at {@code count} or the hash size. If {@code count} is negative,
-	 * the behavior changes and the command is allowed to return the same entry multiple times. In this case, the number
-	 * of returned fields is the absolute value of the specified count.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param count number of fields to return.
-	 * @return {@literal null} if key does not exist or when used in pipeline / transaction.
-	 * @since 2.6
-	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
-	 */
-	Flux<Map.Entry<HK, HV>> randomEntries(H key, long count);
+    /**
+     * Return random entries from the hash stored at {@code key}. If the provided {@code count}
+     * argument is positive, return a list of distinct entries, capped either at {@code count} or the
+     * hash size. If {@code count} is negative, the behavior changes and the command is allowed to
+     * return the same entry multiple times. In this case, the number of returned fields is the
+     * absolute value of the specified count.
+     *
+     * @param key must not be {@literal null}.
+     * @param count number of fields to return.
+     * @return {@literal null} if key does not exist or when used in pipeline / transaction.
+     * @since 2.6
+     * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
+     */
+    Flux<Map.Entry<HK, HV>> randomEntries(H key, long count);
 
-	/**
-	 * Get key set (fields) of hash at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 */
-	Flux<HK> keys(H key);
+    /**
+     * Get key set (fields) of hash at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     */
+    Flux<HK> keys(H key);
 
-	/**
-	 * Get size of hash at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 */
-	Mono<Long> size(H key);
+    /**
+     * Get size of hash at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     */
+    Mono<Long> size(H key);
 
-	/**
-	 * Set multiple hash fields to multiple values using data provided in {@code m}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param map must not be {@literal null}.
-	 */
-	Mono<Boolean> putAll(H key, Map<? extends HK, ? extends HV> map);
+    /**
+     * Set multiple hash fields to multiple values using data provided in {@code m}.
+     *
+     * @param key must not be {@literal null}.
+     * @param map must not be {@literal null}.
+     */
+    Mono<Boolean> putAll(H key, Map<? extends HK, ? extends HV> map);
 
-	/**
-	 * Set the {@code value} of a hash {@code hashKey}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKey must not be {@literal null}.
-	 * @param value
-	 */
-	Mono<Boolean> put(H key, HK hashKey, HV value);
+    /**
+     * Set the {@code value} of a hash {@code hashKey}.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKey must not be {@literal null}.
+     * @param value
+     */
+    Mono<Boolean> put(H key, HK hashKey, HV value);
 
-	/**
-	 * Set the {@code value} of a hash {@code hashKey} only if {@code hashKey} does not exist.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKey must not be {@literal null}.
-	 * @param value
-	 * @return
-	 */
-	Mono<Boolean> putIfAbsent(H key, HK hashKey, HV value);
+    /**
+     * Set the {@code value} of a hash {@code hashKey} only if {@code hashKey} does not exist.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKey must not be {@literal null}.
+     * @param value
+     * @return
+     */
+    Mono<Boolean> putIfAbsent(H key, HK hashKey, HV value);
 
-	/**
-	 * Get entry set (values) of hash at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 */
-	Flux<HV> values(H key);
+    /**
+     * Get entry set (values) of hash at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     */
+    Flux<HV> values(H key);
 
-	/**
-	 * Get entire hash stored at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 */
-	Flux<Map.Entry<HK, HV>> entries(H key);
+    /**
+     * Get entire hash stored at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     */
+    Flux<Map.Entry<HK, HV>> entries(H key);
 
-	/**
-	 * Use a {@link Flux} to iterate over entries in the hash at {@code key}. The resulting {@link Flux} acts as a cursor
-	 * and issues {@code HSCAN} commands itself as long as the subscriber signals demand.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return the {@link Flux} emitting the {@link java.util.Map.Entry entries} on by one or an {@link Flux#empty() empty
-	 *         flux} if the key does not exist.
-	 * @throws IllegalArgumentException when the given {@code key} is {@literal null}.
-	 * @see <a href="https://valkey.io/commands/hscan">Valkey Documentation: HSCAN</a>
-	 * @since 2.1
-	 */
-	default Flux<Map.Entry<HK, HV>> scan(H key) {
-		return scan(key, ScanOptions.NONE);
-	}
+    /**
+     * Use a {@link Flux} to iterate over entries in the hash at {@code key}. The resulting {@link
+     * Flux} acts as a cursor and issues {@code HSCAN} commands itself as long as the subscriber
+     * signals demand.
+     *
+     * @param key must not be {@literal null}.
+     * @return the {@link Flux} emitting the {@link java.util.Map.Entry entries} on by one or an
+     *     {@link Flux#empty() empty flux} if the key does not exist.
+     * @throws IllegalArgumentException when the given {@code key} is {@literal null}.
+     * @see <a href="https://valkey.io/commands/hscan">Valkey Documentation: HSCAN</a>
+     * @since 2.1
+     */
+    default Flux<Map.Entry<HK, HV>> scan(H key) {
+        return scan(key, ScanOptions.NONE);
+    }
 
-	/**
-	 * Use a {@link Flux} to iterate over entries in the hash at {@code key} given {@link ScanOptions}. The resulting
-	 * {@link Flux} acts as a cursor and issues {@code HSCAN} commands itself as long as the subscriber signals demand.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param options must not be {@literal null}. Use {@link ScanOptions#NONE} instead.
-	 * @return the {@link Flux} emitting the {@link java.util.Map.Entry entries} on by one or an {@link Flux#empty() empty
-	 *         flux} if the key does not exist.
-	 * @throws IllegalArgumentException when one of the required arguments is {@literal null}.
-	 * @see <a href="https://valkey.io/commands/hscan">Valkey Documentation: HSCAN</a>
-	 * @since 2.1
-	 */
-	Flux<Map.Entry<HK, HV>> scan(H key, ScanOptions options);
+    /**
+     * Use a {@link Flux} to iterate over entries in the hash at {@code key} given {@link
+     * ScanOptions}. The resulting {@link Flux} acts as a cursor and issues {@code HSCAN} commands
+     * itself as long as the subscriber signals demand.
+     *
+     * @param key must not be {@literal null}.
+     * @param options must not be {@literal null}. Use {@link ScanOptions#NONE} instead.
+     * @return the {@link Flux} emitting the {@link java.util.Map.Entry entries} on by one or an
+     *     {@link Flux#empty() empty flux} if the key does not exist.
+     * @throws IllegalArgumentException when one of the required arguments is {@literal null}.
+     * @see <a href="https://valkey.io/commands/hscan">Valkey Documentation: HSCAN</a>
+     * @since 2.1
+     */
+    Flux<Map.Entry<HK, HV>> scan(H key, ScanOptions options);
 
-	/**
-	 * Set time to live for given {@literal hashKeys} stored within {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param timeout the amount of time after which the key will be expired, must not be {@literal null}.
-	 * @param hashKeys must not be {@literal null}.
-	 * @return a {@link Mono} emitting changes to the hash fields.
-	 * @throws IllegalArgumentException if the timeout is {@literal null}.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
-	 * @since 3.5
-	 */
-	Mono<ExpireChanges<HK>> expire(H key, Duration timeout, Collection<HK> hashKeys);
+    /**
+     * Set time to live for given {@literal hashKeys} stored within {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param timeout the amount of time after which the key will be expired, must not be {@literal
+     *     null}.
+     * @param hashKeys must not be {@literal null}.
+     * @return a {@link Mono} emitting changes to the hash fields.
+     * @throws IllegalArgumentException if the timeout is {@literal null}.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation:
+     *     HEXPIRE</a>
+     * @since 3.5
+     */
+    Mono<ExpireChanges<HK>> expire(H key, Duration timeout, Collection<HK> hashKeys);
 
-	/**
-	 * Set time to live for given {@literal hashKeys} stored within {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param expiration must not be {@literal null}.
-	 * @param options additional options to apply.
-	 * @param hashKeys must not be {@literal null}.
-	 * @return a {@link Mono} emitting changes to the hash fields.
-	 * @throws IllegalArgumentException if the timeout is {@literal null}.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
-	 * @since 3.5
-	 */
-	Mono<ExpireChanges<HK>> expire(H key, Expiration expiration, ExpirationOptions options, Collection<HK> hashKeys);
+    /**
+     * Set time to live for given {@literal hashKeys} stored within {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param expiration must not be {@literal null}.
+     * @param options additional options to apply.
+     * @param hashKeys must not be {@literal null}.
+     * @return a {@link Mono} emitting changes to the hash fields.
+     * @throws IllegalArgumentException if the timeout is {@literal null}.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation:
+     *     HEXPIRE</a>
+     * @since 3.5
+     */
+    Mono<ExpireChanges<HK>> expire(
+            H key, Expiration expiration, ExpirationOptions options, Collection<HK> hashKeys);
 
-	/**
-	 * Set the expiration for given {@code hashKey} as a {@literal date} timestamp.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param expireAt must not be {@literal null}.
-	 * @param hashKeys must not be {@literal null}.
-	 * @return a {@link Mono} emitting changes to the hash fields.
-	 * @throws IllegalArgumentException if the instant is {@literal null} or too large to represent as a {@code Date}.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation: HEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	Mono<ExpireChanges<HK>> expireAt(H key, Instant expireAt, Collection<HK> hashKeys);
+    /**
+     * Set the expiration for given {@code hashKey} as a {@literal date} timestamp.
+     *
+     * @param key must not be {@literal null}.
+     * @param expireAt must not be {@literal null}.
+     * @param hashKeys must not be {@literal null}.
+     * @return a {@link Mono} emitting changes to the hash fields.
+     * @throws IllegalArgumentException if the instant is {@literal null} or too large to represent as
+     *     a {@code Date}.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation:
+     *     HEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    Mono<ExpireChanges<HK>> expireAt(H key, Instant expireAt, Collection<HK> hashKeys);
 
-	/**
-	 * Remove the expiration from given {@code hashKey} .
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKeys must not be {@literal null}.
-	 * @return a {@link Mono} emitting changes to the hash fields.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation: HPERSIST</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	Mono<ExpireChanges<HK>> persist(H key, Collection<HK> hashKeys);
+    /**
+     * Remove the expiration from given {@code hashKey} .
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKeys must not be {@literal null}.
+     * @return a {@link Mono} emitting changes to the hash fields.
+     * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation:
+     *     HPERSIST</a>
+     * @since 3.5
+     */
+    @Nullable
+    Mono<ExpireChanges<HK>> persist(H key, Collection<HK> hashKeys);
 
-	/**
-	 * Get the time to live for {@code hashKey} in seconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashKeys must not be {@literal null}.
-	 * @return a {@link Mono} emitting {@link Expirations} of the hash fields.
-	 * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	default Mono<Expirations<HK>> getTimeToLive(H key, Collection<HK> hashKeys) {
-		return getTimeToLive(key, TimeUnit.SECONDS, hashKeys);
-	}
+    /**
+     * Get the time to live for {@code hashKey} in seconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param hashKeys must not be {@literal null}.
+     * @return a {@link Mono} emitting {@link Expirations} of the hash fields.
+     * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
+     * @since 3.5
+     */
+    @Nullable
+    default Mono<Expirations<HK>> getTimeToLive(H key, Collection<HK> hashKeys) {
+        return getTimeToLive(key, TimeUnit.SECONDS, hashKeys);
+    }
 
-	/**
-	 * Get the time to live for {@code hashKey} and convert it to the given {@link TimeUnit}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param timeUnit must not be {@literal null}.
-	 * @param hashKeys must not be {@literal null}.
-	 * @return a {@link Mono} emitting {@link Expirations} of the hash fields.
-	 * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	Mono<Expirations<HK>> getTimeToLive(H key, TimeUnit timeUnit, Collection<HK> hashKeys);
+    /**
+     * Get the time to live for {@code hashKey} and convert it to the given {@link TimeUnit}.
+     *
+     * @param key must not be {@literal null}.
+     * @param timeUnit must not be {@literal null}.
+     * @param hashKeys must not be {@literal null}.
+     * @return a {@link Mono} emitting {@link Expirations} of the hash fields.
+     * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
+     * @since 3.5
+     */
+    @Nullable
+    Mono<Expirations<HK>> getTimeToLive(H key, TimeUnit timeUnit, Collection<HK> hashKeys);
 
-	/**
-	 * Removes the given {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 */
-	Mono<Boolean> delete(H key);
-
+    /**
+     * Removes the given {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     */
+    Mono<Boolean> delete(H key);
 }

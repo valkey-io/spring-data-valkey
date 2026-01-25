@@ -15,65 +15,68 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.beans.factory.InitializingBean;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Base class for {@link ValkeyTemplate} implementations defining common properties. Not intended to be used directly.
+ * Base class for {@link ValkeyTemplate} implementations defining common properties. Not intended to
+ * be used directly.
  *
  * @author Costin Leau
  * @author John Blum
  */
 public abstract class ValkeyAccessor implements InitializingBean {
 
-	/** Logger available to subclasses */
-	protected final Log logger = LogFactory.getLog(getClass());
+    /** Logger available to subclasses */
+    protected final Log logger = LogFactory.getLog(getClass());
 
-	private @Nullable ValkeyConnectionFactory connectionFactory;
+    private @Nullable ValkeyConnectionFactory connectionFactory;
 
-	@Override
-	public void afterPropertiesSet() {
-		getRequiredConnectionFactory();
-	}
+    @Override
+    public void afterPropertiesSet() {
+        getRequiredConnectionFactory();
+    }
 
-	/**
-	 * Returns the factory configured to acquire connections and perform operations on the connected Valkey instance.
-	 *
-	 * @return the configured {@link ValkeyConnectionFactory}. Can be {@literal null}.
-	 * @see ValkeyConnectionFactory
-	 */
-	@Nullable
-	public ValkeyConnectionFactory getConnectionFactory() {
-		return this.connectionFactory;
-	}
+    /**
+     * Returns the factory configured to acquire connections and perform operations on the connected
+     * Valkey instance.
+     *
+     * @return the configured {@link ValkeyConnectionFactory}. Can be {@literal null}.
+     * @see ValkeyConnectionFactory
+     */
+    @Nullable
+    public ValkeyConnectionFactory getConnectionFactory() {
+        return this.connectionFactory;
+    }
 
-	/**
-	 * Returns the required {@link ValkeyConnectionFactory}, throwing an {@link IllegalStateException}
-	 * if the {@link ValkeyConnectionFactory} is not set.
-	 *
-	 * @return the configured {@link ValkeyConnectionFactory}.
-	 * @throws IllegalStateException if the {@link ValkeyConnectionFactory} is not set.
-	 * @see #getConnectionFactory()
-	 * @since 2.0
-	 */
-	public ValkeyConnectionFactory getRequiredConnectionFactory() {
+    /**
+     * Returns the required {@link ValkeyConnectionFactory}, throwing an {@link IllegalStateException}
+     * if the {@link ValkeyConnectionFactory} is not set.
+     *
+     * @return the configured {@link ValkeyConnectionFactory}.
+     * @throws IllegalStateException if the {@link ValkeyConnectionFactory} is not set.
+     * @see #getConnectionFactory()
+     * @since 2.0
+     */
+    public ValkeyConnectionFactory getRequiredConnectionFactory() {
 
-		ValkeyConnectionFactory connectionFactory = getConnectionFactory();
-		Assert.state(connectionFactory != null, "ValkeyConnectionFactory is required");
-		return connectionFactory;
-	}
+        ValkeyConnectionFactory connectionFactory = getConnectionFactory();
+        Assert.state(connectionFactory != null, "ValkeyConnectionFactory is required");
+        return connectionFactory;
+    }
 
-	/**
-	 * Sets the factory used to acquire connections and perform operations on the connected Valkey instance.
-	 *
-	 * @param connectionFactory {@link ValkeyConnectionFactory} used to acquire connections.
-	 * @see ValkeyConnectionFactory
-	 */
-	public void setConnectionFactory(@Nullable ValkeyConnectionFactory connectionFactory) {
-		this.connectionFactory = connectionFactory;
-	}
+    /**
+     * Sets the factory used to acquire connections and perform operations on the connected Valkey
+     * instance.
+     *
+     * @param connectionFactory {@link ValkeyConnectionFactory} used to acquire connections.
+     * @see ValkeyConnectionFactory
+     */
+    public void setConnectionFactory(@Nullable ValkeyConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
 }

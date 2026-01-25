@@ -15,10 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
@@ -26,6 +22,9 @@ import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
 import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
 import io.valkey.springframework.data.valkey.connection.stream.RecordId;
 import io.valkey.springframework.data.valkey.connection.stream.StreamReadOptions;
+import java.util.List;
+import java.util.Map;
+import org.springframework.data.domain.Range;
 import org.springframework.lang.Nullable;
 
 /**
@@ -38,200 +37,211 @@ import org.springframework.lang.Nullable;
  */
 public interface BoundStreamOperations<K, HK, HV> {
 
-	/**
-	 * Acknowledge one or more records as processed.
-	 *
-	 * @param group name of the consumer group.
-	 * @param recordIds record Id's to acknowledge.
-	 * @return length of acknowledged records. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xack">Valkey Documentation: XACK</a>
-	 */
-	@Nullable
-	Long acknowledge(String group, String... recordIds);
+    /**
+     * Acknowledge one or more records as processed.
+     *
+     * @param group name of the consumer group.
+     * @param recordIds record Id's to acknowledge.
+     * @return length of acknowledged records. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/xack">Valkey Documentation: XACK</a>
+     */
+    @Nullable
+    Long acknowledge(String group, String... recordIds);
 
-	/**
-	 * Append a record to the stream {@code key}.
-	 *
-	 * @param body record body.
-	 * @return the record Id. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xadd">Valkey Documentation: XADD</a>
-	 */
-	@Nullable
-	RecordId add(Map<HK, HV> body);
+    /**
+     * Append a record to the stream {@code key}.
+     *
+     * @param body record body.
+     * @return the record Id. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/xadd">Valkey Documentation: XADD</a>
+     */
+    @Nullable
+    RecordId add(Map<HK, HV> body);
 
-	/**
-	 * Append a record to the stream {@code key} with the specified options.
-	 *
-	 * @param content record content as Map.
-	 * @param xAddOptions additional parameters for the {@literal XADD} call.
-	 * @return the record Id. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xadd">Valkey Documentation: XADD</a>
-	 * @since 3.4
-	 */
-	@Nullable
-	RecordId add(Map<HK, HV> content, XAddOptions xAddOptions);
+    /**
+     * Append a record to the stream {@code key} with the specified options.
+     *
+     * @param content record content as Map.
+     * @param xAddOptions additional parameters for the {@literal XADD} call.
+     * @return the record Id. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/xadd">Valkey Documentation: XADD</a>
+     * @since 3.4
+     */
+    @Nullable
+    RecordId add(Map<HK, HV> content, XAddOptions xAddOptions);
 
-	/**
-	 * Removes the specified entries from the stream. Returns the number of items deleted, that may be different from the
-	 * number of IDs passed in case certain IDs do not exist.
-	 *
-	 * @param recordIds stream record Id's.
-	 * @return number of removed entries. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xdel">Valkey Documentation: XDEL</a>
-	 */
-	@Nullable
-	Long delete(String... recordIds);
+    /**
+     * Removes the specified entries from the stream. Returns the number of items deleted, that may be
+     * different from the number of IDs passed in case certain IDs do not exist.
+     *
+     * @param recordIds stream record Id's.
+     * @return number of removed entries. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/xdel">Valkey Documentation: XDEL</a>
+     */
+    @Nullable
+    Long delete(String... recordIds);
 
-	/**
-	 * Create a consumer group.
-	 *
-	 * @param readOffset
-	 * @param group name of the consumer group.
-	 * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
-	 */
-	@Nullable
-	String createGroup(ReadOffset readOffset, String group);
+    /**
+     * Create a consumer group.
+     *
+     * @param readOffset
+     * @param group name of the consumer group.
+     * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
+     */
+    @Nullable
+    String createGroup(ReadOffset readOffset, String group);
 
-	/**
-	 * Delete a consumer from a consumer group.
-	 *
-	 * @param consumer consumer identified by group name and consumer key.
-	 * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
-	 */
-	@Nullable
-	Boolean deleteConsumer(Consumer consumer);
+    /**
+     * Delete a consumer from a consumer group.
+     *
+     * @param consumer consumer identified by group name and consumer key.
+     * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
+     */
+    @Nullable
+    Boolean deleteConsumer(Consumer consumer);
 
-	/**
-	 * Destroy a consumer group.
-	 *
-	 * @param group name of the consumer group.
-	 * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
-	 */
-	@Nullable
-	Boolean destroyGroup(String group);
+    /**
+     * Destroy a consumer group.
+     *
+     * @param group name of the consumer group.
+     * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
+     */
+    @Nullable
+    Boolean destroyGroup(String group);
 
-	/**
-	 * Get the length of a stream.
-	 *
-	 * @return length of the stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xlen">Valkey Documentation: XLEN</a>
-	 */
-	@Nullable
-	Long size();
+    /**
+     * Get the length of a stream.
+     *
+     * @return length of the stream. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/xlen">Valkey Documentation: XLEN</a>
+     */
+    @Nullable
+    Long size();
 
-	/**
-	 * Read records from a stream within a specific {@link Range}.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xrange">Valkey Documentation: XRANGE</a>
-	 */
-	@Nullable
-	default List<MapRecord<K, HK, HV>> range(Range<String> range) {
-		return range(range, Limit.unlimited());
-	}
+    /**
+     * Read records from a stream within a specific {@link Range}.
+     *
+     * @param range must not be {@literal null}.
+     * @return list with members of the resulting stream. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/xrange">Valkey Documentation: XRANGE</a>
+     */
+    @Nullable
+    default List<MapRecord<K, HK, HV>> range(Range<String> range) {
+        return range(range, Limit.unlimited());
+    }
 
-	/**
-	 * Read records from a stream within a specific {@link Range} applying a {@link Limit}.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @param limit must not be {@literal null}.
-	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xrange">Valkey Documentation: XRANGE</a>
-	 */
-	@Nullable
-	List<MapRecord<K, HK, HV>> range(Range<String> range, Limit limit);
+    /**
+     * Read records from a stream within a specific {@link Range} applying a {@link Limit}.
+     *
+     * @param range must not be {@literal null}.
+     * @param limit must not be {@literal null}.
+     * @return list with members of the resulting stream. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/xrange">Valkey Documentation: XRANGE</a>
+     */
+    @Nullable
+    List<MapRecord<K, HK, HV>> range(Range<String> range, Limit limit);
 
-	/**
-	 * Read records from {@link ReadOffset}.
-	 *
-	 * @param readOffset the offset to read from.
-	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xread">Valkey Documentation: XREAD</a>
-	 */
-	@Nullable
-	default List<MapRecord<K, HK, HV>> read(ReadOffset readOffset) {
-		return read(StreamReadOptions.empty(), readOffset);
-	}
+    /**
+     * Read records from {@link ReadOffset}.
+     *
+     * @param readOffset the offset to read from.
+     * @return list with members of the resulting stream. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/xread">Valkey Documentation: XREAD</a>
+     */
+    @Nullable
+    default List<MapRecord<K, HK, HV>> read(ReadOffset readOffset) {
+        return read(StreamReadOptions.empty(), readOffset);
+    }
 
-	/**
-	 * Read records starting from {@link ReadOffset}.
-	 *
-	 * @param readOptions read arguments.
-	 * @param readOffset the offset to read from.
-	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xread">Valkey Documentation: XREAD</a>
-	 */
-	@Nullable
-	List<MapRecord<K, HK, HV>> read(StreamReadOptions readOptions, ReadOffset readOffset);
+    /**
+     * Read records starting from {@link ReadOffset}.
+     *
+     * @param readOptions read arguments.
+     * @param readOffset the offset to read from.
+     * @return list with members of the resulting stream. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/xread">Valkey Documentation: XREAD</a>
+     */
+    @Nullable
+    List<MapRecord<K, HK, HV>> read(StreamReadOptions readOptions, ReadOffset readOffset);
 
-	/**
-	 * Read records starting from {@link ReadOffset}. using a consumer group.
-	 *
-	 * @param consumer consumer/group.
-	 * @param readOffset the offset to read from.
-	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xreadgroup">Valkey Documentation: XREADGROUP</a>
-	 */
-	@Nullable
-	default List<MapRecord<K, HK, HV>> read(Consumer consumer, ReadOffset readOffset) {
-		return read(consumer, StreamReadOptions.empty(), readOffset);
-	}
+    /**
+     * Read records starting from {@link ReadOffset}. using a consumer group.
+     *
+     * @param consumer consumer/group.
+     * @param readOffset the offset to read from.
+     * @return list with members of the resulting stream. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/xreadgroup">Valkey Documentation: XREADGROUP</a>
+     */
+    @Nullable
+    default List<MapRecord<K, HK, HV>> read(Consumer consumer, ReadOffset readOffset) {
+        return read(consumer, StreamReadOptions.empty(), readOffset);
+    }
 
-	/**
-	 * Read records starting from {@link ReadOffset}. using a consumer group.
-	 *
-	 * @param consumer consumer/group.
-	 * @param readOptions read arguments.
-	 * @param readOffset the offset to read from.
-	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xreadgroup">Valkey Documentation: XREADGROUP</a>
-	 */
-	@Nullable
-	List<MapRecord<K, HK, HV>> read(Consumer consumer, StreamReadOptions readOptions, ReadOffset readOffset);
+    /**
+     * Read records starting from {@link ReadOffset}. using a consumer group.
+     *
+     * @param consumer consumer/group.
+     * @param readOptions read arguments.
+     * @param readOffset the offset to read from.
+     * @return list with members of the resulting stream. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/xreadgroup">Valkey Documentation: XREADGROUP</a>
+     */
+    @Nullable
+    List<MapRecord<K, HK, HV>> read(
+            Consumer consumer, StreamReadOptions readOptions, ReadOffset readOffset);
 
-	/**
-	 * Read records from a stream within a specific {@link Range} in reverse order.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xrevrange">Valkey Documentation: XREVRANGE</a>
-	 */
-	@Nullable
-	default List<MapRecord<K, HK, HV>> reverseRange(Range<String> range) {
-		return reverseRange(range, Limit.unlimited());
-	}
+    /**
+     * Read records from a stream within a specific {@link Range} in reverse order.
+     *
+     * @param range must not be {@literal null}.
+     * @return list with members of the resulting stream. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/xrevrange">Valkey Documentation: XREVRANGE</a>
+     */
+    @Nullable
+    default List<MapRecord<K, HK, HV>> reverseRange(Range<String> range) {
+        return reverseRange(range, Limit.unlimited());
+    }
 
-	/**
-	 * Read records from a stream within a specific {@link Range} applying a {@link Limit} in reverse order.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @param limit must not be {@literal null}.
-	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xrevrange">Valkey Documentation: XREVRANGE</a>
-	 */
-	@Nullable
-	List<MapRecord<K, HK, HV>> reverseRange(Range<String> range, Limit limit);
+    /**
+     * Read records from a stream within a specific {@link Range} applying a {@link Limit} in reverse
+     * order.
+     *
+     * @param range must not be {@literal null}.
+     * @param limit must not be {@literal null}.
+     * @return list with members of the resulting stream. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/xrevrange">Valkey Documentation: XREVRANGE</a>
+     */
+    @Nullable
+    List<MapRecord<K, HK, HV>> reverseRange(Range<String> range, Limit limit);
 
-	/**
-	 * Trims the stream to {@code count} elements.
-	 *
-	 * @param count length of the stream.
-	 * @return number of removed entries. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: XTRIM</a>
-	 */
-	@Nullable
-	Long trim(long count);
+    /**
+     * Trims the stream to {@code count} elements.
+     *
+     * @param count length of the stream.
+     * @return number of removed entries. {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: XTRIM</a>
+     */
+    @Nullable
+    Long trim(long count);
 
-	/**
-	 * Trims the stream to {@code count} elements.
-	 *
-	 * @param count length of the stream.
-	 * @param approximateTrimming the trimming must be performed in a approximated way in order to maximize performances.
-	 * @return number of removed entries. {@literal null} when used in pipeline / transaction.
-	 * @since 2.4
-	 * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: XTRIM</a>
-	 */
-	@Nullable
-	Long trim(long count, boolean approximateTrimming);
+    /**
+     * Trims the stream to {@code count} elements.
+     *
+     * @param count length of the stream.
+     * @param approximateTrimming the trimming must be performed in a approximated way in order to
+     *     maximize performances.
+     * @return number of removed entries. {@literal null} when used in pipeline / transaction.
+     * @since 2.4
+     * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: XTRIM</a>
+     */
+    @Nullable
+    Long trim(long count, boolean approximateTrimming);
 }

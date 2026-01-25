@@ -15,13 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands.Direction;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands.Position;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.springframework.util.CollectionUtils;
 
 /**
@@ -35,289 +34,302 @@ import org.springframework.util.CollectionUtils;
  */
 class DefaultListOperations<K, V> extends AbstractOperations<K, V> implements ListOperations<K, V> {
 
-	DefaultListOperations(ValkeyTemplate<K, V> template) {
-		super(template);
-	}
-
-	@Override
-	public V index(K key, long index) {
-
-		return execute(new ValueDeserializingValkeyCallback(key) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				return connection.lIndex(rawKey, index);
-			}
-		});
-	}
-
-	@Override
-	public Long indexOf(K key, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.lPos(rawKey, rawValue));
-	}
-
-	@Override
-	public Long lastIndexOf(K key, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> {
-
-			List<Long> indexes = connection.lPos(rawKey, rawValue, -1, null);
-			return CollectionUtils.firstElement(indexes);
-		});
-	}
-
-	@Override
-	public V leftPop(K key) {
-
-		return execute(new ValueDeserializingValkeyCallback(key) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				return connection.lPop(rawKey);
-			}
-		});
-	}
-
-	@Override
-	public List<V> leftPop(K key, long count) {
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> deserializeValues(connection.lPop(rawKey, count)));
-	}
-
-	@Override
-	public V leftPop(K key, long timeout, TimeUnit unit) {
-
-		int tm = (int) TimeoutUtils.toSeconds(timeout, unit);
-		return execute(new ValueDeserializingValkeyCallback(key) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				List<byte[]> lPop = connection.bLPop(tm, rawKey);
-				return (CollectionUtils.isEmpty(lPop) ? null : lPop.get(1));
-			}
-		});
-	}
-
-	@Override
-	public Long leftPush(K key, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.lPush(rawKey, rawValue));
-	}
-
-	@Override
-	public Long leftPushAll(K key, V... values) {
-
-		byte[] rawKey = rawKey(key);
-		byte[][] rawValues = rawValues(values);
-		return execute(connection -> connection.lPush(rawKey, rawValues));
-	}
-
-	@Override
-	public Long leftPushAll(K key, Collection<V> values) {
-
-		byte[] rawKey = rawKey(key);
-		byte[][] rawValues = rawValues(values);
-
-		return execute(connection -> connection.lPush(rawKey, rawValues));
-	}
-
-	@Override
-	public Long leftPushIfPresent(K key, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.lPushX(rawKey, rawValue));
-	}
-
-	@Override
-	public Long leftPush(K key, V pivot, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawPivot = rawValue(pivot);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.lInsert(rawKey, Position.BEFORE, rawPivot, rawValue));
-	}
-
-	@Override
-	public Long size(K key) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.lLen(rawKey));
-	}
-
-	@Override
-	public List<V> range(K key, long start, long end) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> deserializeValues(connection.lRange(rawKey, start, end)));
-	}
-
-	@Override
-	public Long remove(K key, long count, Object value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.lRem(rawKey, count, rawValue));
-	}
-
-	@Override
-	public V rightPop(K key) {
-
-		return execute(new ValueDeserializingValkeyCallback(key) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				return connection.rPop(rawKey);
-			}
-		});
-	}
-
-	@Override
-	public List<V> rightPop(K key, long count) {
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> deserializeValues(connection.rPop(rawKey, count)));
-	}
-
-	@Override
-	public V rightPop(K key, long timeout, TimeUnit unit) {
-
-		int tm = (int) TimeoutUtils.toSeconds(timeout, unit);
-
-		return execute(new ValueDeserializingValkeyCallback(key) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				List<byte[]> bRPop = connection.bRPop(tm, rawKey);
-				return (CollectionUtils.isEmpty(bRPop) ? null : bRPop.get(1));
-			}
-		});
-	}
-
-	@Override
-	public Long rightPush(K key, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.rPush(rawKey, rawValue));
-	}
-
-	@Override
-	public Long rightPushAll(K key, V... values) {
-
-		byte[] rawKey = rawKey(key);
-		byte[][] rawValues = rawValues(values);
-		return execute(connection -> connection.rPush(rawKey, rawValues));
-	}
-
-	@Override
-	public Long rightPushAll(K key, Collection<V> values) {
-
-		byte[] rawKey = rawKey(key);
-		byte[][] rawValues = rawValues(values);
-		return execute(connection -> connection.rPush(rawKey, rawValues));
-	}
-
-	@Override
-	public Long rightPushIfPresent(K key, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.rPushX(rawKey, rawValue));
-	}
-
-	@Override
-	public Long rightPush(K key, V pivot, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawPivot = rawValue(pivot);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.lInsert(rawKey, Position.AFTER, rawPivot, rawValue));
-	}
-
-	@Override
-	public V rightPopAndLeftPush(K sourceKey, K destinationKey) {
-
-		byte[] rawDestKey = rawKey(destinationKey);
-		return execute(new ValueDeserializingValkeyCallback(sourceKey) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawSourceKey, ValkeyConnection connection) {
-				return connection.rPopLPush(rawSourceKey, rawDestKey);
-			}
-		});
-	}
-
-	@Override
-	public V rightPopAndLeftPush(K sourceKey, K destinationKey, long timeout, TimeUnit unit) {
-
-		int tm = (int) TimeoutUtils.toSeconds(timeout, unit);
-		byte[] rawDestKey = rawKey(destinationKey);
-		return execute(new ValueDeserializingValkeyCallback(sourceKey) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawSourceKey, ValkeyConnection connection) {
-				return connection.bRPopLPush(tm, rawSourceKey, rawDestKey);
-			}
-		});
-	}
-
-	@Override
-	public V move(K sourceKey, Direction from, K destinationKey, Direction to) {
-
-		byte[] rawDestKey = rawKey(destinationKey);
-		return execute(new ValueDeserializingValkeyCallback(sourceKey) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawSourceKey, ValkeyConnection connection) {
-				return connection.lMove(rawSourceKey, rawDestKey, from, to);
-			}
-		});
-	}
-
-	@Override
-	public V move(K sourceKey, Direction from, K destinationKey, Direction to, long timeout, TimeUnit unit) {
-
-		byte[] rawDestKey = rawKey(destinationKey);
-		return execute(new ValueDeserializingValkeyCallback(sourceKey) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawSourceKey, ValkeyConnection connection) {
-				return connection.bLMove(rawSourceKey, rawDestKey, from, to, TimeoutUtils.toDoubleSeconds(timeout, unit));
-			}
-		});
-	}
-
-	@Override
-	public void set(K key, long index, V value) {
-
-		byte[] rawValue = rawValue(value);
-		execute(new ValueDeserializingValkeyCallback(key) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				connection.lSet(rawKey, index, rawValue);
-				return null;
-			}
-		});
-	}
-
-	@Override
-	public void trim(K key, long start, long end) {
-
-		execute(new ValueDeserializingValkeyCallback(key) {
-
-			@Override
-			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				connection.lTrim(rawKey, start, end);
-				return null;
-			}
-		});
-	}
+    DefaultListOperations(ValkeyTemplate<K, V> template) {
+        super(template);
+    }
+
+    @Override
+    public V index(K key, long index) {
+
+        return execute(
+                new ValueDeserializingValkeyCallback(key) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+                        return connection.lIndex(rawKey, index);
+                    }
+                });
+    }
+
+    @Override
+    public Long indexOf(K key, V value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
+        return execute(connection -> connection.lPos(rawKey, rawValue));
+    }
+
+    @Override
+    public Long lastIndexOf(K key, V value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
+        return execute(
+                connection -> {
+                    List<Long> indexes = connection.lPos(rawKey, rawValue, -1, null);
+                    return CollectionUtils.firstElement(indexes);
+                });
+    }
+
+    @Override
+    public V leftPop(K key) {
+
+        return execute(
+                new ValueDeserializingValkeyCallback(key) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+                        return connection.lPop(rawKey);
+                    }
+                });
+    }
+
+    @Override
+    public List<V> leftPop(K key, long count) {
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> deserializeValues(connection.lPop(rawKey, count)));
+    }
+
+    @Override
+    public V leftPop(K key, long timeout, TimeUnit unit) {
+
+        int tm = (int) TimeoutUtils.toSeconds(timeout, unit);
+        return execute(
+                new ValueDeserializingValkeyCallback(key) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+                        List<byte[]> lPop = connection.bLPop(tm, rawKey);
+                        return (CollectionUtils.isEmpty(lPop) ? null : lPop.get(1));
+                    }
+                });
+    }
+
+    @Override
+    public Long leftPush(K key, V value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
+        return execute(connection -> connection.lPush(rawKey, rawValue));
+    }
+
+    @Override
+    public Long leftPushAll(K key, V... values) {
+
+        byte[] rawKey = rawKey(key);
+        byte[][] rawValues = rawValues(values);
+        return execute(connection -> connection.lPush(rawKey, rawValues));
+    }
+
+    @Override
+    public Long leftPushAll(K key, Collection<V> values) {
+
+        byte[] rawKey = rawKey(key);
+        byte[][] rawValues = rawValues(values);
+
+        return execute(connection -> connection.lPush(rawKey, rawValues));
+    }
+
+    @Override
+    public Long leftPushIfPresent(K key, V value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
+        return execute(connection -> connection.lPushX(rawKey, rawValue));
+    }
+
+    @Override
+    public Long leftPush(K key, V pivot, V value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawPivot = rawValue(pivot);
+        byte[] rawValue = rawValue(value);
+        return execute(connection -> connection.lInsert(rawKey, Position.BEFORE, rawPivot, rawValue));
+    }
+
+    @Override
+    public Long size(K key) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.lLen(rawKey));
+    }
+
+    @Override
+    public List<V> range(K key, long start, long end) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> deserializeValues(connection.lRange(rawKey, start, end)));
+    }
+
+    @Override
+    public Long remove(K key, long count, Object value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
+        return execute(connection -> connection.lRem(rawKey, count, rawValue));
+    }
+
+    @Override
+    public V rightPop(K key) {
+
+        return execute(
+                new ValueDeserializingValkeyCallback(key) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+                        return connection.rPop(rawKey);
+                    }
+                });
+    }
+
+    @Override
+    public List<V> rightPop(K key, long count) {
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> deserializeValues(connection.rPop(rawKey, count)));
+    }
+
+    @Override
+    public V rightPop(K key, long timeout, TimeUnit unit) {
+
+        int tm = (int) TimeoutUtils.toSeconds(timeout, unit);
+
+        return execute(
+                new ValueDeserializingValkeyCallback(key) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+                        List<byte[]> bRPop = connection.bRPop(tm, rawKey);
+                        return (CollectionUtils.isEmpty(bRPop) ? null : bRPop.get(1));
+                    }
+                });
+    }
+
+    @Override
+    public Long rightPush(K key, V value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
+        return execute(connection -> connection.rPush(rawKey, rawValue));
+    }
+
+    @Override
+    public Long rightPushAll(K key, V... values) {
+
+        byte[] rawKey = rawKey(key);
+        byte[][] rawValues = rawValues(values);
+        return execute(connection -> connection.rPush(rawKey, rawValues));
+    }
+
+    @Override
+    public Long rightPushAll(K key, Collection<V> values) {
+
+        byte[] rawKey = rawKey(key);
+        byte[][] rawValues = rawValues(values);
+        return execute(connection -> connection.rPush(rawKey, rawValues));
+    }
+
+    @Override
+    public Long rightPushIfPresent(K key, V value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
+        return execute(connection -> connection.rPushX(rawKey, rawValue));
+    }
+
+    @Override
+    public Long rightPush(K key, V pivot, V value) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawPivot = rawValue(pivot);
+        byte[] rawValue = rawValue(value);
+        return execute(connection -> connection.lInsert(rawKey, Position.AFTER, rawPivot, rawValue));
+    }
+
+    @Override
+    public V rightPopAndLeftPush(K sourceKey, K destinationKey) {
+
+        byte[] rawDestKey = rawKey(destinationKey);
+        return execute(
+                new ValueDeserializingValkeyCallback(sourceKey) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawSourceKey, ValkeyConnection connection) {
+                        return connection.rPopLPush(rawSourceKey, rawDestKey);
+                    }
+                });
+    }
+
+    @Override
+    public V rightPopAndLeftPush(K sourceKey, K destinationKey, long timeout, TimeUnit unit) {
+
+        int tm = (int) TimeoutUtils.toSeconds(timeout, unit);
+        byte[] rawDestKey = rawKey(destinationKey);
+        return execute(
+                new ValueDeserializingValkeyCallback(sourceKey) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawSourceKey, ValkeyConnection connection) {
+                        return connection.bRPopLPush(tm, rawSourceKey, rawDestKey);
+                    }
+                });
+    }
+
+    @Override
+    public V move(K sourceKey, Direction from, K destinationKey, Direction to) {
+
+        byte[] rawDestKey = rawKey(destinationKey);
+        return execute(
+                new ValueDeserializingValkeyCallback(sourceKey) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawSourceKey, ValkeyConnection connection) {
+                        return connection.lMove(rawSourceKey, rawDestKey, from, to);
+                    }
+                });
+    }
+
+    @Override
+    public V move(
+            K sourceKey, Direction from, K destinationKey, Direction to, long timeout, TimeUnit unit) {
+
+        byte[] rawDestKey = rawKey(destinationKey);
+        return execute(
+                new ValueDeserializingValkeyCallback(sourceKey) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawSourceKey, ValkeyConnection connection) {
+                        return connection.bLMove(
+                                rawSourceKey, rawDestKey, from, to, TimeoutUtils.toDoubleSeconds(timeout, unit));
+                    }
+                });
+    }
+
+    @Override
+    public void set(K key, long index, V value) {
+
+        byte[] rawValue = rawValue(value);
+        execute(
+                new ValueDeserializingValkeyCallback(key) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+                        connection.lSet(rawKey, index, rawValue);
+                        return null;
+                    }
+                });
+    }
+
+    @Override
+    public void trim(K key, long start, long end) {
+
+        execute(
+                new ValueDeserializingValkeyCallback(key) {
+
+                    @Override
+                    protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+                        connection.lTrim(rawKey, start, end);
+                        return null;
+                    }
+                });
+    }
 }

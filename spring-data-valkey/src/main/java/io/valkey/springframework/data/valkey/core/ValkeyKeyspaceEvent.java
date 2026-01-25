@@ -26,41 +26,40 @@ import org.springframework.lang.Nullable;
  */
 public class ValkeyKeyspaceEvent extends ApplicationEvent {
 
-	private final @Nullable String channel;
+    private final @Nullable String channel;
 
-	/**
-	 * Creates new {@link ValkeyKeyspaceEvent}.
-	 *
-	 * @param key The key that expired. Must not be {@literal null}.
-	 */
-	public ValkeyKeyspaceEvent(byte[] key) {
-		this(null, key);
-	}
+    /**
+     * Creates new {@link ValkeyKeyspaceEvent}.
+     *
+     * @param key The key that expired. Must not be {@literal null}.
+     */
+    public ValkeyKeyspaceEvent(byte[] key) {
+        this(null, key);
+    }
 
-	/**
-	 * Creates new {@link ValkeyKeyspaceEvent}.
-	 *
-	 * @param channel The source channel aka subscription topic. Can be {@literal null}.
-	 * @param key The key that expired. Must not be {@literal null}.
-	 * @since 1.8
-	 */
-	public ValkeyKeyspaceEvent(@Nullable String channel, byte[] key) {
+    /**
+     * Creates new {@link ValkeyKeyspaceEvent}.
+     *
+     * @param channel The source channel aka subscription topic. Can be {@literal null}.
+     * @param key The key that expired. Must not be {@literal null}.
+     * @since 1.8
+     */
+    public ValkeyKeyspaceEvent(@Nullable String channel, byte[] key) {
 
-		super(key);
-		this.channel = channel;
-	}
+        super(key);
+        this.channel = channel;
+    }
 
-	public byte[] getSource() {
-		return (byte[]) super.getSource();
-	}
+    public byte[] getSource() {
+        return (byte[]) super.getSource();
+    }
 
-	/**
-	 * @return can be {@literal null}.
-	 * @since 1.8
-	 */
-	@Nullable
-	public String getChannel() {
-		return this.channel;
-	}
-
+    /**
+     * @return can be {@literal null}.
+     * @since 1.8
+     */
+    @Nullable
+    public String getChannel() {
+        return this.channel;
+    }
 }

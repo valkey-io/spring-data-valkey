@@ -17,112 +17,129 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import static org.assertj.core.api.Assertions.*;
 
-import reactor.test.StepVerifier;
-
-import java.nio.ByteBuffer;
-
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.connection.ReactiveClusterCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import java.nio.ByteBuffer;
+import org.junit.jupiter.api.Test;
+import reactor.test.StepVerifier;
 
 /**
- * Integration tests for {@link LettuceReactiveValkeyClusterConnection} via {@link ReactiveClusterCommands}.
- * <p>
- * Some assertions check against node 1 and node 4 (ports 7379/7382) as sometimes a failover happens and node 4 becomes
- * the master node.
+ * Integration tests for {@link LettuceReactiveValkeyClusterConnection} via {@link
+ * ReactiveClusterCommands}.
+ *
+ * <p>Some assertions check against node 1 and node 4 (ports 7379/7382) as sometimes a failover
+ * happens and node 4 becomes the master node.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
  */
 class LettuceReactiveClusterCommandsIntegrationTests extends LettuceReactiveClusterTestSupport {
 
-	@Test // DATAREDIS-1150
-	void pingShouldReturnPong() {
-		connection.ping().as(StepVerifier::create).expectNext("PONG").verifyComplete();
-	}
+    @Test // DATAREDIS-1150
+    void pingShouldReturnPong() {
+        connection.ping().as(StepVerifier::create).expectNext("PONG").verifyComplete();
+    }
 
-	@Test // DATAREDIS-1150
-	void pingShouldReturnPongForServers() {
-		connection.clusterGetNodes().flatMap(connection::ping).as(StepVerifier::create)
-				.expectNext("PONG", "PONG", "PONG", "PONG").verifyComplete();
-	}
+    @Test // DATAREDIS-1150
+    void pingShouldReturnPongForServers() {
+        connection
+                .clusterGetNodes()
+                .flatMap(connection::ping)
+                .as(StepVerifier::create)
+                .expectNext("PONG", "PONG", "PONG", "PONG")
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-1150
-	void clusterGetNodesShouldReturnNodes() {
+    @Test // DATAREDIS-1150
+    void clusterGetNodesShouldReturnNodes() {
 
-		connection.clusterGetNodes().collectList() //
-				.as(StepVerifier::create) //
-				.consumeNextWith(actual -> {
+        connection
+                .clusterGetNodes()
+                .collectList() //
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        actual -> {
+                            assertThat(actual).hasSizeGreaterThan(3);
+                        })
+                .verifyComplete();
+    }
 
-					assertThat(actual).hasSizeGreaterThan(3);
-				}).verifyComplete();
-	}
+    @Test // DATAREDIS-1150
+    void clusterGetReplicasShouldReturnNodes() {
 
-	@Test // DATAREDIS-1150
-	void clusterGetReplicasShouldReturnNodes() {
+        connection
+                .clusterGetNodes()
+                .filter(ValkeyClusterNode::isMaster)
+                .filter(node -> (node.getPort() == 7379 || node.getPort() == 7382))
+                .flatMap(it -> connection.clusterGetReplicas(it)) //
+                .collectList() //
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        actual -> {
+                            assertThat(actual).hasSize(1);
+                        })
+                .verifyComplete();
+    }
 
-		connection.clusterGetNodes().filter(ValkeyClusterNode::isMaster)
-				.filter(node -> (node.getPort() == 7379 || node.getPort() == 7382))
-				.flatMap(it -> connection.clusterGetReplicas(it)) //
-				.collectList() //
-				.as(StepVerifier::create) //
-				.consumeNextWith(actual -> {
+    @Test // DATAREDIS-1150
+    void clusterGetMasterReplicaMapShouldReportTopology() {
 
-					assertThat(actual).hasSize(1);
-				}).verifyComplete();
-	}
+        connection
+                .clusterGetMasterReplicaMap() //
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        actual -> {
+                            assertThat(actual).hasSize(3);
+                        })
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-1150
-	void clusterGetMasterReplicaMapShouldReportTopology() {
+    @Test // DATAREDIS-1150
+    void clusterGetSlotForKeyShouldResolveSlot() {
 
-		connection.clusterGetMasterReplicaMap() //
-				.as(StepVerifier::create) //
-				.consumeNextWith(actual -> {
+        connection
+                .clusterGetSlotForKey(ByteBuffer.wrap("hello".getBytes())) //
+                .as(StepVerifier::create) //
+                .expectNext(866) //
+                .verifyComplete();
+    }
 
-					assertThat(actual).hasSize(3);
-				}).verifyComplete();
-	}
+    @Test // DATAREDIS-1150
+    void clusterGetNodeForSlotShouldReportNode() {
 
-	@Test // DATAREDIS-1150
-	void clusterGetSlotForKeyShouldResolveSlot() {
+        connection
+                .clusterGetNodeForSlot(866) //
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        actual -> {
+                            assertThat(actual.getPort()).isIn(7379, 7382);
+                        })
+                .verifyComplete();
+    }
 
-		connection.clusterGetSlotForKey(ByteBuffer.wrap("hello".getBytes())) //
-				.as(StepVerifier::create) //
-				.expectNext(866) //
-				.verifyComplete();
-	}
+    @Test // DATAREDIS-1150
+    void clusterGetNodeForKeyShouldReportNode() {
 
-	@Test // DATAREDIS-1150
-	void clusterGetNodeForSlotShouldReportNode() {
+        connection
+                .clusterGetNodeForKey(ByteBuffer.wrap("hello".getBytes())) //
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        actual -> {
+                            assertThat(actual.getPort()).isIn(7379, 7382);
+                        })
+                .verifyComplete();
+    }
 
-		connection.clusterGetNodeForSlot(866) //
-				.as(StepVerifier::create) //
-				.consumeNextWith(actual -> {
+    @Test // DATAREDIS-1150
+    void clusterGetClusterInfoShouldReportState() {
 
-					assertThat(actual.getPort()).isIn(7379, 7382);
-				}).verifyComplete();
-	}
-
-	@Test // DATAREDIS-1150
-	void clusterGetNodeForKeyShouldReportNode() {
-
-		connection.clusterGetNodeForKey(ByteBuffer.wrap("hello".getBytes())) //
-				.as(StepVerifier::create) //
-				.consumeNextWith(actual -> {
-
-					assertThat(actual.getPort()).isIn(7379, 7382);
-				}).verifyComplete();
-	}
-
-	@Test // DATAREDIS-1150
-	void clusterGetClusterInfoShouldReportState() {
-
-		connection.clusterGetClusterInfo() //
-				.as(StepVerifier::create) //
-				.consumeNextWith(actual -> {
-
-					assertThat(actual.getSlotsAssigned()).isEqualTo(16384);
-				}).verifyComplete();
-	}
+        connection
+                .clusterGetClusterInfo() //
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        actual -> {
+                            assertThat(actual.getSlotsAssigned()).isEqualTo(16384);
+                        })
+                .verifyComplete();
+    }
 }

@@ -30,17 +30,17 @@ import org.springframework.dao.support.PersistenceExceptionTranslator;
  */
 public interface ReactiveValkeyConnectionFactory extends PersistenceExceptionTranslator {
 
-	/**
-	 * @return a reactive Valkey connection.
-	 * @throws IllegalStateException if the connection factory requires initialization and the factory was not yet
-	 *           initialized.
-	 */
-	ReactiveValkeyConnection getReactiveConnection();
+    /**
+     * @return a reactive Valkey connection.
+     * @throws IllegalStateException if the connection factory requires initialization and the factory
+     *     was not yet initialized.
+     */
+    ReactiveValkeyConnection getReactiveConnection();
 
-	/**
-	 * @return a reactive Valkey Cluster connection.
-	 * @throws IllegalStateException if the connection factory requires initialization and the factory was not yet
-	 *           initialized.
-	 */
-	ReactiveValkeyClusterConnection getReactiveClusterConnection();
+    /**
+     * @return a reactive Valkey Cluster connection.
+     * @throws IllegalStateException if the connection factory requires initialization and the factory
+     *     was not yet initialized.
+     */
+    ReactiveValkeyClusterConnection getReactiveClusterConnection();
 }

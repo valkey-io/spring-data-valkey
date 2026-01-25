@@ -27,82 +27,87 @@ import org.springframework.util.ObjectUtils;
  */
 public class GeoIndexedPropertyValue implements IndexedData {
 
-	private final String keyspace;
-	private final String indexName;
-	private final Point value;
+    private final String keyspace;
+    private final String indexName;
+    private final Point value;
 
-	public GeoIndexedPropertyValue(String keyspace, String indexName, Point value) {
+    public GeoIndexedPropertyValue(String keyspace, String indexName, Point value) {
 
-		this.keyspace = keyspace;
-		this.indexName = indexName;
-		this.value = value;
-	}
+        this.keyspace = keyspace;
+        this.indexName = indexName;
+        this.value = value;
+    }
 
-	@Override
-	public String getIndexName() {
-		return GeoIndexedPropertyValue.geoIndexName(indexName);
-	}
+    @Override
+    public String getIndexName() {
+        return GeoIndexedPropertyValue.geoIndexName(indexName);
+    }
 
-	@Override
-	public String getKeyspace() {
-		return keyspace;
-	}
+    @Override
+    public String getKeyspace() {
+        return keyspace;
+    }
 
-	public Point getPoint() {
-		return value;
-	}
+    public Point getPoint() {
+        return value;
+    }
 
-	public static String geoIndexName(String path) {
+    public static String geoIndexName(String path) {
 
-		int index = path.lastIndexOf('.');
-		if (index == -1) {
-			return path;
-		}
-		StringBuilder sb = new StringBuilder(path);
-		sb.setCharAt(index, ':');
-		return sb.toString();
-	}
+        int index = path.lastIndexOf('.');
+        if (index == -1) {
+            return path;
+        }
+        StringBuilder sb = new StringBuilder(path);
+        sb.setCharAt(index, ':');
+        return sb.toString();
+    }
 
-	public Point getValue() {
-		return this.value;
-	}
+    public Point getValue() {
+        return this.value;
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
+    @Override
+    public boolean equals(@Nullable Object o) {
 
-		if (this == o) {
-			return true;
-		}
+        if (this == o) {
+            return true;
+        }
 
-		if (!(o instanceof GeoIndexedPropertyValue that)) {
-			return false;
-		}
+        if (!(o instanceof GeoIndexedPropertyValue that)) {
+            return false;
+        }
 
-		if (!ObjectUtils.nullSafeEquals(keyspace, that.keyspace)) {
-			return false;
-		}
+        if (!ObjectUtils.nullSafeEquals(keyspace, that.keyspace)) {
+            return false;
+        }
 
-		if (!ObjectUtils.nullSafeEquals(indexName, that.indexName)) {
-			return false;
-		}
+        if (!ObjectUtils.nullSafeEquals(indexName, that.indexName)) {
+            return false;
+        }
 
-		return ObjectUtils.nullSafeEquals(value, that.value);
-	}
+        return ObjectUtils.nullSafeEquals(value, that.value);
+    }
 
-	@Override
-	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(keyspace);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(indexName);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(value);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = ObjectUtils.nullSafeHashCode(keyspace);
+        result = 31 * result + ObjectUtils.nullSafeHashCode(indexName);
+        result = 31 * result + ObjectUtils.nullSafeHashCode(value);
+        return result;
+    }
 
-	protected boolean canEqual(Object other) {
-		return other instanceof GeoIndexedPropertyValue;
-	}
+    protected boolean canEqual(Object other) {
+        return other instanceof GeoIndexedPropertyValue;
+    }
 
-	public String toString() {
-		return "GeoIndexedPropertyValue(keyspace=" + this.getKeyspace() + ", indexName=" + this.getIndexName() + ", value="
-				+ this.getValue() + ")";
-	}
+    public String toString() {
+        return "GeoIndexedPropertyValue(keyspace="
+                + this.getKeyspace()
+                + ", indexName="
+                + this.getIndexName()
+                + ", value="
+                + this.getValue()
+                + ")";
+    }
 }

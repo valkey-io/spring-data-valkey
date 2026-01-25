@@ -16,13 +16,11 @@
 
 package io.valkey.springframework.boot.test.autoconfigure.data.valkey;
 
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-
-import org.springframework.stereotype.Service;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import org.springframework.stereotype.Service;
 
 /**
  * Example service used with {@link DataValkeyTest @DataValkeyTest} tests.
@@ -32,17 +30,17 @@ import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 @Service
 public class ExampleService {
 
-	private static final Charset CHARSET = StandardCharsets.UTF_8;
+    private static final Charset CHARSET = StandardCharsets.UTF_8;
 
-	private final ValkeyOperations<Object, Object> operations;
+    private final ValkeyOperations<Object, Object> operations;
 
-	public ExampleService(ValkeyOperations<Object, Object> operations) {
-		this.operations = operations;
-	}
+    public ExampleService(ValkeyOperations<Object, Object> operations) {
+        this.operations = operations;
+    }
 
-	public boolean hasRecord(PersonHash personHash) {
-		return this.operations.execute((ValkeyConnection connection) -> connection.keyCommands()
-			.exists(("persons:" + personHash.getId()).getBytes(CHARSET)));
-	}
-
+    public boolean hasRecord(PersonHash personHash) {
+        return this.operations.execute(
+                (ValkeyConnection connection) ->
+                        connection.keyCommands().exists(("persons:" + personHash.getId()).getBytes(CHARSET)));
+    }
 }

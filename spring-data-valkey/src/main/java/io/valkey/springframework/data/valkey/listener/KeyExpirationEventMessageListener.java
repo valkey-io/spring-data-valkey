@@ -15,61 +15,60 @@
  */
 package io.valkey.springframework.data.valkey.listener;
 
-import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.context.ApplicationEventPublisherAware;
 import io.valkey.springframework.data.valkey.connection.Message;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
 import io.valkey.springframework.data.valkey.core.ValkeyKeyExpiredEvent;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.lang.Nullable;
 
 /**
- * {@link MessageListener} publishing {@link ValkeyKeyExpiredEvent}s via {@link ApplicationEventPublisher} by listening
- * to Valkey keyspace notifications for key expirations.
+ * {@link MessageListener} publishing {@link ValkeyKeyExpiredEvent}s via {@link
+ * ApplicationEventPublisher} by listening to Valkey keyspace notifications for key expirations.
  *
  * @author Christoph Strobl
  * @since 1.7
  */
 public class KeyExpirationEventMessageListener extends KeyspaceEventMessageListener
-		implements ApplicationEventPublisherAware {
+        implements ApplicationEventPublisherAware {
 
-	private static final Topic KEYEVENT_EXPIRED_TOPIC = new PatternTopic("__keyevent@*__:expired");
+    private static final Topic KEYEVENT_EXPIRED_TOPIC = new PatternTopic("__keyevent@*__:expired");
 
-	private @Nullable ApplicationEventPublisher publisher;
+    private @Nullable ApplicationEventPublisher publisher;
 
-	/**
-	 * Creates new {@link MessageListener} for {@code __keyevent@*__:expired} messages.
-	 *
-	 * @param listenerContainer must not be {@literal null}.
-	 */
-	public KeyExpirationEventMessageListener(ValkeyMessageListenerContainer listenerContainer) {
-		super(listenerContainer);
-	}
+    /**
+     * Creates new {@link MessageListener} for {@code __keyevent@*__:expired} messages.
+     *
+     * @param listenerContainer must not be {@literal null}.
+     */
+    public KeyExpirationEventMessageListener(ValkeyMessageListenerContainer listenerContainer) {
+        super(listenerContainer);
+    }
 
-	@Override
-	public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
-		this.publisher = applicationEventPublisher;
-	}
+    @Override
+    public void setApplicationEventPublisher(ApplicationEventPublisher applicationEventPublisher) {
+        this.publisher = applicationEventPublisher;
+    }
 
-	@Override
-	protected void doRegister(ValkeyMessageListenerContainer listenerContainer) {
-		listenerContainer.addMessageListener(this, KEYEVENT_EXPIRED_TOPIC);
-	}
+    @Override
+    protected void doRegister(ValkeyMessageListenerContainer listenerContainer) {
+        listenerContainer.addMessageListener(this, KEYEVENT_EXPIRED_TOPIC);
+    }
 
-	@Override
-	protected void doHandleMessage(Message message) {
-		publishEvent(new ValkeyKeyExpiredEvent(message.getBody()));
-	}
+    @Override
+    protected void doHandleMessage(Message message) {
+        publishEvent(new ValkeyKeyExpiredEvent(message.getBody()));
+    }
 
-	/**
-	 * Publish the event in case an {@link ApplicationEventPublisher} is set.
-	 *
-	 * @param event can be {@literal null}.
-	 */
-	protected void publishEvent(ValkeyKeyExpiredEvent event) {
+    /**
+     * Publish the event in case an {@link ApplicationEventPublisher} is set.
+     *
+     * @param event can be {@literal null}.
+     */
+    protected void publishEvent(ValkeyKeyExpiredEvent event) {
 
-		if (publisher != null) {
-			this.publisher.publishEvent(event);
-		}
-	}
-
+        if (publisher != null) {
+            this.publisher.publishEvent(event);
+        }
+    }
 }

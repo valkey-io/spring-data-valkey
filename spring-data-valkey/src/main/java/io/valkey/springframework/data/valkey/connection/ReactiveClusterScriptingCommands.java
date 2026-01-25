@@ -19,6 +19,4 @@ package io.valkey.springframework.data.valkey.connection;
  * @author Mark Paluch
  * @since 2.0
  */
-public interface ReactiveClusterScriptingCommands extends ReactiveScriptingCommands {
-
-}
+public interface ReactiveClusterScriptingCommands extends ReactiveScriptingCommands {}

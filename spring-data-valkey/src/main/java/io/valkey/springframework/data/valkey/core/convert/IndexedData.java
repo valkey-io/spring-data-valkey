@@ -24,27 +24,27 @@ package io.valkey.springframework.data.valkey.core.convert;
  */
 public interface IndexedData {
 
-	/**
-	 * Get the {@link String} representation of the index name.
-	 *
-	 * @return never {@literal null}.
-	 */
-	String getIndexName();
+    /**
+     * Get the {@link String} representation of the index name.
+     *
+     * @return never {@literal null}.
+     */
+    String getIndexName();
 
-	/**
-	 * Get the associated keyspace the index resides in.
-	 *
-	 * @return
-	 */
-	String getKeyspace();
+    /**
+     * Get the associated keyspace the index resides in.
+     *
+     * @return
+     */
+    String getKeyspace();
 
-	/**
-	 * Return the key prefix for usage in Valkey.
-	 *
-	 * @return concatenated form of the keyspace and the index name.
-	 * @since 3.3.4
-	 */
-	default String getKeyPrefix() {
-		return getKeyspace() + ":" + getIndexName();
-	}
+    /**
+     * Return the key prefix for usage in Valkey.
+     *
+     * @return concatenated form of the keyspace and the index name.
+     * @since 3.3.4
+     */
+    default String getKeyPrefix() {
+        return getKeyspace() + ":" + getIndexName();
+    }
 }

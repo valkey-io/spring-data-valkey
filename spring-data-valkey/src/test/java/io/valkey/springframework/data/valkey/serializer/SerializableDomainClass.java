@@ -21,6 +21,4 @@ import java.io.Serializable;
 /**
  * @author Mark Paluch
  */
-public class SerializableDomainClass implements Serializable {
-
-}
+public class SerializableDomainClass implements Serializable {}

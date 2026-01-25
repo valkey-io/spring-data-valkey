@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.core.types;
 import java.io.IOException;
 import java.io.StringReader;
 import java.util.Properties;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -31,252 +30,261 @@ import org.springframework.util.ObjectUtils;
  */
 public class ValkeyClientInfo {
 
-	public enum INFO {
+    public enum INFO {
+        ADDRESS_PORT("addr"),
+        FILE_DESCRIPTOR("fd"),
+        CONNECTION_NAME("name"),
+        CONNECTION_AGE("age"), //
+        CONNECTION_IDLE("idle"),
+        FLAGS("flags"),
+        DATABSE_ID("db"),
+        CHANNEL_SUBSCRIBTIONS("sub"), //
+        PATTERN_SUBSCRIBTIONS("psub"),
+        MULIT_COMMAND_CONTEXT("multi"),
+        BUFFER_LENGTH("qbuf"), //
+        BUFFER_FREE_SPACE("qbuf-free"),
+        OUTPUT_BUFFER_LENGTH("obl"),
+        OUTPUT_LIST_LENGTH("oll"), //
+        OUTPUT_BUFFER_MEMORY_USAGE("omem"),
+        EVENTS("events"),
+        LAST_COMMAND("cmd");
 
-		ADDRESS_PORT("addr"), FILE_DESCRIPTOR("fd"), CONNECTION_NAME("name"), CONNECTION_AGE("age"), //
-		CONNECTION_IDLE("idle"), FLAGS("flags"), DATABSE_ID("db"), CHANNEL_SUBSCRIBTIONS("sub"), //
-		PATTERN_SUBSCRIBTIONS("psub"), MULIT_COMMAND_CONTEXT("multi"), BUFFER_LENGTH("qbuf"), //
-		BUFFER_FREE_SPACE("qbuf-free"), OUTPUT_BUFFER_LENGTH("obl"), OUTPUT_LIST_LENGTH("oll"), //
-		OUTPUT_BUFFER_MEMORY_USAGE("omem"), EVENTS("events"), LAST_COMMAND("cmd");
+        final String key;
 
-		final String key;
+        INFO(String key) {
+            this.key = key;
+        }
+    }
 
-		INFO(String key) {
-			this.key = key;
-		}
+    private final Properties clientProperties;
 
-	}
+    /**
+     * Create {@link ValkeyClientInfo} from {@link Properties}.
+     *
+     * @param properties must not be {@literal null}.
+     */
+    public ValkeyClientInfo(Properties properties) {
 
-	private final Properties clientProperties;
+        Assert.notNull(properties, "Cannot initialize client information for given 'null' properties");
 
-	/**
-	 * Create {@link ValkeyClientInfo} from {@link Properties}.
-	 *
-	 * @param properties must not be {@literal null}.
-	 */
-	public ValkeyClientInfo(Properties properties) {
+        this.clientProperties = new Properties();
+        this.clientProperties.putAll(properties);
+    }
 
-		Assert.notNull(properties, "Cannot initialize client information for given 'null' properties");
+    /**
+     * Get address/port of the client.
+     *
+     * @return
+     */
+    public String getAddressPort() {
+        return get(INFO.ADDRESS_PORT);
+    }
 
-		this.clientProperties = new Properties();
-		this.clientProperties.putAll(properties);
-	}
+    /**
+     * Get file descriptor corresponding to the socket
+     *
+     * @return
+     */
+    public String getFileDescriptor() {
+        return get(INFO.FILE_DESCRIPTOR);
+    }
 
-	/**
-	 * Get address/port of the client.
-	 *
-	 * @return
-	 */
-	public String getAddressPort() {
-		return get(INFO.ADDRESS_PORT);
-	}
+    /**
+     * Get the clients name.
+     *
+     * @return
+     */
+    public String getName() {
+        return get(INFO.CONNECTION_NAME);
+    }
 
-	/**
-	 * Get file descriptor corresponding to the socket
-	 *
-	 * @return
-	 */
-	public String getFileDescriptor() {
-		return get(INFO.FILE_DESCRIPTOR);
-	}
+    /**
+     * Get total duration of the connection in seconds.
+     *
+     * @return
+     */
+    public Long getAge() {
+        return getLongValueOf(INFO.CONNECTION_AGE);
+    }
 
-	/**
-	 * Get the clients name.
-	 *
-	 * @return
-	 */
-	public String getName() {
-		return get(INFO.CONNECTION_NAME);
-	}
+    /**
+     * Get idle time of the connection in seconds.
+     *
+     * @return
+     */
+    public Long getIdle() {
+        return getLongValueOf(INFO.CONNECTION_IDLE);
+    }
 
-	/**
-	 * Get total duration of the connection in seconds.
-	 *
-	 * @return
-	 */
-	public Long getAge() {
-		return getLongValueOf(INFO.CONNECTION_AGE);
-	}
+    /**
+     * Get client flags.
+     *
+     * @return
+     */
+    public String getFlags() {
+        return get(INFO.FLAGS);
+    }
 
-	/**
-	 * Get idle time of the connection in seconds.
-	 *
-	 * @return
-	 */
-	public Long getIdle() {
-		return getLongValueOf(INFO.CONNECTION_IDLE);
-	}
+    /**
+     * Get current database index.
+     *
+     * @return
+     */
+    public Long getDatabaseId() {
+        return getLongValueOf(INFO.DATABSE_ID);
+    }
 
-	/**
-	 * Get client flags.
-	 *
-	 * @return
-	 */
-	public String getFlags() {
-		return get(INFO.FLAGS);
-	}
+    /**
+     * Get number of channel subscriptions.
+     *
+     * @return
+     */
+    public Long getChannelSubscribtions() {
+        return getLongValueOf(INFO.CHANNEL_SUBSCRIBTIONS);
+    }
 
-	/**
-	 * Get current database index.
-	 *
-	 * @return
-	 */
-	public Long getDatabaseId() {
-		return getLongValueOf(INFO.DATABSE_ID);
-	}
+    /**
+     * Get number of pattern subscriptions.
+     *
+     * @return
+     */
+    public Long getPatternSubscrbtions() {
+        return getLongValueOf(INFO.PATTERN_SUBSCRIBTIONS);
+    }
 
-	/**
-	 * Get number of channel subscriptions.
-	 *
-	 * @return
-	 */
-	public Long getChannelSubscribtions() {
-		return getLongValueOf(INFO.CHANNEL_SUBSCRIBTIONS);
-	}
+    /**
+     * Get the number of commands in a MULTI/EXEC context.
+     *
+     * @return
+     */
+    public Long getMultiCommandContext() {
+        return getLongValueOf(INFO.MULIT_COMMAND_CONTEXT);
+    }
 
-	/**
-	 * Get number of pattern subscriptions.
-	 *
-	 * @return
-	 */
-	public Long getPatternSubscrbtions() {
-		return getLongValueOf(INFO.PATTERN_SUBSCRIBTIONS);
-	}
+    /**
+     * Get the query buffer length.
+     *
+     * @return
+     */
+    public Long getBufferLength() {
+        return getLongValueOf(INFO.BUFFER_LENGTH);
+    }
 
-	/**
-	 * Get the number of commands in a MULTI/EXEC context.
-	 *
-	 * @return
-	 */
-	public Long getMultiCommandContext() {
-		return getLongValueOf(INFO.MULIT_COMMAND_CONTEXT);
-	}
+    /**
+     * Get the free space of the query buffer.
+     *
+     * @return
+     */
+    public Long getBufferFreeSpace() {
+        return getLongValueOf(INFO.BUFFER_FREE_SPACE);
+    }
 
-	/**
-	 * Get the query buffer length.
-	 *
-	 * @return
-	 */
-	public Long getBufferLength() {
-		return getLongValueOf(INFO.BUFFER_LENGTH);
-	}
+    /**
+     * Get the output buffer length.
+     *
+     * @return
+     */
+    public Long getOutputBufferLength() {
+        return getLongValueOf(INFO.OUTPUT_BUFFER_LENGTH);
+    }
 
-	/**
-	 * Get the free space of the query buffer.
-	 *
-	 * @return
-	 */
-	public Long getBufferFreeSpace() {
-		return getLongValueOf(INFO.BUFFER_FREE_SPACE);
-	}
+    /**
+     * Get number queued replies in output buffer.
+     *
+     * @return
+     */
+    public Long getOutputListLength() {
+        return getLongValueOf(INFO.OUTPUT_LIST_LENGTH);
+    }
 
-	/**
-	 * Get the output buffer length.
-	 *
-	 * @return
-	 */
-	public Long getOutputBufferLength() {
-		return getLongValueOf(INFO.OUTPUT_BUFFER_LENGTH);
-	}
+    /**
+     * Get output buffer memory usage.
+     *
+     * @return
+     */
+    public Long getOutputBufferMemoryUsage() {
+        return getLongValueOf(INFO.OUTPUT_BUFFER_MEMORY_USAGE);
+    }
 
-	/**
-	 * Get number queued replies in output buffer.
-	 *
-	 * @return
-	 */
-	public Long getOutputListLength() {
-		return getLongValueOf(INFO.OUTPUT_LIST_LENGTH);
-	}
+    /**
+     * Get file descriptor events.
+     *
+     * @return
+     */
+    public String getEvents() {
+        return get(INFO.EVENTS);
+    }
 
-	/**
-	 * Get output buffer memory usage.
-	 *
-	 * @return
-	 */
-	public Long getOutputBufferMemoryUsage() {
-		return getLongValueOf(INFO.OUTPUT_BUFFER_MEMORY_USAGE);
-	}
+    /**
+     * Get last command played.
+     *
+     * @return
+     */
+    public String getLastCommand() {
+        return get(INFO.LAST_COMMAND);
+    }
 
-	/**
-	 * Get file descriptor events.
-	 *
-	 * @return
-	 */
-	public String getEvents() {
-		return get(INFO.EVENTS);
-	}
+    /**
+     * @param info must not be null
+     * @return {@literal null} if no entry found for requested {@link INFO}.
+     */
+    public String get(INFO info) {
 
-	/**
-	 * Get last command played.
-	 *
-	 * @return
-	 */
-	public String getLastCommand() {
-		return get(INFO.LAST_COMMAND);
-	}
+        Assert.notNull(info, "Cannot retrieve client information for 'null'");
+        return this.clientProperties.getProperty(info.key);
+    }
 
-	/**
-	 * @param info must not be null
-	 * @return {@literal null} if no entry found for requested {@link INFO}.
-	 */
-	public String get(INFO info) {
+    /**
+     * @param key must not be {@literal null} or {@literal empty}.
+     * @return {@literal null} if no entry found for requested {@code key}.
+     */
+    @Nullable
+    public String get(String key) {
 
-		Assert.notNull(info, "Cannot retrieve client information for 'null'");
-		return this.clientProperties.getProperty(info.key);
-	}
+        Assert.hasText(key, "Cannot get client information for 'empty' / 'null' key");
+        return this.clientProperties.getProperty(key);
+    }
 
-	/**
-	 * @param key must not be {@literal null} or {@literal empty}.
-	 * @return {@literal null} if no entry found for requested {@code key}.
-	 */
-	@Nullable
-	public String get(String key) {
+    private Long getLongValueOf(INFO info) {
 
-		Assert.hasText(key, "Cannot get client information for 'empty' / 'null' key");
-		return this.clientProperties.getProperty(key);
-	}
+        String value = get(info);
+        return value == null ? null : Long.valueOf(value);
+    }
 
-	private Long getLongValueOf(INFO info) {
+    @Override
+    public String toString() {
+        return this.clientProperties.toString();
+    }
 
-		String value = get(info);
-		return value == null ? null : Long.valueOf(value);
-	}
+    @Override
+    public boolean equals(@Nullable Object o) {
 
-	@Override
-	public String toString() {
-		return this.clientProperties.toString();
-	}
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-	@Override
-	public boolean equals(@Nullable Object o) {
+        ValkeyClientInfo that = (ValkeyClientInfo) o;
 
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
+        return ObjectUtils.nullSafeEquals(clientProperties, that.clientProperties);
+    }
 
-		ValkeyClientInfo that = (ValkeyClientInfo) o;
+    @Override
+    public int hashCode() {
+        return ObjectUtils.nullSafeHashCode(clientProperties);
+    }
 
-		return ObjectUtils.nullSafeEquals(clientProperties, that.clientProperties);
-	}
+    public static class ValkeyClientInfoBuilder {
 
-	@Override
-	public int hashCode() {
-		return ObjectUtils.nullSafeHashCode(clientProperties);
-	}
+        public static ValkeyClientInfo fromString(String source) {
 
-	public static class ValkeyClientInfoBuilder {
-
-		public static ValkeyClientInfo fromString(String source) {
-
-			Assert.notNull(source, "Cannot read client properties from 'null'");
-			Properties properties = new Properties();
-			try {
-				properties.load(new StringReader(source.replace(' ', '\n')));
-			} catch (IOException ex) {
-				throw new IllegalArgumentException("Properties could not be loaded from String '%s'".formatted(source), ex);
-			}
-			return new ValkeyClientInfo(properties);
-		}
-	}
+            Assert.notNull(source, "Cannot read client properties from 'null'");
+            Properties properties = new Properties();
+            try {
+                properties.load(new StringReader(source.replace(' ', '\n')));
+            } catch (IOException ex) {
+                throw new IllegalArgumentException(
+                        "Properties could not be loaded from String '%s'".formatted(source), ex);
+            }
+            return new ValkeyClientInfo(properties);
+        }
+    }
 }

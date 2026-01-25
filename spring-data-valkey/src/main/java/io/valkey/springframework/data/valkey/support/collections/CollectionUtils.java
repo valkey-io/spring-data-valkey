@@ -15,84 +15,85 @@
  */
 package io.valkey.springframework.data.valkey.support.collections;
 
+import io.valkey.springframework.data.valkey.core.SessionCallback;
+import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-
 import org.springframework.dao.DataAccessException;
-import io.valkey.springframework.data.valkey.core.ValkeyOperations;
-import io.valkey.springframework.data.valkey.core.SessionCallback;
 import org.springframework.lang.NonNull;
 import org.springframework.lang.Nullable;
 
 /**
- * Utility class used mainly for type conversion by the default collection implementations. Meant for internal use.
+ * Utility class used mainly for type conversion by the default collection implementations. Meant
+ * for internal use.
  *
  * @author Costin Leau
  * @author John Blum
  */
 public abstract class CollectionUtils {
 
-	static Collection<String> extractKeys(Collection<? extends ValkeyStore> stores) {
+    static Collection<String> extractKeys(Collection<? extends ValkeyStore> stores) {
 
-		Collection<String> keys = new ArrayList<>(stores.size());
+        Collection<String> keys = new ArrayList<>(stores.size());
 
-		for (ValkeyStore store : stores) {
-			keys.add(store.getKey());
-		}
+        for (ValkeyStore store : stores) {
+            keys.add(store.getKey());
+        }
 
-		return keys;
-	}
+        return keys;
+    }
 
-	public static <T> List<T> initializeList(@NonNull List<T> list, int size) {
+    public static <T> List<T> initializeList(@NonNull List<T> list, int size) {
 
-		for (int count = 0; count < size; count++) {
-			list.add(null);
-		}
+        for (int count = 0; count < size; count++) {
+            list.add(null);
+        }
 
-		return list;
-	}
+        return list;
+    }
 
-	@NonNull
-	public static <T> List<T> nullSafeList(@Nullable List<T> list) {
-		return list != null ? list : Collections.emptyList();
-	}
+    @NonNull
+    public static <T> List<T> nullSafeList(@Nullable List<T> list) {
+        return list != null ? list : Collections.emptyList();
+    }
 
-	static <K> void rename(final K key, final K newKey, ValkeyOperations<K, ?> operations) {
+    static <K> void rename(final K key, final K newKey, ValkeyOperations<K, ?> operations) {
 
-		operations.execute(new SessionCallback<Object>() {
+        operations.execute(
+                new SessionCallback<Object>() {
 
-			@SuppressWarnings("unchecked")
-			public Object execute(ValkeyOperations operations) throws DataAccessException {
+                    @SuppressWarnings("unchecked")
+                    public Object execute(ValkeyOperations operations) throws DataAccessException {
 
-				do {
-					operations.watch(key);
+                        do {
+                            operations.watch(key);
 
-					if (operations.hasKey(key)) {
-						operations.multi();
-						operations.rename(key, newKey);
-					} else {
-						operations.multi();
-					}
-				} while (operations.exec() == null);
+                            if (operations.hasKey(key)) {
+                                operations.multi();
+                                operations.rename(key, newKey);
+                            } else {
+                                operations.multi();
+                            }
+                        } while (operations.exec() == null);
 
-				return null;
-			}
-		});
-	}
+                        return null;
+                    }
+                });
+    }
 
-	@SuppressWarnings("unchecked")
-	static <E> Collection<E> reverse(Collection<? extends E> c) {
+    @SuppressWarnings("unchecked")
+    static <E> Collection<E> reverse(Collection<? extends E> c) {
 
-		Object[] reverse = new Object[c.size()];
-		int index = c.size();
+        Object[] reverse = new Object[c.size()];
+        int index = c.size();
 
-		for (E e : c) {
-			reverse[--index] = e;
-		}
+        for (E e : c) {
+            reverse[--index] = e;
+        }
 
-		return (List<E>) Arrays.asList(reverse);
-	}
+        return (List<E>) Arrays.asList(reverse);
+    }
 }

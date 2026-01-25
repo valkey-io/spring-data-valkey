@@ -15,6 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.stream;
 
+import io.valkey.springframework.data.valkey.connection.stream.ByteRecord;
+import io.valkey.springframework.data.valkey.connection.stream.Consumer;
+import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
+import io.valkey.springframework.data.valkey.connection.stream.Record;
+import io.valkey.springframework.data.valkey.connection.stream.StreamOffset;
+import io.valkey.springframework.data.valkey.stream.StreamMessageListenerContainer.ConsumerStreamReadRequest;
+import io.valkey.springframework.data.valkey.stream.StreamMessageListenerContainer.StreamReadRequest;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -23,19 +30,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Predicate;
-
 import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.dao.DataAccessResourceFailureException;
-import io.valkey.springframework.data.valkey.connection.stream.ByteRecord;
-import io.valkey.springframework.data.valkey.connection.stream.Consumer;
-import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
-import io.valkey.springframework.data.valkey.connection.stream.Record;
-import io.valkey.springframework.data.valkey.connection.stream.StreamOffset;
-import io.valkey.springframework.data.valkey.stream.StreamMessageListenerContainer.ConsumerStreamReadRequest;
-import io.valkey.springframework.data.valkey.stream.StreamMessageListenerContainer.StreamReadRequest;
 import org.springframework.util.ErrorHandler;
-
 
 /**
  * {@link Task} that invokes a {@link BiFunction read function} to poll on a Valkey Stream.
@@ -45,244 +43,248 @@ import org.springframework.util.ErrorHandler;
  */
 class StreamPollTask<K, V extends Record<K, ?>> implements Task {
 
-	private final StreamListener<K, V> listener;
-	private final ErrorHandler errorHandler;
-	private final Predicate<Throwable> cancelSubscriptionOnError;
-	private final Function<ReadOffset, List<ByteRecord>> readFunction;
-	private final Function<ByteRecord, V> deserializer;
+    private final StreamListener<K, V> listener;
+    private final ErrorHandler errorHandler;
+    private final Predicate<Throwable> cancelSubscriptionOnError;
+    private final Function<ReadOffset, List<ByteRecord>> readFunction;
+    private final Function<ByteRecord, V> deserializer;
 
-	private final PollState pollState;
-	private final TypeDescriptor targetType;
+    private final PollState pollState;
+    private final TypeDescriptor targetType;
 
-	private volatile boolean isInEventLoop = false;
+    private volatile boolean isInEventLoop = false;
 
-	StreamPollTask(StreamReadRequest<K> streamRequest, StreamListener<K, V> listener, ErrorHandler errorHandler,
-			TypeDescriptor targetType, Function<ReadOffset, List<ByteRecord>> readFunction,
-			Function<ByteRecord, V> deserializer) {
+    StreamPollTask(
+            StreamReadRequest<K> streamRequest,
+            StreamListener<K, V> listener,
+            ErrorHandler errorHandler,
+            TypeDescriptor targetType,
+            Function<ReadOffset, List<ByteRecord>> readFunction,
+            Function<ByteRecord, V> deserializer) {
 
-		this.listener = listener;
-		this.errorHandler = Optional.ofNullable(streamRequest.getErrorHandler()).orElse(errorHandler);
-		this.cancelSubscriptionOnError = streamRequest.getCancelSubscriptionOnError();
-		this.readFunction = readFunction;
-		this.deserializer = deserializer;
-		this.pollState = createPollState(streamRequest);
-		this.targetType = targetType;
-	}
+        this.listener = listener;
+        this.errorHandler = Optional.ofNullable(streamRequest.getErrorHandler()).orElse(errorHandler);
+        this.cancelSubscriptionOnError = streamRequest.getCancelSubscriptionOnError();
+        this.readFunction = readFunction;
+        this.deserializer = deserializer;
+        this.pollState = createPollState(streamRequest);
+        this.targetType = targetType;
+    }
 
-	private static PollState createPollState(StreamReadRequest<?> streamRequest) {
+    private static PollState createPollState(StreamReadRequest<?> streamRequest) {
 
-		StreamOffset<?> streamOffset = streamRequest.getStreamOffset();
+        StreamOffset<?> streamOffset = streamRequest.getStreamOffset();
 
-		if (streamRequest instanceof ConsumerStreamReadRequest) {
-			return PollState.consumer(((ConsumerStreamReadRequest<?>) streamRequest).getConsumer(), streamOffset.getOffset());
-		}
+        if (streamRequest instanceof ConsumerStreamReadRequest) {
+            return PollState.consumer(
+                    ((ConsumerStreamReadRequest<?>) streamRequest).getConsumer(), streamOffset.getOffset());
+        }
 
-		return PollState.standalone(streamOffset.getOffset());
-	}
+        return PollState.standalone(streamOffset.getOffset());
+    }
 
-	@Override
-	public void cancel() throws DataAccessResourceFailureException {
-		this.pollState.cancel();
-	}
+    @Override
+    public void cancel() throws DataAccessResourceFailureException {
+        this.pollState.cancel();
+    }
 
-	@Override
-	public State getState() {
-		return pollState.getState();
-	}
+    @Override
+    public State getState() {
+        return pollState.getState();
+    }
 
-	@Override
-	public boolean awaitStart(Duration timeout) throws InterruptedException {
-		return pollState.awaitStart(timeout.toNanos(), TimeUnit.NANOSECONDS);
-	}
+    @Override
+    public boolean awaitStart(Duration timeout) throws InterruptedException {
+        return pollState.awaitStart(timeout.toNanos(), TimeUnit.NANOSECONDS);
+    }
 
-	@Override
-	public boolean isLongLived() {
-		return true;
-	}
+    @Override
+    public boolean isLongLived() {
+        return true;
+    }
 
-	@Override
-	public void run() {
+    @Override
+    public void run() {
 
-		pollState.starting();
+        pollState.starting();
 
-		try {
+        try {
 
-			isInEventLoop = true;
-			pollState.running();
-			doLoop();
-		} finally {
-			isInEventLoop = false;
-		}
-	}
+            isInEventLoop = true;
+            pollState.running();
+            doLoop();
+        } finally {
+            isInEventLoop = false;
+        }
+    }
 
-	private void doLoop() {
+    private void doLoop() {
 
-		do {
+        do {
 
-			try {
+            try {
 
-				// allow interruption
-				Thread.sleep(0);
+                // allow interruption
+                Thread.sleep(0);
 
-				List<ByteRecord> raw = readRecords();
-				deserializeAndEmitRecords(raw);
+                List<ByteRecord> raw = readRecords();
+                deserializeAndEmitRecords(raw);
 
-			} catch (InterruptedException ex) {
+            } catch (InterruptedException ex) {
 
-				cancel();
-				Thread.currentThread().interrupt();
-			} catch (RuntimeException ex) {
+                cancel();
+                Thread.currentThread().interrupt();
+            } catch (RuntimeException ex) {
 
-				if (cancelSubscriptionOnError.test(ex)) {
-					cancel();
-				}
+                if (cancelSubscriptionOnError.test(ex)) {
+                    cancel();
+                }
 
-				errorHandler.handleError(ex);
-			}
-		} while (pollState.isSubscriptionActive());
-	}
+                errorHandler.handleError(ex);
+            }
+        } while (pollState.isSubscriptionActive());
+    }
 
-	private List<ByteRecord> readRecords() {
-		return readFunction.apply(pollState.getCurrentReadOffset());
-	}
+    private List<ByteRecord> readRecords() {
+        return readFunction.apply(pollState.getCurrentReadOffset());
+    }
 
-	private void deserializeAndEmitRecords(List<ByteRecord> records) {
+    private void deserializeAndEmitRecords(List<ByteRecord> records) {
 
-		for (ByteRecord raw : records) {
+        for (ByteRecord raw : records) {
 
-			try {
+            try {
 
-				pollState.updateReadOffset(raw.getId().getValue());
-				V record = convertRecord(raw);
-				listener.onMessage(record);
-			} catch (RuntimeException ex) {
+                pollState.updateReadOffset(raw.getId().getValue());
+                V record = convertRecord(raw);
+                listener.onMessage(record);
+            } catch (RuntimeException ex) {
 
-				if (cancelSubscriptionOnError.test(ex)) {
+                if (cancelSubscriptionOnError.test(ex)) {
 
-					cancel();
-					errorHandler.handleError(ex);
+                    cancel();
+                    errorHandler.handleError(ex);
 
-					return;
-				}
+                    return;
+                }
 
-				errorHandler.handleError(ex);
-			}
-		}
-	}
+                errorHandler.handleError(ex);
+            }
+        }
+    }
 
-	private V convertRecord(ByteRecord record) {
+    private V convertRecord(ByteRecord record) {
 
-		try {
-			return deserializer.apply(record);
-		} catch (RuntimeException ex) {
-			throw new ConversionFailedException(TypeDescriptor.forObject(record), targetType, record, ex);
-		}
-	}
+        try {
+            return deserializer.apply(record);
+        } catch (RuntimeException ex) {
+            throw new ConversionFailedException(TypeDescriptor.forObject(record), targetType, record, ex);
+        }
+    }
 
-	@Override
-	public boolean isActive() {
-		return State.RUNNING.equals(getState()) || isInEventLoop;
-	}
+    @Override
+    public boolean isActive() {
+        return State.RUNNING.equals(getState()) || isInEventLoop;
+    }
 
-	/**
-	 * Object representing the current polling state for a particular stream subscription.
-	 */
-	static class PollState {
+    /** Object representing the current polling state for a particular stream subscription. */
+    static class PollState {
 
-		private final ReadOffsetStrategy readOffsetStrategy;
-		private final Optional<Consumer> consumer;
-		private volatile ReadOffset currentOffset;
-		private volatile State state = State.CREATED;
-		private volatile CountDownLatch awaitStart = new CountDownLatch(1);
+        private final ReadOffsetStrategy readOffsetStrategy;
+        private final Optional<Consumer> consumer;
+        private volatile ReadOffset currentOffset;
+        private volatile State state = State.CREATED;
+        private volatile CountDownLatch awaitStart = new CountDownLatch(1);
 
-		private PollState(Optional<Consumer> consumer, ReadOffsetStrategy readOffsetStrategy, ReadOffset currentOffset) {
+        private PollState(
+                Optional<Consumer> consumer,
+                ReadOffsetStrategy readOffsetStrategy,
+                ReadOffset currentOffset) {
 
-			this.readOffsetStrategy = readOffsetStrategy;
-			this.currentOffset = currentOffset;
-			this.consumer = consumer;
-		}
+            this.readOffsetStrategy = readOffsetStrategy;
+            this.currentOffset = currentOffset;
+            this.consumer = consumer;
+        }
 
-		/**
-		 * Create a new state object for standalone-read.
-		 *
-		 * @param offset the {@link ReadOffset} to use.
-		 * @return new instance of {@link PollState}.
-		 */
-		static PollState standalone(ReadOffset offset) {
+        /**
+         * Create a new state object for standalone-read.
+         *
+         * @param offset the {@link ReadOffset} to use.
+         * @return new instance of {@link PollState}.
+         */
+        static PollState standalone(ReadOffset offset) {
 
-			ReadOffsetStrategy strategy = ReadOffsetStrategy.getStrategy(offset);
-			return new PollState(Optional.empty(), strategy, strategy.getFirst(offset, Optional.empty()));
-		}
+            ReadOffsetStrategy strategy = ReadOffsetStrategy.getStrategy(offset);
+            return new PollState(Optional.empty(), strategy, strategy.getFirst(offset, Optional.empty()));
+        }
 
-		/**
-		 * Create a new state object for consumergroup-read.
-		 *
-		 * @param consumer the {@link Consumer} to use.
-		 * @param offset the {@link ReadOffset} to apply.
-		 * @return new instance of {@link PollState}.
-		 */
-		static PollState consumer(Consumer consumer, ReadOffset offset) {
+        /**
+         * Create a new state object for consumergroup-read.
+         *
+         * @param consumer the {@link Consumer} to use.
+         * @param offset the {@link ReadOffset} to apply.
+         * @return new instance of {@link PollState}.
+         */
+        static PollState consumer(Consumer consumer, ReadOffset offset) {
 
-			ReadOffsetStrategy strategy = ReadOffsetStrategy.getStrategy(offset);
-			Optional<Consumer> optionalConsumer = Optional.of(consumer);
-			return new PollState(optionalConsumer, strategy, strategy.getFirst(offset, optionalConsumer));
-		}
+            ReadOffsetStrategy strategy = ReadOffsetStrategy.getStrategy(offset);
+            Optional<Consumer> optionalConsumer = Optional.of(consumer);
+            return new PollState(optionalConsumer, strategy, strategy.getFirst(offset, optionalConsumer));
+        }
 
-		boolean awaitStart(long timeout, TimeUnit unit) throws InterruptedException {
-			return awaitStart.await(timeout, unit);
-		}
+        boolean awaitStart(long timeout, TimeUnit unit) throws InterruptedException {
+            return awaitStart.await(timeout, unit);
+        }
 
-		public State getState() {
-			return state;
-		}
+        public State getState() {
+            return state;
+        }
 
-		/**
-		 * @return {@literal true} if the subscription is active.
-		 */
-		boolean isSubscriptionActive() {
-			return state == State.STARTING || state == State.RUNNING;
-		}
+        /**
+         * @return {@literal true} if the subscription is active.
+         */
+        boolean isSubscriptionActive() {
+            return state == State.STARTING || state == State.RUNNING;
+        }
 
-		/**
-		 * Set the state to {@link io.valkey.springframework.data.valkey.stream.Task.State#STARTING}.
-		 */
-		void starting() {
-			state = State.STARTING;
-		}
+        /**
+         * Set the state to {@link io.valkey.springframework.data.valkey.stream.Task.State#STARTING}.
+         */
+        void starting() {
+            state = State.STARTING;
+        }
 
-		/**
-		 * Switch the state to {@link io.valkey.springframework.data.valkey.stream.Task.State#RUNNING}.
-		 */
-		void running() {
+        /**
+         * Switch the state to {@link io.valkey.springframework.data.valkey.stream.Task.State#RUNNING}.
+         */
+        void running() {
 
-			state = State.RUNNING;
+            state = State.RUNNING;
 
-			CountDownLatch awaitStart = this.awaitStart;
+            CountDownLatch awaitStart = this.awaitStart;
 
-			if (awaitStart.getCount() == 1) {
-				awaitStart.countDown();
-			}
-		}
+            if (awaitStart.getCount() == 1) {
+                awaitStart.countDown();
+            }
+        }
 
-		/**
-		 * Set the state to {@link io.valkey.springframework.data.valkey.stream.Task.State#CANCELLED} and re-arm the
-		 * {@link #awaitStart(long, TimeUnit) await synchronizer}.
-		 */
-		void cancel() {
+        /**
+         * Set the state to {@link io.valkey.springframework.data.valkey.stream.Task.State#CANCELLED}
+         * and re-arm the {@link #awaitStart(long, TimeUnit) await synchronizer}.
+         */
+        void cancel() {
 
-			awaitStart = new CountDownLatch(1);
-			state = State.CANCELLED;
-		}
+            awaitStart = new CountDownLatch(1);
+            state = State.CANCELLED;
+        }
 
-		/**
-		 * Advance the {@link ReadOffset}.
-		 */
-		void updateReadOffset(String messageId) {
-			currentOffset = readOffsetStrategy.getNext(getCurrentReadOffset(), consumer, messageId);
-		}
+        /** Advance the {@link ReadOffset}. */
+        void updateReadOffset(String messageId) {
+            currentOffset = readOffsetStrategy.getNext(getCurrentReadOffset(), consumer, messageId);
+        }
 
-		ReadOffset getCurrentReadOffset() {
-			return currentOffset;
-		}
-	}
+        ReadOffset getCurrentReadOffset() {
+            return currentOffset;
+        }
+    }
 }

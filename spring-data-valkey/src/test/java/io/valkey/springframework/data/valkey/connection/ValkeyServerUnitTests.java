@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.connection;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.Properties;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -28,20 +27,20 @@ import org.junit.jupiter.api.Test;
  */
 class ValkeyServerUnitTests {
 
-	@Test // DATAREDIS-618
-	void shouldReadNumberOfOtherSentinelsCorrectly() {
+    @Test // DATAREDIS-618
+    void shouldReadNumberOfOtherSentinelsCorrectly() {
 
-		ValkeyServer valkeyServer = ValkeyServer.newServerFrom(createProperties());
+        ValkeyServer valkeyServer = ValkeyServer.newServerFrom(createProperties());
 
-		assertThat(valkeyServer.getNumberOtherSentinels()).isEqualTo(2L);
-	}
+        assertThat(valkeyServer.getNumberOtherSentinels()).isEqualTo(2L);
+    }
 
-	private Properties createProperties() {
+    private Properties createProperties() {
 
-		Properties map = new Properties();
+        Properties map = new Properties();
 
-		map.put("num-other-sentinels", "2");
+        map.put("num-other-sentinels", "2");
 
-		return map;
-	}
+        return map;
+    }
 }

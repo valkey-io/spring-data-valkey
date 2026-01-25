@@ -18,84 +18,81 @@ package io.valkey.springframework.data.valkey.connection;
 import java.util.Collection;
 
 /**
- * Subscription for Valkey channels. Just like the underlying {@link ValkeyConnection}, it should not be used by multiple
- * threads. Note that once a subscription died, it cannot accept any more subscriptions.
+ * Subscription for Valkey channels. Just like the underlying {@link ValkeyConnection}, it should
+ * not be used by multiple threads. Note that once a subscription died, it cannot accept any more
+ * subscriptions.
  *
  * @author Costin Leau
  * @author Christoph Strobl
  */
 public interface Subscription {
 
-	/**
-	 * Adds the given channels to the current subscription.
-	 *
-	 * @param channels channel names. Must not be empty.
-	 */
-	void subscribe(byte[]... channels) throws ValkeyInvalidSubscriptionException;
+    /**
+     * Adds the given channels to the current subscription.
+     *
+     * @param channels channel names. Must not be empty.
+     */
+    void subscribe(byte[]... channels) throws ValkeyInvalidSubscriptionException;
 
-	/**
-	 * Adds the given channel patterns to the current subscription.
-	 *
-	 * @param patterns channel patterns. Must not be empty.
-	 */
-	void pSubscribe(byte[]... patterns) throws ValkeyInvalidSubscriptionException;
+    /**
+     * Adds the given channel patterns to the current subscription.
+     *
+     * @param patterns channel patterns. Must not be empty.
+     */
+    void pSubscribe(byte[]... patterns) throws ValkeyInvalidSubscriptionException;
 
-	/**
-	 * Cancels the current subscription for all channels given by name.
-	 */
-	void unsubscribe();
+    /** Cancels the current subscription for all channels given by name. */
+    void unsubscribe();
 
-	/**
-	 * Cancels the current subscription for all given channels.
-	 *
-	 * @param channels channel names. Must not be empty.
-	 */
-	void unsubscribe(byte[]... channels);
+    /**
+     * Cancels the current subscription for all given channels.
+     *
+     * @param channels channel names. Must not be empty.
+     */
+    void unsubscribe(byte[]... channels);
 
-	/**
-	 * Cancels the subscription for all channels matched by patterns.
-	 */
-	void pUnsubscribe();
+    /** Cancels the subscription for all channels matched by patterns. */
+    void pUnsubscribe();
 
-	/**
-	 * Cancels the subscription for all channels matching the given patterns.
-	 *
-	 * @param patterns must not be empty.
-	 */
-	void pUnsubscribe(byte[]... patterns);
+    /**
+     * Cancels the subscription for all channels matching the given patterns.
+     *
+     * @param patterns must not be empty.
+     */
+    void pUnsubscribe(byte[]... patterns);
 
-	/**
-	 * Returns the (named) channels for this subscription.
-	 *
-	 * @return collection of named channels
-	 */
-	Collection<byte[]> getChannels();
+    /**
+     * Returns the (named) channels for this subscription.
+     *
+     * @return collection of named channels
+     */
+    Collection<byte[]> getChannels();
 
-	/**
-	 * Returns the channel patters for this subscription.
-	 *
-	 * @return collection of channel patterns
-	 */
-	Collection<byte[]> getPatterns();
+    /**
+     * Returns the channel patters for this subscription.
+     *
+     * @return collection of channel patterns
+     */
+    Collection<byte[]> getPatterns();
 
-	/**
-	 * Returns the listener used for this subscription.
-	 *
-	 * @return the listener used for this subscription.
-	 */
-	MessageListener getListener();
+    /**
+     * Returns the listener used for this subscription.
+     *
+     * @return the listener used for this subscription.
+     */
+    MessageListener getListener();
 
-	/**
-	 * Indicates whether this subscription is still 'alive' or not.
-	 *
-	 * @return true if the subscription still applies, false otherwise.
-	 */
-	boolean isAlive();
+    /**
+     * Indicates whether this subscription is still 'alive' or not.
+     *
+     * @return true if the subscription still applies, false otherwise.
+     */
+    boolean isAlive();
 
-	/**
-	 * Shutdown the subscription and free any resources held.
-	 *
-	 * @since 1.8.12
-	 */
-	void close();
+    /**
+     * Shutdown the subscription and free any resources held.
+     *
+     * @since 1.8.12
+     */
+    void close();
 }

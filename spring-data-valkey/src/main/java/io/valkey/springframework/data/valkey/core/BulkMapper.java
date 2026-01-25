@@ -18,14 +18,15 @@ package io.valkey.springframework.data.valkey.core;
 import java.util.List;
 
 /**
- * Mapper translating Valkey bulk value responses (typically returned by a sort query) to actual objects. Implementations
- * of this interface do not have to worry about exception or connection handling.
- * <p>
- * Typically used by {@link ValkeyTemplate} {@code sort} methods.
+ * Mapper translating Valkey bulk value responses (typically returned by a sort query) to actual
+ * objects. Implementations of this interface do not have to worry about exception or connection
+ * handling.
+ *
+ * <p>Typically used by {@link ValkeyTemplate} {@code sort} methods.
  *
  * @author Costin Leau
  */
 public interface BulkMapper<T, V> {
 
-	T mapBulk(List<V> tuple);
+    T mapBulk(List<V> tuple);
 }

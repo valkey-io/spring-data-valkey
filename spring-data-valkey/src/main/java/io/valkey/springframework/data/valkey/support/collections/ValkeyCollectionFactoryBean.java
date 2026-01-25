@@ -15,191 +15,200 @@
  */
 package io.valkey.springframework.data.valkey.support.collections;
 
-import java.util.function.Supplier;
-
-import org.springframework.beans.factory.BeanNameAware;
-import org.springframework.beans.factory.InitializingBean;
-import org.springframework.beans.factory.SmartFactoryBean;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
+import java.util.function.Supplier;
+import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.SmartFactoryBean;
 import org.springframework.data.util.Lazy;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
- * Factory bean that facilitates creation of Valkey-based collections. Supports list, set, zset (or sortedSet), map (or
- * hash) and properties. Uses the key and {@link CollectionType} to determine what collection type to use. The factory
- * verifies the key type if a {@link CollectionType} is specified. Defaults to {@link CollectionType#LIST}.
+ * Factory bean that facilitates creation of Valkey-based collections. Supports list, set, zset (or
+ * sortedSet), map (or hash) and properties. Uses the key and {@link CollectionType} to determine
+ * what collection type to use. The factory verifies the key type if a {@link CollectionType} is
+ * specified. Defaults to {@link CollectionType#LIST}.
  *
  * @author Costin Leau
  * @author Christoph Strobl
  * @author Mark Paluch
  * @see ValkeyStore
  */
-public class ValkeyCollectionFactoryBean implements SmartFactoryBean<ValkeyStore>, BeanNameAware, InitializingBean {
+public class ValkeyCollectionFactoryBean
+        implements SmartFactoryBean<ValkeyStore>, BeanNameAware, InitializingBean {
 
-	/**
-	 * Collection types supported by this factory.
-	 *
-	 * @author Costin Leau
-	 * @author Mark Paluch
-	 * @author Christoph Strobl
-	 */
-	public enum CollectionType {
-		LIST {
+    /**
+     * Collection types supported by this factory.
+     *
+     * @author Costin Leau
+     * @author Mark Paluch
+     * @author Christoph Strobl
+     */
+    public enum CollectionType {
+        LIST {
 
-			@Override
-			public DataType dataType() {
-				return DataType.LIST;
-			}
-		},
-		SET {
+            @Override
+            public DataType dataType() {
+                return DataType.LIST;
+            }
+        },
+        SET {
 
-			@Override
-			public DataType dataType() {
-				return DataType.SET;
-			}
-		},
-		ZSET {
+            @Override
+            public DataType dataType() {
+                return DataType.SET;
+            }
+        },
+        ZSET {
 
-			@Override
-			public DataType dataType() {
-				return DataType.ZSET;
-			}
-		},
-		MAP {
+            @Override
+            public DataType dataType() {
+                return DataType.ZSET;
+            }
+        },
+        MAP {
 
-			@Override
-			public DataType dataType() {
-				return DataType.HASH;
-			}
-		},
-		PROPERTIES {
+            @Override
+            public DataType dataType() {
+                return DataType.HASH;
+            }
+        },
+        PROPERTIES {
 
-			@Override
-			public DataType dataType() {
-				return DataType.HASH;
-			}
-		};
+            @Override
+            public DataType dataType() {
+                return DataType.HASH;
+            }
+        };
 
-		abstract DataType dataType();
+        abstract DataType dataType();
 
-		/**
-		 * Attempt to find a {@link CollectionType} by {@link DataType}. Defaults to {@link Supplier ifNotFound} when
-		 * {@code dataType} is {@literal null} or the collection type cannot be determined.
-		 *
-		 * @param dataType the {@link DataType} to look up.
-		 * @param ifNotFound supplier for a default value.
-		 * @since 3.2
-		 */
-		static CollectionType findCollectionType(@Nullable DataType dataType, Supplier<CollectionType> ifNotFound) {
+        /**
+         * Attempt to find a {@link CollectionType} by {@link DataType}. Defaults to {@link Supplier
+         * ifNotFound} when {@code dataType} is {@literal null} or the collection type cannot be
+         * determined.
+         *
+         * @param dataType the {@link DataType} to look up.
+         * @param ifNotFound supplier for a default value.
+         * @since 3.2
+         */
+        static CollectionType findCollectionType(
+                @Nullable DataType dataType, Supplier<CollectionType> ifNotFound) {
 
-			if (dataType == null) {
-				return ifNotFound.get();
-			}
+            if (dataType == null) {
+                return ifNotFound.get();
+            }
 
-			for (CollectionType collectionType : values()) {
-				if (collectionType.dataType() == dataType) {
-					return collectionType;
-				}
-			}
+            for (CollectionType collectionType : values()) {
+                if (collectionType.dataType() == dataType) {
+                    return collectionType;
+                }
+            }
 
-			return ifNotFound.get();
-		}
-	}
+            return ifNotFound.get();
+        }
+    }
 
-	private @Nullable CollectionType type;
-	private @Nullable ValkeyTemplate<String, ?> template;
-	private @Nullable String key;
-	private @Nullable String beanName;
+    private @Nullable CollectionType type;
+    private @Nullable ValkeyTemplate<String, ?> template;
+    private @Nullable String key;
+    private @Nullable String beanName;
 
-	private @Nullable Lazy<ValkeyStore> store;
+    private @Nullable Lazy<ValkeyStore> store;
 
-	@Override
-	public void afterPropertiesSet() {
+    @Override
+    public void afterPropertiesSet() {
 
-		if (!StringUtils.hasText(key)) {
-			key = beanName;
-		}
+        if (!StringUtils.hasText(key)) {
+            key = beanName;
+        }
 
-		Assert.hasText(key, "Collection key is required - no key or bean name specified");
-		Assert.notNull(template, "Valkey template is required");
+        Assert.hasText(key, "Collection key is required - no key or bean name specified");
+        Assert.notNull(template, "Valkey template is required");
 
-		store = Lazy.of(() -> {
+        store =
+                Lazy.of(
+                        () -> {
+                            DataType keyType = template.type(key);
 
-			DataType keyType = template.type(key);
+                            // can't create store
+                            Assert.isTrue(
+                                    !DataType.STREAM.equals(keyType), "Cannot create store on keys of type 'STREAM'");
 
-			// can't create store
-			Assert.isTrue(!DataType.STREAM.equals(keyType), "Cannot create store on keys of type 'STREAM'");
+                            if (this.type == null) {
+                                this.type = CollectionType.findCollectionType(keyType, () -> CollectionType.LIST);
+                            }
 
-			if (this.type == null) {
-				this.type = CollectionType.findCollectionType(keyType, () -> CollectionType.LIST);
-			}
+                            if (keyType != null && DataType.NONE != keyType && this.type.dataType() != keyType) {
+                                throw new IllegalArgumentException(
+                                        "Cannot create collection type '%s' for a key containing '%s'"
+                                                .formatted(this.type, keyType));
+                            }
 
-			if (keyType != null && DataType.NONE != keyType && this.type.dataType() != keyType) {
-				throw new IllegalArgumentException(
-						"Cannot create collection type '%s' for a key containing '%s'".formatted(this.type, keyType));
-			}
+                            return createStore(this.type, key, template);
+                        });
+    }
 
-			return createStore(this.type, key, template);
-		});
-	}
+    private ValkeyStore createStore(
+            CollectionType collectionType, String key, ValkeyOperations<String, ?> operations) {
 
-	private ValkeyStore createStore(CollectionType collectionType, String key, ValkeyOperations<String, ?> operations) {
+        return switch (collectionType) {
+            case LIST -> ValkeyList.create(key, operations);
+            case SET -> new DefaultValkeySet<>(key, operations);
+            case ZSET -> ValkeyZSet.create(key, operations);
+            case PROPERTIES -> new ValkeyProperties(key, operations);
+            case MAP -> new DefaultValkeyMap<>(key, operations);
+        };
+    }
 
-		return switch (collectionType) {
-			case LIST -> ValkeyList.create(key, operations);
-			case SET -> new DefaultValkeySet<>(key, operations);
-			case ZSET -> ValkeyZSet.create(key, operations);
-			case PROPERTIES -> new ValkeyProperties(key, operations);
-			case MAP -> new DefaultValkeyMap<>(key, operations);
-		};
-	}
+    @Override
+    public ValkeyStore getObject() {
 
-	@Override
-	public ValkeyStore getObject() {
+        Assert.state(
+                store != null,
+                "ValkeyCollectionFactoryBean is not initialized. Ensure to initialize this factory by"
+                        + " calling afterPropertiesSet() before obtaining the factory object.");
+        return store.get();
+    }
 
-		Assert.state(store != null,
-				"ValkeyCollectionFactoryBean is not initialized. Ensure to initialize this factory by calling afterPropertiesSet() before obtaining the factory object.");
-		return store.get();
-	}
+    @Override
+    public Class<?> getObjectType() {
+        return (store != null ? store.get().getClass() : ValkeyStore.class);
+    }
 
-	@Override
-	public Class<?> getObjectType() {
-		return (store != null ? store.get().getClass() : ValkeyStore.class);
-	}
+    @Override
+    public void setBeanName(String name) {
+        this.beanName = name;
+    }
 
-	@Override
-	public void setBeanName(String name) {
-		this.beanName = name;
-	}
+    /**
+     * Sets the store type. Used if the key does not exist.
+     *
+     * @param type The type to set.
+     */
+    public void setType(CollectionType type) {
+        this.type = type;
+    }
 
-	/**
-	 * Sets the store type. Used if the key does not exist.
-	 *
-	 * @param type The type to set.
-	 */
-	public void setType(CollectionType type) {
-		this.type = type;
-	}
+    /**
+     * Sets the template used by the resulting store.
+     *
+     * @param template The template to set.
+     */
+    public void setTemplate(ValkeyTemplate<String, ?> template) {
+        this.template = template;
+    }
 
-	/**
-	 * Sets the template used by the resulting store.
-	 *
-	 * @param template The template to set.
-	 */
-	public void setTemplate(ValkeyTemplate<String, ?> template) {
-		this.template = template;
-	}
-
-	/**
-	 * Sets the key of the store.
-	 *
-	 * @param key The key to set.
-	 */
-	public void setKey(String key) {
-		this.key = key;
-	}
+    /**
+     * Sets the key of the store.
+     *
+     * @param key The key to set.
+     */
+    public void setKey(String key) {
+        this.key = key;
+    }
 }

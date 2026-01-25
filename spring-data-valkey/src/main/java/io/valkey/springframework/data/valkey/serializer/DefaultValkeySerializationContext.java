@@ -29,127 +29,132 @@ import org.springframework.util.Assert;
  */
 class DefaultValkeySerializationContext<K, V> implements ValkeySerializationContext<K, V> {
 
-	private final SerializationPair<K> keyTuple;
-	private final SerializationPair<V> valueTuple;
-	private final SerializationPair<?> hashKeyTuple;
-	private final SerializationPair<?> hashValueTuple;
-	private final SerializationPair<String> stringTuple;
+    private final SerializationPair<K> keyTuple;
+    private final SerializationPair<V> valueTuple;
+    private final SerializationPair<?> hashKeyTuple;
+    private final SerializationPair<?> hashValueTuple;
+    private final SerializationPair<String> stringTuple;
 
-	private DefaultValkeySerializationContext(SerializationPair<K> keyTuple, SerializationPair<V> valueTuple,
-			SerializationPair<?> hashKeyTuple, SerializationPair<?> hashValueTuple,
-			SerializationPair<String> stringTuple) {
+    private DefaultValkeySerializationContext(
+            SerializationPair<K> keyTuple,
+            SerializationPair<V> valueTuple,
+            SerializationPair<?> hashKeyTuple,
+            SerializationPair<?> hashValueTuple,
+            SerializationPair<String> stringTuple) {
 
-		this.keyTuple = keyTuple;
-		this.valueTuple = valueTuple;
-		this.hashKeyTuple = hashKeyTuple;
-		this.hashValueTuple = hashValueTuple;
-		this.stringTuple = stringTuple;
-	}
+        this.keyTuple = keyTuple;
+        this.valueTuple = valueTuple;
+        this.hashKeyTuple = hashKeyTuple;
+        this.hashValueTuple = hashValueTuple;
+        this.stringTuple = stringTuple;
+    }
 
-	@Override
-	public SerializationPair<K> getKeySerializationPair() {
-		return this.keyTuple;
-	}
+    @Override
+    public SerializationPair<K> getKeySerializationPair() {
+        return this.keyTuple;
+    }
 
-	@Override
-	public SerializationPair<V> getValueSerializationPair() {
-		return this.valueTuple;
-	}
+    @Override
+    public SerializationPair<V> getValueSerializationPair() {
+        return this.valueTuple;
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public <HK> SerializationPair<HK> getHashKeySerializationPair() {
-		return (SerializationPair<HK>) this.hashKeyTuple;
-	}
+    @Override
+    @SuppressWarnings("unchecked")
+    public <HK> SerializationPair<HK> getHashKeySerializationPair() {
+        return (SerializationPair<HK>) this.hashKeyTuple;
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public <HV> SerializationPair<HV> getHashValueSerializationPair() {
-		return (SerializationPair<HV>) this.hashValueTuple;
-	}
+    @Override
+    @SuppressWarnings("unchecked")
+    public <HV> SerializationPair<HV> getHashValueSerializationPair() {
+        return (SerializationPair<HV>) this.hashValueTuple;
+    }
 
-	@Override
-	public SerializationPair<String> getStringSerializationPair() {
-		return this.stringTuple;
-	}
+    @Override
+    public SerializationPair<String> getStringSerializationPair() {
+        return this.stringTuple;
+    }
 
-	/**
-	 * Default implementation of {@link ValkeySerializationContextBuilder}.
-	 *
-	 * @author Mark Paluch
-	 * @author Christoph Strobl
-	 * @author Zhou KQ
-	 * @since 2.0
-	 */
-	static class DefaultValkeySerializationContextBuilder<K, V> implements ValkeySerializationContextBuilder<K, V> {
+    /**
+     * Default implementation of {@link ValkeySerializationContextBuilder}.
+     *
+     * @author Mark Paluch
+     * @author Christoph Strobl
+     * @author Zhou KQ
+     * @since 2.0
+     */
+    static class DefaultValkeySerializationContextBuilder<K, V>
+            implements ValkeySerializationContextBuilder<K, V> {
 
-		private @Nullable SerializationPair<K> keyTuple;
-		private @Nullable SerializationPair<V> valueTuple;
-		private @Nullable SerializationPair<?> hashKeyTuple;
-		private @Nullable SerializationPair<?> hashValueTuple;
+        private @Nullable SerializationPair<K> keyTuple;
+        private @Nullable SerializationPair<V> valueTuple;
+        private @Nullable SerializationPair<?> hashKeyTuple;
+        private @Nullable SerializationPair<?> hashValueTuple;
 
-		private SerializationPair<String> stringTuple = SerializationPair.fromSerializer(ValkeySerializer.string());
+        private SerializationPair<String> stringTuple =
+                SerializationPair.fromSerializer(ValkeySerializer.string());
 
-		@Override
-		public ValkeySerializationContextBuilder<K, V> key(SerializationPair<K> tuple) {
+        @Override
+        public ValkeySerializationContextBuilder<K, V> key(SerializationPair<K> tuple) {
 
-			Assert.notNull(tuple, "SerializationPair must not be null");
+            Assert.notNull(tuple, "SerializationPair must not be null");
 
-			this.keyTuple = tuple;
+            this.keyTuple = tuple;
 
-			return this;
-		}
+            return this;
+        }
 
-		@Override
-		public ValkeySerializationContextBuilder<K, V> value(SerializationPair<V> tuple) {
+        @Override
+        public ValkeySerializationContextBuilder<K, V> value(SerializationPair<V> tuple) {
 
-			Assert.notNull(tuple, "SerializationPair must not be null");
+            Assert.notNull(tuple, "SerializationPair must not be null");
 
-			this.valueTuple = tuple;
+            this.valueTuple = tuple;
 
-			return this;
-		}
+            return this;
+        }
 
-		@Override
-		public ValkeySerializationContextBuilder<K, V> hashKey(SerializationPair<?> tuple) {
+        @Override
+        public ValkeySerializationContextBuilder<K, V> hashKey(SerializationPair<?> tuple) {
 
-			Assert.notNull(tuple, "SerializationPair must not be null");
+            Assert.notNull(tuple, "SerializationPair must not be null");
 
-			this.hashKeyTuple = tuple;
+            this.hashKeyTuple = tuple;
 
-			return this;
-		}
+            return this;
+        }
 
-		@Override
-		public ValkeySerializationContextBuilder<K, V> hashValue(SerializationPair<?> tuple) {
+        @Override
+        public ValkeySerializationContextBuilder<K, V> hashValue(SerializationPair<?> tuple) {
 
-			Assert.notNull(tuple, "SerializationPair must not be null");
+            Assert.notNull(tuple, "SerializationPair must not be null");
 
-			this.hashValueTuple = tuple;
+            this.hashValueTuple = tuple;
 
-			return this;
-		}
+            return this;
+        }
 
-		@Override
-		public ValkeySerializationContextBuilder<K, V> string(SerializationPair<String> tuple) {
+        @Override
+        public ValkeySerializationContextBuilder<K, V> string(SerializationPair<String> tuple) {
 
-			Assert.notNull(tuple, "SerializationPair must not be null");
+            Assert.notNull(tuple, "SerializationPair must not be null");
 
-			this.stringTuple = tuple;
+            this.stringTuple = tuple;
 
-			return this;
-		}
+            return this;
+        }
 
-		@Override
-		public ValkeySerializationContext<K, V> build() {
+        @Override
+        public ValkeySerializationContext<K, V> build() {
 
-			Assert.notNull(this.keyTuple, "Key SerializationPair must not be null");
-			Assert.notNull(this.valueTuple, "Value SerializationPair must not be null");
-			Assert.notNull(this.hashKeyTuple, "HashKey SerializationPair must not be null");
-			Assert.notNull(this.hashValueTuple, "HashValue SerializationPair must not be null");
+            Assert.notNull(this.keyTuple, "Key SerializationPair must not be null");
+            Assert.notNull(this.valueTuple, "Value SerializationPair must not be null");
+            Assert.notNull(this.hashKeyTuple, "HashKey SerializationPair must not be null");
+            Assert.notNull(this.hashValueTuple, "HashValue SerializationPair must not be null");
 
-			return new DefaultValkeySerializationContext<>(this.keyTuple, this.valueTuple,
-					this.hashKeyTuple, this.hashValueTuple, this.stringTuple);
-		}
-	}
+            return new DefaultValkeySerializationContext<>(
+                    this.keyTuple, this.valueTuple, this.hashKeyTuple, this.hashValueTuple, this.stringTuple);
+        }
+    }
 }

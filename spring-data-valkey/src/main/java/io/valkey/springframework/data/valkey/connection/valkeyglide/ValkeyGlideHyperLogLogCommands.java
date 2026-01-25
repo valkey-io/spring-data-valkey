@@ -45,15 +45,13 @@ public class ValkeyGlideHyperLogLogCommands implements ValkeyHyperLogLogCommands
         Assert.notNull(key, "Key must not be null");
         Assert.notEmpty(values, "PFADD requires at least one non 'null' value");
         Assert.noNullElements(values, "Values for PFADD must not contain 'null'");
-        
+
         try {
             Object[] args = new Object[1 + values.length];
             args[0] = key;
             System.arraycopy(values, 0, args, 1, values.length);
-            
-            return connection.execute("PFADD",
-                (Boolean glideResult) -> glideResult ? 1L : 0L,
-                args);
+
+            return connection.execute("PFADD", (Boolean glideResult) -> glideResult ? 1L : 0L, args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -64,14 +62,12 @@ public class ValkeyGlideHyperLogLogCommands implements ValkeyHyperLogLogCommands
     public Long pfCount(byte[]... keys) {
         Assert.notEmpty(keys, "PFCOUNT requires at least one non 'null' key");
         Assert.noNullElements(keys, "Keys for PFCOUNT must not contain 'null'");
-        
+
         try {
             Object[] args = new Object[keys.length];
             System.arraycopy(keys, 0, args, 0, keys.length);
-            
-            return connection.execute("PFCOUNT",
-                (Long glideResult) -> glideResult,
-                args);
+
+            return connection.execute("PFCOUNT", (Long glideResult) -> glideResult, args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -82,15 +78,17 @@ public class ValkeyGlideHyperLogLogCommands implements ValkeyHyperLogLogCommands
         Assert.notNull(destinationKey, "Destination key must not be null");
         Assert.notNull(sourceKeys, "Source keys must not be null");
         Assert.noNullElements(sourceKeys, "Keys for PFMERGE must not contain 'null'");
-        
+
         try {
             Object[] args = new Object[1 + sourceKeys.length];
             args[0] = destinationKey;
             System.arraycopy(sourceKeys, 0, args, 1, sourceKeys.length);
-            
-            connection.execute("PFMERGE",
-                (String glideResult) -> glideResult, // Return the "OK" response for pipeline/transaction correlation
-                args);
+
+            connection.execute(
+                    "PFMERGE",
+                    (String glideResult) ->
+                            glideResult, // Return the "OK" response for pipeline/transaction correlation
+                    args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }

@@ -19,9 +19,10 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 
 /**
- * {@link java.lang.String String-focused} extension of {@link ReactiveValkeyTemplate}. As most operations against Valkey
- * are {@link String} based, this class provides a dedicated arrangement that minimizes configuration of its more
- * generic {@link ReactiveValkeyTemplate template} especially in terms of the used {@link ValkeySerializationContext}.
+ * {@link java.lang.String String-focused} extension of {@link ReactiveValkeyTemplate}. As most
+ * operations against Valkey are {@link String} based, this class provides a dedicated arrangement
+ * that minimizes configuration of its more generic {@link ReactiveValkeyTemplate template}
+ * especially in terms of the used {@link ValkeySerializationContext}.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -29,39 +30,42 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializationConte
  */
 public class ReactiveStringValkeyTemplate extends ReactiveValkeyTemplate<String, String> {
 
-	/**
-	 * Creates new {@link ReactiveValkeyTemplate} using given {@link ReactiveValkeyConnectionFactory} applying default
-	 * {@link String} serialization.
-	 *
-	 * @param connectionFactory must not be {@literal null}.
-	 * @see ValkeySerializationContext#string()
-	 */
-	public ReactiveStringValkeyTemplate(ReactiveValkeyConnectionFactory connectionFactory) {
-		this(connectionFactory, ValkeySerializationContext.string());
-	}
+    /**
+     * Creates new {@link ReactiveValkeyTemplate} using given {@link ReactiveValkeyConnectionFactory}
+     * applying default {@link String} serialization.
+     *
+     * @param connectionFactory must not be {@literal null}.
+     * @see ValkeySerializationContext#string()
+     */
+    public ReactiveStringValkeyTemplate(ReactiveValkeyConnectionFactory connectionFactory) {
+        this(connectionFactory, ValkeySerializationContext.string());
+    }
 
-	/**
-	 * Creates new {@link ReactiveValkeyTemplate} using given {@link ReactiveValkeyConnectionFactory} and
-	 * {@link ValkeySerializationContext}.
-	 *
-	 * @param connectionFactory must not be {@literal null}.
-	 * @param serializationContext must not be {@literal null}.
-	 */
-	public ReactiveStringValkeyTemplate(ReactiveValkeyConnectionFactory connectionFactory,
-			ValkeySerializationContext<String, String> serializationContext) {
-		super(connectionFactory, serializationContext);
-	}
+    /**
+     * Creates new {@link ReactiveValkeyTemplate} using given {@link ReactiveValkeyConnectionFactory}
+     * and {@link ValkeySerializationContext}.
+     *
+     * @param connectionFactory must not be {@literal null}.
+     * @param serializationContext must not be {@literal null}.
+     */
+    public ReactiveStringValkeyTemplate(
+            ReactiveValkeyConnectionFactory connectionFactory,
+            ValkeySerializationContext<String, String> serializationContext) {
+        super(connectionFactory, serializationContext);
+    }
 
-	/**
-	 * Creates new {@link ReactiveValkeyTemplate} using given {@link ReactiveValkeyConnectionFactory} and
-	 * {@link ValkeySerializationContext}.
-	 *
-	 * @param connectionFactory must not be {@literal null}.
-	 * @param serializationContext must not be {@literal null}.
-	 * @param exposeConnection flag indicating to expose the connection used.
-	 */
-	public ReactiveStringValkeyTemplate(ReactiveValkeyConnectionFactory connectionFactory,
-			ValkeySerializationContext<String, String> serializationContext, boolean exposeConnection) {
-		super(connectionFactory, serializationContext, exposeConnection);
-	}
+    /**
+     * Creates new {@link ReactiveValkeyTemplate} using given {@link ReactiveValkeyConnectionFactory}
+     * and {@link ValkeySerializationContext}.
+     *
+     * @param connectionFactory must not be {@literal null}.
+     * @param serializationContext must not be {@literal null}.
+     * @param exposeConnection flag indicating to expose the connection used.
+     */
+    public ReactiveStringValkeyTemplate(
+            ReactiveValkeyConnectionFactory connectionFactory,
+            ValkeySerializationContext<String, String> serializationContext,
+            boolean exposeConnection) {
+        super(connectionFactory, serializationContext, exposeConnection);
+    }
 }

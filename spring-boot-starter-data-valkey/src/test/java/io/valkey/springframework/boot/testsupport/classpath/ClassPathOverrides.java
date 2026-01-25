@@ -21,7 +21,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
@@ -30,17 +29,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
  * @author Andy Wilkinson
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD })
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Documented
 @ExtendWith(ModifiedClassPathExtension.class)
 public @interface ClassPathOverrides {
 
-	/**
-	 * One or more sets of Maven coordinates ({@code groupId:artifactId:version}) to be
-	 * added to the classpath. The additions will take precedence over any existing
-	 * classes on the classpath.
-	 * @return the coordinates
-	 */
-	String[] value();
-
+    /**
+     * One or more sets of Maven coordinates ({@code groupId:artifactId:version}) to be added to the
+     * classpath. The additions will take precedence over any existing classes on the classpath.
+     *
+     * @return the coordinates
+     */
+    String[] value();
 }

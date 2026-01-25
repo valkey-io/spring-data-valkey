@@ -15,12 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.test.extension;
 
-import redis.clients.jedis.util.IOUtils;
-
 import java.io.Closeable;
 import java.util.LinkedList;
-
 import org.springframework.core.OrderComparator;
+import redis.clients.jedis.util.IOUtils;
 
 /**
  * Shutdown queue allowing ordered resource shutdown (LIFO).
@@ -28,38 +26,35 @@ import org.springframework.core.OrderComparator;
  * @author Mark Paluch
  */
 public enum ShutdownQueue {
+    INSTANCE;
 
-	INSTANCE;
+    static {
+        Runtime.getRuntime().addShutdownHook(new Thread(ShutdownQueue::close));
+    }
 
-	static {
+    private static void close() {
 
-		Runtime.getRuntime().addShutdownHook(new Thread(ShutdownQueue::close));
-	}
+        Closeable closeable;
 
-	private static void close() {
+        OrderComparator.sort(INSTANCE.closeables);
 
-		Closeable closeable;
+        while ((closeable = INSTANCE.closeables.pollLast()) != null) {
+            try {
+                closeable.close();
+            } catch (Exception o_O) {
+                // ignore
+                o_O.printStackTrace();
+            }
+        }
+    }
 
-		OrderComparator.sort(INSTANCE.closeables);
+    private final LinkedList<Closeable> closeables = new LinkedList<>();
 
-		while ((closeable = INSTANCE.closeables.pollLast()) != null) {
-			try {
-				closeable.close();
-			} catch (Exception o_O) {
-				// ignore
-				o_O.printStackTrace();
-			}
-		}
-	}
+    public static void register(Closeable closeable) {
+        INSTANCE.closeables.add(closeable);
+    }
 
-	private final LinkedList<Closeable> closeables = new LinkedList<>();
-
-	public static void register(Closeable closeable) {
-		INSTANCE.closeables.add(closeable);
-	}
-
-	public static void register(AutoCloseable closeable) {
-		INSTANCE.closeables.add(() -> IOUtils.closeQuietly(closeable));
-	}
-
+    public static void register(AutoCloseable closeable) {
+        INSTANCE.closeables.add(() -> IOUtils.closeQuietly(closeable));
+    }
 }

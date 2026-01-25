@@ -22,5 +22,5 @@ package io.valkey.springframework.data.valkey;
  */
 public interface ObjectFactory<T> {
 
-	T instance();
+    T instance();
 }

@@ -17,15 +17,13 @@ package io.valkey.springframework.data.valkey.core;
 
 import static org.mockito.ArgumentMatchers.*;
 
-import java.util.Collections;
-import java.util.Set;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.ZAddArgs;
 import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
+import java.util.Collections;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Range;
 
 /**
  * Unit tests for {@link DefaultZSetOperations}.
@@ -34,39 +32,46 @@ import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
  */
 class DefaultZSetOperationsUnitTests {
 
-	DefaultZSetOperations zSetOperations;
-	ConnectionMockingValkeyTemplate template;
+    DefaultZSetOperations zSetOperations;
+    ConnectionMockingValkeyTemplate template;
 
-	@BeforeEach
-	void beforeEach() {
+    @BeforeEach
+    void beforeEach() {
 
-		template = ConnectionMockingValkeyTemplate.template();
-		zSetOperations = new DefaultZSetOperations<>(template);
-	}
+        template = ConnectionMockingValkeyTemplate.template();
+        zSetOperations = new DefaultZSetOperations<>(template);
+    }
 
-	@Test // GH-1816
-	void delegatesRemoveRangeByLex() {
+    @Test // GH-1816
+    void delegatesRemoveRangeByLex() {
 
-		Range<String> range = Range.closed("alpha", "omega");
-		zSetOperations.removeRangeByLex("key", range);
+        Range<String> range = Range.closed("alpha", "omega");
+        zSetOperations.removeRangeByLex("key", range);
 
-		template.verify().zRemRangeByLex(eq(template.serializeKey("key")), any(Range.class));
-	}
+        template.verify().zRemRangeByLex(eq(template.serializeKey("key")), any(Range.class));
+    }
 
-	@Test // GH-1794
-	void delegatesAddIfAbsent() {
+    @Test // GH-1794
+    void delegatesAddIfAbsent() {
 
-		zSetOperations.addIfAbsent("key", "value", 1D);
+        zSetOperations.addIfAbsent("key", "value", 1D);
 
-		template.verify().zAdd(eq(template.serializeKey("key")), eq(1D), eq(template.serializeKey("value")),
-				eq(ZAddArgs.ifNotExists()));
-	}
+        template
+                .verify()
+                .zAdd(
+                        eq(template.serializeKey("key")),
+                        eq(1D),
+                        eq(template.serializeKey("value")),
+                        eq(ZAddArgs.ifNotExists()));
+    }
 
-	@Test // GH-1794
-	void delegatesAddIfAbsentForTuples() {
+    @Test // GH-1794
+    void delegatesAddIfAbsentForTuples() {
 
-		zSetOperations.addIfAbsent("key", Collections.singleton(TypedTuple.of("value", 1D)));
+        zSetOperations.addIfAbsent("key", Collections.singleton(TypedTuple.of("value", 1D)));
 
-		template.verify().zAdd(eq(template.serializeKey("key")), any(Set.class), eq(ZAddArgs.ifNotExists()));
-	}
+        template
+                .verify()
+                .zAdd(eq(template.serializeKey("key")), any(Set.class), eq(ZAddArgs.ifNotExists()));
+    }
 }

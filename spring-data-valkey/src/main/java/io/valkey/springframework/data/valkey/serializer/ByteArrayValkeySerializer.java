@@ -24,18 +24,17 @@ import org.springframework.lang.Nullable;
  * @since 2.2
  */
 enum ByteArrayValkeySerializer implements ValkeySerializer<byte[]> {
+    INSTANCE;
 
-	INSTANCE;
+    @Nullable
+    @Override
+    public byte[] serialize(@Nullable byte[] value) throws SerializationException {
+        return value;
+    }
 
-	@Nullable
-	@Override
-	public byte[] serialize(@Nullable byte[] value) throws SerializationException {
-		return value;
-	}
-
-	@Nullable
-	@Override
-	public byte[] deserialize(@Nullable byte[] bytes) throws SerializationException {
-		return bytes;
-	}
+    @Nullable
+    @Override
+    public byte[] deserialize(@Nullable byte[] bytes) throws SerializationException {
+        return bytes;
+    }
 }

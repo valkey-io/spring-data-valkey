@@ -17,12 +17,10 @@ package io.valkey.springframework.data.valkey.stream;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Optional;
-
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
 import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ReadOffsetStrategy}.
@@ -31,68 +29,79 @@ import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
  */
 class ReadOffsetStrategyUnitTests {
 
-	private static Optional<Consumer> consumer = Optional.of(Consumer.from("foo", "bar"));
+    private static Optional<Consumer> consumer = Optional.of(Consumer.from("foo", "bar"));
 
-	@Test // DATAREDIS-864
-	void nextMessageStandaloneShouldReturnLastSeenMessageId() {
+    @Test // DATAREDIS-864
+    void nextMessageStandaloneShouldReturnLastSeenMessageId() {
 
-		ReadOffset offset = ReadOffset.from("foo");
+        ReadOffset offset = ReadOffset.from("foo");
 
-		assertThat(ReadOffsetStrategy.NextMessage.getFirst(offset, Optional.empty())).isEqualTo(offset);
-		assertThat(ReadOffsetStrategy.NextMessage.getNext(offset, Optional.empty(), "42")).isEqualTo(ReadOffset.from("42"));
-	}
+        assertThat(ReadOffsetStrategy.NextMessage.getFirst(offset, Optional.empty())).isEqualTo(offset);
+        assertThat(ReadOffsetStrategy.NextMessage.getNext(offset, Optional.empty(), "42"))
+                .isEqualTo(ReadOffset.from("42"));
+    }
 
-	@Test // DATAREDIS-864
-	void lastConsumedStandaloneShouldReturnLastSeenMessageId() {
+    @Test // DATAREDIS-864
+    void lastConsumedStandaloneShouldReturnLastSeenMessageId() {
 
-		ReadOffset offset = ReadOffset.lastConsumed();
+        ReadOffset offset = ReadOffset.lastConsumed();
 
-		assertThat(ReadOffsetStrategy.LastConsumed.getFirst(offset, Optional.empty())).isEqualTo(ReadOffset.latest());
-		assertThat(ReadOffsetStrategy.LastConsumed.getNext(offset, Optional.empty(), "42"))
-				.isEqualTo(ReadOffset.from("42"));
-	}
+        assertThat(ReadOffsetStrategy.LastConsumed.getFirst(offset, Optional.empty()))
+                .isEqualTo(ReadOffset.latest());
+        assertThat(ReadOffsetStrategy.LastConsumed.getNext(offset, Optional.empty(), "42"))
+                .isEqualTo(ReadOffset.from("42"));
+    }
 
-	@Test // DATAREDIS-864
-	void latestStandaloneShouldReturnLatest() {
+    @Test // DATAREDIS-864
+    void latestStandaloneShouldReturnLatest() {
 
-		ReadOffset offset = ReadOffset.latest();
+        ReadOffset offset = ReadOffset.latest();
 
-		assertThat(ReadOffsetStrategy.Latest.getFirst(offset, Optional.empty())).isEqualTo(ReadOffset.latest());
-		assertThat(ReadOffsetStrategy.Latest.getNext(offset, Optional.empty(), "42")).isEqualTo(ReadOffset.latest());
-	}
+        assertThat(ReadOffsetStrategy.Latest.getFirst(offset, Optional.empty()))
+                .isEqualTo(ReadOffset.latest());
+        assertThat(ReadOffsetStrategy.Latest.getNext(offset, Optional.empty(), "42"))
+                .isEqualTo(ReadOffset.latest());
+    }
 
-	@Test // DATAREDIS-864
-	void nextMessageConsumerGroupShouldReturnLastSeenMessageId() {
+    @Test // DATAREDIS-864
+    void nextMessageConsumerGroupShouldReturnLastSeenMessageId() {
 
-		ReadOffset offset = ReadOffset.from("foo");
+        ReadOffset offset = ReadOffset.from("foo");
 
-		assertThat(ReadOffsetStrategy.NextMessage.getFirst(offset, consumer)).isEqualTo(offset);
-		assertThat(ReadOffsetStrategy.NextMessage.getNext(offset, consumer, "42")).isEqualTo(ReadOffset.from("42"));
-	}
+        assertThat(ReadOffsetStrategy.NextMessage.getFirst(offset, consumer)).isEqualTo(offset);
+        assertThat(ReadOffsetStrategy.NextMessage.getNext(offset, consumer, "42"))
+                .isEqualTo(ReadOffset.from("42"));
+    }
 
-	@Test // DATAREDIS-864
-	void lastConsumedConsumerGroupShouldReturnLastSeenMessageId() {
+    @Test // DATAREDIS-864
+    void lastConsumedConsumerGroupShouldReturnLastSeenMessageId() {
 
-		ReadOffset offset = ReadOffset.lastConsumed();
+        ReadOffset offset = ReadOffset.lastConsumed();
 
-		assertThat(ReadOffsetStrategy.LastConsumed.getFirst(offset, consumer)).isEqualTo(ReadOffset.lastConsumed());
-		assertThat(ReadOffsetStrategy.LastConsumed.getNext(offset, consumer, "42")).isEqualTo(ReadOffset.lastConsumed());
-	}
+        assertThat(ReadOffsetStrategy.LastConsumed.getFirst(offset, consumer))
+                .isEqualTo(ReadOffset.lastConsumed());
+        assertThat(ReadOffsetStrategy.LastConsumed.getNext(offset, consumer, "42"))
+                .isEqualTo(ReadOffset.lastConsumed());
+    }
 
-	@Test // DATAREDIS-864
-	void latestConsumerGroupShouldReturnLatest() {
+    @Test // DATAREDIS-864
+    void latestConsumerGroupShouldReturnLatest() {
 
-		ReadOffset offset = ReadOffset.latest();
+        ReadOffset offset = ReadOffset.latest();
 
-		assertThat(ReadOffsetStrategy.Latest.getFirst(offset, consumer)).isEqualTo(ReadOffset.latest());
-		assertThat(ReadOffsetStrategy.Latest.getNext(offset, consumer, "42")).isEqualTo(ReadOffset.latest());
-	}
+        assertThat(ReadOffsetStrategy.Latest.getFirst(offset, consumer)).isEqualTo(ReadOffset.latest());
+        assertThat(ReadOffsetStrategy.Latest.getNext(offset, consumer, "42"))
+                .isEqualTo(ReadOffset.latest());
+    }
 
-	@Test // DATAREDIS-864
-	void getStrategyShouldReturnAppropriateStrategy() {
+    @Test // DATAREDIS-864
+    void getStrategyShouldReturnAppropriateStrategy() {
 
-		assertThat(ReadOffsetStrategy.getStrategy(ReadOffset.from("foo"))).isEqualTo(ReadOffsetStrategy.NextMessage);
-		assertThat(ReadOffsetStrategy.getStrategy(ReadOffset.lastConsumed())).isEqualTo(ReadOffsetStrategy.LastConsumed);
-		assertThat(ReadOffsetStrategy.getStrategy(ReadOffset.latest())).isEqualTo(ReadOffsetStrategy.Latest);
-	}
+        assertThat(ReadOffsetStrategy.getStrategy(ReadOffset.from("foo")))
+                .isEqualTo(ReadOffsetStrategy.NextMessage);
+        assertThat(ReadOffsetStrategy.getStrategy(ReadOffset.lastConsumed()))
+                .isEqualTo(ReadOffsetStrategy.LastConsumed);
+        assertThat(ReadOffsetStrategy.getStrategy(ReadOffset.latest()))
+                .isEqualTo(ReadOffsetStrategy.Latest);
+    }
 }

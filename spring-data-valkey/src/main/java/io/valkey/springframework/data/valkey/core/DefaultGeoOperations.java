@@ -15,22 +15,21 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.data.geo.Circle;
-import org.springframework.data.geo.Distance;
-import org.springframework.data.geo.GeoResults;
-import org.springframework.data.geo.Metric;
-import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoRadiusCommandArgs;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference.GeoMemberReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.springframework.data.geo.Circle;
+import org.springframework.data.geo.Distance;
+import org.springframework.data.geo.GeoResults;
+import org.springframework.data.geo.Metric;
+import org.springframework.data.geo.Point;
 
 /**
  * Default implementation of {@link GeoOperations}.
@@ -42,183 +41,193 @@ import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
  */
 class DefaultGeoOperations<K, M> extends AbstractOperations<K, M> implements GeoOperations<K, M> {
 
-	/**
-	 * Creates new {@link DefaultGeoOperations}.
-	 *
-	 * @param template must not be {@literal null}.
-	 */
-	DefaultGeoOperations(ValkeyTemplate<K, M> template) {
-		super(template);
-	}
+    /**
+     * Creates new {@link DefaultGeoOperations}.
+     *
+     * @param template must not be {@literal null}.
+     */
+    DefaultGeoOperations(ValkeyTemplate<K, M> template) {
+        super(template);
+    }
 
-	@Override
-	public Long add(K key, Point point, M member) {
+    @Override
+    public Long add(K key, Point point, M member) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawMember = rawValue(member);
+        byte[] rawKey = rawKey(key);
+        byte[] rawMember = rawValue(member);
 
-		return execute(connection -> connection.geoAdd(rawKey, point, rawMember));
-	}
+        return execute(connection -> connection.geoAdd(rawKey, point, rawMember));
+    }
 
-	@Override
-	public Long add(K key, GeoLocation<M> location) {
-		return add(key, location.getPoint(), location.getName());
-	}
+    @Override
+    public Long add(K key, GeoLocation<M> location) {
+        return add(key, location.getPoint(), location.getName());
+    }
 
-	@Override
-	public Long add(K key, Map<M, Point> memberCoordinateMap) {
+    @Override
+    public Long add(K key, Map<M, Point> memberCoordinateMap) {
 
-		byte[] rawKey = rawKey(key);
-		Map<byte[], Point> rawMemberCoordinateMap = new HashMap<>();
+        byte[] rawKey = rawKey(key);
+        Map<byte[], Point> rawMemberCoordinateMap = new HashMap<>();
 
-		for (M member : memberCoordinateMap.keySet()) {
-			byte[] rawMember = rawValue(member);
-			rawMemberCoordinateMap.put(rawMember, memberCoordinateMap.get(member));
-		}
+        for (M member : memberCoordinateMap.keySet()) {
+            byte[] rawMember = rawValue(member);
+            rawMemberCoordinateMap.put(rawMember, memberCoordinateMap.get(member));
+        }
 
-		return execute(connection -> connection.geoAdd(rawKey, rawMemberCoordinateMap));
-	}
+        return execute(connection -> connection.geoAdd(rawKey, rawMemberCoordinateMap));
+    }
 
-	@Override
-	public Long add(K key, Iterable<GeoLocation<M>> locations) {
+    @Override
+    public Long add(K key, Iterable<GeoLocation<M>> locations) {
 
-		Map<M, Point> memberCoordinateMap = new LinkedHashMap<>();
-		for (GeoLocation<M> location : locations) {
-			memberCoordinateMap.put(location.getName(), location.getPoint());
-		}
+        Map<M, Point> memberCoordinateMap = new LinkedHashMap<>();
+        for (GeoLocation<M> location : locations) {
+            memberCoordinateMap.put(location.getName(), location.getPoint());
+        }
 
-		return add(key, memberCoordinateMap);
-	}
+        return add(key, memberCoordinateMap);
+    }
 
-	@Override
-	public Distance distance(K key, M member1, M member2) {
+    @Override
+    public Distance distance(K key, M member1, M member2) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawMember1 = rawValue(member1);
-		byte[] rawMember2 = rawValue(member2);
+        byte[] rawKey = rawKey(key);
+        byte[] rawMember1 = rawValue(member1);
+        byte[] rawMember2 = rawValue(member2);
 
-		return execute(connection -> connection.geoDist(rawKey, rawMember1, rawMember2));
-	}
+        return execute(connection -> connection.geoDist(rawKey, rawMember1, rawMember2));
+    }
 
-	@Override
-	public Distance distance(K key, M member1, M member2, Metric metric) {
+    @Override
+    public Distance distance(K key, M member1, M member2, Metric metric) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawMember1 = rawValue(member1);
-		byte[] rawMember2 = rawValue(member2);
+        byte[] rawKey = rawKey(key);
+        byte[] rawMember1 = rawValue(member1);
+        byte[] rawMember2 = rawValue(member2);
 
-		return execute(connection -> connection.geoDist(rawKey, rawMember1, rawMember2, metric));
-	}
+        return execute(connection -> connection.geoDist(rawKey, rawMember1, rawMember2, metric));
+    }
 
-	@Override
-	public List<String> hash(K key, M... members) {
+    @Override
+    public List<String> hash(K key, M... members) {
 
-		byte[] rawKey = rawKey(key);
-		byte[][] rawMembers = rawValues(members);
+        byte[] rawKey = rawKey(key);
+        byte[][] rawMembers = rawValues(members);
 
-		return execute(connection -> connection.geoHash(rawKey, rawMembers));
-	}
+        return execute(connection -> connection.geoHash(rawKey, rawMembers));
+    }
 
-	@Override
-	public List<Point> position(K key, M... members) {
-		byte[] rawKey = rawKey(key);
-		byte[][] rawMembers = rawValues(members);
+    @Override
+    public List<Point> position(K key, M... members) {
+        byte[] rawKey = rawKey(key);
+        byte[][] rawMembers = rawValues(members);
 
-		return execute(connection -> connection.geoPos(rawKey, rawMembers));
-	}
+        return execute(connection -> connection.geoPos(rawKey, rawMembers));
+    }
 
-	@Override
-	public GeoResults<GeoLocation<M>> radius(K key, Circle within) {
+    @Override
+    public GeoResults<GeoLocation<M>> radius(K key, Circle within) {
 
-		byte[] rawKey = rawKey(key);
+        byte[] rawKey = rawKey(key);
 
-		GeoResults<GeoLocation<byte[]>> raw = execute(connection -> connection.geoRadius(rawKey, within));
+        GeoResults<GeoLocation<byte[]>> raw =
+                execute(connection -> connection.geoRadius(rawKey, within));
 
-		return deserializeGeoResults(raw);
-	}
+        return deserializeGeoResults(raw);
+    }
 
-	@Override
-	public GeoResults<GeoLocation<M>> radius(K key, Circle within, GeoRadiusCommandArgs args) {
+    @Override
+    public GeoResults<GeoLocation<M>> radius(K key, Circle within, GeoRadiusCommandArgs args) {
 
-		byte[] rawKey = rawKey(key);
+        byte[] rawKey = rawKey(key);
 
-		GeoResults<GeoLocation<byte[]>> raw = execute(connection -> connection.geoRadius(rawKey, within, args));
+        GeoResults<GeoLocation<byte[]>> raw =
+                execute(connection -> connection.geoRadius(rawKey, within, args));
 
-		return deserializeGeoResults(raw);
-	}
+        return deserializeGeoResults(raw);
+    }
 
-	@Override
-	public GeoResults<GeoLocation<M>> radius(K key, M member, double radius) {
+    @Override
+    public GeoResults<GeoLocation<M>> radius(K key, M member, double radius) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawMember = rawValue(member);
-		GeoResults<GeoLocation<byte[]>> raw = execute(
-				connection -> connection.geoRadiusByMember(rawKey, rawMember, radius));
+        byte[] rawKey = rawKey(key);
+        byte[] rawMember = rawValue(member);
+        GeoResults<GeoLocation<byte[]>> raw =
+                execute(connection -> connection.geoRadiusByMember(rawKey, rawMember, radius));
 
-		return deserializeGeoResults(raw);
-	}
+        return deserializeGeoResults(raw);
+    }
 
-	@Override
-	public GeoResults<GeoLocation<M>> radius(K key, M member, Distance distance) {
+    @Override
+    public GeoResults<GeoLocation<M>> radius(K key, M member, Distance distance) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawMember = rawValue(member);
+        byte[] rawKey = rawKey(key);
+        byte[] rawMember = rawValue(member);
 
-		GeoResults<GeoLocation<byte[]>> raw = execute(
-				connection -> connection.geoRadiusByMember(rawKey, rawMember, distance));
+        GeoResults<GeoLocation<byte[]>> raw =
+                execute(connection -> connection.geoRadiusByMember(rawKey, rawMember, distance));
 
-		return deserializeGeoResults(raw);
-	}
+        return deserializeGeoResults(raw);
+    }
 
-	@Override
-	public GeoResults<GeoLocation<M>> radius(K key, M member, Distance distance, GeoRadiusCommandArgs param) {
+    @Override
+    public GeoResults<GeoLocation<M>> radius(
+            K key, M member, Distance distance, GeoRadiusCommandArgs param) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawMember = rawValue(member);
+        byte[] rawKey = rawKey(key);
+        byte[] rawMember = rawValue(member);
 
-		GeoResults<GeoLocation<byte[]>> raw = execute(
-				connection -> connection.geoRadiusByMember(rawKey, rawMember, distance, param));
+        GeoResults<GeoLocation<byte[]>> raw =
+                execute(connection -> connection.geoRadiusByMember(rawKey, rawMember, distance, param));
 
-		return deserializeGeoResults(raw);
-	}
+        return deserializeGeoResults(raw);
+    }
 
-	@Override
-	public Long remove(K key, M... members) {
+    @Override
+    public Long remove(K key, M... members) {
 
-		byte[] rawKey = rawKey(key);
-		byte[][] rawMembers = rawValues(members);
-		return execute(connection -> connection.zRem(rawKey, rawMembers));
-	}
+        byte[] rawKey = rawKey(key);
+        byte[][] rawMembers = rawValues(members);
+        return execute(connection -> connection.zRem(rawKey, rawMembers));
+    }
 
-	@Override
-	public GeoResults<GeoLocation<M>> search(K key, GeoReference<M> reference,
-			GeoShape geoPredicate, ValkeyGeoCommands.GeoSearchCommandArgs args) {
+    @Override
+    public GeoResults<GeoLocation<M>> search(
+            K key,
+            GeoReference<M> reference,
+            GeoShape geoPredicate,
+            ValkeyGeoCommands.GeoSearchCommandArgs args) {
 
-		byte[] rawKey = rawKey(key);
-		GeoReference<byte[]> rawMember = getGeoReference(reference);
+        byte[] rawKey = rawKey(key);
+        GeoReference<byte[]> rawMember = getGeoReference(reference);
 
-		GeoResults<GeoLocation<byte[]>> raw = execute(
-				connection -> connection.geoSearch(rawKey, rawMember, geoPredicate, args));
+        GeoResults<GeoLocation<byte[]>> raw =
+                execute(connection -> connection.geoSearch(rawKey, rawMember, geoPredicate, args));
 
-		return deserializeGeoResults(raw);
-	}
+        return deserializeGeoResults(raw);
+    }
 
-	@Override
-	public Long searchAndStore(K key, K destKey, GeoReference<M> reference,
-			GeoShape geoPredicate, ValkeyGeoCommands.GeoSearchStoreCommandArgs args) {
+    @Override
+    public Long searchAndStore(
+            K key,
+            K destKey,
+            GeoReference<M> reference,
+            GeoShape geoPredicate,
+            ValkeyGeoCommands.GeoSearchStoreCommandArgs args) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawDestKey = rawKey(destKey);
-		GeoReference<byte[]> rawMember = getGeoReference(reference);
+        byte[] rawKey = rawKey(key);
+        byte[] rawDestKey = rawKey(destKey);
+        GeoReference<byte[]> rawMember = getGeoReference(reference);
 
-		return execute(connection -> connection.geoSearchStore(rawDestKey, rawKey, rawMember, geoPredicate, args));
-	}
+        return execute(
+                connection -> connection.geoSearchStore(rawDestKey, rawKey, rawMember, geoPredicate, args));
+    }
 
-	@SuppressWarnings("unchecked")
-	private GeoReference<byte[]> getGeoReference(GeoReference<M> reference) {
-		return reference instanceof GeoReference.GeoMemberReference
-				? GeoReference
-						.fromMember(rawValue(((GeoMemberReference<M>) reference).getMember()))
-				: (GeoReference<byte[]>) reference;
-	}
+    @SuppressWarnings("unchecked")
+    private GeoReference<byte[]> getGeoReference(GeoReference<M> reference) {
+        return reference instanceof GeoReference.GeoMemberReference
+                ? GeoReference.fromMember(rawValue(((GeoMemberReference<M>) reference).getMember()))
+                : (GeoReference<byte[]>) reference;
+    }
 }

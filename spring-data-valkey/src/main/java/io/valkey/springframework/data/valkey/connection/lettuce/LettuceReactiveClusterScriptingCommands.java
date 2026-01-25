@@ -22,14 +22,14 @@ import io.valkey.springframework.data.valkey.connection.ReactiveClusterScripting
  * @since 2.0
  */
 class LettuceReactiveClusterScriptingCommands extends LettuceReactiveScriptingCommands
-		implements ReactiveClusterScriptingCommands {
+        implements ReactiveClusterScriptingCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveStringCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterScriptingCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveStringCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterScriptingCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 }

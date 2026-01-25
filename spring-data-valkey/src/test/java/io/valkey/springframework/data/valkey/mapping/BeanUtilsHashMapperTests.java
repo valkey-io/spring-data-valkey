@@ -15,12 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.mapping;
 
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.*;
 
-
 import io.valkey.springframework.data.valkey.hash.BeanUtilsHashMapper;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Costin Leau
@@ -28,13 +26,12 @@ import io.valkey.springframework.data.valkey.hash.BeanUtilsHashMapper;
  */
 public class BeanUtilsHashMapperTests extends AbstractHashMapperTests {
 
-	protected <T> BeanUtilsHashMapper<T> mapperFor(Class<T> t) {
-		return new BeanUtilsHashMapper<>(t);
-	}
+    protected <T> BeanUtilsHashMapper<T> mapperFor(Class<T> t) {
+        return new BeanUtilsHashMapper<>(t);
+    }
 
-	@Test
-	public void testNestedBean() {
-		assertThatExceptionOfType(Exception.class).isThrownBy(super::testNestedBean);
-	}
-
+    @Test
+    public void testNestedBean() {
+        assertThatExceptionOfType(Exception.class).isThrownBy(super::testNestedBean);
+    }
 }

@@ -17,17 +17,15 @@ package io.valkey.springframework.data.valkey.test.util;
 
 import static org.assertj.core.error.ShouldContain.*;
 
+import io.valkey.springframework.data.valkey.core.convert.Bucket;
+import io.valkey.springframework.data.valkey.core.convert.ValkeyData;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import org.assertj.core.api.AssertProvider;
 import org.assertj.core.api.MapAssert;
 import org.assertj.core.internal.Failures;
-
-import io.valkey.springframework.data.valkey.core.convert.Bucket;
-import io.valkey.springframework.data.valkey.core.convert.ValkeyData;
 
 /**
  * {@link AssertProvider} for {@link ValkeyTestData}.
@@ -36,124 +34,122 @@ import io.valkey.springframework.data.valkey.core.convert.ValkeyData;
  */
 public class ValkeyTestData implements AssertProvider<ValkeyTestData.ValkeyBucketAssert> {
 
-	private final ValkeyData valkeyData;
+    private final ValkeyData valkeyData;
 
-	ValkeyTestData(ValkeyData valkeyData) {
-		this.valkeyData = valkeyData;
-	}
+    ValkeyTestData(ValkeyData valkeyData) {
+        this.valkeyData = valkeyData;
+    }
 
-	public static ValkeyTestData from(ValkeyData data) {
-		return new ValkeyTestData(data);
-	}
+    public static ValkeyTestData from(ValkeyData data) {
+        return new ValkeyTestData(data);
+    }
 
-	@Override
-	public ValkeyBucketAssert assertThat() {
-		return new ValkeyBucketAssert(valkeyData);
-	}
+    @Override
+    public ValkeyBucketAssert assertThat() {
+        return new ValkeyBucketAssert(valkeyData);
+    }
 
-	public Bucket getBucket() {
-		return valkeyData.getBucket();
-	}
+    public Bucket getBucket() {
+        return valkeyData.getBucket();
+    }
 
-	public String getId() {
-		return valkeyData.getId();
-	}
+    public String getId() {
+        return valkeyData.getId();
+    }
 
-	public ValkeyData getValkeyData() {
-		return valkeyData;
-	}
+    public ValkeyData getValkeyData() {
+        return valkeyData;
+    }
 
-	public static class ValkeyBucketAssert extends MapAssert<String, String> {
+    public static class ValkeyBucketAssert extends MapAssert<String, String> {
 
-		private final Failures failures = Failures.instance();
+        private final Failures failures = Failures.instance();
 
-		private final ValkeyData valkeyData;
+        private final ValkeyData valkeyData;
 
-		ValkeyBucketAssert(ValkeyData valkeyData) {
+        ValkeyBucketAssert(ValkeyData valkeyData) {
 
-			super(toStringMap(valkeyData.getBucket().asMap()));
-			this.valkeyData = valkeyData;
-		}
+            super(toStringMap(valkeyData.getBucket().asMap()));
+            this.valkeyData = valkeyData;
+        }
 
-		/**
-		 * Checks for presence of type hint at given path.
-		 *
-		 * @param path
-		 * @param type
-		 * @return
-		 */
-		public ValkeyBucketAssert containingTypeHint(String path, Class<?> type) {
+        /**
+         * Checks for presence of type hint at given path.
+         *
+         * @param path
+         * @param type
+         * @return
+         */
+        public ValkeyBucketAssert containingTypeHint(String path, Class<?> type) {
 
-			isNotNull();
+            isNotNull();
 
-			String hint = "Type hint for <%s> at <%s>".formatted(type.getName(), path);
+            String hint = "Type hint for <%s> at <%s>".formatted(type.getName(), path);
 
-			if (!actual.containsKey(path)) {
+            if (!actual.containsKey(path)) {
 
-				throw failures.failure(info, shouldContain(actual, hint, hint));
-			}
+                throw failures.failure(info, shouldContain(actual, hint, hint));
+            }
 
-			String string = getString(path);
+            String string = getString(path);
 
-			if (!string.equals(type.getName())) {
-				throw failures.failure(info, shouldContain(actual, hint, hint));
-			}
+            if (!string.equals(type.getName())) {
+                throw failures.failure(info, shouldContain(actual, hint, hint));
+            }
 
-			return this;
-		}
+            return this;
+        }
 
-		/**
-		 * Checks for presence of equivalent String value at path.
-		 *
-		 * @param path
-		 * @param value
-		 * @return
-		 */
-		public ValkeyBucketAssert containsEntry(String path, String value) {
-			super.containsEntry(path, value);
-			return this;
-		}
+        /**
+         * Checks for presence of equivalent String value at path.
+         *
+         * @param path
+         * @param value
+         * @return
+         */
+        public ValkeyBucketAssert containsEntry(String path, String value) {
+            super.containsEntry(path, value);
+            return this;
+        }
 
-		/**
-		 * Checks for presence of equivalent time in msec value at path.
-		 *
-		 * @param path
-		 * @param date
-		 * @return
-		 */
-		public ValkeyBucketAssert containsEntry(String path, Date date) {
-			return containsEntry(path, "" + date.getTime());
-		}
+        /**
+         * Checks for presence of equivalent time in msec value at path.
+         *
+         * @param path
+         * @param date
+         * @return
+         */
+        public ValkeyBucketAssert containsEntry(String path, Date date) {
+            return containsEntry(path, "" + date.getTime());
+        }
 
-		/**
-		 * Checks given path is not present.
-		 *
-		 * @param path
-		 * @return
-		 */
-		public ValkeyBucketAssert without(String path) {
+        /**
+         * Checks given path is not present.
+         *
+         * @param path
+         * @return
+         */
+        public ValkeyBucketAssert without(String path) {
 
-			return this;
-		}
+            return this;
+        }
 
-		private String getString(String path) {
-			return actual.get(path);
-		}
+        private String getString(String path) {
+            return actual.get(path);
+        }
+    }
 
-	}
+    private static Map<String, String> toStringMap(Map<String, byte[]> source) {
 
+        Map<String, String> converted = new LinkedHashMap<>();
 
-	private static Map<String, String> toStringMap(Map<String, byte[]> source) {
+        source.forEach((k, v) -> converted.put(k, new String(v, StandardCharsets.UTF_8)));
 
-		Map<String, String> converted = new LinkedHashMap<>();
+        return converted;
+    }
 
-		source.forEach((k, v) -> converted.put(k, new String(v, StandardCharsets.UTF_8)));
-
-		return converted;
-	}
-
-	@Override
-	public String toString() {
-		return toStringMap(getBucket().asMap()).toString();
-	}
+    @Override
+    public String toString() {
+        return toStringMap(getBucket().asMap()).toString();
+    }
 }

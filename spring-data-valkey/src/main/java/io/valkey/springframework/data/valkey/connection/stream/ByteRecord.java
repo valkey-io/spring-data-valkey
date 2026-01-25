@@ -15,10 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.connection.stream;
 
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import java.util.Collections;
 import java.util.Map;
-
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import org.springframework.lang.Nullable;
 
 /**
@@ -29,58 +28,66 @@ import org.springframework.lang.Nullable;
  */
 public interface ByteRecord extends MapRecord<byte[], byte[], byte[]> {
 
-	@Override
-	ByteRecord withId(RecordId id);
+    @Override
+    ByteRecord withId(RecordId id);
 
-	/**
-	 * Create a new {@link ByteRecord} with the associated stream {@literal key}.
-	 *
-	 * @param key the binary stream key.
-	 * @return a new {@link ByteRecord}.
-	 */
-	ByteRecord withStreamKey(byte[] key);
+    /**
+     * Create a new {@link ByteRecord} with the associated stream {@literal key}.
+     *
+     * @param key the binary stream key.
+     * @return a new {@link ByteRecord}.
+     */
+    ByteRecord withStreamKey(byte[] key);
 
-	/**
-	 * Deserialize {@link #getStream() key} and {@link #getValue() field/value pairs} with the given
-	 * {@link ValkeySerializer}. An already assigned {@link RecordId id} is carried over to the new instance.
-	 *
-	 * @param serializer can be {@literal null} if the {@link Record} only holds binary data.
-	 * @return new {@link MapRecord} holding the deserialized values.
-	 */
-	default <T> MapRecord<T, T, T> deserialize(@Nullable ValkeySerializer<T> serializer) {
-		return deserialize(serializer, serializer, serializer);
-	}
+    /**
+     * Deserialize {@link #getStream() key} and {@link #getValue() field/value pairs} with the given
+     * {@link ValkeySerializer}. An already assigned {@link RecordId id} is carried over to the new
+     * instance.
+     *
+     * @param serializer can be {@literal null} if the {@link Record} only holds binary data.
+     * @return new {@link MapRecord} holding the deserialized values.
+     */
+    default <T> MapRecord<T, T, T> deserialize(@Nullable ValkeySerializer<T> serializer) {
+        return deserialize(serializer, serializer, serializer);
+    }
 
-	/**
-	 * Deserialize {@link #getStream() key} with the {@literal streamSerializer}, field names with the
-	 * {@literal fieldSerializer} and values with the {@literal valueSerializer}. An already assigned {@link RecordId id}
-	 * is carried over to the new instance.
-	 *
-	 * @param streamSerializer can be {@literal null} if the key suites already the target format.
-	 * @param fieldSerializer can be {@literal null} if the fields suite already the target format.
-	 * @param valueSerializer can be {@literal null} if the values suite already the target format.
-	 * @return new {@link MapRecord} holding the deserialized values.
-	 */
-	default <K, HK, HV> MapRecord<K, HK, HV> deserialize(@Nullable ValkeySerializer<? extends K> streamSerializer,
-			@Nullable ValkeySerializer<? extends HK> fieldSerializer,
-			@Nullable ValkeySerializer<? extends HV> valueSerializer) {
+    /**
+     * Deserialize {@link #getStream() key} with the {@literal streamSerializer}, field names with the
+     * {@literal fieldSerializer} and values with the {@literal valueSerializer}. An already assigned
+     * {@link RecordId id} is carried over to the new instance.
+     *
+     * @param streamSerializer can be {@literal null} if the key suites already the target format.
+     * @param fieldSerializer can be {@literal null} if the fields suite already the target format.
+     * @param valueSerializer can be {@literal null} if the values suite already the target format.
+     * @return new {@link MapRecord} holding the deserialized values.
+     */
+    default <K, HK, HV> MapRecord<K, HK, HV> deserialize(
+            @Nullable ValkeySerializer<? extends K> streamSerializer,
+            @Nullable ValkeySerializer<? extends HK> fieldSerializer,
+            @Nullable ValkeySerializer<? extends HV> valueSerializer) {
 
-		return mapEntries(it -> {
+        return mapEntries(
+                        it -> {
+                            Map<HK, HV> map =
+                                    Collections.singletonMap(
+                                            StreamSerialization.deserialize(fieldSerializer, it.getKey()),
+                                            StreamSerialization.deserialize(valueSerializer, it.getValue()));
 
-			Map<HK, HV> map = Collections.singletonMap(StreamSerialization.deserialize(fieldSerializer, it.getKey()),
-					StreamSerialization.deserialize(valueSerializer, it.getValue()));
+                            return map.entrySet().iterator().next();
+                        })
+                .withStreamKey(StreamSerialization.deserialize(streamSerializer, getRequiredStream()));
+    }
 
-			return map.entrySet().iterator().next();
-		}).withStreamKey(StreamSerialization.deserialize(streamSerializer, getRequiredStream()));
-	}
-
-	/**
-	 * Convert a binary {@link MapRecord} into a {@link ByteRecord}.
-	 *
-	 * @param source must not be {@literal null}.
-	 * @return new instance of {@link ByteRecord}.
-	 */
-	static ByteRecord of(MapRecord<byte[], byte[], byte[]> source) {
-		return StreamRecords.newRecord().in(source.getRequiredStream()).withId(source.getId()).ofBytes(source.getValue());
-	}
+    /**
+     * Convert a binary {@link MapRecord} into a {@link ByteRecord}.
+     *
+     * @param source must not be {@literal null}.
+     * @return new instance of {@link ByteRecord}.
+     */
+    static ByteRecord of(MapRecord<byte[], byte[], byte[]> source) {
+        return StreamRecords.newRecord()
+                .in(source.getRequiredStream())
+                .withId(source.getId())
+                .ofBytes(source.getValue());
+    }
 }

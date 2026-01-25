@@ -19,9 +19,9 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Cache statistics for a {@link ValkeyCache}. <br />
- * <strong>NOTE:</strong> {@link CacheStatistics} only serve local (in memory) data and do not collect any server
- * statistics.
+ * Cache statistics for a {@link ValkeyCache}. <br>
+ * <strong>NOTE:</strong> {@link CacheStatistics} only serve local (in memory) data and do not
+ * collect any server statistics.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -29,64 +29,67 @@ import java.util.concurrent.TimeUnit;
  */
 public interface CacheStatistics {
 
-	/**
-	 * @return the name of the {@link ValkeyCache}.
-	 */
-	String getCacheName();
+    /**
+     * @return the name of the {@link ValkeyCache}.
+     */
+    String getCacheName();
 
-	/**
-	 * @return number of put operations on the cache.
-	 */
-	long getPuts();
+    /**
+     * @return number of put operations on the cache.
+     */
+    long getPuts();
 
-	/**
-	 * @return the total number of get operations including both {@link #getHits() hits} and {@link #getMisses() misses}.
-	 */
-	long getGets();
+    /**
+     * @return the total number of get operations including both {@link #getHits() hits} and {@link
+     *     #getMisses() misses}.
+     */
+    long getGets();
 
-	/**
-	 * @return the number of cache get hits.
-	 */
-	long getHits();
+    /**
+     * @return the number of cache get hits.
+     */
+    long getHits();
 
-	/**
-	 * @return number of cache get misses.
-	 */
-	long getMisses();
+    /**
+     * @return number of cache get misses.
+     */
+    long getMisses();
 
-	/**
-	 * @return the number of {@link #getGets() gets} that have not yet been answered (neither {@link #getHits() hit} nor
-	 *         {@link #getMisses() miss}).
-	 */
-	default long getPending() {
-		return getGets() - (getHits() + getMisses());
-	}
+    /**
+     * @return the number of {@link #getGets() gets} that have not yet been answered (neither {@link
+     *     #getHits() hit} nor {@link #getMisses() miss}).
+     */
+    default long getPending() {
+        return getGets() - (getHits() + getMisses());
+    }
 
-	/**
-	 * @return number of cache removals.
-	 */
-	long getDeletes();
+    /**
+     * @return number of cache removals.
+     */
+    long getDeletes();
 
-	/**
-	 * @param unit the time unit to report the lock wait duration.
-	 * @return lock duration using the given {@link TimeUnit} if the cache is configured to use locking.
-	 */
-	long getLockWaitDuration(TimeUnit unit);
+    /**
+     * @param unit the time unit to report the lock wait duration.
+     * @return lock duration using the given {@link TimeUnit} if the cache is configured to use
+     *     locking.
+     */
+    long getLockWaitDuration(TimeUnit unit);
 
-	/**
-	 * @return initial point in time when started statistics capturing.
-	 */
-	Instant getSince();
+    /**
+     * @return initial point in time when started statistics capturing.
+     */
+    Instant getSince();
 
-	/**
-	 * @return instantaneous point in time of last statistics counter reset. Equals {@link #getSince()} if never reset.
-	 */
-	Instant getLastReset();
+    /**
+     * @return instantaneous point in time of last statistics counter reset. Equals {@link
+     *     #getSince()} if never reset.
+     */
+    Instant getLastReset();
 
-	/**
-	 * @return the statistics time.
-	 */
-	default Instant getTime() {
-		return Instant.now();
-	}
+    /**
+     * @return the statistics time.
+     */
+    default Instant getTime() {
+        return Instant.now();
+    }
 }

@@ -15,18 +15,17 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import reactor.test.StepVerifier;
-
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
+import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.ValkeyElementReader;
+import io.valkey.springframework.data.valkey.serializer.ValkeyElementWriter;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.serializer.ValkeyElementReader;
-import io.valkey.springframework.data.valkey.serializer.ValkeyElementWriter;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
-import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
+import reactor.test.StepVerifier;
 
 /**
  * Integration tests for {@link ReactiveStringValkeyTemplate}.
@@ -36,52 +35,67 @@ import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 @ExtendWith(LettuceConnectionFactoryExtension.class)
 public class ReactiveStringValkeyTemplateIntegrationTests {
 
-	private final ReactiveValkeyConnectionFactory connectionFactory;
+    private final ReactiveValkeyConnectionFactory connectionFactory;
 
-	private ReactiveStringValkeyTemplate template;
+    private ReactiveStringValkeyTemplate template;
 
-	public ReactiveStringValkeyTemplateIntegrationTests(ReactiveValkeyConnectionFactory connectionFactory) {
-		this.connectionFactory = connectionFactory;
-	}
+    public ReactiveStringValkeyTemplateIntegrationTests(
+            ReactiveValkeyConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
 
-	@BeforeEach
-	void before() {
+    @BeforeEach
+    void before() {
 
-		template = new ReactiveStringValkeyTemplate(connectionFactory);
+        template = new ReactiveStringValkeyTemplate(connectionFactory);
 
-		template.execute(connection -> connection.serverCommands().flushDb()).as(StepVerifier::create).expectNext("OK")
-				.verifyComplete();
-	}
+        template
+                .execute(connection -> connection.serverCommands().flushDb())
+                .as(StepVerifier::create)
+                .expectNext("OK")
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-643
-	void shouldSetAndGetKeys() {
+    @Test // DATAREDIS-643
+    void shouldSetAndGetKeys() {
 
-		template.opsForValue().set("key", "value").as(StepVerifier::create).expectNext(true).verifyComplete();
-		template.opsForValue().get("key").as(StepVerifier::create).expectNext("value").verifyComplete();
-	}
+        template
+                .opsForValue()
+                .set("key", "value")
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+        template.opsForValue().get("key").as(StepVerifier::create).expectNext("value").verifyComplete();
+    }
 
-	@Test // GH-2655
-	void keysFailsOnNullElements() {
+    @Test // GH-2655
+    void keysFailsOnNullElements() {
 
-		template.opsForValue().set("a", "1").as(StepVerifier::create).expectNext(true).verifyComplete();
-		template.opsForValue().set("b", "1").as(StepVerifier::create).expectNext(true).verifyComplete();
+        template.opsForValue().set("a", "1").as(StepVerifier::create).expectNext(true).verifyComplete();
+        template.opsForValue().set("b", "1").as(StepVerifier::create).expectNext(true).verifyComplete();
 
-		ValkeyElementReader<String> reader = ValkeyElementReader.from(StringValkeySerializer.UTF_8);
-		ValkeyElementWriter<String> writer = ValkeyElementWriter.from(StringValkeySerializer.UTF_8);
+        ValkeyElementReader<String> reader = ValkeyElementReader.from(StringValkeySerializer.UTF_8);
+        ValkeyElementWriter<String> writer = ValkeyElementWriter.from(StringValkeySerializer.UTF_8);
 
-		ValkeySerializationContext<String, String> nullReadingContext = ValkeySerializationContext
-				.<String, String>newSerializationContext(StringValkeySerializer.UTF_8).key(buffer -> {
+        ValkeySerializationContext<String, String> nullReadingContext =
+                ValkeySerializationContext.<String, String>newSerializationContext(
+                                StringValkeySerializer.UTF_8)
+                        .key(
+                                buffer -> {
+                                    String read = reader.read(buffer);
 
-					String read = reader.read(buffer);
+                                    return "a".equals(read) ? null : read;
+                                },
+                                writer)
+                        .build();
 
-					return "a".equals(read) ? null : read;
+        ReactiveValkeyTemplate<String, String> customTemplate =
+                new ReactiveValkeyTemplate<>(template.getConnectionFactory(), nullReadingContext);
 
-				}, writer).build();
-
-		ReactiveValkeyTemplate<String, String> customTemplate = new ReactiveValkeyTemplate<>(template.getConnectionFactory(),
-				nullReadingContext);
-
-		customTemplate.keys("b").as(StepVerifier::create).expectNext("b").verifyComplete();
-		customTemplate.keys("a").as(StepVerifier::create).verifyError(InvalidDataAccessApiUsageException.class);
-	}
+        customTemplate.keys("b").as(StepVerifier::create).expectNext("b").verifyComplete();
+        customTemplate
+                .keys("a")
+                .as(StepVerifier::create)
+                .verifyError(InvalidDataAccessApiUsageException.class);
+    }
 }

@@ -15,20 +15,20 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.DataType;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
-
-import io.valkey.springframework.data.valkey.connection.DataType;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Operations over a Valkey key. Useful for executing common key-'bound' operations to all implementations.
- * <p>
- * As the rest of the APIs, if the underlying connection is pipelined or queued/in multi mode, all methods will return
- * {@literal null}.
+ * Operations over a Valkey key. Useful for executing common key-'bound' operations to all
+ * implementations.
+ *
+ * <p>As the rest of the APIs, if the underlying connection is pipelined or queued/in multi mode,
+ * all methods will return {@literal null}.
  *
  * @author Costin Leau
  * @author Christoph Strobl
@@ -36,111 +36,114 @@ import org.springframework.util.Assert;
  */
 public interface BoundKeyOperations<K> {
 
-	/**
-	 * Returns the key associated with this entity.
-	 *
-	 * @return key associated with the implementing entity
-	 */
-	K getKey();
+    /**
+     * Returns the key associated with this entity.
+     *
+     * @return key associated with the implementing entity
+     */
+    K getKey();
 
-	/**
-	 * Returns the associated Valkey type.
-	 *
-	 * @return key type. {@literal null} when used in pipeline / transaction.
-	 */
-	@Nullable
-	DataType getType();
+    /**
+     * Returns the associated Valkey type.
+     *
+     * @return key type. {@literal null} when used in pipeline / transaction.
+     */
+    @Nullable
+    DataType getType();
 
-	/**
-	 * Returns a bound operations object to perform expiration operations on the bound key.
-	 *
-	 * @return the bound operations object to perform operations on the hash field expiration.
-	 * @since 3.5
-	 */
-	default BoundKeyExpirationOperations expiration() {
-		return new DefaultBoundKeyExpirationOperations<>(getOperations(), getKey());
-	}
+    /**
+     * Returns a bound operations object to perform expiration operations on the bound key.
+     *
+     * @return the bound operations object to perform operations on the hash field expiration.
+     * @since 3.5
+     */
+    default BoundKeyExpirationOperations expiration() {
+        return new DefaultBoundKeyExpirationOperations<>(getOperations(), getKey());
+    }
 
-	/**
-	 * Returns the expiration of this key.
-	 *
-	 * @return expiration value (in seconds). {@literal null} when used in pipeline / transaction.
-	 */
-	@Nullable
-	Long getExpire();
+    /**
+     * Returns the expiration of this key.
+     *
+     * @return expiration value (in seconds). {@literal null} when used in pipeline / transaction.
+     */
+    @Nullable
+    Long getExpire();
 
-	/**
-	 * Sets the key time-to-live/expiration.
-	 *
-	 * @param timeout must not be {@literal null}.
-	 * @return {@literal true} if expiration was set, {@literal false} otherwise. {@literal null} when used in pipeline /
-	 *         transaction.
-	 * @throws IllegalArgumentException if the timeout is {@literal null}.
-	 * @since 2.3
-	 */
-	@Nullable
-	default Boolean expire(Duration timeout) {
+    /**
+     * Sets the key time-to-live/expiration.
+     *
+     * @param timeout must not be {@literal null}.
+     * @return {@literal true} if expiration was set, {@literal false} otherwise. {@literal null} when
+     *     used in pipeline / transaction.
+     * @throws IllegalArgumentException if the timeout is {@literal null}.
+     * @since 2.3
+     */
+    @Nullable
+    default Boolean expire(Duration timeout) {
 
-		Assert.notNull(timeout, "Timeout must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
 
-		return expire(timeout.toMillis(), TimeUnit.MILLISECONDS);
-	}
+        return expire(timeout.toMillis(), TimeUnit.MILLISECONDS);
+    }
 
-	/**
-	 * Sets the key time-to-live/expiration.
-	 *
-	 * @param timeout expiration value
-	 * @param unit expiration unit
-	 * @return true if expiration was set, false otherwise. {@literal null} when used in pipeline / transaction.
-	 */
-	@Nullable
-	Boolean expire(long timeout, TimeUnit unit);
+    /**
+     * Sets the key time-to-live/expiration.
+     *
+     * @param timeout expiration value
+     * @param unit expiration unit
+     * @return true if expiration was set, false otherwise. {@literal null} when used in pipeline /
+     *     transaction.
+     */
+    @Nullable
+    Boolean expire(long timeout, TimeUnit unit);
 
-	/**
-	 * Sets the key time-to-live/expiration.
-	 *
-	 * @param date expiration date
-	 * @return true if expiration was set, false otherwise. {@literal null} when used in pipeline / transaction.
-	 */
-	@Nullable
-	Boolean expireAt(Date date);
+    /**
+     * Sets the key time-to-live/expiration.
+     *
+     * @param date expiration date
+     * @return true if expiration was set, false otherwise. {@literal null} when used in pipeline /
+     *     transaction.
+     */
+    @Nullable
+    Boolean expireAt(Date date);
 
-	/**
-	 * Sets the key time-to-live/expiration.
-	 *
-	 * @param expireAt expiration time.
-	 * @return {@literal true} if expiration was set, {@literal false} otherwise. {@literal null} when used in pipeline /
-	 *         transaction.
-	 * @throws IllegalArgumentException if the instant is {@literal null} or too large to represent as a {@code Date}.
-	 * @since 2.3
-	 */
-	@Nullable
-	default Boolean expireAt(Instant expireAt) {
+    /**
+     * Sets the key time-to-live/expiration.
+     *
+     * @param expireAt expiration time.
+     * @return {@literal true} if expiration was set, {@literal false} otherwise. {@literal null} when
+     *     used in pipeline / transaction.
+     * @throws IllegalArgumentException if the instant is {@literal null} or too large to represent as
+     *     a {@code Date}.
+     * @since 2.3
+     */
+    @Nullable
+    default Boolean expireAt(Instant expireAt) {
 
-		Assert.notNull(expireAt, "ExpireAt must not be null");
+        Assert.notNull(expireAt, "ExpireAt must not be null");
 
-		return expireAt(Date.from(expireAt));
-	}
+        return expireAt(Date.from(expireAt));
+    }
 
-	/**
-	 * Removes the expiration (if any) of the key.
-	 *
-	 * @return true if expiration was removed, false otherwise. {@literal null} when used in pipeline / transaction.
-	 */
-	@Nullable
-	Boolean persist();
+    /**
+     * Removes the expiration (if any) of the key.
+     *
+     * @return true if expiration was removed, false otherwise. {@literal null} when used in pipeline
+     *     / transaction.
+     */
+    @Nullable
+    Boolean persist();
 
-	/**
-	 * Renames the key. <br>
-	 * <b>Note:</b> The new name for empty collections will be propagated on add of first element.
-	 *
-	 * @param newKey new key. Must not be {@literal null}.
-	 */
-	void rename(K newKey);
+    /**
+     * Renames the key. <br>
+     * <b>Note:</b> The new name for empty collections will be propagated on add of first element.
+     *
+     * @param newKey new key. Must not be {@literal null}.
+     */
+    void rename(K newKey);
 
-	/**
-	 * @return never {@literal null}.
-	 */
-	ValkeyOperations<K, ?> getOperations();
-
+    /**
+     * @return never {@literal null}.
+     */
+    ValkeyOperations<K, ?> getOperations();
 }

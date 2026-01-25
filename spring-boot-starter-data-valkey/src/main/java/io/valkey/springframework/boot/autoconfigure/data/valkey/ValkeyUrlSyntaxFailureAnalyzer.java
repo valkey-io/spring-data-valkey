@@ -18,51 +18,56 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-
 import org.springframework.boot.diagnostics.AbstractFailureAnalyzer;
 import org.springframework.boot.diagnostics.FailureAnalysis;
 
 /**
- * A {@code FailureAnalyzer} that performs analysis of failures caused by a
- * {@link ValkeyUrlSyntaxException}.
+ * A {@code FailureAnalyzer} that performs analysis of failures caused by a {@link
+ * ValkeyUrlSyntaxException}.
  *
  * @author Scott Frederick
  */
 class ValkeyUrlSyntaxFailureAnalyzer extends AbstractFailureAnalyzer<ValkeyUrlSyntaxException> {
 
-	@Override
-	protected FailureAnalysis analyze(Throwable rootFailure, ValkeyUrlSyntaxException cause) {
-		try {
-			URI uri = new URI(cause.getUrl());
-			if ("valkey-sentinel".equals(uri.getScheme())) {
-				return new FailureAnalysis(getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
-						"Use spring.data.valkey.sentinel properties instead of spring.data.valkey.url to configure Valkey sentinel addresses.",
-						cause);
-			}
-			if ("valkey-socket".equals(uri.getScheme())) {
-				return new FailureAnalysis(getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
-						"Configure the appropriate Spring Data Valkey connection beans directly instead of setting the property 'spring.data.valkey.url'.",
-						cause);
-			}
-			if (!"valkey".equals(uri.getScheme()) && !"valkeys".equals(uri.getScheme())) {
-				return new FailureAnalysis(getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
-						"Use the scheme 'valkey://' for insecure or 'valkeys://' for secure Valkey standalone configuration.",
-						cause);
-			}
-		}
-		catch (URISyntaxException ex) {
-			// fall through to default description and action
-		}
-		return new FailureAnalysis(getDefaultDescription(cause.getUrl()),
-				"Review the value of the property 'spring.data.valkey.url'.", cause);
-	}
+    @Override
+    protected FailureAnalysis analyze(Throwable rootFailure, ValkeyUrlSyntaxException cause) {
+        try {
+            URI uri = new URI(cause.getUrl());
+            if ("valkey-sentinel".equals(uri.getScheme())) {
+                return new FailureAnalysis(
+                        getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
+                        "Use spring.data.valkey.sentinel properties instead of spring.data.valkey.url to"
+                                + " configure Valkey sentinel addresses.",
+                        cause);
+            }
+            if ("valkey-socket".equals(uri.getScheme())) {
+                return new FailureAnalysis(
+                        getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
+                        "Configure the appropriate Spring Data Valkey connection beans directly instead of"
+                                + " setting the property 'spring.data.valkey.url'.",
+                        cause);
+            }
+            if (!"valkey".equals(uri.getScheme()) && !"valkeys".equals(uri.getScheme())) {
+                return new FailureAnalysis(
+                        getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
+                        "Use the scheme 'valkey://' for insecure or 'valkeys://' for secure Valkey standalone"
+                                + " configuration.",
+                        cause);
+            }
+        } catch (URISyntaxException ex) {
+            // fall through to default description and action
+        }
+        return new FailureAnalysis(
+                getDefaultDescription(cause.getUrl()),
+                "Review the value of the property 'spring.data.valkey.url'.",
+                cause);
+    }
 
-	private String getDefaultDescription(String url) {
-		return "The URL '" + url + "' is not valid for configuring Spring Data Valkey. ";
-	}
+    private String getDefaultDescription(String url) {
+        return "The URL '" + url + "' is not valid for configuring Spring Data Valkey. ";
+    }
 
-	private String getUnsupportedSchemeDescription(String url, String scheme) {
-		return getDefaultDescription(url) + "The scheme '" + scheme + "' is not supported.";
-	}
-
+    private String getUnsupportedSchemeDescription(String url, String scheme) {
+        return getDefaultDescription(url) + "The scheme '" + scheme + "' is not supported.";
+    }
 }

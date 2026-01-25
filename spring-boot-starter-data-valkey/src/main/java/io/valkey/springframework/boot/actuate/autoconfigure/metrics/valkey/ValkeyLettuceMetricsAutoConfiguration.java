@@ -20,7 +20,8 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.metrics.MicrometerCommandLatencyRecorder;
 import io.lettuce.core.metrics.MicrometerOptions;
 import io.micrometer.core.instrument.MeterRegistry;
-
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ClientResourcesBuilderCustomizer;
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.metrics.CompositeMeterRegistryAutoConfiguration;
 import org.springframework.boot.actuate.autoconfigure.metrics.MetricsAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -29,9 +30,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ClientResourcesBuilderCustomizer;
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
-
 /**
  * Auto-configuration for Lettuce metrics with Valkey.
  *
@@ -39,21 +37,23 @@ import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfig
  * @author Yanming Zhou
  * @since 2.6.0
  */
-@AutoConfiguration(before = ValkeyAutoConfiguration.class,
-		after = { MetricsAutoConfiguration.class, CompositeMeterRegistryAutoConfiguration.class })
-@ConditionalOnClass({ RedisClient.class, MicrometerCommandLatencyRecorder.class })
+@AutoConfiguration(
+        before = ValkeyAutoConfiguration.class,
+        after = {MetricsAutoConfiguration.class, CompositeMeterRegistryAutoConfiguration.class})
+@ConditionalOnClass({RedisClient.class, MicrometerCommandLatencyRecorder.class})
 @ConditionalOnBean(MeterRegistry.class)
 public class ValkeyLettuceMetricsAutoConfiguration {
 
-	@Bean
-	@ConditionalOnMissingBean
-	MicrometerOptions valkeyMicrometerOptions() {
-		return MicrometerOptions.create();
-	}
+    @Bean
+    @ConditionalOnMissingBean
+    MicrometerOptions valkeyMicrometerOptions() {
+        return MicrometerOptions.create();
+    }
 
-	@Bean
-	ClientResourcesBuilderCustomizer valkeyLettuceMetrics(MeterRegistry meterRegistry, MicrometerOptions options) {
-		return (client) -> client.commandLatencyRecorder(new MicrometerCommandLatencyRecorder(meterRegistry, options));
-	}
-
+    @Bean
+    ClientResourcesBuilderCustomizer valkeyLettuceMetrics(
+            MeterRegistry meterRegistry, MicrometerOptions options) {
+        return (client) ->
+                client.commandLatencyRecorder(new MicrometerCommandLatencyRecorder(meterRegistry, options));
+    }
 }

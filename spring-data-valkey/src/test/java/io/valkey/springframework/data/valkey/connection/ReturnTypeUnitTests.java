@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -31,22 +30,21 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class ReturnTypeUnitTests {
 
-	@ParameterizedTest // DATAREDIS-1245
-	@ValueSource(classes = { List.class, ArrayList.class, LinkedList.class })
-	void shouldConsiderListsAsMultiType(Class<?> listClass) {
-		assertThat(ReturnType.fromJavaType(listClass)).isEqualTo(ReturnType.MULTI);
-	}
+    @ParameterizedTest // DATAREDIS-1245
+    @ValueSource(classes = {List.class, ArrayList.class, LinkedList.class})
+    void shouldConsiderListsAsMultiType(Class<?> listClass) {
+        assertThat(ReturnType.fromJavaType(listClass)).isEqualTo(ReturnType.MULTI);
+    }
 
-	@ParameterizedTest // GH-3090
-	@ValueSource(classes = { Integer.class, Long.class, Number.class })
-	void shouldConsiderIntegerType(Class<?> listClass) {
-		assertThat(ReturnType.fromJavaType(listClass)).isEqualTo(ReturnType.INTEGER);
-	}
+    @ParameterizedTest // GH-3090
+    @ValueSource(classes = {Integer.class, Long.class, Number.class})
+    void shouldConsiderIntegerType(Class<?> listClass) {
+        assertThat(ReturnType.fromJavaType(listClass)).isEqualTo(ReturnType.INTEGER);
+    }
 
-	@ParameterizedTest // GH-3090
-	@ValueSource(classes = { Double.class, Float.class, String.class })
-	void shouldConsiderValueType(Class<?> listClass) {
-		assertThat(ReturnType.fromJavaType(listClass)).isEqualTo(ReturnType.VALUE);
-	}
-
+    @ParameterizedTest // GH-3090
+    @ValueSource(classes = {Double.class, Float.class, String.class})
+    void shouldConsiderValueType(Class<?> listClass) {
+        assertThat(ReturnType.fromJavaType(listClass)).isEqualTo(ReturnType.VALUE);
+    }
 }

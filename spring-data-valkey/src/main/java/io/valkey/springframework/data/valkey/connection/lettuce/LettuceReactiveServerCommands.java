@@ -16,19 +16,17 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.api.reactive.RedisServerReactiveCommands;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.util.Date;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
 import io.valkey.springframework.data.valkey.connection.ReactiveServerCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.FlushOption;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
+import java.nio.ByteBuffer;
+import java.util.Date;
+import java.util.Properties;
+import java.util.concurrent.TimeUnit;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * {@link ReactiveServerCommands} implementation for {@literal Lettuce}.
@@ -39,145 +37,154 @@ import org.springframework.util.Assert;
  */
 class LettuceReactiveServerCommands implements ReactiveServerCommands {
 
-	private final LettuceReactiveValkeyConnection connection;
+    private final LettuceReactiveValkeyConnection connection;
 
-	/**
-	 * Create new {@link LettuceReactiveGeoCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 * @throws IllegalArgumentException when {@code connection} is {@literal null}.
-	 */
-	LettuceReactiveServerCommands(LettuceReactiveValkeyConnection connection) {
+    /**
+     * Create new {@link LettuceReactiveGeoCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     * @throws IllegalArgumentException when {@code connection} is {@literal null}.
+     */
+    LettuceReactiveServerCommands(LettuceReactiveValkeyConnection connection) {
 
-		Assert.notNull(connection, "Connection must not be null");
+        Assert.notNull(connection, "Connection must not be null");
 
-		this.connection = connection;
-	}
+        this.connection = connection;
+    }
 
-	@Override
-	public Mono<String> bgReWriteAof() {
-		return connection.execute(RedisServerReactiveCommands::bgrewriteaof).next();
-	}
+    @Override
+    public Mono<String> bgReWriteAof() {
+        return connection.execute(RedisServerReactiveCommands::bgrewriteaof).next();
+    }
 
-	@Override
-	public Mono<String> bgSave() {
-		return connection.execute(RedisServerReactiveCommands::bgsave).next();
-	}
+    @Override
+    public Mono<String> bgSave() {
+        return connection.execute(RedisServerReactiveCommands::bgsave).next();
+    }
 
-	@Override
-	public Mono<Long> lastSave() {
-		return connection.execute(RedisServerReactiveCommands::lastsave).next().map(Date::getTime);
-	}
+    @Override
+    public Mono<Long> lastSave() {
+        return connection.execute(RedisServerReactiveCommands::lastsave).next().map(Date::getTime);
+    }
 
-	@Override
-	public Mono<String> save() {
-		return connection.execute(RedisServerReactiveCommands::save).next();
-	}
+    @Override
+    public Mono<String> save() {
+        return connection.execute(RedisServerReactiveCommands::save).next();
+    }
 
-	@Override
-	public Mono<Long> dbSize() {
-		return connection.execute(RedisServerReactiveCommands::dbsize).next();
-	}
+    @Override
+    public Mono<Long> dbSize() {
+        return connection.execute(RedisServerReactiveCommands::dbsize).next();
+    }
 
-	@Override
-	public Mono<String> flushDb() {
-		return connection.execute(RedisServerReactiveCommands::flushdb).next();
-	}
+    @Override
+    public Mono<String> flushDb() {
+        return connection.execute(RedisServerReactiveCommands::flushdb).next();
+    }
 
-	@Override
-	public Mono<String> flushDb(FlushOption option) {
-		return connection.execute(it -> it.flushdb(LettuceConverters.toFlushMode(option))).next();
-	}
+    @Override
+    public Mono<String> flushDb(FlushOption option) {
+        return connection.execute(it -> it.flushdb(LettuceConverters.toFlushMode(option))).next();
+    }
 
-	@Override
-	public Mono<String> flushAll() {
-		return connection.execute(RedisServerReactiveCommands::flushall).next();
-	}
+    @Override
+    public Mono<String> flushAll() {
+        return connection.execute(RedisServerReactiveCommands::flushall).next();
+    }
 
-	@Override
-	public Mono<String> flushAll(FlushOption option) {
-		return connection.execute(it -> it.flushall(LettuceConverters.toFlushMode(option))).next();
-	}
+    @Override
+    public Mono<String> flushAll(FlushOption option) {
+        return connection.execute(it -> it.flushall(LettuceConverters.toFlushMode(option))).next();
+    }
 
-	@Override
-	public Mono<Properties> info() {
+    @Override
+    public Mono<Properties> info() {
 
-		return connection.execute(RedisServerReactiveCommands::info) //
-				.map(LettuceConverters::toProperties) //
-				.next();
-	}
+        return connection
+                .execute(RedisServerReactiveCommands::info) //
+                .map(LettuceConverters::toProperties) //
+                .next();
+    }
 
-	@Override
-	public Mono<Properties> info(String section) {
+    @Override
+    public Mono<Properties> info(String section) {
 
-		Assert.hasText(section, "Section must not be null or empty");
+        Assert.hasText(section, "Section must not be null or empty");
 
-		return connection.execute(c -> c.info(section)) //
-				.map(LettuceConverters::toProperties) //
-				.next();
-	}
+        return connection
+                .execute(c -> c.info(section)) //
+                .map(LettuceConverters::toProperties) //
+                .next();
+    }
 
-	@Override
-	public Mono<Properties> getConfig(String pattern) {
+    @Override
+    public Mono<Properties> getConfig(String pattern) {
 
-		Assert.hasText(pattern, "Pattern must not be null or empty");
+        Assert.hasText(pattern, "Pattern must not be null or empty");
 
-		return connection.execute(c -> c.configGet(pattern)) //
-				.map(LettuceConverters::toProperties).next();
-	}
+        return connection
+                .execute(c -> c.configGet(pattern)) //
+                .map(LettuceConverters::toProperties)
+                .next();
+    }
 
-	@Override
-	public Mono<String> setConfig(String param, String value) {
+    @Override
+    public Mono<String> setConfig(String param, String value) {
 
-		Assert.hasText(param, "Parameter must not be null or empty");
-		Assert.notNull(value, "Value must not be null");
+        Assert.hasText(param, "Parameter must not be null or empty");
+        Assert.notNull(value, "Value must not be null");
 
-		return connection.execute(c -> c.configSet(param, value)).next();
-	}
+        return connection.execute(c -> c.configSet(param, value)).next();
+    }
 
-	@Override
-	public Mono<String> resetConfigStats() {
-		return connection.execute(RedisServerReactiveCommands::configResetstat).next();
-	}
+    @Override
+    public Mono<String> resetConfigStats() {
+        return connection.execute(RedisServerReactiveCommands::configResetstat).next();
+    }
 
-	@Override
-	public Mono<Long> time(TimeUnit timeUnit) {
+    @Override
+    public Mono<Long> time(TimeUnit timeUnit) {
 
-		return connection.execute(RedisServerReactiveCommands::time) //
-				.map(ByteUtils::getBytes) //
-				.collectList() //
-				.map(LettuceConverters.toTimeConverter(timeUnit)::convert);
-	}
+        return connection
+                .execute(RedisServerReactiveCommands::time) //
+                .map(ByteUtils::getBytes) //
+                .collectList() //
+                .map(LettuceConverters.toTimeConverter(timeUnit)::convert);
+    }
 
-	@Override
-	public Mono<String> killClient(String host, int port) {
+    @Override
+    public Mono<String> killClient(String host, int port) {
 
-		Assert.notNull(host, "Host must not be null or empty");
+        Assert.notNull(host, "Host must not be null or empty");
 
-		return connection.execute(c -> c.clientKill("%s:%d".formatted(host, port))).next();
-	}
+        return connection.execute(c -> c.clientKill("%s:%d".formatted(host, port))).next();
+    }
 
-	@Override
-	public Mono<String> setClientName(String name) {
+    @Override
+    public Mono<String> setClientName(String name) {
 
-		Assert.hasText(name, "Name must not be null or empty");
+        Assert.hasText(name, "Name must not be null or empty");
 
-		return connection.execute(c -> c.clientSetname(ByteBuffer.wrap(LettuceConverters.toBytes(name)))).next();
-	}
+        return connection
+                .execute(c -> c.clientSetname(ByteBuffer.wrap(LettuceConverters.toBytes(name))))
+                .next();
+    }
 
-	@Override
-	public Mono<String> getClientName() {
+    @Override
+    public Mono<String> getClientName() {
 
-		return connection.execute(RedisServerReactiveCommands::clientGetname) //
-				.map(ByteUtils::getBytes) //
-				.map(LettuceConverters::toString) //
-				.next();
-	}
+        return connection
+                .execute(RedisServerReactiveCommands::clientGetname) //
+                .map(ByteUtils::getBytes) //
+                .map(LettuceConverters::toString) //
+                .next();
+    }
 
-	@Override
-	public Flux<ValkeyClientInfo> getClientList() {
+    @Override
+    public Flux<ValkeyClientInfo> getClientList() {
 
-		return connection.execute(RedisServerReactiveCommands::clientList)
-				.concatMapIterable(s -> LettuceConverters.stringToValkeyClientListConverter().convert(s));
-	}
+        return connection
+                .execute(RedisServerReactiveCommands::clientList)
+                .concatMapIterable(s -> LettuceConverters.stringToValkeyClientListConverter().convert(s));
+    }
 }

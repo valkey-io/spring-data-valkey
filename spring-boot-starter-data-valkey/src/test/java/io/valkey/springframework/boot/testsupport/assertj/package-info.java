@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Custom AssertJ assertions.
- */
+/** Custom AssertJ assertions. */
 package io.valkey.springframework.boot.testsupport.assertj;

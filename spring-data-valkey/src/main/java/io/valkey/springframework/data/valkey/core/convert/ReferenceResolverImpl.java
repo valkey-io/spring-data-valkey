@@ -15,12 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
-import java.util.Map;
-
 import io.valkey.springframework.data.valkey.core.ValkeyCallback;
 import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.convert.BinaryConverters.StringToBytesConverter;
+import java.util.Map;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -33,26 +32,27 @@ import org.springframework.util.Assert;
  */
 public class ReferenceResolverImpl implements ReferenceResolver {
 
-	private final ValkeyOperations<?, ?> valkeyOps;
-	private final StringToBytesConverter converter;
+    private final ValkeyOperations<?, ?> valkeyOps;
+    private final StringToBytesConverter converter;
 
-	/**
-	 * @param valkeyOperations must not be {@literal null}.
-	 */
-	public ReferenceResolverImpl(ValkeyOperations<?, ?> valkeyOperations) {
+    /**
+     * @param valkeyOperations must not be {@literal null}.
+     */
+    public ReferenceResolverImpl(ValkeyOperations<?, ?> valkeyOperations) {
 
-		Assert.notNull(valkeyOperations, "ValkeyOperations must not be null");
+        Assert.notNull(valkeyOperations, "ValkeyOperations must not be null");
 
-		this.valkeyOps = valkeyOperations;
-		this.converter = new StringToBytesConverter();
-	}
+        this.valkeyOps = valkeyOperations;
+        this.converter = new StringToBytesConverter();
+    }
 
-	@Override
-	@Nullable
-	public Map<byte[], byte[]> resolveReference(Object id, String keyspace) {
+    @Override
+    @Nullable
+    public Map<byte[], byte[]> resolveReference(Object id, String keyspace) {
 
-		byte[] key = converter.convert(keyspace + ":" + id);
+        byte[] key = converter.convert(keyspace + ":" + id);
 
-		return valkeyOps.execute((ValkeyCallback<Map<byte[], byte[]>>) connection -> connection.hGetAll(key));
-	}
+        return valkeyOps.execute(
+                (ValkeyCallback<Map<byte[], byte[]>>) connection -> connection.hGetAll(key));
+    }
 }

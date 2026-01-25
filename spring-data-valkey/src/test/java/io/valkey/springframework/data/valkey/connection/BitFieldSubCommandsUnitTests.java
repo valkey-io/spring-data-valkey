@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import static org.assertj.core.api.Assertions.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.*;
+import static org.assertj.core.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
@@ -28,68 +28,91 @@ import org.junit.jupiter.api.Test;
  */
 class BitFieldSubCommandsUnitTests {
 
-	@Test // DATAREDIS-971
-	void shouldCreateSignedBitFieldType() {
+    @Test // DATAREDIS-971
+    void shouldCreateSignedBitFieldType() {
 
-		BitFieldType type = BitFieldType.signed(10);
+        BitFieldType type = BitFieldType.signed(10);
 
-		assertThat(type.isSigned()).isTrue();
-		assertThat(type.getBits()).isEqualTo(10);
-	}
+        assertThat(type.isSigned()).isTrue();
+        assertThat(type.getBits()).isEqualTo(10);
+    }
 
-	@Test // DATAREDIS-971
-	void shouldCreateUnsignedBitFieldType() {
+    @Test // DATAREDIS-971
+    void shouldCreateUnsignedBitFieldType() {
 
-		BitFieldType type = BitFieldType.unsigned(10);
+        BitFieldType type = BitFieldType.unsigned(10);
 
-		assertThat(type.isSigned()).isFalse();
-		assertThat(type.getBits()).isEqualTo(10);
-	}
+        assertThat(type.isSigned()).isFalse();
+        assertThat(type.getBits()).isEqualTo(10);
+    }
 
-	@Test // GH-2055
-	void shouldCreateBitCommandsWithChainingMethod() {
+    @Test // GH-2055
+    void shouldCreateBitCommandsWithChainingMethod() {
 
-		BitFieldType type = BitFieldType.unsigned(1);
-		BitFieldSubCommands bitFieldSubCommands = BitFieldSubCommands.create().get(type).valueAt(Offset.offset(1)).get(type)
-				.valueAt(Offset.offset(2)).set(type).valueAt(Offset.offset(3)).to(1).set(type).valueAt(Offset.offset(4)).to(1)
-				.incr(type).valueAt(Offset.offset(5)).by(1);
+        BitFieldType type = BitFieldType.unsigned(1);
+        BitFieldSubCommands bitFieldSubCommands =
+                BitFieldSubCommands.create()
+                        .get(type)
+                        .valueAt(Offset.offset(1))
+                        .get(type)
+                        .valueAt(Offset.offset(2))
+                        .set(type)
+                        .valueAt(Offset.offset(3))
+                        .to(1)
+                        .set(type)
+                        .valueAt(Offset.offset(4))
+                        .to(1)
+                        .incr(type)
+                        .valueAt(Offset.offset(5))
+                        .by(1);
 
-		assertThat(bitFieldSubCommands.getSubCommands()).hasSize(5);
-	}
+        assertThat(bitFieldSubCommands.getSubCommands()).hasSize(5);
+    }
 
-	@Test // GH-2055
-	void shouldCreateEqualObjects() {
+    @Test // GH-2055
+    void shouldCreateEqualObjects() {
 
-		BitFieldType type = BitFieldType.unsigned(1);
+        BitFieldType type = BitFieldType.unsigned(1);
 
-		BitFieldSubCommands createdWithBuilder = BitFieldSubCommands.create() //
-				.get(type).valueAt(Offset.offset(2)) //
-				.set(type).valueAt(Offset.offset(3)).to(1) //
-				.incr(type).valueAt(Offset.offset(5)).by(1);
+        BitFieldSubCommands createdWithBuilder =
+                BitFieldSubCommands.create() //
+                        .get(type)
+                        .valueAt(Offset.offset(2)) //
+                        .set(type)
+                        .valueAt(Offset.offset(3))
+                        .to(1) //
+                        .incr(type)
+                        .valueAt(Offset.offset(5))
+                        .by(1);
 
-		BitFieldSubCommand subGetCommand = BitFieldGet.create(type, Offset.offset(2));
-		BitFieldSubCommand subSetCommand = BitFieldSet.create(type, Offset.offset(3), 1);
-		BitFieldSubCommand subIncrByCommand = BitFieldIncrBy.create(type, Offset.offset(5), 1);
+        BitFieldSubCommand subGetCommand = BitFieldGet.create(type, Offset.offset(2));
+        BitFieldSubCommand subSetCommand = BitFieldSet.create(type, Offset.offset(3), 1);
+        BitFieldSubCommand subIncrByCommand = BitFieldIncrBy.create(type, Offset.offset(5), 1);
 
-		BitFieldSubCommands createdWithCreate = BitFieldSubCommands.create(subGetCommand, subSetCommand, subIncrByCommand);
+        BitFieldSubCommands createdWithCreate =
+                BitFieldSubCommands.create(subGetCommand, subSetCommand, subIncrByCommand);
 
-		assertThat(createdWithBuilder).isEqualTo(createdWithCreate).hasSameHashCodeAs(createdWithCreate);
-	}
+        assertThat(createdWithBuilder)
+                .isEqualTo(createdWithCreate)
+                .hasSameHashCodeAs(createdWithCreate);
+    }
 
-	@Test // GH-2055
-	void shouldCreateBitCommandsWithNonChainingMethod() {
+    @Test // GH-2055
+    void shouldCreateBitCommandsWithNonChainingMethod() {
 
-		BitFieldType type = BitFieldType.unsigned(1);
-		Offset offset = Offset.offset(1);
+        BitFieldType type = BitFieldType.unsigned(1);
+        Offset offset = Offset.offset(1);
 
-		BitFieldSubCommand subGetCommand = BitFieldGet.create(type, offset);
-		BitFieldSubCommand subSetCommand = BitFieldSet.create(type, offset, 1);
-		BitFieldSubCommand subIncrByCommand = BitFieldIncrBy.create(type, offset, 1);
-		BitFieldSubCommand subIncrByCommand2 = BitFieldIncrBy.create(type, offset, 1, BitFieldIncrBy.Overflow.FAIL);
+        BitFieldSubCommand subGetCommand = BitFieldGet.create(type, offset);
+        BitFieldSubCommand subSetCommand = BitFieldSet.create(type, offset, 1);
+        BitFieldSubCommand subIncrByCommand = BitFieldIncrBy.create(type, offset, 1);
+        BitFieldSubCommand subIncrByCommand2 =
+                BitFieldIncrBy.create(type, offset, 1, BitFieldIncrBy.Overflow.FAIL);
 
-		BitFieldSubCommands bitFieldSubCommands = BitFieldSubCommands.create(subGetCommand, subSetCommand, subIncrByCommand,
-				subIncrByCommand2);
+        BitFieldSubCommands bitFieldSubCommands =
+                BitFieldSubCommands.create(
+                        subGetCommand, subSetCommand, subIncrByCommand, subIncrByCommand2);
 
-		assertThat(bitFieldSubCommands.getSubCommands()).hasSize(4);
-	}
+        assertThat(bitFieldSubCommands.getSubCommands()).hasSize(4);
+    }
 }

@@ -23,14 +23,14 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Value object encapsulating a multiplication factor for each input sorted set. This means that the score of every
- * element in every input sorted set is multiplied by this factor before being passed to the aggregation function.
+ * Value object encapsulating a multiplication factor for each input sorted set. This means that the
+ * score of every element in every input sorted set is multiplied by this factor before being passed
+ * to the aggregation function.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -38,128 +38,132 @@ import org.springframework.util.ObjectUtils;
  */
 public class Weights {
 
-	private final List<Double> weights;
+    private final List<Double> weights;
 
-	private Weights(List<Double> weights) {
-		this.weights = weights;
-	}
+    private Weights(List<Double> weights) {
+        this.weights = weights;
+    }
 
-	/**
-	 * Create new {@link Weights} given {@code weights} as {@code int}.
-	 *
-	 * @param weights must not be {@literal null}.
-	 * @return the {@link Weights} for {@code weights}.
-	 */
-	public static Weights of(int... weights) {
+    /**
+     * Create new {@link Weights} given {@code weights} as {@code int}.
+     *
+     * @param weights must not be {@literal null}.
+     * @return the {@link Weights} for {@code weights}.
+     */
+    public static Weights of(int... weights) {
 
-		Assert.notNull(weights, "Weights must not be null");
-		return new Weights(Arrays.stream(weights).mapToDouble(value -> value).boxed().collect(Collectors.toList()));
-	}
+        Assert.notNull(weights, "Weights must not be null");
+        return new Weights(
+                Arrays.stream(weights).mapToDouble(value -> value).boxed().collect(Collectors.toList()));
+    }
 
-	/**
-	 * Create new {@link Weights} given {@code weights} as {@code double}.
-	 *
-	 * @param weights must not be {@literal null}.
-	 * @return the {@link Weights} for {@code weights}.
-	 */
-	public static Weights of(double... weights) {
+    /**
+     * Create new {@link Weights} given {@code weights} as {@code double}.
+     *
+     * @param weights must not be {@literal null}.
+     * @return the {@link Weights} for {@code weights}.
+     */
+    public static Weights of(double... weights) {
 
-		Assert.notNull(weights, "Weights must not be null");
+        Assert.notNull(weights, "Weights must not be null");
 
-		return new Weights(DoubleStream.of(weights).boxed().collect(Collectors.toList()));
-	}
+        return new Weights(DoubleStream.of(weights).boxed().collect(Collectors.toList()));
+    }
 
-	/**
-	 * Creates equal {@link Weights} for a number of input sets {@code count} with a weight of one.
-	 *
-	 * @param count number of input sets. Must be greater or equal to zero.
-	 * @return equal {@link Weights} for a number of input sets with a weight of one.
-	 */
-	public static Weights fromSetCount(int count) {
+    /**
+     * Creates equal {@link Weights} for a number of input sets {@code count} with a weight of one.
+     *
+     * @param count number of input sets. Must be greater or equal to zero.
+     * @return equal {@link Weights} for a number of input sets with a weight of one.
+     */
+    public static Weights fromSetCount(int count) {
 
-		Assert.isTrue(count >= 0, "Count of input sorted sets must be greater or equal to zero");
+        Assert.isTrue(count >= 0, "Count of input sorted sets must be greater or equal to zero");
 
-		return new Weights(IntStream.range(0, count).mapToDouble(value -> 1).boxed().collect(Collectors.toList()));
-	}
+        return new Weights(
+                IntStream.range(0, count).mapToDouble(value -> 1).boxed().collect(Collectors.toList()));
+    }
 
-	/**
-	 * Creates a new {@link Weights} object that contains all weights multiplied by {@code multiplier}
-	 *
-	 * @param multiplier multiplier used to multiply each weight with.
-	 * @return equal {@link Weights} for a number of input sets with a weight of one.
-	 */
-	public Weights multiply(int multiplier) {
-		return apply(it -> it * multiplier);
-	}
+    /**
+     * Creates a new {@link Weights} object that contains all weights multiplied by {@code multiplier}
+     *
+     * @param multiplier multiplier used to multiply each weight with.
+     * @return equal {@link Weights} for a number of input sets with a weight of one.
+     */
+    public Weights multiply(int multiplier) {
+        return apply(it -> it * multiplier);
+    }
 
-	/**
-	 * Creates a new {@link Weights} object that contains all weights multiplied by {@code multiplier}
-	 *
-	 * @param multiplier multiplier used to multiply each weight with.
-	 * @return equal {@link Weights} for a number of input sets with a weight of one.
-	 */
-	public Weights multiply(double multiplier) {
-		return apply(it -> it * multiplier);
-	}
+    /**
+     * Creates a new {@link Weights} object that contains all weights multiplied by {@code multiplier}
+     *
+     * @param multiplier multiplier used to multiply each weight with.
+     * @return equal {@link Weights} for a number of input sets with a weight of one.
+     */
+    public Weights multiply(double multiplier) {
+        return apply(it -> it * multiplier);
+    }
 
-	/**
-	 * Creates a new {@link Weights} object that contains all weights with {@link Function} applied.
-	 *
-	 * @param operator operator function.
-	 * @return the new {@link Weights} with {@link DoubleUnaryOperator} applied.
-	 */
-	public Weights apply(Function<Double, Double> operator) {
-		return new Weights(weights.stream().map(operator).collect(Collectors.toList()));
-	}
+    /**
+     * Creates a new {@link Weights} object that contains all weights with {@link Function} applied.
+     *
+     * @param operator operator function.
+     * @return the new {@link Weights} with {@link DoubleUnaryOperator} applied.
+     */
+    public Weights apply(Function<Double, Double> operator) {
+        return new Weights(weights.stream().map(operator).collect(Collectors.toList()));
+    }
 
-	/**
-	 * Retrieve the weight at {@code index}.
-	 *
-	 * @param index the weight index.
-	 * @return the weight at {@code index}.
-	 * @throws IndexOutOfBoundsException if the index is out of range
-	 */
-	public double getWeight(int index) {
-		return weights.get(index);
-	}
+    /**
+     * Retrieve the weight at {@code index}.
+     *
+     * @param index the weight index.
+     * @return the weight at {@code index}.
+     * @throws IndexOutOfBoundsException if the index is out of range
+     */
+    public double getWeight(int index) {
+        return weights.get(index);
+    }
 
-	/**
-	 * @return number of weights.
-	 */
-	public int size() {
-		return weights.size();
-	}
+    /**
+     * @return number of weights.
+     */
+    public int size() {
+        return weights.size();
+    }
 
-	/**
-	 * @return an array containing all of the weights in this list in proper sequence (from first to last element).
-	 */
-	public double[] toArray() {
-		return weights.stream().mapToDouble(Double::doubleValue).toArray();
-	}
+    /**
+     * @return an array containing all of the weights in this list in proper sequence (from first to
+     *     last element).
+     */
+    public double[] toArray() {
+        return weights.stream().mapToDouble(Double::doubleValue).toArray();
+    }
 
-	/**
-	 * @return a {@link List} containing all of the weights in this list in proper sequence (from first to last element).
-	 */
-	public List<Double> toList() {
-		return Collections.unmodifiableList(weights);
-	}
+    /**
+     * @return a {@link List} containing all of the weights in this list in proper sequence (from
+     *     first to last element).
+     */
+    public List<Double> toList() {
+        return Collections.unmodifiableList(weights);
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
+    @Override
+    public boolean equals(@Nullable Object o) {
 
-		if (this == o) {
-			return true;
-		}
+        if (this == o) {
+            return true;
+        }
 
-		if (!(o instanceof Weights that)) {
-			return false;
-		}
+        if (!(o instanceof Weights that)) {
+            return false;
+        }
 
-		return ObjectUtils.nullSafeEquals(this.weights, that.weights);
-	}
+        return ObjectUtils.nullSafeEquals(this.weights, that.weights);
+    }
 
-	@Override
-	public int hashCode() {
-		return ObjectUtils.nullSafeHashCode(weights);
-	}
+    @Override
+    public int hashCode() {
+        return ObjectUtils.nullSafeHashCode(weights);
+    }
 }

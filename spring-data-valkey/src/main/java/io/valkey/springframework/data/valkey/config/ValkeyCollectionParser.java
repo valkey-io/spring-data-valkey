@@ -15,9 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.config;
 
+import io.valkey.springframework.data.valkey.support.collections.ValkeyCollectionFactoryBean;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.xml.AbstractSimpleBeanDefinitionParser;
-import io.valkey.springframework.data.valkey.support.collections.ValkeyCollectionFactoryBean;
 import org.springframework.util.StringUtils;
 import org.w3c.dom.Element;
 
@@ -28,19 +28,19 @@ import org.w3c.dom.Element;
  */
 class ValkeyCollectionParser extends AbstractSimpleBeanDefinitionParser {
 
-	protected Class<?> getBeanClass(Element element) {
-		return ValkeyCollectionFactoryBean.class;
-	}
+    protected Class<?> getBeanClass(Element element) {
+        return ValkeyCollectionFactoryBean.class;
+    }
 
-	protected void postProcess(BeanDefinitionBuilder beanDefinition, Element element) {
+    protected void postProcess(BeanDefinitionBuilder beanDefinition, Element element) {
 
-		String template = element.getAttribute("template");
-		if (StringUtils.hasText(template)) {
-			beanDefinition.addPropertyReference("template", template);
-		}
-	}
+        String template = element.getAttribute("template");
+        if (StringUtils.hasText(template)) {
+            beanDefinition.addPropertyReference("template", template);
+        }
+    }
 
-	protected boolean isEligibleAttribute(String attributeName) {
-		return super.isEligibleAttribute(attributeName) && (!"template".equals(attributeName));
-	}
+    protected boolean isEligibleAttribute(String attributeName) {
+        return super.isEligibleAttribute(attributeName) && (!"template".equals(attributeName));
+    }
 }

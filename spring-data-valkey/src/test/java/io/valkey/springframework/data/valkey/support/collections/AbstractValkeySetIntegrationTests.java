@@ -17,6 +17,12 @@ package io.valkey.springframework.data.valkey.support.collections;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.ObjectFactory;
+import io.valkey.springframework.data.valkey.core.BoundSetOperations;
+import io.valkey.springframework.data.valkey.core.Cursor;
+import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,15 +30,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
-
 import org.junit.jupiter.api.BeforeEach;
-
-import io.valkey.springframework.data.valkey.ObjectFactory;
-import io.valkey.springframework.data.valkey.core.BoundSetOperations;
-import io.valkey.springframework.data.valkey.core.Cursor;
-import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -42,292 +40,294 @@ import org.springframework.util.ObjectUtils;
  * @author Christoph Strobl
  * @author Thomas Darimont
  */
-public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValkeyCollectionIntegrationTests<T> {
+public abstract class AbstractValkeySetIntegrationTests<T>
+        extends AbstractValkeyCollectionIntegrationTests<T> {
 
-	protected ValkeySet<T> set;
+    protected ValkeySet<T> set;
 
-	/**
-	 * Constructs a new <code>AbstractValkeySetTests</code> instance.
-	 *
-	 * @param factory
-	 * @param template
-	 */
-	@SuppressWarnings("rawtypes")
-	AbstractValkeySetIntegrationTests(ObjectFactory<T> factory, ValkeyTemplate template) {
-		super(factory, template);
-	}
+    /**
+     * Constructs a new <code>AbstractValkeySetTests</code> instance.
+     *
+     * @param factory
+     * @param template
+     */
+    @SuppressWarnings("rawtypes")
+    AbstractValkeySetIntegrationTests(ObjectFactory<T> factory, ValkeyTemplate template) {
+        super(factory, template);
+    }
 
-	@SuppressWarnings("unchecked")
-	@BeforeEach
-	public void setUp() throws Exception {
-		super.setUp();
-		set = (ValkeySet<T>) collection;
-	}
+    @SuppressWarnings("unchecked")
+    @BeforeEach
+    public void setUp() throws Exception {
+        super.setUp();
+        set = (ValkeySet<T>) collection;
+    }
 
-	@SuppressWarnings("unchecked")
-	private ValkeySet<T> createSetFor(String key) {
-		return new DefaultValkeySet<>((BoundSetOperations<String, T>) set.getOperations().boundSetOps(key));
-	}
+    @SuppressWarnings("unchecked")
+    private ValkeySet<T> createSetFor(String key) {
+        return new DefaultValkeySet<>(
+                (BoundSetOperations<String, T>) set.getOperations().boundSetOps(key));
+    }
 
-	@ParameterizedValkeyTest // GH-2037
-	@EnabledOnCommand("SMISMEMBER")
-	void testContainsAll() {
-		
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
+    @ParameterizedValkeyTest // GH-2037
+    @EnabledOnCommand("SMISMEMBER")
+    void testContainsAll() {
 
-		set.add(t1);
-		set.add(t2);
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
 
-		assertThat(set.containsAll(Arrays.asList(t1, t2, t3))).isFalse();
-		assertThat(set.containsAll(Arrays.asList(t1, t2))).isTrue();
-		assertThat(set.containsAll(Collections.emptyList())).isTrue();
-	}
+        set.add(t1);
+        set.add(t2);
 
-	@ParameterizedValkeyTest
-	void testDiff() {
-		ValkeySet<T> diffSet1 = createSetFor("test:set:diff1");
-		ValkeySet<T> diffSet2 = createSetFor("test:set:diff2");
+        assertThat(set.containsAll(Arrays.asList(t1, t2, t3))).isFalse();
+        assertThat(set.containsAll(Arrays.asList(t1, t2))).isTrue();
+        assertThat(set.containsAll(Collections.emptyList())).isTrue();
+    }
 
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
+    @ParameterizedValkeyTest
+    void testDiff() {
+        ValkeySet<T> diffSet1 = createSetFor("test:set:diff1");
+        ValkeySet<T> diffSet2 = createSetFor("test:set:diff2");
 
-		set.add(t1);
-		set.add(t2);
-		set.add(t3);
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
 
-		diffSet1.add(t2);
-		diffSet2.add(t3);
+        set.add(t1);
+        set.add(t2);
+        set.add(t3);
 
-		Set<T> diff = set.diff(Arrays.asList(diffSet1, diffSet2));
-		assertThat(diff.size()).isEqualTo(1);
-		assertThat(diff).contains(t1);
-	}
+        diffSet1.add(t2);
+        diffSet2.add(t3);
 
-	@ParameterizedValkeyTest
-	void testDiffAndStore() {
-		ValkeySet<T> diffSet1 = createSetFor("test:set:diff1");
-		ValkeySet<T> diffSet2 = createSetFor("test:set:diff2");
+        Set<T> diff = set.diff(Arrays.asList(diffSet1, diffSet2));
+        assertThat(diff.size()).isEqualTo(1);
+        assertThat(diff).contains(t1);
+    }
 
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
-		T t4 = getT();
+    @ParameterizedValkeyTest
+    void testDiffAndStore() {
+        ValkeySet<T> diffSet1 = createSetFor("test:set:diff1");
+        ValkeySet<T> diffSet2 = createSetFor("test:set:diff2");
 
-		set.add(t1);
-		set.add(t2);
-		set.add(t3);
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
+        T t4 = getT();
 
-		diffSet1.add(t2);
-		diffSet2.add(t3);
-		diffSet2.add(t4);
+        set.add(t1);
+        set.add(t2);
+        set.add(t3);
 
-		String resultName = "test:set:diff:result:1";
-		ValkeySet<T> diff = set.diffAndStore(Arrays.asList(diffSet1, diffSet2), resultName);
+        diffSet1.add(t2);
+        diffSet2.add(t3);
+        diffSet2.add(t4);
 
-		assertThat(diff.size()).isEqualTo(1);
-		assertThat(diff).contains(t1);
-		assertThat(diff.getKey()).isEqualTo(resultName);
-	}
+        String resultName = "test:set:diff:result:1";
+        ValkeySet<T> diff = set.diffAndStore(Arrays.asList(diffSet1, diffSet2), resultName);
 
-	@ParameterizedValkeyTest
-	void testIntersect() {
-		ValkeySet<T> intSet1 = createSetFor("test:set:int1");
-		ValkeySet<T> intSet2 = createSetFor("test:set:int2");
+        assertThat(diff.size()).isEqualTo(1);
+        assertThat(diff).contains(t1);
+        assertThat(diff.getKey()).isEqualTo(resultName);
+    }
 
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
-		T t4 = getT();
+    @ParameterizedValkeyTest
+    void testIntersect() {
+        ValkeySet<T> intSet1 = createSetFor("test:set:int1");
+        ValkeySet<T> intSet2 = createSetFor("test:set:int2");
 
-		set.add(t1);
-		set.add(t2);
-		set.add(t3);
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
+        T t4 = getT();
 
-		intSet1.add(t2);
-		intSet1.add(t4);
-		intSet2.add(t2);
-		intSet2.add(t3);
+        set.add(t1);
+        set.add(t2);
+        set.add(t3);
 
-		Set<T> inter = set.intersect(Arrays.asList(intSet1, intSet2));
-		assertThat(inter.size()).isEqualTo(1);
-		assertThat(inter).contains(t2);
-	}
+        intSet1.add(t2);
+        intSet1.add(t4);
+        intSet2.add(t2);
+        intSet2.add(t3);
 
-	public void testIntersectAndStore() {
-		ValkeySet<T> intSet1 = createSetFor("test:set:int1");
-		ValkeySet<T> intSet2 = createSetFor("test:set:int2");
+        Set<T> inter = set.intersect(Arrays.asList(intSet1, intSet2));
+        assertThat(inter.size()).isEqualTo(1);
+        assertThat(inter).contains(t2);
+    }
 
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
-		T t4 = getT();
+    public void testIntersectAndStore() {
+        ValkeySet<T> intSet1 = createSetFor("test:set:int1");
+        ValkeySet<T> intSet2 = createSetFor("test:set:int2");
 
-		set.add(t1);
-		set.add(t2);
-		set.add(t3);
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
+        T t4 = getT();
 
-		intSet1.add(t2);
-		intSet1.add(t4);
-		intSet2.add(t2);
-		intSet2.add(t3);
+        set.add(t1);
+        set.add(t2);
+        set.add(t3);
 
-		String resultName = "test:set:intersect:result:1";
-		ValkeySet<T> inter = set.intersectAndStore(Arrays.asList(intSet1, intSet2), resultName);
-		assertThat(inter.size()).isEqualTo(1);
-		assertThat(inter).contains(t2);
-		assertThat(inter.getKey()).isEqualTo(resultName);
-	}
+        intSet1.add(t2);
+        intSet1.add(t4);
+        intSet2.add(t2);
+        intSet2.add(t3);
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	void testUnion() {
-		ValkeySet<T> unionSet1 = createSetFor("test:set:union1");
-		ValkeySet<T> unionSet2 = createSetFor("test:set:union2");
+        String resultName = "test:set:intersect:result:1";
+        ValkeySet<T> inter = set.intersectAndStore(Arrays.asList(intSet1, intSet2), resultName);
+        assertThat(inter.size()).isEqualTo(1);
+        assertThat(inter).contains(t2);
+        assertThat(inter.getKey()).isEqualTo(resultName);
+    }
 
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
-		T t4 = getT();
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    void testUnion() {
+        ValkeySet<T> unionSet1 = createSetFor("test:set:union1");
+        ValkeySet<T> unionSet2 = createSetFor("test:set:union2");
 
-		set.add(t1);
-		set.add(t2);
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
+        T t4 = getT();
 
-		unionSet1.add(t2);
-		unionSet1.add(t4);
-		unionSet2.add(t3);
+        set.add(t1);
+        set.add(t2);
 
-		Set<T> union = set.union(Arrays.asList(unionSet1, unionSet2));
-		assertThat(union.size()).isEqualTo(4);
-		assertThat(union).contains(t1, t2, t3, t4);
-	}
+        unionSet1.add(t2);
+        unionSet1.add(t4);
+        unionSet2.add(t3);
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	void testUnionAndStore() {
-		ValkeySet<T> unionSet1 = createSetFor("test:set:union1");
-		ValkeySet<T> unionSet2 = createSetFor("test:set:union2");
+        Set<T> union = set.union(Arrays.asList(unionSet1, unionSet2));
+        assertThat(union.size()).isEqualTo(4);
+        assertThat(union).contains(t1, t2, t3, t4);
+    }
 
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
-		T t4 = getT();
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    void testUnionAndStore() {
+        ValkeySet<T> unionSet1 = createSetFor("test:set:union1");
+        ValkeySet<T> unionSet2 = createSetFor("test:set:union2");
 
-		set.add(t1);
-		set.add(t2);
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
+        T t4 = getT();
 
-		unionSet1.add(t2);
-		unionSet1.add(t4);
-		unionSet2.add(t3);
+        set.add(t1);
+        set.add(t2);
 
-		String resultName = "test:set:union:result:1";
-		ValkeySet<T> union = set.unionAndStore(Arrays.asList(unionSet1, unionSet2), resultName);
-		assertThat(union.size()).isEqualTo(4);
-		assertThat(union).contains(t1, t2, t3, t4);
-		assertThat(union.getKey()).isEqualTo(resultName);
-	}
+        unionSet1.add(t2);
+        unionSet1.add(t4);
+        unionSet2.add(t3);
 
-	@ParameterizedValkeyTest
-	public void testIterator() {
-		T t1 = getT();
-		T t2 = getT();
-		T t3 = getT();
-		T t4 = getT();
+        String resultName = "test:set:union:result:1";
+        ValkeySet<T> union = set.unionAndStore(Arrays.asList(unionSet1, unionSet2), resultName);
+        assertThat(union.size()).isEqualTo(4);
+        assertThat(union).contains(t1, t2, t3, t4);
+        assertThat(union.getKey()).isEqualTo(resultName);
+    }
 
-		List<T> list = Arrays.asList(t1, t2, t3, t4);
+    @ParameterizedValkeyTest
+    public void testIterator() {
+        T t1 = getT();
+        T t2 = getT();
+        T t3 = getT();
+        T t4 = getT();
 
-		assertThat(collection.addAll(list)).isTrue();
-		Iterator<T> iterator = collection.iterator();
+        List<T> list = Arrays.asList(t1, t2, t3, t4);
 
-		List<T> result = new ArrayList<>(list);
+        assertThat(collection.addAll(list)).isTrue();
+        Iterator<T> iterator = collection.iterator();
 
-		while (iterator.hasNext()) {
-			T expected = iterator.next();
-			Iterator<T> resultItr = result.iterator();
-			while (resultItr.hasNext()) {
-				T obj = resultItr.next();
-				if (ObjectUtils.nullSafeEquals(expected, obj)) {
-					resultItr.remove();
-				}
-			}
-		}
+        List<T> result = new ArrayList<>(list);
 
-		assertThat(result.size()).isEqualTo(0);
-	}
+        while (iterator.hasNext()) {
+            T expected = iterator.next();
+            Iterator<T> resultItr = result.iterator();
+            while (resultItr.hasNext()) {
+                T obj = resultItr.next();
+                if (ObjectUtils.nullSafeEquals(expected, obj)) {
+                    resultItr.remove();
+                }
+            }
+        }
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	public void testToArray() {
-		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
-		List<T> list = (List<T>) Arrays.asList(expectedArray);
+        assertThat(result.size()).isEqualTo(0);
+    }
 
-		assertThat(collection.addAll(list)).isTrue();
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    public void testToArray() {
+        Object[] expectedArray = new Object[] {getT(), getT(), getT()};
+        List<T> list = (List<T>) Arrays.asList(expectedArray);
 
-		Object[] array = collection.toArray();
+        assertThat(collection.addAll(list)).isTrue();
 
-		List<T> result = new ArrayList<>(list);
+        Object[] array = collection.toArray();
 
-		for (int i = 0; i < array.length; i++) {
-			Iterator<T> resultItr = result.iterator();
-			while (resultItr.hasNext()) {
-				T obj = resultItr.next();
-				if (ObjectUtils.nullSafeEquals(array[i], obj)) {
-					resultItr.remove();
-				}
-			}
-		}
+        List<T> result = new ArrayList<>(list);
 
-		assertThat(result).isEmpty();
-	}
+        for (int i = 0; i < array.length; i++) {
+            Iterator<T> resultItr = result.iterator();
+            while (resultItr.hasNext()) {
+                T obj = resultItr.next();
+                if (ObjectUtils.nullSafeEquals(array[i], obj)) {
+                    resultItr.remove();
+                }
+            }
+        }
 
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	public void testToArrayWithGenerics() {
-		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
-		List<T> list = (List<T>) Arrays.asList(expectedArray);
+        assertThat(result).isEmpty();
+    }
 
-		assertThat(collection.addAll(list)).isTrue();
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    public void testToArrayWithGenerics() {
+        Object[] expectedArray = new Object[] {getT(), getT(), getT()};
+        List<T> list = (List<T>) Arrays.asList(expectedArray);
 
-		Object[] array = collection.toArray(new Object[expectedArray.length]);
-		List<T> result = new ArrayList<>(list);
+        assertThat(collection.addAll(list)).isTrue();
 
-		for (int i = 0; i < array.length; i++) {
-			Iterator<T> resultItr = result.iterator();
-			while (resultItr.hasNext()) {
-				T obj = resultItr.next();
-				if (ObjectUtils.nullSafeEquals(array[i], obj)) {
-					resultItr.remove();
-				}
-			}
-		}
+        Object[] array = collection.toArray(new Object[expectedArray.length]);
+        List<T> result = new ArrayList<>(list);
 
-		assertThat(result.size()).isEqualTo(0);
-	}
+        for (int i = 0; i < array.length; i++) {
+            Iterator<T> resultItr = result.iterator();
+            while (resultItr.hasNext()) {
+                T obj = resultItr.next();
+                if (ObjectUtils.nullSafeEquals(array[i], obj)) {
+                    resultItr.remove();
+                }
+            }
+        }
 
-	// DATAREDIS-314
-	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
-	void testScanWorksCorrectly() throws IOException {
+        assertThat(result.size()).isEqualTo(0);
+    }
 
-		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
-		collection.addAll((List<T>) Arrays.asList(expectedArray));
+    // DATAREDIS-314
+    @SuppressWarnings("unchecked")
+    @ParameterizedValkeyTest
+    void testScanWorksCorrectly() throws IOException {
 
-		Cursor<T> cursor = (Cursor<T>) set.scan();
-		while (cursor.hasNext()) {
-			assertThat(cursor.next()).isIn(expectedArray[0], expectedArray[1], expectedArray[2]);
-		}
-		cursor.close();
-	}
+        Object[] expectedArray = new Object[] {getT(), getT(), getT()};
+        collection.addAll((List<T>) Arrays.asList(expectedArray));
 
-	@ParameterizedValkeyTest // GH-2049
-	void randMemberReturnsSomething() {
+        Cursor<T> cursor = (Cursor<T>) set.scan();
+        while (cursor.hasNext()) {
+            assertThat(cursor.next()).isIn(expectedArray[0], expectedArray[1], expectedArray[2]);
+        }
+        cursor.close();
+    }
 
-		Object[] valuesArray = new Object[]{getT(), getT(), getT()};
+    @ParameterizedValkeyTest // GH-2049
+    void randMemberReturnsSomething() {
 
-		collection.addAll((List<T>) Arrays.asList(valuesArray));
+        Object[] valuesArray = new Object[] {getT(), getT(), getT()};
 
-		assertThat(set.randomValue()).isIn(valuesArray);
-	}
+        collection.addAll((List<T>) Arrays.asList(valuesArray));
+
+        assertThat(set.randomValue()).isIn(valuesArray);
+    }
 }

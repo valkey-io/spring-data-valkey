@@ -25,48 +25,48 @@ import org.springframework.util.ObjectUtils;
  */
 public class GeoLocation<T> {
 
-	private final T name;
-	private final Point point;
+    private final T name;
+    private final Point point;
 
-	public GeoLocation(T name, Point point) {
-		this.name = name;
-		this.point = point;
-	}
+    public GeoLocation(T name, Point point) {
+        this.name = name;
+        this.point = point;
+    }
 
-	public T getName() {
-		return this.name;
-	}
+    public T getName() {
+        return this.name;
+    }
 
-	public Point getPoint() {
-		return this.point;
-	}
+    public Point getPoint() {
+        return this.point;
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
+    @Override
+    public boolean equals(@Nullable Object o) {
 
-		if (this == o) {
-			return true;
-		}
+        if (this == o) {
+            return true;
+        }
 
-		if (!(o instanceof GeoLocation<?> that)) {
-			return false;
-		}
+        if (!(o instanceof GeoLocation<?> that)) {
+            return false;
+        }
 
-		if (!ObjectUtils.nullSafeEquals(name, that.name)) {
-			return false;
-		}
+        if (!ObjectUtils.nullSafeEquals(name, that.name)) {
+            return false;
+        }
 
-		return ObjectUtils.nullSafeEquals(point, that.point);
-	}
+        return ObjectUtils.nullSafeEquals(point, that.point);
+    }
 
-	@Override
-	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(name);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(point);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = ObjectUtils.nullSafeHashCode(name);
+        result = 31 * result + ObjectUtils.nullSafeHashCode(point);
+        return result;
+    }
 
-	public String toString() {
-		return "GeoLocation(name=" + this.getName() + ", point=" + this.getPoint() + ")";
-	}
+    public String toString() {
+        return "GeoLocation(name=" + this.getName() + ", point=" + this.getPoint() + ")";
+    }
 }

@@ -15,9 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.assertj.core.data.Offset.*;
-import static org.assertj.core.data.Offset.offset;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldIncrBy.Overflow.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldType.*;
@@ -27,32 +24,10 @@ import static io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands
 import static io.valkey.springframework.data.valkey.connection.ValkeyListCommands.*;
 import static io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.*;
 import static io.valkey.springframework.data.valkey.core.ScanOptions.*;
+import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.data.Offset.*;
+import static org.assertj.core.data.Offset.offset;
 
-import redis.clients.jedis.ConnectionPool;
-import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCluster;
-
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.data.domain.Range.Bound;
-import org.springframework.data.geo.Circle;
-import org.springframework.data.geo.Distance;
-import org.springframework.data.geo.GeoResults;
-import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.connection.*;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.SlotRange;
@@ -71,7 +46,29 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
 import io.valkey.springframework.data.valkey.test.extension.JedisExtension;
 import io.valkey.springframework.data.valkey.test.util.HexStringUtils;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.data.domain.Range.Bound;
+import org.springframework.data.geo.Circle;
+import org.springframework.data.geo.Distance;
+import org.springframework.data.geo.GeoResults;
+import org.springframework.data.geo.Point;
 import org.springframework.test.util.ReflectionTestUtils;
+import redis.clients.jedis.ConnectionPool;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
 
 /**
  * @author Christoph Strobl
@@ -85,3122 +82,3490 @@ import org.springframework.test.util.ReflectionTestUtils;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class JedisClusterConnectionTests implements ClusterConnectionTests {
 
-	static final List<HostAndPort> CLUSTER_NODES = Arrays.asList(new HostAndPort(CLUSTER_HOST, MASTER_NODE_1_PORT),
-			new HostAndPort(CLUSTER_HOST, MASTER_NODE_2_PORT), new HostAndPort(CLUSTER_HOST, MASTER_NODE_3_PORT));
+    static final List<HostAndPort> CLUSTER_NODES =
+            Arrays.asList(
+                    new HostAndPort(CLUSTER_HOST, MASTER_NODE_1_PORT),
+                    new HostAndPort(CLUSTER_HOST, MASTER_NODE_2_PORT),
+                    new HostAndPort(CLUSTER_HOST, MASTER_NODE_3_PORT));
+
+    private static final byte[] KEY_1_BYTES = JedisConverters.toBytes(KEY_1);
+    private static final byte[] KEY_2_BYTES = JedisConverters.toBytes(KEY_2);
+    private static final byte[] KEY_3_BYTES = JedisConverters.toBytes(KEY_3);
+
+    private static final byte[] SAME_SLOT_KEY_1_BYTES = JedisConverters.toBytes(SAME_SLOT_KEY_1);
+    private static final byte[] SAME_SLOT_KEY_2_BYTES = JedisConverters.toBytes(SAME_SLOT_KEY_2);
+    private static final byte[] SAME_SLOT_KEY_3_BYTES = JedisConverters.toBytes(SAME_SLOT_KEY_3);
 
-	private static final byte[] KEY_1_BYTES = JedisConverters.toBytes(KEY_1);
-	private static final byte[] KEY_2_BYTES = JedisConverters.toBytes(KEY_2);
-	private static final byte[] KEY_3_BYTES = JedisConverters.toBytes(KEY_3);
+    private static final byte[] VALUE_1_BYTES = JedisConverters.toBytes(VALUE_1);
+    private static final byte[] VALUE_2_BYTES = JedisConverters.toBytes(VALUE_2);
+    private static final byte[] VALUE_3_BYTES = JedisConverters.toBytes(VALUE_3);
 
-	private static final byte[] SAME_SLOT_KEY_1_BYTES = JedisConverters.toBytes(SAME_SLOT_KEY_1);
-	private static final byte[] SAME_SLOT_KEY_2_BYTES = JedisConverters.toBytes(SAME_SLOT_KEY_2);
-	private static final byte[] SAME_SLOT_KEY_3_BYTES = JedisConverters.toBytes(SAME_SLOT_KEY_3);
+    private static final GeoLocation<byte[]> ARIGENTO =
+            new GeoLocation<>("arigento".getBytes(Charset.forName("UTF-8")), POINT_ARIGENTO);
+    private static final GeoLocation<byte[]> CATANIA =
+            new GeoLocation<>("catania".getBytes(Charset.forName("UTF-8")), POINT_CATANIA);
+    private static final GeoLocation<byte[]> PALERMO =
+            new GeoLocation<>("palermo".getBytes(Charset.forName("UTF-8")), POINT_PALERMO);
 
-	private static final byte[] VALUE_1_BYTES = JedisConverters.toBytes(VALUE_1);
-	private static final byte[] VALUE_2_BYTES = JedisConverters.toBytes(VALUE_2);
-	private static final byte[] VALUE_3_BYTES = JedisConverters.toBytes(VALUE_3);
+    private final JedisCluster nativeConnection;
+    private final JedisClusterConnection clusterConnection;
 
-	private static final GeoLocation<byte[]> ARIGENTO = new GeoLocation<>("arigento".getBytes(Charset.forName("UTF-8")),
-			POINT_ARIGENTO);
-	private static final GeoLocation<byte[]> CATANIA = new GeoLocation<>("catania".getBytes(Charset.forName("UTF-8")),
-			POINT_CATANIA);
-	private static final GeoLocation<byte[]> PALERMO = new GeoLocation<>("palermo".getBytes(Charset.forName("UTF-8")),
-			POINT_PALERMO);
+    public JedisClusterConnectionTests(JedisCluster nativeConnection) {
+        this.nativeConnection = nativeConnection;
+        clusterConnection = new JedisClusterConnection(this.nativeConnection);
+    }
 
-	private final JedisCluster nativeConnection;
-	private final JedisClusterConnection clusterConnection;
+    @BeforeEach
+    void beforeEach() throws IOException {
 
-	public JedisClusterConnectionTests(JedisCluster nativeConnection) {
-		this.nativeConnection = nativeConnection;
-		clusterConnection = new JedisClusterConnection(this.nativeConnection);
-	}
+        for (ConnectionPool pool : nativeConnection.getClusterNodes().values()) {
+            try (Jedis jedis = new Jedis(pool.getResource())) {
+                jedis.flushAll();
+            } catch (Exception ignore) {
+                // ignore since we cannot remove data from replicas
+            }
+        }
+    }
 
-	@BeforeEach
-	void beforeEach() throws IOException {
+    @Test // DATAREDIS-315
+    public void appendShouldAddValueCorrectly() {
 
-		for (ConnectionPool pool : nativeConnection.getClusterNodes().values()) {
-			try (Jedis jedis = new Jedis(pool.getResource())) {
-				jedis.flushAll();
-			} catch (Exception ignore) {
-				// ignore since we cannot remove data from replicas
-			}
-		}
-	}
+        clusterConnection.append(KEY_1_BYTES, VALUE_1_BYTES);
+        clusterConnection.append(KEY_1_BYTES, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void appendShouldAddValueCorrectly() {
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1.concat(VALUE_2));
+    }
 
-		clusterConnection.append(KEY_1_BYTES, VALUE_1_BYTES);
-		clusterConnection.append(KEY_1_BYTES, VALUE_2_BYTES);
+    @Test // DATAREDIS-315
+    public void bRPopLPushShouldWork() {
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1.concat(VALUE_2));
-	}
+        nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void bRPopLPushShouldWork() {
+        assertThat(clusterConnection.bRPopLPush(0, KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+        assertThat(nativeConnection.exists(KEY_2_BYTES)).isTrue();
+    }
 
-		nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+    @Test // DATAREDIS-315
+    public void bRPopLPushShouldWorkOnSameSlotKeys() {
 
-		assertThat(clusterConnection.bRPopLPush(0, KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-		assertThat(nativeConnection.exists(KEY_2_BYTES)).isTrue();
-	}
+        nativeConnection.lpush(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void bRPopLPushShouldWorkOnSameSlotKeys() {
+        assertThat(clusterConnection.bRPopLPush(0, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .isEqualTo(VALUE_1_BYTES);
+        assertThat(nativeConnection.exists(SAME_SLOT_KEY_2_BYTES)).isTrue();
+    }
 
-		nativeConnection.lpush(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+    @Test // DATAREDIS-315
+    public void bitCountShouldWorkCorrectly() {
 
-		assertThat(clusterConnection.bRPopLPush(0, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-		assertThat(nativeConnection.exists(SAME_SLOT_KEY_2_BYTES)).isTrue();
-	}
+        nativeConnection.setbit(KEY_1, 0, true);
+        nativeConnection.setbit(KEY_1, 1, false);
 
-	@Test // DATAREDIS-315
-	public void bitCountShouldWorkCorrectly() {
+        assertThat(clusterConnection.bitCount(KEY_1_BYTES)).isEqualTo(1L);
+    }
 
-		nativeConnection.setbit(KEY_1, 0, true);
-		nativeConnection.setbit(KEY_1, 1, false);
+    @Test // DATAREDIS-315
+    public void bitCountWithRangeShouldWorkCorrectly() {
 
-		assertThat(clusterConnection.bitCount(KEY_1_BYTES)).isEqualTo(1L);
-	}
+        nativeConnection.setbit(KEY_1, 0, true);
+        nativeConnection.setbit(KEY_1, 1, false);
+        nativeConnection.setbit(KEY_1, 2, true);
+        nativeConnection.setbit(KEY_1, 3, false);
+        nativeConnection.setbit(KEY_1, 4, true);
 
-	@Test // DATAREDIS-315
-	public void bitCountWithRangeShouldWorkCorrectly() {
+        assertThat(clusterConnection.bitCount(KEY_1_BYTES, 0, 3)).isEqualTo(3L);
+    }
 
-		nativeConnection.setbit(KEY_1, 0, true);
-		nativeConnection.setbit(KEY_1, 1, false);
-		nativeConnection.setbit(KEY_1, 2, true);
-		nativeConnection.setbit(KEY_1, 3, false);
-		nativeConnection.setbit(KEY_1, 4, true);
+    @Test // DATAREDIS-315
+    public void bitOpShouldThrowExceptionWhenKeysDoNotMapToSameSlot() {
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(
+                        () -> clusterConnection.bitOp(BitOperation.AND, KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES));
+    }
 
-		assertThat(clusterConnection.bitCount(KEY_1_BYTES, 0, 3)).isEqualTo(3L);
-	}
+    @Test // DATAREDIS-315
+    void bitOpShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void bitOpShouldThrowExceptionWhenKeysDoNotMapToSameSlot() {
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.bitOp(BitOperation.AND, KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES));
-	}
+        nativeConnection.set(SAME_SLOT_KEY_1, "foo");
+        nativeConnection.set(SAME_SLOT_KEY_2, "bar");
 
-	@Test // DATAREDIS-315
-	void bitOpShouldWorkCorrectly() {
+        clusterConnection.bitOp(
+                BitOperation.AND, SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-		nativeConnection.set(SAME_SLOT_KEY_1, "foo");
-		nativeConnection.set(SAME_SLOT_KEY_2, "bar");
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_3)).isEqualTo("bab");
+    }
 
-		clusterConnection.bitOp(BitOperation.AND, SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+    @Test // DATAREDIS-315
+    public void blPopShouldPopElementCorrectly() {
 
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_3)).isEqualTo("bab");
-	}
+        nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.lpush(KEY_2_BYTES, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void blPopShouldPopElementCorrectly() {
+        assertThat(clusterConnection.bLPop(100, KEY_1_BYTES, KEY_2_BYTES).size()).isEqualTo(2);
+    }
 
-		nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.lpush(KEY_2_BYTES, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void blPopShouldPopElementCorrectlyWhenKeyOnSameSlot() {
 
-		assertThat(clusterConnection.bLPop(100, KEY_1_BYTES, KEY_2_BYTES).size()).isEqualTo(2);
-	}
+        nativeConnection.lpush(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.lpush(SAME_SLOT_KEY_2_BYTES, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void blPopShouldPopElementCorrectlyWhenKeyOnSameSlot() {
+        assertThat(clusterConnection.bLPop(100, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES).size())
+                .isEqualTo(2);
+    }
 
-		nativeConnection.lpush(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.lpush(SAME_SLOT_KEY_2_BYTES, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void brPopShouldPopElementCorrectly() {
 
-		assertThat(clusterConnection.bLPop(100, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES).size()).isEqualTo(2);
-	}
+        nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.lpush(KEY_2_BYTES, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void brPopShouldPopElementCorrectly() {
+        assertThat(clusterConnection.bRPop(100, KEY_1_BYTES, KEY_2_BYTES).size()).isEqualTo(2);
+    }
 
-		nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.lpush(KEY_2_BYTES, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void brPopShouldPopElementCorrectlyWhenKeyOnSameSlot() {
 
-		assertThat(clusterConnection.bRPop(100, KEY_1_BYTES, KEY_2_BYTES).size()).isEqualTo(2);
-	}
+        nativeConnection.lpush(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.lpush(SAME_SLOT_KEY_2_BYTES, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void brPopShouldPopElementCorrectlyWhenKeyOnSameSlot() {
+        assertThat(clusterConnection.bRPop(100, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES).size())
+                .isEqualTo(2);
+    }
 
-		nativeConnection.lpush(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.lpush(SAME_SLOT_KEY_2_BYTES, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void clientListShouldGetInfosForAllClients() {
+        assertThat(clusterConnection.getClientList().isEmpty()).isFalse();
+    }
 
-		assertThat(clusterConnection.bRPop(100, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES).size()).isEqualTo(2);
-	}
+    @Test // DATAREDIS-315
+    public void clusterGetMasterReplicaMapShouldListMastersAndReplicasCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void clientListShouldGetInfosForAllClients() {
-		assertThat(clusterConnection.getClientList().isEmpty()).isFalse();
-	}
+        Map<ValkeyClusterNode, Collection<ValkeyClusterNode>> masterReplicaMap =
+                clusterConnection.clusterGetMasterReplicaMap();
 
-	@Test // DATAREDIS-315
-	public void clusterGetMasterReplicaMapShouldListMastersAndReplicasCorrectly() {
+        assertThat(masterReplicaMap).isNotNull();
+        assertThat(masterReplicaMap.size()).isEqualTo(3);
+        assertThat(masterReplicaMap.get(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT)))
+                .contains(new ValkeyClusterNode(CLUSTER_HOST, REPLICAOF_NODE_1_PORT));
+        assertThat(
+                        masterReplicaMap.get(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_2_PORT)).isEmpty())
+                .isTrue();
+        assertThat(
+                        masterReplicaMap.get(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_3_PORT)).isEmpty())
+                .isTrue();
+    }
 
-		Map<ValkeyClusterNode, Collection<ValkeyClusterNode>> masterReplicaMap = clusterConnection
-				.clusterGetMasterReplicaMap();
+    @Test // DATAREDIS-315
+    public void clusterGetReplicasShouldReturnReplicaCorrectly() {
 
-		assertThat(masterReplicaMap).isNotNull();
-		assertThat(masterReplicaMap.size()).isEqualTo(3);
-		assertThat(masterReplicaMap.get(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT)))
-				.contains(new ValkeyClusterNode(CLUSTER_HOST, REPLICAOF_NODE_1_PORT));
-		assertThat(masterReplicaMap.get(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_2_PORT)).isEmpty()).isTrue();
-		assertThat(masterReplicaMap.get(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_3_PORT)).isEmpty()).isTrue();
-	}
+        Set<ValkeyClusterNode> replicas =
+                clusterConnection.clusterGetReplicas(
+                        new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT));
 
-	@Test // DATAREDIS-315
-	public void clusterGetReplicasShouldReturnReplicaCorrectly() {
+        assertThat(replicas.size()).isEqualTo(1);
+        assertThat(replicas).contains(new ValkeyClusterNode(CLUSTER_HOST, REPLICAOF_NODE_1_PORT));
+    }
 
-		Set<ValkeyClusterNode> replicas = clusterConnection
-				.clusterGetReplicas(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT));
+    @Test // DATAREDIS-315
+    public void countKeysShouldReturnNumberOfKeysInSlot() {
 
-		assertThat(replicas.size()).isEqualTo(1);
-		assertThat(replicas).contains(new ValkeyClusterNode(CLUSTER_HOST, REPLICAOF_NODE_1_PORT));
-	}
+        nativeConnection.set(SAME_SLOT_KEY_1, VALUE_1);
+        nativeConnection.set(SAME_SLOT_KEY_2, VALUE_2);
 
-	@Test // DATAREDIS-315
-	public void countKeysShouldReturnNumberOfKeysInSlot() {
+        assertThat(
+                        clusterConnection.clusterCountKeysInSlot(
+                                ClusterSlotHashUtil.calculateSlot(SAME_SLOT_KEY_1)))
+                .isEqualTo(2L);
+    }
 
-		nativeConnection.set(SAME_SLOT_KEY_1, VALUE_1);
-		nativeConnection.set(SAME_SLOT_KEY_2, VALUE_2);
+    @Test // DATAREDIS-315
+    public void dbSizeForSpecificNodeShouldGetNodeDbSize() {
 
-		assertThat(clusterConnection.clusterCountKeysInSlot(ClusterSlotHashUtil.calculateSlot(SAME_SLOT_KEY_1)))
-				.isEqualTo(2L);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // DATAREDIS-315
-	public void dbSizeForSpecificNodeShouldGetNodeDbSize() {
+        assertThat(
+                        clusterConnection.dbSize(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty())))
+                .isEqualTo(1L);
+        assertThat(
+                        clusterConnection.dbSize(new ValkeyClusterNode("127.0.0.1", 7380, SlotRange.empty())))
+                .isEqualTo(1L);
+        assertThat(
+                        clusterConnection.dbSize(new ValkeyClusterNode("127.0.0.1", 7381, SlotRange.empty())))
+                .isEqualTo(0L);
+    }
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+    @Test // DATAREDIS-315
+    public void dbSizeShouldReturnCummulatedDbSize() {
 
-		assertThat(clusterConnection.dbSize(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()))).isEqualTo(1L);
-		assertThat(clusterConnection.dbSize(new ValkeyClusterNode("127.0.0.1", 7380, SlotRange.empty()))).isEqualTo(1L);
-		assertThat(clusterConnection.dbSize(new ValkeyClusterNode("127.0.0.1", 7381, SlotRange.empty()))).isEqualTo(0L);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // DATAREDIS-315
-	public void dbSizeShouldReturnCummulatedDbSize() {
+        assertThat(clusterConnection.dbSize()).isEqualTo(2L);
+    }
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+    @Test // DATAREDIS-315
+    public void decrByShouldDecreaseValueCorrectly() {
 
-		assertThat(clusterConnection.dbSize()).isEqualTo(2L);
-	}
+        nativeConnection.set(KEY_1, "5");
 
-	@Test // DATAREDIS-315
-	public void decrByShouldDecreaseValueCorrectly() {
+        assertThat(clusterConnection.decrBy(KEY_1_BYTES, 4)).isEqualTo(1L);
+    }
 
-		nativeConnection.set(KEY_1, "5");
+    @Test // DATAREDIS-315
+    public void decrShouldDecreaseValueCorrectly() {
 
-		assertThat(clusterConnection.decrBy(KEY_1_BYTES, 4)).isEqualTo(1L);
-	}
+        nativeConnection.set(KEY_1, "5");
 
-	@Test // DATAREDIS-315
-	public void decrShouldDecreaseValueCorrectly() {
+        assertThat(clusterConnection.decr(KEY_1_BYTES)).isEqualTo(4L);
+    }
 
-		nativeConnection.set(KEY_1, "5");
+    @Test // DATAREDIS-315
+    public void delShouldRemoveMultipleKeysCorrectly() {
 
-		assertThat(clusterConnection.decr(KEY_1_BYTES)).isEqualTo(4L);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // DATAREDIS-315
-	public void delShouldRemoveMultipleKeysCorrectly() {
+        clusterConnection.del(KEY_1_BYTES, KEY_2_BYTES);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.del(KEY_1_BYTES, KEY_2_BYTES);
+    @Test // DATAREDIS-315
+    public void delShouldRemoveMultipleKeysOnSameSlotCorrectly() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(SAME_SLOT_KEY_1, VALUE_1);
+        nativeConnection.set(SAME_SLOT_KEY_2, VALUE_2);
 
-	@Test // DATAREDIS-315
-	public void delShouldRemoveMultipleKeysOnSameSlotCorrectly() {
+        clusterConnection.del(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-		nativeConnection.set(SAME_SLOT_KEY_1, VALUE_1);
-		nativeConnection.set(SAME_SLOT_KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_1)).isNull();
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_2)).isNull();
+    }
 
-		clusterConnection.del(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+    @Test // DATAREDIS-315
+    public void delShouldRemoveSingleKeyCorrectly() {
 
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_1)).isNull();
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-	@Test // DATAREDIS-315
-	public void delShouldRemoveSingleKeyCorrectly() {
+        clusterConnection.del(KEY_1_BYTES);
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        assertThat(nativeConnection.get(KEY_1)).isNull();
+    }
 
-		clusterConnection.del(KEY_1_BYTES);
+    @Test // DATAREDIS-315
+    public void discardShouldThrowException() {
+        assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::discard);
+    }
 
-		assertThat(nativeConnection.get(KEY_1)).isNull();
-	}
+    @Test // DATAREDIS-315
+    public void dumpAndRestoreShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void discardShouldThrowException() {
-		assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::discard);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-	@Test // DATAREDIS-315
-	public void dumpAndRestoreShouldWorkCorrectly() {
+        byte[] dumpedValue = clusterConnection.dump(KEY_1_BYTES);
+        clusterConnection.restore(KEY_2_BYTES, 0, dumpedValue);
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        assertThat(nativeConnection.get(KEY_2)).isEqualTo(VALUE_1);
+    }
 
-		byte[] dumpedValue = clusterConnection.dump(KEY_1_BYTES);
-		clusterConnection.restore(KEY_2_BYTES, 0, dumpedValue);
+    @Test // DATAREDIS-696
+    public void dumpAndRestoreWithReplaceOptionShouldWorkCorrectly() {
 
-		assertThat(nativeConnection.get(KEY_2)).isEqualTo(VALUE_1);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-	@Test // DATAREDIS-696
-	public void dumpAndRestoreWithReplaceOptionShouldWorkCorrectly() {
+        byte[] dumpedValue = clusterConnection.keyCommands().dump(KEY_1_BYTES);
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_1, VALUE_2);
 
-		byte[] dumpedValue = clusterConnection.keyCommands().dump(KEY_1_BYTES);
+        clusterConnection.keyCommands().restore(KEY_1_BYTES, 0, dumpedValue, true);
 
-		nativeConnection.set(KEY_1, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+    }
 
-		clusterConnection.keyCommands().restore(KEY_1_BYTES, 0, dumpedValue, true);
+    @Test // DATAREDIS-315
+    public void echoShouldReturnInputCorrectly() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(() -> clusterConnection.echo(VALUE_1_BYTES));
+    }
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-	}
+    @Test // DATAREDIS-315
+    public void execShouldThrowException() {
+        assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::exec);
+    }
 
-	@Test // DATAREDIS-315
-	public void echoShouldReturnInputCorrectly() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> clusterConnection.echo(VALUE_1_BYTES));
-	}
+    @Test // DATAREDIS-689
+    void executeWithArgs() {
 
-	@Test // DATAREDIS-315
-	public void execShouldThrowException() {
-		assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::exec);
-	}
+        assertThat(clusterConnection.execute("SET", KEY_1_BYTES, VALUE_1_BYTES))
+                .isEqualTo("OK".getBytes());
 
-	@Test // DATAREDIS-689
-	void executeWithArgs() {
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+    }
 
-		assertThat(clusterConnection.execute("SET", KEY_1_BYTES, VALUE_1_BYTES)).isEqualTo("OK".getBytes());
+    @Test // DATAREDIS-689
+    void executeWithKeyAndArgs() {
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-	}
+        Object result =
+                clusterConnection.execute("SET", KEY_1_BYTES, Collections.singletonList(VALUE_1_BYTES));
+        assertThat(result).isEqualTo("OK".getBytes());
 
-	@Test // DATAREDIS-689
-	void executeWithKeyAndArgs() {
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+    }
 
-		Object result = clusterConnection.execute("SET", KEY_1_BYTES, Collections.singletonList(VALUE_1_BYTES));
-		assertThat(result).isEqualTo("OK".getBytes());
+    @Test // DATAREDIS-689
+    void executeWithNoKeyAndArgsThrowsException() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                clusterConnection.execute(
+                                        "KEYS", (byte[]) null, Collections.singletonList("*".getBytes())));
+    }
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-	}
+    @Test // DATAREDIS-529
+    public void existsShouldCountSameKeyMultipleTimes() {
 
-	@Test // DATAREDIS-689
-	void executeWithNoKeyAndArgsThrowsException() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> clusterConnection.execute("KEYS", (byte[]) null, Collections.singletonList("*".getBytes())));
-	}
+        nativeConnection.set(KEY_1, "true");
 
-	@Test // DATAREDIS-529
-	public void existsShouldCountSameKeyMultipleTimes() {
+        assertThat(clusterConnection.keyCommands().exists(KEY_1_BYTES, KEY_1_BYTES)).isEqualTo(2L);
+    }
 
-		nativeConnection.set(KEY_1, "true");
+    @Test // DATAREDIS-529
+    public void existsWithMultipleKeysShouldConsiderAbsentKeys() {
 
-		assertThat(clusterConnection.keyCommands().exists(KEY_1_BYTES, KEY_1_BYTES)).isEqualTo(2L);
-	}
+        assertThat(
+                        clusterConnection
+                                .keyCommands()
+                                .exists("no-exist-1".getBytes(), "no-exist-2".getBytes()))
+                .isEqualTo(0L);
+    }
 
-	@Test // DATAREDIS-529
-	public void existsWithMultipleKeysShouldConsiderAbsentKeys() {
+    @Test // DATAREDIS-529
+    public void existsWithMultipleKeysShouldReturnResultCorrectly() {
 
-		assertThat(clusterConnection.keyCommands().exists("no-exist-1".getBytes(), "no-exist-2".getBytes())).isEqualTo(0L);
-	}
+        nativeConnection.set(KEY_1, "true");
+        nativeConnection.set(KEY_2, "true");
+        nativeConnection.set(KEY_3, "true");
 
-	@Test // DATAREDIS-529
-	public void existsWithMultipleKeysShouldReturnResultCorrectly() {
+        assertThat(
+                        clusterConnection
+                                .keyCommands()
+                                .exists(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES, "nonexistent".getBytes()))
+                .isEqualTo(3L);
+    }
 
-		nativeConnection.set(KEY_1, "true");
-		nativeConnection.set(KEY_2, "true");
-		nativeConnection.set(KEY_3, "true");
+    @Test // DATAREDIS-315
+    public void expireAtShouldBeSetCorrectly() {
 
-		assertThat(clusterConnection.keyCommands().exists(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES, "nonexistent".getBytes()))
-				.isEqualTo(3L);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-	@Test // DATAREDIS-315
-	public void expireAtShouldBeSetCorrectly() {
+        clusterConnection.expireAt(KEY_1_BYTES, System.currentTimeMillis() / 1000 + 5000);
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
+    }
 
-		clusterConnection.expireAt(KEY_1_BYTES, System.currentTimeMillis() / 1000 + 5000);
+    @Test // GH-3114
+    @EnabledOnCommand("SPUBLISH") // Valkey 7.0
+    public void expireAtWithConditionShouldBeSetCorrectly() {
 
-		assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-	@Test // GH-3114
-	@EnabledOnCommand("SPUBLISH") // Valkey 7.0
-	public void expireAtWithConditionShouldBeSetCorrectly() {
+        assertThat(
+                        clusterConnection.expireAt(
+                                KEY_1_BYTES,
+                                System.currentTimeMillis() / 1000 + 5000,
+                                ExpirationOptions.Condition.XX))
+                .isFalse();
+        assertThat(
+                        clusterConnection.expireAt(
+                                KEY_1_BYTES,
+                                System.currentTimeMillis() / 1000 + 5000,
+                                ExpirationOptions.Condition.NX))
+                .isTrue();
+        assertThat(
+                        clusterConnection.expireAt(
+                                KEY_1_BYTES,
+                                System.currentTimeMillis() / 1000 + 15000,
+                                ExpirationOptions.Condition.LT))
+                .isFalse();
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
+    }
 
-		assertThat(clusterConnection.expireAt(KEY_1_BYTES, System.currentTimeMillis() / 1000 + 5000,
-				ExpirationOptions.Condition.XX)).isFalse();
-		assertThat(clusterConnection.expireAt(KEY_1_BYTES, System.currentTimeMillis() / 1000 + 5000,
-				ExpirationOptions.Condition.NX)).isTrue();
-		assertThat(clusterConnection.expireAt(KEY_1_BYTES, System.currentTimeMillis() / 1000 + 15000,
-				ExpirationOptions.Condition.LT)).isFalse();
+    @Test // DATAREDIS-315
+    public void expireShouldBeSetCorrectly() {
 
-		assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-	@Test // DATAREDIS-315
-	public void expireShouldBeSetCorrectly() {
+        clusterConnection.expire(KEY_1_BYTES, 5);
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
+    }
 
-		clusterConnection.expire(KEY_1_BYTES, 5);
+    @Test // GH-3114
+    @EnabledOnCommand("SPUBLISH") // Valkey 7.0
+    public void expireWithConditionShouldBeSetCorrectly() {
 
-		assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-	@Test // GH-3114
-	@EnabledOnCommand("SPUBLISH") // Valkey 7.0
-	public void expireWithConditionShouldBeSetCorrectly() {
+        assertThat(clusterConnection.expire(KEY_1_BYTES, 15, ExpirationOptions.Condition.XX)).isFalse();
+        assertThat(clusterConnection.expire(KEY_1_BYTES, 15, ExpirationOptions.Condition.NX)).isTrue();
+        assertThat(clusterConnection.expire(KEY_1_BYTES, 15, ExpirationOptions.Condition.LT)).isFalse();
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
+    }
 
-		assertThat(clusterConnection.expire(KEY_1_BYTES, 15, ExpirationOptions.Condition.XX)).isFalse();
-		assertThat(clusterConnection.expire(KEY_1_BYTES, 15, ExpirationOptions.Condition.NX)).isTrue();
-		assertThat(clusterConnection.expire(KEY_1_BYTES, 15, ExpirationOptions.Condition.LT)).isFalse();
+    @Test // DATAREDIS-315
+    public void flushDbOnSingleNodeShouldFlushOnlyGivenNodesDb() {
 
-		assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // DATAREDIS-315
-	public void flushDbOnSingleNodeShouldFlushOnlyGivenNodesDb() {
+        clusterConnection.flushDb(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()));
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNotNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushDb(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()));
+    @Test // GH-2187
+    public void flushDbSyncOnSingleNodeShouldFlushOnlyGivenNodesDb() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNotNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushDbSyncOnSingleNodeShouldFlushOnlyGivenNodesDb() {
+        clusterConnection.flushDb(
+                new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), FlushOption.SYNC);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNotNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushDb(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), FlushOption.SYNC);
+    @Test // GH-2187
+    public void flushDbAsyncOnSingleNodeShouldFlushOnlyGivenNodesDb() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNotNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushDbAsyncOnSingleNodeShouldFlushOnlyGivenNodesDb() {
+        clusterConnection.flushDb(
+                new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), FlushOption.ASYNC);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNotNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushDb(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), FlushOption.ASYNC);
+    @Test // DATAREDIS-315
+    public void flushDbShouldFlushAllClusterNodes() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNotNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // DATAREDIS-315
-	public void flushDbShouldFlushAllClusterNodes() {
+        clusterConnection.flushDb();
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushDb();
+    @Test // GH-2187
+    public void flushDbSyncShouldFlushAllClusterNodes() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushDbSyncShouldFlushAllClusterNodes() {
+        clusterConnection.flushDb(FlushOption.SYNC);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushDb(FlushOption.SYNC);
+    @Test // GH-2187
+    public void flushDbAsyncShouldFlushAllClusterNodes() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushDbAsyncShouldFlushAllClusterNodes() {
+        clusterConnection.flushDb(FlushOption.ASYNC);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushDb(FlushOption.ASYNC);
+    @Test // GH-2187
+    public void flushAllOnSingleNodeShouldFlushOnlyGivenNodesDb() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushAllOnSingleNodeShouldFlushOnlyGivenNodesDb() {
+        clusterConnection.flushAll(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()));
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNotNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushAll(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()));
+    @Test // GH-2187
+    public void flushAllSyncOnSingleNodeShouldFlushOnlyGivenNodesDb() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNotNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushAllSyncOnSingleNodeShouldFlushOnlyGivenNodesDb() {
+        clusterConnection.flushAll(
+                new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), FlushOption.SYNC);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNotNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushAll(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), FlushOption.SYNC);
+    @Test // GH-2187
+    public void flushAllAsyncOnSingleNodeShouldFlushOnlyGivenNodesDb() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNotNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushAllAsyncOnSingleNodeShouldFlushOnlyGivenNodesDb() {
+        clusterConnection.flushAll(
+                new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), FlushOption.ASYNC);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNotNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushAll(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), FlushOption.ASYNC);
+    @Test // GH-2187
+    public void flushAllShouldFlushAllClusterNodes() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNotNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushAllShouldFlushAllClusterNodes() {
+        clusterConnection.flushAll();
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushAll();
+    @Test // GH-2187
+    public void flushAllSyncShouldFlushAllClusterNodes() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushAllSyncShouldFlushAllClusterNodes() {
+        clusterConnection.flushAll(FlushOption.SYNC);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushAll(FlushOption.SYNC);
+    @Test // GH-2187
+    public void flushAllAsyncShouldFlushAllClusterNodes() {
 
-		assertThat(nativeConnection.get(KEY_1)).isNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // GH-2187
-	public void flushAllAsyncShouldFlushAllClusterNodes() {
+        clusterConnection.flushAll(FlushOption.ASYNC);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        assertThat(nativeConnection.get(KEY_1)).isNull();
+        assertThat(nativeConnection.get(KEY_2)).isNull();
+    }
 
-		clusterConnection.flushAll(FlushOption.ASYNC);
+    @Test // DATAREDIS-438
+    public void geoAddMultipleGeoLocations() {
+        assertThat(
+                        clusterConnection.geoAdd(
+                                KEY_1_BYTES, Arrays.asList(PALERMO, ARIGENTO, CATANIA, PALERMO)))
+                .isEqualTo(3L);
+    }
 
-		assertThat(nativeConnection.get(KEY_1)).isNull();
-		assertThat(nativeConnection.get(KEY_2)).isNull();
-	}
+    @Test // DATAREDIS-438
+    public void geoAddSingleGeoLocation() {
+        assertThat(clusterConnection.geoAdd(KEY_1_BYTES, PALERMO)).isEqualTo(1L);
+    }
 
-	@Test // DATAREDIS-438
-	public void geoAddMultipleGeoLocations() {
-		assertThat(clusterConnection.geoAdd(KEY_1_BYTES, Arrays.asList(PALERMO, ARIGENTO, CATANIA, PALERMO))).isEqualTo(3L);
-	}
+    @Test // DATAREDIS-438
+    public void geoDist() {
 
-	@Test // DATAREDIS-438
-	public void geoAddSingleGeoLocation() {
-		assertThat(clusterConnection.geoAdd(KEY_1_BYTES, PALERMO)).isEqualTo(1L);
-	}
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-	@Test // DATAREDIS-438
-	public void geoDist() {
+        Distance distance =
+                clusterConnection.geoDist(KEY_1_BYTES, PALERMO.getName(), CATANIA.getName());
+        assertThat(distance.getValue()).isCloseTo(166274.15156960033D, offset(0.005));
+        assertThat(distance.getUnit()).isEqualTo("m");
+    }
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+    @Test // DATAREDIS-438
+    public void geoDistWithMetric() {
 
-		Distance distance = clusterConnection.geoDist(KEY_1_BYTES, PALERMO.getName(), CATANIA.getName());
-		assertThat(distance.getValue()).isCloseTo(166274.15156960033D, offset(0.005));
-		assertThat(distance.getUnit()).isEqualTo("m");
-	}
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-	@Test // DATAREDIS-438
-	public void geoDistWithMetric() {
+        Distance distance =
+                clusterConnection.geoDist(KEY_1_BYTES, PALERMO.getName(), CATANIA.getName(), KILOMETERS);
+        assertThat(distance.getValue()).isCloseTo(166.27415156960033D, offset(0.005));
+        assertThat(distance.getUnit()).isEqualTo("km");
+    }
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+    @Test // DATAREDIS-438
+    public void geoHash() {
 
-		Distance distance = clusterConnection.geoDist(KEY_1_BYTES, PALERMO.getName(), CATANIA.getName(), KILOMETERS);
-		assertThat(distance.getValue()).isCloseTo(166.27415156960033D, offset(0.005));
-		assertThat(distance.getUnit()).isEqualTo("km");
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-	}
+        List<String> result =
+                clusterConnection.geoHash(KEY_1_BYTES, PALERMO.getName(), CATANIA.getName());
+        assertThat(result).containsExactly("sqc8b49rny0", "sqdtr74hyu0");
+    }
 
-	@Test // DATAREDIS-438
-	public void geoHash() {
+    @Test // DATAREDIS-438
+    public void geoHashNonExisting() {
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		List<String> result = clusterConnection.geoHash(KEY_1_BYTES, PALERMO.getName(), CATANIA.getName());
-		assertThat(result).containsExactly("sqc8b49rny0", "sqdtr74hyu0");
-	}
+        List<String> result =
+                clusterConnection.geoHash(
+                        KEY_1_BYTES, PALERMO.getName(), ARIGENTO.getName(), CATANIA.getName());
+        assertThat(result).containsExactly("sqc8b49rny0", (String) null, "sqdtr74hyu0");
+    }
 
-	@Test // DATAREDIS-438
-	public void geoHashNonExisting() {
+    @Test // DATAREDIS-438
+    public void geoPosition() {
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		List<String> result = clusterConnection.geoHash(KEY_1_BYTES, PALERMO.getName(), ARIGENTO.getName(),
-				CATANIA.getName());
-		assertThat(result).containsExactly("sqc8b49rny0", (String) null, "sqdtr74hyu0");
-	}
+        List<Point> positions =
+                clusterConnection.geoPos(KEY_1_BYTES, PALERMO.getName(), CATANIA.getName());
 
-	@Test // DATAREDIS-438
-	public void geoPosition() {
+        assertThat(positions.get(0).getX()).isCloseTo(POINT_PALERMO.getX(), offset(0.005));
+        assertThat(positions.get(0).getY()).isCloseTo(POINT_PALERMO.getY(), offset(0.005));
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+        assertThat(positions.get(1).getX()).isCloseTo(POINT_CATANIA.getX(), offset(0.005));
+        assertThat(positions.get(1).getY()).isCloseTo(POINT_CATANIA.getY(), offset(0.005));
+    }
 
-		List<Point> positions = clusterConnection.geoPos(KEY_1_BYTES, PALERMO.getName(), CATANIA.getName());
+    @Test // DATAREDIS-438
+    public void geoPositionNonExisting() {
 
-		assertThat(positions.get(0).getX()).isCloseTo(POINT_PALERMO.getX(), offset(0.005));
-		assertThat(positions.get(0).getY()).isCloseTo(POINT_PALERMO.getY(), offset(0.005));
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		assertThat(positions.get(1).getX()).isCloseTo(POINT_CATANIA.getX(), offset(0.005));
-		assertThat(positions.get(1).getY()).isCloseTo(POINT_CATANIA.getY(), offset(0.005));
-	}
+        List<Point> positions =
+                clusterConnection.geoPos(
+                        KEY_1_BYTES, PALERMO.getName(), ARIGENTO.getName(), CATANIA.getName());
 
-	@Test // DATAREDIS-438
-	public void geoPositionNonExisting() {
+        assertThat(positions.get(0).getX()).isCloseTo(POINT_PALERMO.getX(), offset(0.005));
+        assertThat(positions.get(0).getY()).isCloseTo(POINT_PALERMO.getY(), offset(0.005));
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+        assertThat(positions.get(1)).isNull();
 
-		List<Point> positions = clusterConnection.geoPos(KEY_1_BYTES, PALERMO.getName(), ARIGENTO.getName(),
-				CATANIA.getName());
+        assertThat(positions.get(2).getX()).isCloseTo(POINT_CATANIA.getX(), offset(0.005));
+        assertThat(positions.get(2).getY()).isCloseTo(POINT_CATANIA.getY(), offset(0.005));
+    }
 
-		assertThat(positions.get(0).getX()).isCloseTo(POINT_PALERMO.getX(), offset(0.005));
-		assertThat(positions.get(0).getY()).isCloseTo(POINT_PALERMO.getY(), offset(0.005));
+    @Test // DATAREDIS-438
+    public void geoRadiusByMemberShouldApplyLimit() {
 
-		assertThat(positions.get(1)).isNull();
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		assertThat(positions.get(2).getX()).isCloseTo(POINT_CATANIA.getX(), offset(0.005));
-		assertThat(positions.get(2).getY()).isCloseTo(POINT_CATANIA.getY(), offset(0.005));
-	}
+        GeoResults<GeoLocation<byte[]>> result =
+                clusterConnection.geoRadiusByMember(
+                        KEY_1_BYTES,
+                        PALERMO.getName(),
+                        new Distance(200, KILOMETERS),
+                        newGeoRadiusArgs().limit(2));
 
-	@Test // DATAREDIS-438
-	public void geoRadiusByMemberShouldApplyLimit() {
+        assertThat(result.getContent()).hasSize(2);
+    }
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+    @Test // DATAREDIS-438
+    public void geoRadiusByMemberShouldReturnDistanceCorrectly() {
 
-		GeoResults<GeoLocation<byte[]>> result = clusterConnection.geoRadiusByMember(KEY_1_BYTES, PALERMO.getName(),
-				new Distance(200, KILOMETERS), newGeoRadiusArgs().limit(2));
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		assertThat(result.getContent()).hasSize(2);
-	}
+        GeoResults<GeoLocation<byte[]>> result =
+                clusterConnection.geoRadiusByMember(
+                        KEY_1_BYTES,
+                        PALERMO.getName(),
+                        new Distance(100, KILOMETERS),
+                        newGeoRadiusArgs().includeDistance());
 
-	@Test // DATAREDIS-438
-	public void geoRadiusByMemberShouldReturnDistanceCorrectly() {
+        assertThat(result.getContent()).hasSize(2);
+        assertThat(result.getContent().get(0).getDistance().getValue())
+                .isCloseTo(90.978D, offset(0.005));
+        assertThat(result.getContent().get(0).getDistance().getUnit()).isEqualTo("km");
+    }
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+    @Test // DATAREDIS-438
+    public void geoRadiusByMemberShouldReturnMembersCorrectly() {
 
-		GeoResults<GeoLocation<byte[]>> result = clusterConnection.geoRadiusByMember(KEY_1_BYTES, PALERMO.getName(),
-				new Distance(100, KILOMETERS), newGeoRadiusArgs().includeDistance());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		assertThat(result.getContent()).hasSize(2);
-		assertThat(result.getContent().get(0).getDistance().getValue()).isCloseTo(90.978D, offset(0.005));
-		assertThat(result.getContent().get(0).getDistance().getUnit()).isEqualTo("km");
-	}
+        GeoResults<GeoLocation<byte[]>> result =
+                clusterConnection.geoRadiusByMember(
+                        KEY_1_BYTES,
+                        PALERMO.getName(),
+                        new Distance(100, KILOMETERS),
+                        newGeoRadiusArgs().sortAscending());
 
-	@Test // DATAREDIS-438
-	public void geoRadiusByMemberShouldReturnMembersCorrectly() {
+        assertThat(result.getContent().get(0).getContent().getName()).isEqualTo(PALERMO.getName());
+        assertThat(result.getContent().get(1).getContent().getName()).isEqualTo(ARIGENTO.getName());
+    }
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+    @Test // DATAREDIS-438
+    public void geoRadiusShouldApplyLimit() {
 
-		GeoResults<GeoLocation<byte[]>> result = clusterConnection.geoRadiusByMember(KEY_1_BYTES, PALERMO.getName(),
-				new Distance(100, KILOMETERS), newGeoRadiusArgs().sortAscending());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		assertThat(result.getContent().get(0).getContent().getName()).isEqualTo(PALERMO.getName());
-		assertThat(result.getContent().get(1).getContent().getName()).isEqualTo(ARIGENTO.getName());
-	}
+        GeoResults<GeoLocation<byte[]>> result =
+                clusterConnection.geoRadius(
+                        KEY_1_BYTES,
+                        new Circle(new Point(15D, 37D), new Distance(200D, KILOMETERS)),
+                        newGeoRadiusArgs().limit(2));
 
-	@Test // DATAREDIS-438
-	public void geoRadiusShouldApplyLimit() {
+        assertThat(result.getContent()).hasSize(2);
+    }
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+    @Test // DATAREDIS-438
+    public void geoRadiusShouldReturnDistanceCorrectly() {
 
-		GeoResults<GeoLocation<byte[]>> result = clusterConnection.geoRadius(KEY_1_BYTES,
-				new Circle(new Point(15D, 37D), new Distance(200D, KILOMETERS)), newGeoRadiusArgs().limit(2));
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		assertThat(result.getContent()).hasSize(2);
-	}
+        GeoResults<GeoLocation<byte[]>> result =
+                clusterConnection.geoRadius(
+                        KEY_1_BYTES,
+                        new Circle(new Point(15D, 37D), new Distance(200D, KILOMETERS)),
+                        newGeoRadiusArgs().includeDistance());
 
-	@Test // DATAREDIS-438
-	public void geoRadiusShouldReturnDistanceCorrectly() {
+        assertThat(result.getContent()).hasSize(3);
+        assertThat(result.getContent().get(0).getDistance().getValue())
+                .isCloseTo(130.423D, offset(0.005));
+        assertThat(result.getContent().get(0).getDistance().getUnit()).isEqualTo("km");
+    }
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+    @Test // DATAREDIS-438
+    public void geoRadiusShouldReturnMembersCorrectly() {
 
-		GeoResults<GeoLocation<byte[]>> result = clusterConnection.geoRadius(KEY_1_BYTES,
-				new Circle(new Point(15D, 37D), new Distance(200D, KILOMETERS)), newGeoRadiusArgs().includeDistance());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		assertThat(result.getContent()).hasSize(3);
-		assertThat(result.getContent().get(0).getDistance().getValue()).isCloseTo(130.423D, offset(0.005));
-		assertThat(result.getContent().get(0).getDistance().getUnit()).isEqualTo("km");
-	}
+        GeoResults<GeoLocation<byte[]>> result =
+                clusterConnection.geoRadius(
+                        KEY_1_BYTES, new Circle(new Point(15D, 37D), new Distance(150D, KILOMETERS)));
+        assertThat(result.getContent()).hasSize(2);
+    }
 
-	@Test // DATAREDIS-438
-	public void geoRadiusShouldReturnMembersCorrectly() {
+    @Test // DATAREDIS-438
+    public void geoRemoveDeletesMembers() {
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
+        nativeConnection.geoadd(
+                KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
 
-		GeoResults<GeoLocation<byte[]>> result = clusterConnection.geoRadius(KEY_1_BYTES,
-				new Circle(new Point(15D, 37D), new Distance(150D, KILOMETERS)));
-		assertThat(result.getContent()).hasSize(2);
-	}
+        assertThat(clusterConnection.geoRemove(KEY_1_BYTES, ARIGENTO.getName())).isEqualTo(1L);
+    }
 
-	@Test // DATAREDIS-438
-	public void geoRemoveDeletesMembers() {
+    @Test // DATAREDIS-315
+    public void getBitShouldWorkCorrectly() {
 
-		nativeConnection.geoadd(KEY_1_BYTES, PALERMO.getPoint().getX(), PALERMO.getPoint().getY(), PALERMO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, ARIGENTO.getPoint().getX(), ARIGENTO.getPoint().getY(), ARIGENTO.getName());
-		nativeConnection.geoadd(KEY_1_BYTES, CATANIA.getPoint().getX(), CATANIA.getPoint().getY(), CATANIA.getName());
+        nativeConnection.setbit(KEY_1, 0, true);
+        nativeConnection.setbit(KEY_1, 1, false);
 
-		assertThat(clusterConnection.geoRemove(KEY_1_BYTES, ARIGENTO.getName())).isEqualTo(1L);
-	}
+        assertThat(clusterConnection.getBit(KEY_1_BYTES, 0)).isTrue();
+        assertThat(clusterConnection.getBit(KEY_1_BYTES, 1)).isFalse();
+    }
 
-	@Test // DATAREDIS-315
-	public void getBitShouldWorkCorrectly() {
+    @Test // DATAREDIS-315
+    public void getClusterNodeForKeyShouldReturnNodeCorrectly() {
+        assertThat((ValkeyNode) clusterConnection.clusterGetNodeForKey(KEY_1_BYTES))
+                .isEqualTo(new ValkeyNode("127.0.0.1", 7380));
+    }
 
-		nativeConnection.setbit(KEY_1, 0, true);
-		nativeConnection.setbit(KEY_1, 1, false);
+    @Test // DATAREDIS-315, DATAREDIS-661
+    public void getConfigShouldLoadConfigurationOfSpecificNode() {
 
-		assertThat(clusterConnection.getBit(KEY_1_BYTES, 0)).isTrue();
-		assertThat(clusterConnection.getBit(KEY_1_BYTES, 1)).isFalse();
-	}
+        Properties result =
+                clusterConnection.getConfig(
+                        new ValkeyClusterNode(CLUSTER_HOST, REPLICAOF_NODE_1_PORT), "*");
 
-	@Test // DATAREDIS-315
-	public void getClusterNodeForKeyShouldReturnNodeCorrectly() {
-		assertThat((ValkeyNode) clusterConnection.clusterGetNodeForKey(KEY_1_BYTES))
-				.isEqualTo(new ValkeyNode("127.0.0.1", 7380));
-	}
+        assertThat(result.getProperty("slaveof")).endsWith("7379");
+    }
 
-	@Test // DATAREDIS-315, DATAREDIS-661
-	public void getConfigShouldLoadConfigurationOfSpecificNode() {
+    @Test // DATAREDIS-315, DATAREDIS-661
+    public void getConfigShouldLoadCumulatedConfiguration() {
 
-		Properties result = clusterConnection.getConfig(new ValkeyClusterNode(CLUSTER_HOST, REPLICAOF_NODE_1_PORT), "*");
+        Properties result = clusterConnection.getConfig("*max-*-entries*");
 
-		assertThat(result.getProperty("slaveof")).endsWith("7379");
-	}
+        // config get *max-*-entries on valkey 3.0.7 returns 8 entries per node while on 3.2.0-rc3
+        // returns 6.
+        // @link https://github.com/spring-projects/spring-data-valkey/pull/187
+        assertThat(result.size() % 3).isEqualTo(0);
 
-	@Test // DATAREDIS-315, DATAREDIS-661
-	public void getConfigShouldLoadCumulatedConfiguration() {
+        for (Object o : result.keySet()) {
 
-		Properties result = clusterConnection.getConfig("*max-*-entries*");
+            assertThat(o.toString()).startsWith(CLUSTER_HOST);
+            assertThat(result.getProperty(o.toString())).doesNotStartWith(CLUSTER_HOST);
+        }
+    }
 
-		// config get *max-*-entries on valkey 3.0.7 returns 8 entries per node while on 3.2.0-rc3 returns 6.
-		// @link https://github.com/spring-projects/spring-data-valkey/pull/187
-		assertThat(result.size() % 3).isEqualTo(0);
+    @Test // DATAREDIS-315
+    public void getRangeShouldReturnValueCorrectly() {
 
-		for (Object o : result.keySet()) {
+        nativeConnection.set(KEY_1, VALUE_1);
 
-			assertThat(o.toString()).startsWith(CLUSTER_HOST);
-			assertThat(result.getProperty(o.toString())).doesNotStartWith(CLUSTER_HOST);
-		}
-	}
+        assertThat(clusterConnection.getRange(KEY_1_BYTES, 0, 2))
+                .isEqualTo(JedisConverters.toBytes("val"));
+    }
 
-	@Test // DATAREDIS-315
-	public void getRangeShouldReturnValueCorrectly() {
+    @Test // GH-2050
+    @EnabledOnCommand("GETEX")
+    public void getExShouldWorkCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		assertThat(clusterConnection.getRange(KEY_1_BYTES, 0, 2)).isEqualTo(JedisConverters.toBytes("val"));
-	}
+        assertThat(clusterConnection.getEx(KEY_1_BYTES, Expiration.seconds(10)))
+                .isEqualTo(VALUE_1_BYTES);
+        assertThat(clusterConnection.ttl(KEY_1_BYTES)).isGreaterThan(1);
+    }
 
-	@Test // GH-2050
-	@EnabledOnCommand("GETEX")
-	public void getExShouldWorkCorrectly() {
+    @Test // GH-2050
+    @EnabledOnCommand("GETDEL")
+    public void getDelShouldWorkCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		assertThat(clusterConnection.getEx(KEY_1_BYTES, Expiration.seconds(10))).isEqualTo(VALUE_1_BYTES);
-		assertThat(clusterConnection.ttl(KEY_1_BYTES)).isGreaterThan(1);
-	}
+        assertThat(clusterConnection.getDel(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
+        assertThat(clusterConnection.exists(KEY_1_BYTES)).isFalse();
+    }
 
-	@Test // GH-2050
-	@EnabledOnCommand("GETDEL")
-	public void getDelShouldWorkCorrectly() {
+    @Test // DATAREDIS-315
+    public void getSetShouldWorkCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		assertThat(clusterConnection.getDel(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
-		assertThat(clusterConnection.exists(KEY_1_BYTES)).isFalse();
-	}
+        byte[] valueBeforeSet = clusterConnection.getSet(KEY_1_BYTES, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void getSetShouldWorkCorrectly() {
+        assertThat(valueBeforeSet).isEqualTo(VALUE_1_BYTES);
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_2);
+    }
 
-		nativeConnection.set(KEY_1, VALUE_1);
+    @Test // DATAREDIS-315
+    public void getShouldReturnValueCorrectly() {
 
-		byte[] valueBeforeSet = clusterConnection.getSet(KEY_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		assertThat(valueBeforeSet).isEqualTo(VALUE_1_BYTES);
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_2);
-	}
+        assertThat(clusterConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void getShouldReturnValueCorrectly() {
+    @Test // DATAREDIS-315
+    public void hDelShouldRemoveFieldsCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        clusterConnection.hDel(KEY_1_BYTES, KEY_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void hDelShouldRemoveFieldsCorrectly() {
+        assertThat(nativeConnection.hexists(KEY_1_BYTES, KEY_2_BYTES)).isFalse();
+        assertThat(nativeConnection.hexists(KEY_1_BYTES, KEY_3_BYTES)).isTrue();
+    }
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
-		nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
+    @Test // DATAREDIS-315
+    public void hExistsShouldReturnPresenceOfFieldCorrectly() {
 
-		clusterConnection.hDel(KEY_1_BYTES, KEY_2_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
 
-		assertThat(nativeConnection.hexists(KEY_1_BYTES, KEY_2_BYTES)).isFalse();
-		assertThat(nativeConnection.hexists(KEY_1_BYTES, KEY_3_BYTES)).isTrue();
-	}
+        assertThat(clusterConnection.hExists(KEY_1_BYTES, KEY_2_BYTES)).isTrue();
+        assertThat(clusterConnection.hExists(KEY_1_BYTES, KEY_3_BYTES)).isFalse();
+        assertThat(clusterConnection.hExists(JedisConverters.toBytes("foo"), KEY_2_BYTES)).isFalse();
+    }
 
-	@Test // DATAREDIS-315
-	public void hExistsShouldReturnPresenceOfFieldCorrectly() {
+    @Test // DATAREDIS-315
+    public void hGetAllShouldRetrieveEntriesCorrectly() {
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        Map<byte[], byte[]> hashes = new HashMap<>();
+        hashes.put(KEY_2_BYTES, VALUE_1_BYTES);
+        hashes.put(KEY_3_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.hExists(KEY_1_BYTES, KEY_2_BYTES)).isTrue();
-		assertThat(clusterConnection.hExists(KEY_1_BYTES, KEY_3_BYTES)).isFalse();
-		assertThat(clusterConnection.hExists(JedisConverters.toBytes("foo"), KEY_2_BYTES)).isFalse();
-	}
+        nativeConnection.hmset(KEY_1_BYTES, hashes);
 
-	@Test // DATAREDIS-315
-	public void hGetAllShouldRetrieveEntriesCorrectly() {
+        Map<byte[], byte[]> hGetAll = clusterConnection.hGetAll(KEY_1_BYTES);
 
-		Map<byte[], byte[]> hashes = new HashMap<>();
-		hashes.put(KEY_2_BYTES, VALUE_1_BYTES);
-		hashes.put(KEY_3_BYTES, VALUE_2_BYTES);
+        assertThat(hGetAll.containsKey(KEY_2_BYTES)).isTrue();
+        assertThat(hGetAll.containsKey(KEY_3_BYTES)).isTrue();
+    }
 
-		nativeConnection.hmset(KEY_1_BYTES, hashes);
+    @Test // DATAREDIS-315
+    public void hGetShouldRetrieveValueCorrectly() {
 
-		Map<byte[], byte[]> hGetAll = clusterConnection.hGetAll(KEY_1_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
 
-		assertThat(hGetAll.containsKey(KEY_2_BYTES)).isTrue();
-		assertThat(hGetAll.containsKey(KEY_3_BYTES)).isTrue();
-	}
+        assertThat(clusterConnection.hGet(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void hGetShouldRetrieveValueCorrectly() {
+    @Test // DATAREDIS-315
+    public void hIncrByFloatShouldIncreaseFieldCorretly() {
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, JedisConverters.toBytes(1L));
+        nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, JedisConverters.toBytes(2L));
 
-		assertThat(clusterConnection.hGet(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        clusterConnection.hIncrBy(KEY_1_BYTES, KEY_3_BYTES, 3.5D);
 
-	@Test // DATAREDIS-315
-	public void hIncrByFloatShouldIncreaseFieldCorretly() {
+        assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_3_BYTES))
+                .isEqualTo(JedisConverters.toBytes(5.5D));
+    }
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, JedisConverters.toBytes(1L));
-		nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, JedisConverters.toBytes(2L));
+    @Test // DATAREDIS-315
+    public void hIncrByShouldIncreaseFieldCorretly() {
 
-		clusterConnection.hIncrBy(KEY_1_BYTES, KEY_3_BYTES, 3.5D);
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, JedisConverters.toBytes(1L));
+        nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, JedisConverters.toBytes(2L));
 
-		assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_3_BYTES)).isEqualTo(JedisConverters.toBytes(5.5D));
-	}
+        clusterConnection.hIncrBy(KEY_1_BYTES, KEY_3_BYTES, 3);
 
-	@Test // DATAREDIS-315
-	public void hIncrByShouldIncreaseFieldCorretly() {
+        assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_3_BYTES))
+                .isEqualTo(JedisConverters.toBytes(5L));
+    }
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, JedisConverters.toBytes(1L));
-		nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, JedisConverters.toBytes(2L));
+    @Test // DATAREDIS-315
+    public void hKeysShouldRetrieveKeysCorrectly() {
 
-		clusterConnection.hIncrBy(KEY_1_BYTES, KEY_3_BYTES, 3);
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
 
-		assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_3_BYTES)).isEqualTo(JedisConverters.toBytes(5L));
-	}
+        assertThat(clusterConnection.hKeys(KEY_1_BYTES)).contains(KEY_2_BYTES, KEY_3_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void hKeysShouldRetrieveKeysCorrectly() {
+    @Test // DATAREDIS-315
+    public void hLenShouldRetrieveSizeCorrectly() {
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
-		nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.hKeys(KEY_1_BYTES)).contains(KEY_2_BYTES, KEY_3_BYTES);
-	}
+        assertThat(clusterConnection.hLen(KEY_1_BYTES)).isEqualTo(2L);
+    }
 
-	@Test // DATAREDIS-315
-	public void hLenShouldRetrieveSizeCorrectly() {
+    @Test // DATAREDIS-315
+    public void hMGetShouldRetrieveValueCorrectly() {
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
-		nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.hLen(KEY_1_BYTES)).isEqualTo(2L);
-	}
+        assertThat(clusterConnection.hMGet(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void hMGetShouldRetrieveValueCorrectly() {
+    @Test // DATAREDIS-315
+    public void hMSetShouldAddValuesCorrectly() {
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
-		nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
+        Map<byte[], byte[]> hashes = new HashMap<>();
+        hashes.put(KEY_2_BYTES, VALUE_1_BYTES);
+        hashes.put(KEY_3_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.hMGet(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
-	}
+        clusterConnection.hMSet(KEY_1_BYTES, hashes);
 
-	@Test // DATAREDIS-315
-	public void hMSetShouldAddValuesCorrectly() {
+        assertThat(nativeConnection.hmget(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		Map<byte[], byte[]> hashes = new HashMap<>();
-		hashes.put(KEY_2_BYTES, VALUE_1_BYTES);
-		hashes.put(KEY_3_BYTES, VALUE_2_BYTES);
+    @Test // DATAREDIS-479
+    public void hScanShouldReadEntireValueRange() {
 
-		clusterConnection.hMSet(KEY_1_BYTES, hashes);
+        int nrOfValues = 321;
+        for (int i = 0; i < nrOfValues; i++) {
+            nativeConnection.hset(
+                    KEY_1_BYTES, JedisConverters.toBytes("key" + i), JedisConverters.toBytes("value-" + i));
+        }
 
-		assertThat(nativeConnection.hmget(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
-	}
+        Cursor<Map.Entry<byte[], byte[]>> cursor =
+                clusterConnection.hScan(KEY_1_BYTES, scanOptions().match("key*").build());
 
-	@Test // DATAREDIS-479
-	public void hScanShouldReadEntireValueRange() {
+        int i = 0;
+        while (cursor.hasNext()) {
 
-		int nrOfValues = 321;
-		for (int i = 0; i < nrOfValues; i++) {
-			nativeConnection.hset(KEY_1_BYTES, JedisConverters.toBytes("key" + i), JedisConverters.toBytes("value-" + i));
-		}
+            cursor.next();
+            i++;
+        }
 
-		Cursor<Map.Entry<byte[], byte[]>> cursor = clusterConnection.hScan(KEY_1_BYTES,
-				scanOptions().match("key*").build());
+        assertThat(i).isEqualTo(nrOfValues);
+    }
 
-		int i = 0;
-		while (cursor.hasNext()) {
+    @Test // DATAREDIS-315
+    public void hSetNXShouldNotSetValueWhenAlreadyExists() {
 
-			cursor.next();
-			i++;
-		}
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
 
-		assertThat(i).isEqualTo(nrOfValues);
-	}
+        clusterConnection.hSetNX(KEY_1_BYTES, KEY_2_BYTES, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void hSetNXShouldNotSetValueWhenAlreadyExists() {
+        assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+    @Test // DATAREDIS-315
+    public void hSetNXShouldSetValueCorrectly() {
 
-		clusterConnection.hSetNX(KEY_1_BYTES, KEY_2_BYTES, VALUE_2_BYTES);
+        clusterConnection.hSetNX(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
 
-		assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void hSetNXShouldSetValueCorrectly() {
+    @Test // DATAREDIS-315
+    public void hSetShouldSetValueCorrectly() {
 
-		clusterConnection.hSetNX(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        clusterConnection.hSet(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
 
-		assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void hSetShouldSetValueCorrectly() {
+    @Test // DATAREDIS-698
+    public void hStrLenReturnsFieldLength() {
 
-		clusterConnection.hSet(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		assertThat(nativeConnection.hget(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        assertThat(clusterConnection.hashCommands().hStrLen(KEY_1_BYTES, KEY_2_BYTES))
+                .isEqualTo(Long.valueOf(VALUE_3.length()));
+    }
 
-	@Test // DATAREDIS-698
-	public void hStrLenReturnsFieldLength() {
+    @Test // DATAREDIS-698
+    public void hStrLenReturnsZeroWhenFieldDoesNotExist() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		assertThat(clusterConnection.hashCommands().hStrLen(KEY_1_BYTES, KEY_2_BYTES))
-				.isEqualTo(Long.valueOf(VALUE_3.length()));
-	}
+        assertThat(clusterConnection.hashCommands().hStrLen(KEY_1_BYTES, KEY_3_BYTES)).isEqualTo(0L);
+    }
 
-	@Test // DATAREDIS-698
-	public void hStrLenReturnsZeroWhenFieldDoesNotExist() {
+    @Test // DATAREDIS-698
+    public void hStrLenReturnsZeroWhenKeyDoesNotExist() {
+        assertThat(clusterConnection.hashCommands().hStrLen(KEY_1_BYTES, KEY_1_BYTES)).isEqualTo(0L);
+    }
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hExpireReturnsSuccessAndSetsTTL() {
 
-		assertThat(clusterConnection.hashCommands().hStrLen(KEY_1_BYTES, KEY_3_BYTES)).isEqualTo(0L);
-	}
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-	@Test // DATAREDIS-698
-	public void hStrLenReturnsZeroWhenKeyDoesNotExist() {
-		assertThat(clusterConnection.hashCommands().hStrLen(KEY_1_BYTES, KEY_1_BYTES)).isEqualTo(0L);
-	}
+        assertThat(clusterConnection.hashCommands().hExpire(KEY_1_BYTES, 5L, KEY_2_BYTES)).contains(1L);
+        assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_2_BYTES))
+                .allSatisfy(val -> assertThat(val).isBetween(0L, 5L));
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hExpireReturnsSuccessAndSetsTTL() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hExpireReturnsMinusTwoWhenFieldDoesNotExist() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        // missing field
+        assertThat(clusterConnection.hashCommands().hExpire(KEY_1_BYTES, 5L, KEY_1_BYTES))
+                .contains(-2L);
+        // missing key
+        assertThat(clusterConnection.hashCommands().hExpire(KEY_2_BYTES, 5L, KEY_2_BYTES))
+                .contains(-2L);
+    }
 
-		assertThat(clusterConnection.hashCommands().hExpire(KEY_1_BYTES, 5L, KEY_2_BYTES)).contains(1L);
-		assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_2_BYTES))
-				.allSatisfy(val -> assertThat(val).isBetween(0L, 5L));
-	}
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hExpireReturnsTwoWhenZeroProvided() {
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hExpireReturnsMinusTwoWhenFieldDoesNotExist() {
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
-		// missing field
-		assertThat(clusterConnection.hashCommands().hExpire(KEY_1_BYTES, 5L, KEY_1_BYTES)).contains(-2L);
-		// missing key
-		assertThat(clusterConnection.hashCommands().hExpire(KEY_2_BYTES, 5L, KEY_2_BYTES)).contains(-2L);
-	}
+        assertThat(clusterConnection.hashCommands().hExpire(KEY_1_BYTES, 0L, KEY_2_BYTES)).contains(2L);
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hExpireReturnsTwoWhenZeroProvided() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hpExpireReturnsSuccessAndSetsTTL() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		assertThat(clusterConnection.hashCommands().hExpire(KEY_1_BYTES, 0L, KEY_2_BYTES)).contains(2L);
-	}
+        assertThat(clusterConnection.hashCommands().hpExpire(KEY_1_BYTES, 5000L, KEY_2_BYTES))
+                .contains(1L);
+        assertThat(
+                        clusterConnection.hashCommands().hTtl(KEY_1_BYTES, TimeUnit.MILLISECONDS, KEY_2_BYTES))
+                .allSatisfy(val -> assertThat(val).isBetween(0L, 5000L));
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hpExpireReturnsSuccessAndSetsTTL() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hpExpireReturnsMinusTwoWhenFieldDoesNotExist() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        // missing field
+        assertThat(clusterConnection.hashCommands().hpExpire(KEY_1_BYTES, 5L, KEY_1_BYTES))
+                .contains(-2L);
+        // missing key
+        assertThat(clusterConnection.hashCommands().hpExpire(KEY_2_BYTES, 5L, KEY_2_BYTES))
+                .contains(-2L);
+    }
 
-		assertThat(clusterConnection.hashCommands().hpExpire(KEY_1_BYTES, 5000L, KEY_2_BYTES)).contains(1L);
-		assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, TimeUnit.MILLISECONDS, KEY_2_BYTES))
-				.allSatisfy(val -> assertThat(val).isBetween(0L, 5000L));
-	}
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hpExpireReturnsTwoWhenZeroProvided() {
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hpExpireReturnsMinusTwoWhenFieldDoesNotExist() {
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
-		// missing field
-		assertThat(clusterConnection.hashCommands().hpExpire(KEY_1_BYTES, 5L, KEY_1_BYTES)).contains(-2L);
-		// missing key
-		assertThat(clusterConnection.hashCommands().hpExpire(KEY_2_BYTES, 5L, KEY_2_BYTES)).contains(-2L);
-	}
+        assertThat(clusterConnection.hashCommands().hpExpire(KEY_1_BYTES, 0L, KEY_2_BYTES))
+                .contains(2L);
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hpExpireReturnsTwoWhenZeroProvided() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hExpireAtReturnsSuccessAndSetsTTL() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        long inFiveSeconds = Instant.now().plusSeconds(5L).getEpochSecond();
 
-		assertThat(clusterConnection.hashCommands().hpExpire(KEY_1_BYTES, 0L, KEY_2_BYTES)).contains(2L);
-	}
+        assertThat(clusterConnection.hashCommands().hExpireAt(KEY_1_BYTES, inFiveSeconds, KEY_2_BYTES))
+                .contains(1L);
+        assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_2_BYTES))
+                .allSatisfy(val -> assertThat(val).isBetween(0L, 5L));
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hExpireAtReturnsSuccessAndSetsTTL() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hExpireAtReturnsMinusTwoWhenFieldDoesNotExist() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
-		long inFiveSeconds = Instant.now().plusSeconds(5L).getEpochSecond();
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        long inFiveSeconds = Instant.now().plusSeconds(5L).getEpochSecond();
 
-		assertThat(clusterConnection.hashCommands().hExpireAt(KEY_1_BYTES, inFiveSeconds, KEY_2_BYTES)).contains(1L);
-		assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_2_BYTES))
-				.allSatisfy(val -> assertThat(val).isBetween(0L, 5L));
-	}
+        // missing field
+        assertThat(clusterConnection.hashCommands().hExpireAt(KEY_1_BYTES, inFiveSeconds, KEY_1_BYTES))
+                .contains(-2L);
+        // missing key
+        assertThat(clusterConnection.hashCommands().hExpireAt(KEY_2_BYTES, inFiveSeconds, KEY_2_BYTES))
+                .contains(-2L);
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hExpireAtReturnsMinusTwoWhenFieldDoesNotExist() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hExpireAdReturnsTwoWhenZeroProvided() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
-		long inFiveSeconds = Instant.now().plusSeconds(5L).getEpochSecond();
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		// missing field
-		assertThat(clusterConnection.hashCommands().hExpireAt(KEY_1_BYTES, inFiveSeconds, KEY_1_BYTES)).contains(-2L);
-		// missing key
-		assertThat(clusterConnection.hashCommands().hExpireAt(KEY_2_BYTES, inFiveSeconds, KEY_2_BYTES)).contains(-2L);
-	}
+        assertThat(clusterConnection.hashCommands().hExpireAt(KEY_1_BYTES, 0L, KEY_2_BYTES))
+                .contains(2L);
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hExpireAdReturnsTwoWhenZeroProvided() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hpExpireAtReturnsSuccessAndSetsTTL() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        long inFiveSeconds = Instant.now().plusSeconds(5L).toEpochMilli();
 
-		assertThat(clusterConnection.hashCommands().hExpireAt(KEY_1_BYTES, 0L, KEY_2_BYTES)).contains(2L);
-	}
+        assertThat(clusterConnection.hashCommands().hpExpireAt(KEY_1_BYTES, inFiveSeconds, KEY_2_BYTES))
+                .contains(1L);
+        assertThat(
+                        clusterConnection.hashCommands().hTtl(KEY_1_BYTES, TimeUnit.MILLISECONDS, KEY_2_BYTES))
+                .allSatisfy(val -> assertThat(val).isBetween(0L, 5000L));
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hpExpireAtReturnsSuccessAndSetsTTL() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hpExpireAtReturnsMinusTwoWhenFieldDoesNotExist() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
-		long inFiveSeconds = Instant.now().plusSeconds(5L).toEpochMilli();
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        long inFiveSeconds = Instant.now().plusSeconds(5L).toEpochMilli();
 
-		assertThat(clusterConnection.hashCommands().hpExpireAt(KEY_1_BYTES, inFiveSeconds, KEY_2_BYTES)).contains(1L);
-		assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, TimeUnit.MILLISECONDS, KEY_2_BYTES))
-				.allSatisfy(val -> assertThat(val).isBetween(0L, 5000L));
-	}
+        // missing field
+        assertThat(clusterConnection.hashCommands().hpExpireAt(KEY_1_BYTES, inFiveSeconds, KEY_1_BYTES))
+                .contains(-2L);
+        // missing key
+        assertThat(clusterConnection.hashCommands().hpExpireAt(KEY_2_BYTES, inFiveSeconds, KEY_2_BYTES))
+                .contains(-2L);
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hpExpireAtReturnsMinusTwoWhenFieldDoesNotExist() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hpExpireAdReturnsTwoWhenZeroProvided() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
-		long inFiveSeconds = Instant.now().plusSeconds(5L).toEpochMilli();
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		// missing field
-		assertThat(clusterConnection.hashCommands().hpExpireAt(KEY_1_BYTES, inFiveSeconds, KEY_1_BYTES)).contains(-2L);
-		// missing key
-		assertThat(clusterConnection.hashCommands().hpExpireAt(KEY_2_BYTES, inFiveSeconds, KEY_2_BYTES)).contains(-2L);
-	}
+        assertThat(clusterConnection.hashCommands().hpExpireAt(KEY_1_BYTES, 0L, KEY_2_BYTES))
+                .contains(2L);
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hpExpireAdReturnsTwoWhenZeroProvided() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hPersistReturnsSuccessAndPersistsField() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		assertThat(clusterConnection.hashCommands().hpExpireAt(KEY_1_BYTES, 0L, KEY_2_BYTES)).contains(2L);
-	}
+        assertThat(clusterConnection.hashCommands().hExpire(KEY_1_BYTES, 5L, KEY_2_BYTES)).contains(1L);
+        assertThat(clusterConnection.hashCommands().hPersist(KEY_1_BYTES, KEY_2_BYTES)).contains(1L);
+        assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_2_BYTES)).contains(-1L);
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hPersistReturnsSuccessAndPersistsField() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hPersistReturnsMinusOneWhenFieldDoesNotHaveExpiration() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        assertThat(clusterConnection.hashCommands().hPersist(KEY_1_BYTES, KEY_2_BYTES)).contains(-1L);
+    }
 
-		assertThat(clusterConnection.hashCommands().hExpire(KEY_1_BYTES, 5L, KEY_2_BYTES)).contains(1L);
-		assertThat(clusterConnection.hashCommands().hPersist(KEY_1_BYTES, KEY_2_BYTES)).contains(1L);
-		assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_2_BYTES)).contains(-1L);
-	}
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hPersistReturnsMinusTwoWhenFieldOrKeyMissing() {
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hPersistReturnsMinusOneWhenFieldDoesNotHaveExpiration() {
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
-		assertThat(clusterConnection.hashCommands().hPersist(KEY_1_BYTES, KEY_2_BYTES)).contains(-1L);
-	}
+        assertThat(clusterConnection.hashCommands().hPersist(KEY_1_BYTES, KEY_1_BYTES)).contains(-2L);
+        assertThat(clusterConnection.hashCommands().hPersist(KEY_3_BYTES, KEY_2_BYTES)).contains(-2L);
+    }
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hPersistReturnsMinusTwoWhenFieldOrKeyMissing() {
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hTtlReturnsMinusOneWhenFieldHasNoExpiration() {
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+        nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
 
-		assertThat(clusterConnection.hashCommands().hPersist(KEY_1_BYTES, KEY_1_BYTES)).contains(-2L);
-		assertThat(clusterConnection.hashCommands().hPersist(KEY_3_BYTES, KEY_2_BYTES)).contains(-2L);
+        assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_2_BYTES)).contains(-1L);
+    }
 
-	}
+    @Test // GH-3054
+    @EnabledOnCommand("HEXPIRE")
+    public void hTtlReturnsMinusTwoWhenFieldOrKeyMissing() {
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hTtlReturnsMinusOneWhenFieldHasNoExpiration() {
+        assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_1_BYTES)).contains(-2L);
+        assertThat(clusterConnection.hashCommands().hTtl(KEY_3_BYTES, KEY_2_BYTES)).contains(-2L);
+    }
 
-		nativeConnection.hset(KEY_1, KEY_2, VALUE_3);
+    @Test // DATAREDIS-315
+    public void hValsShouldRetrieveValuesCorrectly() {
 
-		assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_2_BYTES)).contains(-1L);
-	}
+        nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
+        nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
 
-	@Test // GH-3054
-	@EnabledOnCommand("HEXPIRE")
-	public void hTtlReturnsMinusTwoWhenFieldOrKeyMissing() {
+        assertThat(clusterConnection.hVals(KEY_1_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		assertThat(clusterConnection.hashCommands().hTtl(KEY_1_BYTES, KEY_1_BYTES)).contains(-2L);
-		assertThat(clusterConnection.hashCommands().hTtl(KEY_3_BYTES, KEY_2_BYTES)).contains(-2L);
-	}
+    @Test // DATAREDIS-315
+    public void incrByFloatShouldIncreaseValueCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void hValsShouldRetrieveValuesCorrectly() {
+        nativeConnection.set(KEY_1, "1");
 
-		nativeConnection.hset(KEY_1_BYTES, KEY_2_BYTES, VALUE_1_BYTES);
-		nativeConnection.hset(KEY_1_BYTES, KEY_3_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.incrBy(KEY_1_BYTES, 5.5D)).isEqualTo(6.5D);
+    }
 
-		assertThat(clusterConnection.hVals(KEY_1_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void incrByShouldIncreaseValueCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void incrByFloatShouldIncreaseValueCorrectly() {
+        nativeConnection.set(KEY_1, "1");
 
-		nativeConnection.set(KEY_1, "1");
+        assertThat(clusterConnection.incrBy(KEY_1_BYTES, 5)).isEqualTo(6L);
+    }
 
-		assertThat(clusterConnection.incrBy(KEY_1_BYTES, 5.5D)).isEqualTo(6.5D);
-	}
+    @Test // DATAREDIS-315
+    public void incrShouldIncreaseValueCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void incrByShouldIncreaseValueCorrectly() {
+        nativeConnection.set(KEY_1, "1");
 
-		nativeConnection.set(KEY_1, "1");
+        assertThat(clusterConnection.incr(KEY_1_BYTES)).isEqualTo(2L);
+    }
 
-		assertThat(clusterConnection.incrBy(KEY_1_BYTES, 5)).isEqualTo(6L);
-	}
+    @Test // DATAREDIS-315
+    public void infoShouldCollectInfoForSpecificNode() {
 
-	@Test // DATAREDIS-315
-	public void incrShouldIncreaseValueCorrectly() {
+        Properties properties =
+                clusterConnection.info(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_2_PORT));
 
-		nativeConnection.set(KEY_1, "1");
+        assertThat(properties.getProperty("tcp_port")).isEqualTo(Integer.toString(MASTER_NODE_2_PORT));
+    }
 
-		assertThat(clusterConnection.incr(KEY_1_BYTES)).isEqualTo(2L);
-	}
+    @Test // DATAREDIS-315
+    public void infoShouldCollectInfoForSpecificNodeAndSection() {
 
-	@Test // DATAREDIS-315
-	public void infoShouldCollectInfoForSpecificNode() {
+        Properties properties =
+                clusterConnection.info(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_2_PORT), "server");
 
-		Properties properties = clusterConnection.info(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_2_PORT));
+        assertThat(properties.getProperty("tcp_port")).isEqualTo(Integer.toString(MASTER_NODE_2_PORT));
+        assertThat(properties.getProperty("used_memory")).isNull();
+    }
 
-		assertThat(properties.getProperty("tcp_port")).isEqualTo(Integer.toString(MASTER_NODE_2_PORT));
-	}
+    @Test // DATAREDIS-315, DATAREDIS-685
+    public void infoShouldCollectionInfoFromAllClusterNodes() {
 
-	@Test // DATAREDIS-315
-	public void infoShouldCollectInfoForSpecificNodeAndSection() {
+        Properties singleNodeInfo =
+                clusterConnection.serverCommands().info(new ValkeyClusterNode("127.0.0.1", 7380));
+        assertThat(Double.valueOf(clusterConnection.serverCommands().info().size()))
+                .isCloseTo(singleNodeInfo.size() * 3, offset(12d));
+    }
 
-		Properties properties = clusterConnection.info(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_2_PORT), "server");
+    @Test // DATAREDIS-315
+    public void keysShouldReturnAllKeys() {
 
-		assertThat(properties.getProperty("tcp_port")).isEqualTo(Integer.toString(MASTER_NODE_2_PORT));
-		assertThat(properties.getProperty("used_memory")).isNull();
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-	@Test // DATAREDIS-315, DATAREDIS-685
-	public void infoShouldCollectionInfoFromAllClusterNodes() {
+        assertThat(clusterConnection.keys(JedisConverters.toBytes("*")))
+                .contains(KEY_1_BYTES, KEY_2_BYTES);
+    }
 
-		Properties singleNodeInfo = clusterConnection.serverCommands().info(new ValkeyClusterNode("127.0.0.1", 7380));
-		assertThat(Double.valueOf(clusterConnection.serverCommands().info().size())).isCloseTo(singleNodeInfo.size() * 3,
-				offset(12d));
-	}
+    @Test // DATAREDIS-315
+    public void keysShouldReturnAllKeysForSpecificNode() {
 
-	@Test // DATAREDIS-315
-	public void keysShouldReturnAllKeys() {
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        Set<byte[]> keysOnNode =
+                clusterConnection.keys(
+                        new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()),
+                        JedisConverters.toBytes("*"));
 
-		assertThat(clusterConnection.keys(JedisConverters.toBytes("*"))).contains(KEY_1_BYTES, KEY_2_BYTES);
-	}
+        assertThat(keysOnNode).contains(KEY_2_BYTES).doesNotContain(KEY_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void keysShouldReturnAllKeysForSpecificNode() {
+    @Test // DATAREDIS-635
+    public void scanShouldReturnAllKeys() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-		Set<byte[]> keysOnNode = clusterConnection.keys(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()),
-				JedisConverters.toBytes("*"));
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(() -> clusterConnection.scan(ScanOptions.NONE));
+    }
 
-		assertThat(keysOnNode).contains(KEY_2_BYTES).doesNotContain(KEY_1_BYTES);
-	}
+    @Override // DATAREDIS-635
+    public void scanShouldReturnAllKeysForSpecificNode() {
 
-	@Test // DATAREDIS-635
-	public void scanShouldReturnAllKeys() {
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        Cursor<byte[]> cursor =
+                clusterConnection.scan(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), NONE);
 
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> clusterConnection.scan(ScanOptions.NONE));
-	}
+        List<byte[]> keysOnNode = new ArrayList<>();
+        cursor.forEachRemaining(keysOnNode::add);
 
-	@Override // DATAREDIS-635
-	public void scanShouldReturnAllKeysForSpecificNode() {
+        assertThat(keysOnNode).contains(KEY_2_BYTES).doesNotContain(KEY_1_BYTES);
+    }
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+    @Test // DATAREDIS-315
+    public void lIndexShouldGetElementAtIndexCorrectly() {
 
-		Cursor<byte[]> cursor = clusterConnection.scan(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()), NONE);
+        nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
 
-		List<byte[]> keysOnNode = new ArrayList<>();
-		cursor.forEachRemaining(keysOnNode::add);
+        assertThat(clusterConnection.lIndex(KEY_1_BYTES, 1)).isEqualTo(VALUE_2_BYTES);
+    }
 
-		assertThat(keysOnNode).contains(KEY_2_BYTES).doesNotContain(KEY_1_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void lInsertShouldAddElementAtPositionCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void lIndexShouldGetElementAtIndexCorrectly() {
+        nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
 
-		nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
+        clusterConnection.lInsert(
+                KEY_1_BYTES, Position.AFTER, VALUE_2_BYTES, JedisConverters.toBytes("booh"));
 
-		assertThat(clusterConnection.lIndex(KEY_1_BYTES, 1)).isEqualTo(VALUE_2_BYTES);
-	}
+        assertThat(nativeConnection.lrange(KEY_1, 0, -1).get(2)).isEqualTo("booh");
+    }
 
-	@Test // DATAREDIS-315
-	public void lInsertShouldAddElementAtPositionCorrectly() {
+    @Test // GH-2039
+    @EnabledOnCommand("LMOVE")
+    public void lMoveShouldMoveElementsCorrectly() {
 
-		nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
+        nativeConnection.rpush(SAME_SLOT_KEY_1, VALUE_1, VALUE_2, VALUE_3);
 
-		clusterConnection.lInsert(KEY_1_BYTES, Position.AFTER, VALUE_2_BYTES, JedisConverters.toBytes("booh"));
+        assertThat(
+                        clusterConnection.lMove(
+                                SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT))
+                .isEqualTo(VALUE_3_BYTES);
+        assertThat(
+                        clusterConnection.lMove(
+                                SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT))
+                .isEqualTo(VALUE_2_BYTES);
 
-		assertThat(nativeConnection.lrange(KEY_1, 0, -1).get(2)).isEqualTo("booh");
-	}
+        assertThat(nativeConnection.lrange(SAME_SLOT_KEY_1, 0, -1)).containsExactly(VALUE_1);
+        assertThat(nativeConnection.lrange(SAME_SLOT_KEY_2, 0, -1)).containsExactly(VALUE_2, VALUE_3);
+    }
 
-	@Test // GH-2039
-	@EnabledOnCommand("LMOVE")
-	public void lMoveShouldMoveElementsCorrectly() {
+    @Test // GH-2039
+    @EnabledOnCommand("BLMOVE")
+    public void blMoveShouldMoveElementsCorrectly() {
 
-		nativeConnection.rpush(SAME_SLOT_KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        nativeConnection.rpush(SAME_SLOT_KEY_1, VALUE_2, VALUE_3);
 
-		assertThat(clusterConnection.lMove(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT))
-				.isEqualTo(VALUE_3_BYTES);
-		assertThat(clusterConnection.lMove(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT))
-				.isEqualTo(VALUE_2_BYTES);
+        assertThat(
+                        clusterConnection.lMove(
+                                SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT))
+                .isEqualTo(VALUE_3_BYTES);
+        assertThat(
+                        clusterConnection.lMove(
+                                SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT))
+                .isEqualTo(VALUE_2_BYTES);
+        assertThat(
+                        clusterConnection.bLMove(
+                                SAME_SLOT_KEY_1_BYTES,
+                                SAME_SLOT_KEY_2_BYTES,
+                                Direction.RIGHT,
+                                Direction.LEFT,
+                                0.01))
+                .isNull();
 
-		assertThat(nativeConnection.lrange(SAME_SLOT_KEY_1, 0, -1)).containsExactly(VALUE_1);
-		assertThat(nativeConnection.lrange(SAME_SLOT_KEY_2, 0, -1)).containsExactly(VALUE_2, VALUE_3);
-	}
+        assertThat(nativeConnection.lrange(SAME_SLOT_KEY_1, 0, -1)).isEmpty();
+        assertThat(nativeConnection.lrange(SAME_SLOT_KEY_2, 0, -1)).containsExactly(VALUE_2, VALUE_3);
+    }
 
-	@Test // GH-2039
-	@EnabledOnCommand("BLMOVE")
-	public void blMoveShouldMoveElementsCorrectly() {
+    @Test // DATAREDIS-315
+    public void lLenShouldCountValuesCorrectly() {
 
-		nativeConnection.rpush(SAME_SLOT_KEY_1, VALUE_2, VALUE_3);
+        nativeConnection.lpush(KEY_1, VALUE_1, VALUE_2);
 
-		assertThat(clusterConnection.lMove(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT))
-				.isEqualTo(VALUE_3_BYTES);
-		assertThat(clusterConnection.lMove(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT))
-				.isEqualTo(VALUE_2_BYTES);
-		assertThat(
-				clusterConnection.bLMove(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, Direction.RIGHT, Direction.LEFT, 0.01))
-				.isNull();
+        assertThat(clusterConnection.lLen(KEY_1_BYTES)).isEqualTo(2L);
+    }
 
-		assertThat(nativeConnection.lrange(SAME_SLOT_KEY_1, 0, -1)).isEmpty();
-		assertThat(nativeConnection.lrange(SAME_SLOT_KEY_2, 0, -1)).containsExactly(VALUE_2, VALUE_3);
-	}
+    @Test // DATAREDIS-315
+    public void lPopShouldReturnElementCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void lLenShouldCountValuesCorrectly() {
+        nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2);
 
-		nativeConnection.lpush(KEY_1, VALUE_1, VALUE_2);
+        assertThat(clusterConnection.lPop(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-		assertThat(clusterConnection.lLen(KEY_1_BYTES)).isEqualTo(2L);
-	}
+    @Test // DATAREDIS-315
+    public void lPushNXShouldNotAddValuesWhenKeyDoesNotExist() {
 
-	@Test // DATAREDIS-315
-	public void lPopShouldReturnElementCorrectly() {
+        clusterConnection.lPushX(KEY_1_BYTES, VALUE_1_BYTES);
 
-		nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2);
+        assertThat(nativeConnection.exists(KEY_1)).isFalse();
+    }
 
-		assertThat(clusterConnection.lPop(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void lPushShouldAddValuesCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void lPushNXShouldNotAddValuesWhenKeyDoesNotExist() {
+        clusterConnection.lPush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
 
-		clusterConnection.lPushX(KEY_1_BYTES, VALUE_1_BYTES);
+        assertThat(nativeConnection.lrange(KEY_1, 0, -1)).contains(VALUE_1, VALUE_2);
+    }
 
-		assertThat(nativeConnection.exists(KEY_1)).isFalse();
-	}
+    @Test // DATAREDIS-315
+    public void lRangeShouldGetValuesCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void lPushShouldAddValuesCorrectly() {
+        nativeConnection.lpush(KEY_1, VALUE_1, VALUE_2);
 
-		clusterConnection.lPush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.lRange(KEY_1_BYTES, 0L, -1L))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		assertThat(nativeConnection.lrange(KEY_1, 0, -1)).contains(VALUE_1, VALUE_2);
-	}
+    @Test // DATAREDIS-315
+    public void lRemShouldRemoveElementAtPositionCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void lRangeShouldGetValuesCorrectly() {
+        nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
 
-		nativeConnection.lpush(KEY_1, VALUE_1, VALUE_2);
+        clusterConnection.lRem(KEY_1_BYTES, 1L, VALUE_1_BYTES);
 
-		assertThat(clusterConnection.lRange(KEY_1_BYTES, 0L, -1L)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
-	}
+        assertThat(nativeConnection.llen(KEY_1)).isEqualTo(3L);
+    }
 
-	@Test // DATAREDIS-315
-	public void lRemShouldRemoveElementAtPositionCorrectly() {
+    @Test // DATAREDIS-315
+    public void lSetShouldSetElementAtPositionCorrectly() {
 
-		nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
+        nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
 
-		clusterConnection.lRem(KEY_1_BYTES, 1L, VALUE_1_BYTES);
+        clusterConnection.lSet(KEY_1_BYTES, 1L, VALUE_1_BYTES);
 
-		assertThat(nativeConnection.llen(KEY_1)).isEqualTo(3L);
-	}
+        assertThat(nativeConnection.lrange(KEY_1, 0, -1).get(1)).isEqualTo(VALUE_1);
+    }
 
-	@Test // DATAREDIS-315
-	public void lSetShouldSetElementAtPositionCorrectly() {
+    @Test // DATAREDIS-315
+    public void lTrimShouldTrimListCorrectly() {
 
-		nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
+        nativeConnection.lpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
 
-		clusterConnection.lSet(KEY_1_BYTES, 1L, VALUE_1_BYTES);
+        clusterConnection.lTrim(KEY_1_BYTES, 2, 3);
 
-		assertThat(nativeConnection.lrange(KEY_1, 0, -1).get(1)).isEqualTo(VALUE_1);
-	}
+        assertThat(nativeConnection.lrange(KEY_1, 0, -1)).contains(VALUE_1, VALUE_2);
+    }
 
-	@Test // DATAREDIS-315
-	public void lTrimShouldTrimListCorrectly() {
+    @Test // DATAREDIS-315
+    public void mGetShouldReturnCorrectlyWhenKeysDoNotMapToSameSlot() {
 
-		nativeConnection.lpush(KEY_1, VALUE_1, VALUE_2, "foo", "bar");
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
 
-		clusterConnection.lTrim(KEY_1_BYTES, 2, 3);
+        assertThat(clusterConnection.mGet(KEY_1_BYTES, KEY_2_BYTES))
+                .containsExactly(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		assertThat(nativeConnection.lrange(KEY_1, 0, -1)).contains(VALUE_1, VALUE_2);
-	}
+    @Test // DATAREDIS-756
+    public void mGetShouldReturnMultipleSameKeysWhenKeysDoNotMapToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void mGetShouldReturnCorrectlyWhenKeysDoNotMapToSameSlot() {
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
+        nativeConnection.set(KEY_3_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
-		nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
+        List<byte[]> result =
+                clusterConnection.mGet(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES, KEY_1_BYTES);
+        assertThat(result).containsExactly(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES, VALUE_1_BYTES);
+    }
 
-		assertThat(clusterConnection.mGet(KEY_1_BYTES, KEY_2_BYTES)).containsExactly(VALUE_1_BYTES, VALUE_2_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void mGetShouldReturnCorrectlyWhenKeysMapToSameSlot() {
 
-	@Test // DATAREDIS-756
-	public void mGetShouldReturnMultipleSameKeysWhenKeysDoNotMapToSameSlot() {
+        nativeConnection.set(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
-		nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
-		nativeConnection.set(KEY_3_BYTES, VALUE_3_BYTES);
+        assertThat(clusterConnection.mGet(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .containsExactly(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		List<byte[]> result = clusterConnection.mGet(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES, KEY_1_BYTES);
-		assertThat(result).containsExactly(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES, VALUE_1_BYTES);
-	}
+    @Test // DATAREDIS-756
+    public void mGetShouldReturnMultipleSameKeysWhenKeysMapToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void mGetShouldReturnCorrectlyWhenKeysMapToSameSlot() {
+        nativeConnection.set(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
 
-		nativeConnection.set(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
-		nativeConnection.set(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
+        List<byte[]> result =
+                clusterConnection.mGet(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, SAME_SLOT_KEY_1_BYTES);
+        assertThat(result).containsExactly(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_1_BYTES);
+    }
 
-		assertThat(clusterConnection.mGet(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).containsExactly(VALUE_1_BYTES,
-				VALUE_2_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void mSetNXShouldReturnFalseIfNotAllKeysSet() {
 
-	@Test // DATAREDIS-756
-	public void mGetShouldReturnMultipleSameKeysWhenKeysMapToSameSlot() {
+        nativeConnection.set(KEY_2_BYTES, VALUE_3_BYTES);
+        Map<byte[], byte[]> map = new LinkedHashMap<>();
+        map.put(KEY_1_BYTES, VALUE_1_BYTES);
+        map.put(KEY_2_BYTES, VALUE_2_BYTES);
 
-		nativeConnection.set(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
-		nativeConnection.set(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.mSetNX(map)).isFalse();
 
-		List<byte[]> result = clusterConnection.mGet(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, SAME_SLOT_KEY_1_BYTES);
-		assertThat(result).containsExactly(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_1_BYTES);
-	}
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeConnection.get(KEY_2)).isEqualTo(VALUE_3);
+    }
 
-	@Test // DATAREDIS-315
-	public void mSetNXShouldReturnFalseIfNotAllKeysSet() {
+    @Test // DATAREDIS-315
+    public void mSetNXShouldReturnTrueIfAllKeysSet() {
 
-		nativeConnection.set(KEY_2_BYTES, VALUE_3_BYTES);
-		Map<byte[], byte[]> map = new LinkedHashMap<>();
-		map.put(KEY_1_BYTES, VALUE_1_BYTES);
-		map.put(KEY_2_BYTES, VALUE_2_BYTES);
+        Map<byte[], byte[]> map = new LinkedHashMap<>();
+        map.put(KEY_1_BYTES, VALUE_1_BYTES);
+        map.put(KEY_2_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.mSetNX(map)).isFalse();
+        assertThat(clusterConnection.mSetNX(map)).isTrue();
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeConnection.get(KEY_2)).isEqualTo(VALUE_3);
-	}
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeConnection.get(KEY_2)).isEqualTo(VALUE_2);
+    }
 
-	@Test // DATAREDIS-315
-	public void mSetNXShouldReturnTrueIfAllKeysSet() {
+    @Test // DATAREDIS-315
+    public void mSetNXShouldWorkForOnSameSlotKeys() {
 
-		Map<byte[], byte[]> map = new LinkedHashMap<>();
-		map.put(KEY_1_BYTES, VALUE_1_BYTES);
-		map.put(KEY_2_BYTES, VALUE_2_BYTES);
+        Map<byte[], byte[]> map = new LinkedHashMap<>();
+        map.put(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
+        map.put(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.mSetNX(map)).isTrue();
+        assertThat(clusterConnection.mSetNX(map)).isTrue();
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeConnection.get(KEY_2)).isEqualTo(VALUE_2);
-	}
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_2)).isEqualTo(VALUE_2);
+    }
 
-	@Test // DATAREDIS-315
-	public void mSetNXShouldWorkForOnSameSlotKeys() {
+    @Test // DATAREDIS-315
+    public void mSetShouldWorkWhenKeysDoNotMapToSameSlot() {
 
-		Map<byte[], byte[]> map = new LinkedHashMap<>();
-		map.put(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
-		map.put(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
+        Map<byte[], byte[]> map = new LinkedHashMap<>();
+        map.put(KEY_1_BYTES, VALUE_1_BYTES);
+        map.put(KEY_2_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.mSetNX(map)).isTrue();
+        clusterConnection.mSet(map);
 
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_2)).isEqualTo(VALUE_2);
-	}
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeConnection.get(KEY_2)).isEqualTo(VALUE_2);
+    }
 
-	@Test // DATAREDIS-315
-	public void mSetShouldWorkWhenKeysDoNotMapToSameSlot() {
+    @Test // DATAREDIS-315
+    public void mSetShouldWorkWhenKeysMapToSameSlot() {
 
-		Map<byte[], byte[]> map = new LinkedHashMap<>();
-		map.put(KEY_1_BYTES, VALUE_1_BYTES);
-		map.put(KEY_2_BYTES, VALUE_2_BYTES);
+        Map<byte[], byte[]> map = new LinkedHashMap<>();
+        map.put(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
+        map.put(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
 
-		clusterConnection.mSet(map);
+        clusterConnection.mSet(map);
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeConnection.get(KEY_2)).isEqualTo(VALUE_2);
-	}
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_2)).isEqualTo(VALUE_2);
+    }
 
-	@Test // DATAREDIS-315
-	public void mSetShouldWorkWhenKeysMapToSameSlot() {
+    @Test // DATAREDIS-315
+    public void moveShouldNotBeSupported() {
+        assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
+                .isThrownBy(() -> clusterConnection.move(KEY_1_BYTES, 3));
+    }
 
-		Map<byte[], byte[]> map = new LinkedHashMap<>();
-		map.put(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
-		map.put(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
+    @Test // DATAREDIS-315
+    public void multiShouldThrowException() {
+        assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::multi);
+    }
 
-		clusterConnection.mSet(map);
+    @Test // DATAREDIS-315
+    public void pExpireAtShouldBeSetCorrectly() {
 
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_2)).isEqualTo(VALUE_2);
-	}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-	@Test // DATAREDIS-315
-	public void moveShouldNotBeSupported() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> clusterConnection.move(KEY_1_BYTES, 3));
-	}
+        clusterConnection.pExpireAt(KEY_1_BYTES, System.currentTimeMillis() + 5000);
 
-	@Test // DATAREDIS-315
-	public void multiShouldThrowException() {
-		assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::multi);
-	}
+        assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
+    }
 
-	@Test // DATAREDIS-315
-	public void pExpireAtShouldBeSetCorrectly() {
+    @Test // GH-3114
+    @EnabledOnCommand("SPUBLISH") // Valkey 7.0
+    public void pExpireAtWithConditionShouldBeSetCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		clusterConnection.pExpireAt(KEY_1_BYTES, System.currentTimeMillis() + 5000);
+        assertThat(
+                        clusterConnection.pExpireAt(
+                                KEY_1_BYTES, System.currentTimeMillis() + 5000, ExpirationOptions.Condition.XX))
+                .isFalse();
+        assertThat(
+                        clusterConnection.pExpireAt(
+                                KEY_1_BYTES, System.currentTimeMillis() + 5000, ExpirationOptions.Condition.NX))
+                .isTrue();
+        assertThat(
+                        clusterConnection.pExpireAt(
+                                KEY_1_BYTES, System.currentTimeMillis() + 15000, ExpirationOptions.Condition.LT))
+                .isFalse();
 
-		assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
-	}
+        assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
+    }
 
-	@Test // GH-3114
-	@EnabledOnCommand("SPUBLISH") // Valkey 7.0
-	public void pExpireAtWithConditionShouldBeSetCorrectly() {
+    @Test // DATAREDIS-315
+    public void pExpireShouldBeSetCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		assertThat(
-				clusterConnection.pExpireAt(KEY_1_BYTES, System.currentTimeMillis() + 5000, ExpirationOptions.Condition.XX))
-				.isFalse();
-		assertThat(
-				clusterConnection.pExpireAt(KEY_1_BYTES, System.currentTimeMillis() + 5000, ExpirationOptions.Condition.NX))
-				.isTrue();
-		assertThat(
-				clusterConnection.pExpireAt(KEY_1_BYTES, System.currentTimeMillis() + 15000, ExpirationOptions.Condition.LT))
-				.isFalse();
+        clusterConnection.pExpire(KEY_1_BYTES, 5000);
 
-		assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
-	}
+        assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
+    }
 
-	@Test // DATAREDIS-315
-	public void pExpireShouldBeSetCorrectly() {
+    @Test // GH-3114
+    @EnabledOnCommand("SPUBLISH") // Valkey 7.0
+    public void pExpireWithConditionShouldBeSetCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		clusterConnection.pExpire(KEY_1_BYTES, 5000);
+        assertThat(clusterConnection.pExpire(KEY_1_BYTES, 15000, ExpirationOptions.Condition.XX))
+                .isFalse();
+        assertThat(clusterConnection.pExpire(KEY_1_BYTES, 15000, ExpirationOptions.Condition.NX))
+                .isTrue();
+        assertThat(clusterConnection.pExpire(KEY_1_BYTES, 15000, ExpirationOptions.Condition.LT))
+                .isFalse();
 
-		assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
-	}
+        assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
+    }
 
-	@Test // GH-3114
-	@EnabledOnCommand("SPUBLISH") // Valkey 7.0
-	public void pExpireWithConditionShouldBeSetCorrectly() {
+    @Test // DATAREDIS-315
+    public void pSetExShouldSetValueCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        clusterConnection.pSetEx(KEY_1_BYTES, 5000, VALUE_1_BYTES);
 
-		assertThat(clusterConnection.pExpire(KEY_1_BYTES, 15000, ExpirationOptions.Condition.XX)).isFalse();
-		assertThat(clusterConnection.pExpire(KEY_1_BYTES, 15000, ExpirationOptions.Condition.NX)).isTrue();
-		assertThat(clusterConnection.pExpire(KEY_1_BYTES, 15000, ExpirationOptions.Condition.LT)).isFalse();
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeConnection.ttl(KEY_1)).isGreaterThan(1);
+    }
 
-		assertThat(nativeConnection.ttl(JedisConverters.toString(KEY_1_BYTES))).isGreaterThan(1);
-	}
+    @Test // DATAREDIS-315
+    public void pTtlShouldReturnValueCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void pSetExShouldSetValueCorrectly() {
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.expire(KEY_1, 5);
 
-		clusterConnection.pSetEx(KEY_1_BYTES, 5000, VALUE_1_BYTES);
+        assertThat(clusterConnection.pTtl(KEY_1_BYTES)).isGreaterThan(1);
+    }
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeConnection.ttl(KEY_1)).isGreaterThan(1);
-	}
+    @Test // DATAREDIS-315
+    public void pTtlShouldReturnMinusOneWhenKeyDoesNotHaveExpirationSet() {
 
-	@Test // DATAREDIS-315
-	public void pTtlShouldReturnValueCorrectly() {
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.expire(KEY_1, 5);
+        assertThat(clusterConnection.pTtl(KEY_1_BYTES)).isEqualTo(-1L);
+    }
 
-		assertThat(clusterConnection.pTtl(KEY_1_BYTES)).isGreaterThan(1);
-	}
+    @Test // DATAREDIS-315
+    public void pTtlShouldReturnMinusTwoWhenKeyDoesNotExist() {
+        assertThat(clusterConnection.pTtl(KEY_1_BYTES)).isEqualTo(-2L);
+    }
 
-	@Test // DATAREDIS-315
-	public void pTtlShouldReturnMinusOneWhenKeyDoesNotHaveExpirationSet() {
+    @Test // DATAREDIS-526
+    public void pTtlWithTimeUnitShouldReturnMinusTwoWhenKeyDoesNotExist() {
+        assertThat(clusterConnection.pTtl(KEY_1_BYTES, TimeUnit.HOURS)).isEqualTo(-2L);
+    }
 
-		nativeConnection.set(KEY_1, VALUE_1);
+    @Test // DATAREDIS-315
+    public void persistShouldRemoveTTL() {
 
-		assertThat(clusterConnection.pTtl(KEY_1_BYTES)).isEqualTo(-1L);
-	}
+        nativeConnection.setex(KEY_1_BYTES, 10, VALUE_1_BYTES);
 
-	@Test // DATAREDIS-315
-	public void pTtlShouldReturnMinusTwoWhenKeyDoesNotExist() {
-		assertThat(clusterConnection.pTtl(KEY_1_BYTES)).isEqualTo(-2L);
-	}
+        assertThat(clusterConnection.persist(KEY_1_BYTES)).isTrue();
+        assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
+    }
 
-	@Test // DATAREDIS-526
-	public void pTtlWithTimeUnitShouldReturnMinusTwoWhenKeyDoesNotExist() {
-		assertThat(clusterConnection.pTtl(KEY_1_BYTES, TimeUnit.HOURS)).isEqualTo(-2L);
-	}
+    @Test // DATAREDIS-315
+    public void pfAddShouldAddValuesCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void persistShouldRemoveTTL() {
+        clusterConnection.pfAdd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.setex(KEY_1_BYTES, 10, VALUE_1_BYTES);
+        assertThat(nativeConnection.pfcount(KEY_1_BYTES)).isEqualTo(3L);
+    }
 
-		assertThat(clusterConnection.persist(KEY_1_BYTES)).isTrue();
-		assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
-	}
+    @Test // DATAREDIS-315
+    public void pfCountShouldAllowCountingOnSameSlotKeys() {
 
-	@Test // DATAREDIS-315
-	public void pfAddShouldAddValuesCorrectly() {
+        nativeConnection.pfadd(SAME_SLOT_KEY_1, VALUE_1, VALUE_2);
+        nativeConnection.pfadd(SAME_SLOT_KEY_2, VALUE_2, VALUE_3);
 
-		clusterConnection.pfAdd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        assertThat(clusterConnection.pfCount(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .isEqualTo(3L);
+    }
 
-		assertThat(nativeConnection.pfcount(KEY_1_BYTES)).isEqualTo(3L);
-	}
+    @Test // DATAREDIS-315
+    public void pfCountShouldAllowCountingOnSingleKey() {
 
-	@Test // DATAREDIS-315
-	public void pfCountShouldAllowCountingOnSameSlotKeys() {
+        nativeConnection.pfadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
 
-		nativeConnection.pfadd(SAME_SLOT_KEY_1, VALUE_1, VALUE_2);
-		nativeConnection.pfadd(SAME_SLOT_KEY_2, VALUE_2, VALUE_3);
+        assertThat(clusterConnection.pfCount(KEY_1_BYTES)).isEqualTo(3L);
+    }
 
-		assertThat(clusterConnection.pfCount(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).isEqualTo(3L);
-	}
+    @Test // DATAREDIS-315
+    public void pfCountShouldThrowErrorCountingOnDifferentSlotKeys() {
 
-	@Test // DATAREDIS-315
-	public void pfCountShouldAllowCountingOnSingleKey() {
+        nativeConnection.pfadd(KEY_1, VALUE_1, VALUE_2);
+        nativeConnection.pfadd(KEY_2, VALUE_2, VALUE_3);
 
-		nativeConnection.pfadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.pfCount(KEY_1_BYTES, KEY_2_BYTES));
+    }
 
-		assertThat(clusterConnection.pfCount(KEY_1_BYTES)).isEqualTo(3L);
-	}
+    @Test // DATAREDIS-315
+    public void pfMergeShouldThrowErrorOnDifferentSlotKeys() {
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.pfMerge(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+    }
 
-	@Test // DATAREDIS-315
-	public void pfCountShouldThrowErrorCountingOnDifferentSlotKeys() {
+    @Test // DATAREDIS-315
+    public void pfMergeShouldWorkWhenAllKeysMapToSameSlot() {
 
-		nativeConnection.pfadd(KEY_1, VALUE_1, VALUE_2);
-		nativeConnection.pfadd(KEY_2, VALUE_2, VALUE_3);
+        nativeConnection.pfadd(SAME_SLOT_KEY_1, VALUE_1, VALUE_2);
+        nativeConnection.pfadd(SAME_SLOT_KEY_2, VALUE_2, VALUE_3);
 
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.pfCount(KEY_1_BYTES, KEY_2_BYTES));
-	}
+        clusterConnection.pfMerge(SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void pfMergeShouldThrowErrorOnDifferentSlotKeys() {
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.pfMerge(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-	}
+        assertThat(nativeConnection.pfcount(SAME_SLOT_KEY_3)).isEqualTo(3L);
+    }
 
-	@Test // DATAREDIS-315
-	public void pfMergeShouldWorkWhenAllKeysMapToSameSlot() {
+    @Test // DATAREDIS-315
+    public void pingShouldRetrunPong() {
+        assertThat(clusterConnection.ping()).isEqualTo("PONG");
+    }
 
-		nativeConnection.pfadd(SAME_SLOT_KEY_1, VALUE_1, VALUE_2);
-		nativeConnection.pfadd(SAME_SLOT_KEY_2, VALUE_2, VALUE_3);
+    @Test // DATAREDIS-315
+    public void pingShouldRetrunPongForExistingNode() {
+        assertThat(clusterConnection.ping(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty())))
+                .isEqualTo("PONG");
+    }
 
-		clusterConnection.pfMerge(SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+    @Test // DATAREDIS-315
+    public void pingShouldThrowExceptionWhenNodeNotKnownToCluster() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> clusterConnection.ping(new ValkeyClusterNode("127.0.0.1", 1234, null)));
+    }
 
-		assertThat(nativeConnection.pfcount(SAME_SLOT_KEY_3)).isEqualTo(3L);
-	}
+    @Test // DATAREDIS-315
+    public void rPopLPushShouldWorkWhenDoNotMapToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void pingShouldRetrunPong() {
-		assertThat(clusterConnection.ping()).isEqualTo("PONG");
-	}
+        nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void pingShouldRetrunPongForExistingNode() {
-		assertThat(clusterConnection.ping(new ValkeyClusterNode("127.0.0.1", 7379, SlotRange.empty()))).isEqualTo("PONG");
-	}
+        assertThat(clusterConnection.rPopLPush(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+        assertThat(nativeConnection.exists(KEY_2_BYTES)).isTrue();
+    }
 
-	@Test // DATAREDIS-315
-	public void pingShouldThrowExceptionWhenNodeNotKnownToCluster() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> clusterConnection.ping(new ValkeyClusterNode("127.0.0.1", 1234, null)));
-	}
+    @Test // DATAREDIS-315
+    public void rPopLPushShouldWorkWhenKeysOnSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void rPopLPushShouldWorkWhenDoNotMapToSameSlot() {
+        nativeConnection.lpush(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
 
-		nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.rPopLPush(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .isEqualTo(VALUE_1_BYTES);
+        assertThat(nativeConnection.exists(SAME_SLOT_KEY_2_BYTES)).isTrue();
+    }
 
-		assertThat(clusterConnection.rPopLPush(KEY_1_BYTES, KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-		assertThat(nativeConnection.exists(KEY_2_BYTES)).isTrue();
-	}
+    @Test // DATAREDIS-315
+    public void rPopShouldReturnElementCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void rPopLPushShouldWorkWhenKeysOnSameSlot() {
+        nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2);
 
-		nativeConnection.lpush(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.rPop(KEY_1_BYTES)).isEqualTo(VALUE_2_BYTES);
+    }
 
-		assertThat(clusterConnection.rPopLPush(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-		assertThat(nativeConnection.exists(SAME_SLOT_KEY_2_BYTES)).isTrue();
-	}
+    @Test // DATAREDIS-315
+    public void rPushNXShouldNotAddValuesWhenKeyDoesNotExist() {
 
-	@Test // DATAREDIS-315
-	public void rPopShouldReturnElementCorrectly() {
+        clusterConnection.rPushX(KEY_1_BYTES, VALUE_1_BYTES);
 
-		nativeConnection.rpush(KEY_1, VALUE_1, VALUE_2);
+        assertThat(nativeConnection.exists(KEY_1)).isFalse();
+    }
 
-		assertThat(clusterConnection.rPop(KEY_1_BYTES)).isEqualTo(VALUE_2_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void rPushShouldAddValuesCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void rPushNXShouldNotAddValuesWhenKeyDoesNotExist() {
+        clusterConnection.rPush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
 
-		clusterConnection.rPushX(KEY_1_BYTES, VALUE_1_BYTES);
+        assertThat(nativeConnection.lrange(KEY_1, 0, -1)).contains(VALUE_1, VALUE_2);
+    }
 
-		assertThat(nativeConnection.exists(KEY_1)).isFalse();
-	}
+    @Test // DATAREDIS-315
+    public void randomKeyShouldReturnCorrectlyWhenKeysAvailable() {
 
-	@Test // DATAREDIS-315
-	public void rPushShouldAddValuesCorrectly() {
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_2);
 
-		clusterConnection.rPush(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.randomKey()).isNotNull();
+    }
 
-		assertThat(nativeConnection.lrange(KEY_1, 0, -1)).contains(VALUE_1, VALUE_2);
-	}
+    @Test // DATAREDIS-315
+    public void randomKeyShouldReturnNullWhenNoKeysAvailable() {
+        assertThat(clusterConnection.randomKey()).isNull();
+    }
 
-	@Test // DATAREDIS-315
-	public void randomKeyShouldReturnCorrectlyWhenKeysAvailable() {
+    @Test // DATAREDIS-315
+    public void rename() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_2);
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
 
-		assertThat(clusterConnection.randomKey()).isNotNull();
-	}
+        clusterConnection.rename(KEY_1_BYTES, KEY_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void randomKeyShouldReturnNullWhenNoKeysAvailable() {
-		assertThat(clusterConnection.randomKey()).isNull();
-	}
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isFalse();
+        assertThat(nativeConnection.get(KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void rename() {
+    @Test // DATAREDIS-1190
+    public void renameShouldOverwriteTargetKey() {
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
 
-		clusterConnection.rename(KEY_1_BYTES, KEY_2_BYTES);
+        clusterConnection.rename(KEY_1_BYTES, KEY_2_BYTES);
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isFalse();
-		assertThat(nativeConnection.get(KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isFalse();
+        assertThat(nativeConnection.get(KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-1190
-	public void renameShouldOverwriteTargetKey() {
+    @Test // DATAREDIS-315
+    public void renameNXWhenOnSameSlot() {
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
-		nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
+        nativeConnection.set(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
 
-		clusterConnection.rename(KEY_1_BYTES, KEY_2_BYTES);
+        assertThat(clusterConnection.renameNX(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).isTrue();
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isFalse();
-		assertThat(nativeConnection.get(KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        assertThat(nativeConnection.exists(SAME_SLOT_KEY_1_BYTES)).isFalse();
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void renameNXWhenOnSameSlot() {
+    @Test // DATAREDIS-315
+    public void renameNXWhenTargetKeyDoesExist() {
 
-		nativeConnection.set(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.renameNX(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).isTrue();
+        assertThat(clusterConnection.renameNX(KEY_1_BYTES, KEY_2_BYTES)).isFalse();
 
-		assertThat(nativeConnection.exists(SAME_SLOT_KEY_1_BYTES)).isFalse();
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        assertThat(nativeConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
+        assertThat(nativeConnection.get(KEY_2_BYTES)).isEqualTo(VALUE_2_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void renameNXWhenTargetKeyDoesExist() {
+    @Test // DATAREDIS-315
+    public void renameNXWhenTargetKeyDoesNotExist() {
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
-		nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
 
-		assertThat(clusterConnection.renameNX(KEY_1_BYTES, KEY_2_BYTES)).isFalse();
+        assertThat(clusterConnection.renameNX(KEY_1_BYTES, KEY_2_BYTES)).isTrue();
 
-		assertThat(nativeConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
-		assertThat(nativeConnection.get(KEY_2_BYTES)).isEqualTo(VALUE_2_BYTES);
-	}
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isFalse();
+        assertThat(nativeConnection.get(KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void renameNXWhenTargetKeyDoesNotExist() {
+    @Test // DATAREDIS-315
+    public void renameSameKeysOnSameSlot() {
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
 
-		assertThat(clusterConnection.renameNX(KEY_1_BYTES, KEY_2_BYTES)).isTrue();
+        clusterConnection.rename(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isFalse();
-		assertThat(nativeConnection.get(KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+        assertThat(nativeConnection.exists(SAME_SLOT_KEY_1_BYTES)).isFalse();
+        assertThat(nativeConnection.get(SAME_SLOT_KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void renameSameKeysOnSameSlot() {
+    @Test // DATAREDIS-315
+    public void sAddShouldAddValueToSetCorrectly() {
 
-		nativeConnection.set(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES);
+        clusterConnection.sAdd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
 
-		clusterConnection.rename(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+        assertThat(nativeConnection.smembers(KEY_1)).contains(VALUE_1, VALUE_2);
+    }
 
-		assertThat(nativeConnection.exists(SAME_SLOT_KEY_1_BYTES)).isFalse();
-		assertThat(nativeConnection.get(SAME_SLOT_KEY_2_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void sCardShouldCountValuesInSetCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void sAddShouldAddValueToSetCorrectly() {
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		clusterConnection.sAdd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.sCard(KEY_1_BYTES)).isEqualTo(2L);
+    }
 
-		assertThat(nativeConnection.smembers(KEY_1)).contains(VALUE_1, VALUE_2);
-	}
+    @Test // DATAREDIS-315
+    public void sDiffShouldWorkWhenKeysMapToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void sCardShouldCountValuesInSetCorrectly() {
+        nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        assertThat(clusterConnection.sDiff(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(VALUE_1_BYTES);
+    }
 
-		assertThat(clusterConnection.sCard(KEY_1_BYTES)).isEqualTo(2L);
-	}
+    @Test // DATAREDIS-315, DATAREDIS-647
+    public void sDiffShouldWorkWhenKeysNotMapToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void sDiffShouldWorkWhenKeysMapToSameSlot() {
+        nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        nativeConnection.sadd(KEY_3_BYTES, VALUE_1_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        assertThat(clusterConnection.sDiff(KEY_1_BYTES, KEY_2_BYTES)).contains(VALUE_1_BYTES);
+        assertThat(clusterConnection.sDiff(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES)).isEmpty();
+    }
 
-		assertThat(clusterConnection.sDiff(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).contains(VALUE_1_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void sDiffStoreShouldWorkWhenKeysMapToSameSlot() {
 
-	@Test // DATAREDIS-315, DATAREDIS-647
-	public void sDiffShouldWorkWhenKeysNotMapToSameSlot() {
+        nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
-		nativeConnection.sadd(KEY_3_BYTES, VALUE_1_BYTES, VALUE_3_BYTES);
+        clusterConnection.sDiffStore(
+                SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-		assertThat(clusterConnection.sDiff(KEY_1_BYTES, KEY_2_BYTES)).contains(VALUE_1_BYTES);
-		assertThat(clusterConnection.sDiff(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES)).isEmpty();
-	}
+        assertThat(nativeConnection.smembers(SAME_SLOT_KEY_3_BYTES)).contains(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void sDiffStoreShouldWorkWhenKeysMapToSameSlot() {
+    @Test // DATAREDIS-315
+    public void sDiffStoreShouldWorkWhenKeysNotMapToSameSlot() {
 
-		nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		clusterConnection.sDiffStore(SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+        clusterConnection.sDiffStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES);
 
-		assertThat(nativeConnection.smembers(SAME_SLOT_KEY_3_BYTES)).contains(VALUE_1_BYTES);
-	}
+        assertThat(nativeConnection.smembers(KEY_3_BYTES)).contains(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void sDiffStoreShouldWorkWhenKeysNotMapToSameSlot() {
+    @Test // DATAREDIS-315
+    public void sInterShouldWorkForKeysMappingToSameSlot() {
 
-		nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		clusterConnection.sDiffStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES);
+        assertThat(clusterConnection.sInter(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(VALUE_2_BYTES);
+    }
 
-		assertThat(nativeConnection.smembers(KEY_3_BYTES)).contains(VALUE_1_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void sInterShouldWorkForKeysNotMappingToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void sInterShouldWorkForKeysMappingToSameSlot() {
+        nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        assertThat(clusterConnection.sInter(KEY_1_BYTES, KEY_2_BYTES)).contains(VALUE_2_BYTES);
+    }
 
-		assertThat(clusterConnection.sInter(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).contains(VALUE_2_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void sInterStoreShouldWorkForKeysMappingToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void sInterShouldWorkForKeysNotMappingToSameSlot() {
+        nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        clusterConnection.sInterStore(
+                SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-		assertThat(clusterConnection.sInter(KEY_1_BYTES, KEY_2_BYTES)).contains(VALUE_2_BYTES);
-	}
+        assertThat(nativeConnection.smembers(SAME_SLOT_KEY_3_BYTES)).contains(VALUE_2_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void sInterStoreShouldWorkForKeysMappingToSameSlot() {
+    @Test // DATAREDIS-315
+    public void sInterStoreShouldWorkForKeysNotMappingToSameSlot() {
 
-		nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		clusterConnection.sInterStore(SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+        clusterConnection.sInterStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES);
 
-		assertThat(nativeConnection.smembers(SAME_SLOT_KEY_3_BYTES)).contains(VALUE_2_BYTES);
-	}
+        assertThat(nativeConnection.smembers(KEY_3_BYTES)).contains(VALUE_2_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void sInterStoreShouldWorkForKeysNotMappingToSameSlot() {
+    @Test // DATAREDIS-315
+    public void sIsMemberShouldReturnFalseIfValueIsMemberOfSet() {
 
-		nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		clusterConnection.sInterStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES);
+        assertThat(clusterConnection.sIsMember(KEY_1_BYTES, JedisConverters.toBytes("foo"))).isFalse();
+    }
 
-		assertThat(nativeConnection.smembers(KEY_3_BYTES)).contains(VALUE_2_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void sIsMemberShouldReturnTrueIfValueIsMemberOfSet() {
 
-	@Test // DATAREDIS-315
-	public void sIsMemberShouldReturnFalseIfValueIsMemberOfSet() {
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        assertThat(clusterConnection.sIsMember(KEY_1_BYTES, VALUE_1_BYTES)).isTrue();
+    }
 
-		assertThat(clusterConnection.sIsMember(KEY_1_BYTES, JedisConverters.toBytes("foo"))).isFalse();
-	}
+    @Test // GH-2037
+    @EnabledOnCommand("SMISMEMBER")
+    public void sMIsMemberShouldReturnCorrectValues() {
 
-	@Test // DATAREDIS-315
-	public void sIsMemberShouldReturnTrueIfValueIsMemberOfSet() {
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        assertThat(
+                        clusterConnection.sMIsMember(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES))
+                .containsExactly(true, true, false);
+    }
 
-		assertThat(clusterConnection.sIsMember(KEY_1_BYTES, VALUE_1_BYTES)).isTrue();
-	}
+    @Test // DATAREDIS-315
+    public void sMembersShouldReturnValuesContainedInSetCorrectly() {
 
-	@Test // GH-2037
-	@EnabledOnCommand("SMISMEMBER")
-	public void sMIsMemberShouldReturnCorrectValues() {
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        assertThat(clusterConnection.sMembers(KEY_1_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		assertThat(clusterConnection.sMIsMember(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES))
-				.containsExactly(true, true, false);
-	}
+    @Test // DATAREDIS-315
+    public void sMoveShouldWorkWhenKeysDoNotMapToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void sMembersShouldReturnValuesContainedInSetCorrectly() {
+        nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(KEY_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        clusterConnection.sMove(KEY_1_BYTES, KEY_2_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.sMembers(KEY_1_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
-	}
+        assertThat(nativeConnection.sismember(KEY_1_BYTES, VALUE_2_BYTES)).isFalse();
+        assertThat(nativeConnection.sismember(KEY_2_BYTES, VALUE_2_BYTES)).isTrue();
+    }
 
-	@Test // DATAREDIS-315
-	public void sMoveShouldWorkWhenKeysDoNotMapToSameSlot() {
+    @Test // DATAREDIS-315
+    public void sMoveShouldWorkWhenKeysMapToSameSlot() {
 
-		nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(KEY_2_BYTES, VALUE_3_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_3_BYTES);
 
-		clusterConnection.sMove(KEY_1_BYTES, KEY_2_BYTES, VALUE_2_BYTES);
+        clusterConnection.sMove(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
 
-		assertThat(nativeConnection.sismember(KEY_1_BYTES, VALUE_2_BYTES)).isFalse();
-		assertThat(nativeConnection.sismember(KEY_2_BYTES, VALUE_2_BYTES)).isTrue();
-	}
+        assertThat(nativeConnection.sismember(SAME_SLOT_KEY_1_BYTES, VALUE_2_BYTES)).isFalse();
+        assertThat(nativeConnection.sismember(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES)).isTrue();
+    }
 
-	@Test // DATAREDIS-315
-	public void sMoveShouldWorkWhenKeysMapToSameSlot() {
+    @Test // DATAREDIS-315
+    public void sPopShouldPopValueFromSetCorrectly() {
 
-		nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_3_BYTES);
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		clusterConnection.sMove(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.sPop(KEY_1_BYTES)).isNotNull();
+    }
 
-		assertThat(nativeConnection.sismember(SAME_SLOT_KEY_1_BYTES, VALUE_2_BYTES)).isFalse();
-		assertThat(nativeConnection.sismember(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES)).isTrue();
-	}
+    @Test // DATAREDIS-668
+    void sPopWithCountShouldPopValueFromSetCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void sPopShouldPopValueFromSetCorrectly() {
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        assertThat(clusterConnection.setCommands().sPop(KEY_1_BYTES, 2)).hasSize(2);
+        assertThat(nativeConnection.scard(KEY_1)).isEqualTo(1L);
+    }
 
-		assertThat(clusterConnection.sPop(KEY_1_BYTES)).isNotNull();
-	}
+    @Test // DATAREDIS-315
+    public void sRandMamberShouldReturnValueCorrectly() {
 
-	@Test // DATAREDIS-668
-	void sPopWithCountShouldPopValueFromSetCorrectly() {
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2, VALUE_3);
+        assertThat(clusterConnection.sRandMember(KEY_1_BYTES)).isNotNull();
+    }
 
-		assertThat(clusterConnection.setCommands().sPop(KEY_1_BYTES, 2)).hasSize(2);
-		assertThat(nativeConnection.scard(KEY_1)).isEqualTo(1L);
-	}
+    @Test // DATAREDIS-315
+    public void sRandMamberWithCountShouldReturnValueCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void sRandMamberShouldReturnValueCorrectly() {
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        assertThat(clusterConnection.sRandMember(KEY_1_BYTES, 3)).isNotNull();
+    }
 
-		assertThat(clusterConnection.sRandMember(KEY_1_BYTES)).isNotNull();
-	}
+    @Test // DATAREDIS-315
+    public void sRemShouldRemoveValueFromSetCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void sRandMamberWithCountShouldReturnValueCorrectly() {
+        nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        clusterConnection.sRem(KEY_1_BYTES, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.sRandMember(KEY_1_BYTES, 3)).isNotNull();
-	}
+        assertThat(nativeConnection.smembers(KEY_1)).contains(VALUE_1);
+    }
 
-	@Test // DATAREDIS-315
-	public void sRemShouldRemoveValueFromSetCorrectly() {
+    @Test // DATAREDIS-315
+    public void sUnionShouldWorkForKeysMappingToSameSlot() {
 
-		nativeConnection.sadd(KEY_1, VALUE_1, VALUE_2);
+        nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		clusterConnection.sRem(KEY_1_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.sUnion(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+    }
 
-		assertThat(nativeConnection.smembers(KEY_1)).contains(VALUE_1);
-	}
+    @Test // DATAREDIS-315
+    public void sUnionShouldWorkForKeysNotMappingToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void sUnionShouldWorkForKeysMappingToSameSlot() {
+        nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        assertThat(clusterConnection.sUnion(KEY_1_BYTES, KEY_2_BYTES))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+    }
 
-		assertThat(clusterConnection.sUnion(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).contains(VALUE_1_BYTES,
-				VALUE_2_BYTES, VALUE_3_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void sUnionStoreShouldWorkForKeysMappingToSameSlot() {
 
-	@Test // DATAREDIS-315
-	public void sUnionShouldWorkForKeysNotMappingToSameSlot() {
+        nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        clusterConnection.sUnionStore(
+                SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-		assertThat(clusterConnection.sUnion(KEY_1_BYTES, KEY_2_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES,
-				VALUE_3_BYTES);
-	}
+        assertThat(nativeConnection.smembers(SAME_SLOT_KEY_3_BYTES))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void sUnionStoreShouldWorkForKeysMappingToSameSlot() {
+    @Test // DATAREDIS-315
+    public void sUnionStoreShouldWorkForKeysNotMappingToSameSlot() {
 
-		nativeConnection.sadd(SAME_SLOT_KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(SAME_SLOT_KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
+        nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
 
-		clusterConnection.sUnionStore(SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+        clusterConnection.sUnionStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES);
 
-		assertThat(nativeConnection.smembers(SAME_SLOT_KEY_3_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
-	}
+        assertThat(nativeConnection.smembers(KEY_3_BYTES))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void sUnionStoreShouldWorkForKeysNotMappingToSameSlot() {
+    @Test // DATAREDIS-315
+    public void selectShouldAllowSelectionOfDBIndexZero() {
+        clusterConnection.select(0);
+    }
 
-		nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES);
-		nativeConnection.sadd(KEY_2_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void selectShouldThrowExceptionWhenSelectingNonZeroDbIndex() {
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.select(1));
+    }
 
-		clusterConnection.sUnionStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES);
+    @Test // DATAREDIS-315
+    public void setBitShouldWorkCorrectly() {
 
-		assertThat(nativeConnection.smembers(KEY_3_BYTES)).contains(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
-	}
+        clusterConnection.setBit(KEY_1_BYTES, 0, true);
+        clusterConnection.setBit(KEY_1_BYTES, 1, false);
 
-	@Test // DATAREDIS-315
-	public void selectShouldAllowSelectionOfDBIndexZero() {
-		clusterConnection.select(0);
-	}
+        assertThat(nativeConnection.getbit(KEY_1, 0)).isTrue();
+        assertThat(nativeConnection.getbit(KEY_1, 1)).isFalse();
+    }
 
-	@Test // DATAREDIS-315
-	public void selectShouldThrowExceptionWhenSelectingNonZeroDbIndex() {
-		assertThatExceptionOfType(DataAccessException.class).isThrownBy(() -> clusterConnection.select(1));
-	}
+    @Test // DATAREDIS-315
+    public void setExShouldSetValueCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void setBitShouldWorkCorrectly() {
+        clusterConnection.setEx(KEY_1_BYTES, 5, VALUE_1_BYTES);
 
-		clusterConnection.setBit(KEY_1_BYTES, 0, true);
-		clusterConnection.setBit(KEY_1_BYTES, 1, false);
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeConnection.ttl(KEY_1)).isGreaterThan(1);
+    }
 
-		assertThat(nativeConnection.getbit(KEY_1, 0)).isTrue();
-		assertThat(nativeConnection.getbit(KEY_1, 1)).isFalse();
-	}
+    @Test // DATAREDIS-315
+    public void setNxShouldNotSetValueWhenAlreadyExistsInDBCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void setExShouldSetValueCorrectly() {
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		clusterConnection.setEx(KEY_1_BYTES, 5, VALUE_1_BYTES);
+        clusterConnection.setNX(KEY_1_BYTES, VALUE_2_BYTES);
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeConnection.ttl(KEY_1)).isGreaterThan(1);
-	}
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+    }
 
-	@Test // DATAREDIS-315
-	public void setNxShouldNotSetValueWhenAlreadyExistsInDBCorrectly() {
+    @Test // DATAREDIS-315
+    public void setNxShouldSetValueCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        clusterConnection.setNX(KEY_1_BYTES, VALUE_1_BYTES);
 
-		clusterConnection.setNX(KEY_1_BYTES, VALUE_2_BYTES);
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+    }
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-	}
+    @Test // DATAREDIS-315
+    public void setRangeShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void setNxShouldSetValueCorrectly() {
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		clusterConnection.setNX(KEY_1_BYTES, VALUE_1_BYTES);
+        clusterConnection.setRange(KEY_1_BYTES, JedisConverters.toBytes("UE"), 3);
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-	}
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo("valUE1");
+    }
 
-	@Test // DATAREDIS-315
-	public void setRangeShouldWorkCorrectly() {
+    @Test // DATAREDIS-315
+    public void setShouldSetValueCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
 
-		clusterConnection.setRange(KEY_1_BYTES, JedisConverters.toBytes("UE"), 3);
+        assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
+    }
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo("valUE1");
-	}
+    @Test // DATAREDIS-316
+    public void setWithExpirationAndIfAbsentShouldNotBeAppliedWhenKeyExists() {
 
-	@Test // DATAREDIS-315
-	public void setShouldSetValueCorrectly() {
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        clusterConnection.set(KEY_1_BYTES, VALUE_2_BYTES, Expiration.seconds(1), SetOption.ifAbsent());
 
-		assertThat(nativeConnection.get(KEY_1)).isEqualTo(VALUE_1);
-	}
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
+        assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
+        assertThat(nativeConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-	@Test // DATAREDIS-316
-	public void setWithExpirationAndIfAbsentShouldNotBeAppliedWhenKeyExists() {
+    @Test // DATAREDIS-316
+    public void setWithExpirationAndIfAbsentShouldWorkCorrectly() {
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES, Expiration.seconds(1), SetOption.ifAbsent());
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_2_BYTES, Expiration.seconds(1), SetOption.ifAbsent());
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
+        assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(1L);
+    }
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
-		assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
-		assertThat(nativeConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+    @Test // DATAREDIS-316
+    public void setWithExpirationAndIfPresentShouldNotBeAppliedWhenKeyDoesNotExists() {
 
-	@Test // DATAREDIS-316
-	public void setWithExpirationAndIfAbsentShouldWorkCorrectly() {
+        clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES, Expiration.seconds(1), SetOption.ifPresent());
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES, Expiration.seconds(1), SetOption.ifAbsent());
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isFalse();
+    }
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
-		assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(1L);
-	}
+    @Test // DATAREDIS-316
+    public void setWithExpirationAndIfPresentShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-316
-	public void setWithExpirationAndIfPresentShouldNotBeAppliedWhenKeyDoesNotExists() {
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES, Expiration.seconds(1), SetOption.ifPresent());
+        clusterConnection.set(KEY_1_BYTES, VALUE_2_BYTES, Expiration.seconds(1), SetOption.ifPresent());
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isFalse();
-	}
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
+        assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(1L);
+        assertThat(nativeConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_2_BYTES);
+    }
 
-	@Test // DATAREDIS-316
-	public void setWithExpirationAndIfPresentShouldWorkCorrectly() {
+    @Test // DATAREDIS-316
+    public void setWithExpirationInMillisecondsShouldWorkCorrectly() {
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        clusterConnection.set(
+                KEY_1_BYTES, VALUE_1_BYTES, Expiration.milliseconds(500), SetOption.upsert());
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_2_BYTES, Expiration.seconds(1), SetOption.ifPresent());
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
+        assertThat(nativeConnection.pttl(KEY_1)).isCloseTo(500L, offset(499L));
+    }
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
-		assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(1L);
-		assertThat(nativeConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_2_BYTES);
-	}
+    @Test // DATAREDIS-316
+    public void setWithExpirationInSecondsShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-316
-	public void setWithExpirationInMillisecondsShouldWorkCorrectly() {
+        clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES, Expiration.seconds(1), SetOption.upsert());
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES, Expiration.milliseconds(500), SetOption.upsert());
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
+        assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(1L);
+    }
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
-		assertThat(nativeConnection.pttl(KEY_1)).isCloseTo(500L, offset(499L));
-	}
+    @Test // DATAREDIS-316
+    public void setWithOptionIfAbsentShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-316
-	public void setWithExpirationInSecondsShouldWorkCorrectly() {
+        clusterConnection.set(
+                KEY_1_BYTES, VALUE_1_BYTES, Expiration.persistent(), SetOption.ifAbsent());
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES, Expiration.seconds(1), SetOption.upsert());
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
+        assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
+    }
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
-		assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(1L);
-	}
+    @Test // DATAREDIS-316, DATAREDIS-588
+    public void setWithOptionIfPresentShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-316
-	public void setWithOptionIfAbsentShouldWorkCorrectly() {
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        clusterConnection.set(
+                KEY_1_BYTES, VALUE_2_BYTES, Expiration.persistent(), SetOption.ifPresent());
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES, Expiration.persistent(), SetOption.ifAbsent());
+        assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
+        assertThat(clusterConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_2_BYTES);
+        assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
+    }
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
-		assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
-	}
+    @Test // DATAREDIS-315
+    public void shouldAllowSettingAndGettingValues() {
 
-	@Test // DATAREDIS-316, DATAREDIS-588
-	public void setWithOptionIfPresentShouldWorkCorrectly() {
+        clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        assertThat(clusterConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
+    }
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
-		clusterConnection.set(KEY_1_BYTES, VALUE_2_BYTES, Expiration.persistent(), SetOption.ifPresent());
+    @Test // DATAREDIS-315
+    public void sortAndStoreShouldAddSortedValuesValuesCorrectly() {
 
-		assertThat(nativeConnection.exists(KEY_1_BYTES)).isTrue();
-		assertThat(clusterConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_2_BYTES);
-		assertThat(nativeConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
-	}
+        nativeConnection.lpush(KEY_1, VALUE_2, VALUE_1);
 
-	@Test // DATAREDIS-315
-	public void shouldAllowSettingAndGettingValues() {
+        assertThat(
+                        clusterConnection.sort(KEY_1_BYTES, new DefaultSortParameters().alpha(), KEY_2_BYTES))
+                .isEqualTo(2L);
+        assertThat(nativeConnection.exists(KEY_2_BYTES)).isTrue();
+    }
 
-		clusterConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
-		assertThat(clusterConnection.get(KEY_1_BYTES)).isEqualTo(VALUE_1_BYTES);
-	}
+    @Test // DATAREDIS-315, GH-2341
+    public void sortAndStoreShouldReplaceDestinationList() {
 
-	@Test // DATAREDIS-315
-	public void sortAndStoreShouldAddSortedValuesValuesCorrectly() {
+        nativeConnection.lpush(KEY_1, VALUE_2, VALUE_1);
+        nativeConnection.lpush(KEY_2_BYTES, VALUE_3_BYTES);
 
-		nativeConnection.lpush(KEY_1, VALUE_2, VALUE_1);
+        assertThat(
+                        clusterConnection.sort(KEY_1_BYTES, new DefaultSortParameters().alpha(), KEY_2_BYTES))
+                .isEqualTo(2L);
+        assertThat(nativeConnection.llen(KEY_2_BYTES)).isEqualTo(2);
+    }
 
-		assertThat(clusterConnection.sort(KEY_1_BYTES, new DefaultSortParameters().alpha(), KEY_2_BYTES)).isEqualTo(2L);
-		assertThat(nativeConnection.exists(KEY_2_BYTES)).isTrue();
-	}
+    @Test // DATAREDIS-315
+    public void sortShouldReturnValuesCorrectly() {
 
-	@Test // DATAREDIS-315, GH-2341
-	public void sortAndStoreShouldReplaceDestinationList() {
+        nativeConnection.lpush(KEY_1, VALUE_2, VALUE_1);
 
-		nativeConnection.lpush(KEY_1, VALUE_2, VALUE_1);
-		nativeConnection.lpush(KEY_2_BYTES, VALUE_3_BYTES);
+        assertThat(clusterConnection.sort(KEY_1_BYTES, new DefaultSortParameters().alpha()))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		assertThat(clusterConnection.sort(KEY_1_BYTES, new DefaultSortParameters().alpha(), KEY_2_BYTES)).isEqualTo(2L);
-		assertThat(nativeConnection.llen(KEY_2_BYTES)).isEqualTo(2);
-	}
+    @Test // DATAREDIS-315
+    public void sscanShouldRetrieveAllValuesInSetCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void sortShouldReturnValuesCorrectly() {
+        for (int i = 0; i < 30; i++) {
+            nativeConnection.sadd(KEY_1_BYTES, JedisConverters.toBytes(Integer.valueOf(i)));
+        }
 
-		nativeConnection.lpush(KEY_1, VALUE_2, VALUE_1);
+        int count = 0;
+        Cursor<byte[]> cursor = clusterConnection.sScan(KEY_1_BYTES, ScanOptions.NONE);
+        while (cursor.hasNext()) {
+            count++;
+            cursor.next();
+        }
 
-		assertThat(clusterConnection.sort(KEY_1_BYTES, new DefaultSortParameters().alpha())).contains(VALUE_1_BYTES,
-				VALUE_2_BYTES);
-	}
+        assertThat(count).isEqualTo(30);
+    }
 
-	@Test // DATAREDIS-315
-	public void sscanShouldRetrieveAllValuesInSetCorrectly() {
+    @Test // DATAREDIS-315
+    public void strLenShouldWorkCorrectly() {
 
-		for (int i = 0; i < 30; i++) {
-			nativeConnection.sadd(KEY_1_BYTES, JedisConverters.toBytes(Integer.valueOf(i)));
-		}
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		int count = 0;
-		Cursor<byte[]> cursor = clusterConnection.sScan(KEY_1_BYTES, ScanOptions.NONE);
-		while (cursor.hasNext()) {
-			count++;
-			cursor.next();
-		}
+        assertThat(clusterConnection.strLen(KEY_1_BYTES)).isEqualTo(6L);
+    }
 
-		assertThat(count).isEqualTo(30);
-	}
+    @Test // DATAREDIS-315
+    public void ttlShouldReturnMinusOneWhenKeyDoesNotHaveExpirationSet() {
 
-	@Test // DATAREDIS-315
-	public void strLenShouldWorkCorrectly() {
+        nativeConnection.set(KEY_1, VALUE_1);
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        assertThat(clusterConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
+    }
 
-		assertThat(clusterConnection.strLen(KEY_1_BYTES)).isEqualTo(6L);
-	}
+    @Test // DATAREDIS-315
+    public void ttlShouldReturnMinusTwoWhenKeyDoesNotExist() {
+        assertThat(clusterConnection.ttl(KEY_1_BYTES)).isEqualTo(-2L);
+    }
 
-	@Test // DATAREDIS-315
-	public void ttlShouldReturnMinusOneWhenKeyDoesNotHaveExpirationSet() {
+    @Test // DATAREDIS-315
+    public void ttlShouldReturnValueCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.expire(KEY_1, 5);
 
-		assertThat(clusterConnection.ttl(KEY_1_BYTES)).isEqualTo(-1L);
-	}
+        assertThat(clusterConnection.ttl(KEY_1_BYTES)).isGreaterThan(1);
+    }
 
-	@Test // DATAREDIS-315
-	public void ttlShouldReturnMinusTwoWhenKeyDoesNotExist() {
-		assertThat(clusterConnection.ttl(KEY_1_BYTES)).isEqualTo(-2L);
-	}
+    @Test // DATAREDIS-526
+    public void ttlWithTimeUnitShouldReturnMinusTwoWhenKeyDoesNotExist() {
+        assertThat(clusterConnection.ttl(KEY_1_BYTES, TimeUnit.HOURS)).isEqualTo(-2L);
+    }
 
-	@Test // DATAREDIS-315
-	public void ttlShouldReturnValueCorrectly() {
+    @Test // DATAREDIS-315
+    public void typeShouldReadKeyTypeCorrectly() {
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.expire(KEY_1, 5);
+        nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
+        nativeConnection.hmset(KEY_3_BYTES, Collections.singletonMap(KEY_1_BYTES, VALUE_1_BYTES));
 
-		assertThat(clusterConnection.ttl(KEY_1_BYTES)).isGreaterThan(1);
-	}
+        assertThat(clusterConnection.type(KEY_1_BYTES)).isEqualTo(DataType.SET);
+        assertThat(clusterConnection.type(KEY_2_BYTES)).isEqualTo(DataType.STRING);
+        assertThat(clusterConnection.type(KEY_3_BYTES)).isEqualTo(DataType.HASH);
+    }
 
-	@Test // DATAREDIS-526
-	public void ttlWithTimeUnitShouldReturnMinusTwoWhenKeyDoesNotExist() {
-		assertThat(clusterConnection.ttl(KEY_1_BYTES, TimeUnit.HOURS)).isEqualTo(-2L);
-	}
+    @Test // DATAREDIS-315
+    public void unwatchShouldThrowException() {
+        assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::unwatch);
+    }
 
-	@Test // DATAREDIS-315
-	public void typeShouldReadKeyTypeCorrectly() {
+    @Test // DATAREDIS-315
+    public void watchShouldThrowException() {
+        assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::watch);
+    }
 
-		nativeConnection.sadd(KEY_1_BYTES, VALUE_1_BYTES);
-		nativeConnection.set(KEY_2_BYTES, VALUE_2_BYTES);
-		nativeConnection.hmset(KEY_3_BYTES, Collections.singletonMap(KEY_1_BYTES, VALUE_1_BYTES));
+    @Test // DATAREDIS-674
+    void zAddShouldAddMultipleValuesWithScoreCorrectly() {
 
-		assertThat(clusterConnection.type(KEY_1_BYTES)).isEqualTo(DataType.SET);
-		assertThat(clusterConnection.type(KEY_2_BYTES)).isEqualTo(DataType.STRING);
-		assertThat(clusterConnection.type(KEY_3_BYTES)).isEqualTo(DataType.HASH);
-	}
+        Set<Tuple> tuples = new HashSet<>();
+        tuples.add(new DefaultTuple(VALUE_1_BYTES, 10D));
+        tuples.add(new DefaultTuple(VALUE_2_BYTES, 20D));
 
-	@Test // DATAREDIS-315
-	public void unwatchShouldThrowException() {
-		assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::unwatch);
-	}
+        clusterConnection.zAdd(KEY_1_BYTES, tuples);
 
-	@Test // DATAREDIS-315
-	public void watchShouldThrowException() {
-		assertThatExceptionOfType(DataAccessException.class).isThrownBy(clusterConnection::watch);
-	}
+        assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(2L);
+    }
 
-	@Test // DATAREDIS-674
-	void zAddShouldAddMultipleValuesWithScoreCorrectly() {
+    @Test // DATAREDIS-315
+    public void zAddShouldAddValueWithScoreCorrectly() {
 
-		Set<Tuple> tuples = new HashSet<>();
-		tuples.add(new DefaultTuple(VALUE_1_BYTES, 10D));
-		tuples.add(new DefaultTuple(VALUE_2_BYTES, 20D));
+        clusterConnection.zAdd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        clusterConnection.zAdd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-		clusterConnection.zAdd(KEY_1_BYTES, tuples);
+        assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(2L);
+    }
 
-		assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(2L);
-	}
+    @Test // DATAREDIS-315
+    public void zCardShouldReturnTotalNumberOfValues() {
 
-	@Test // DATAREDIS-315
-	public void zAddShouldAddValueWithScoreCorrectly() {
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-		clusterConnection.zAdd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		clusterConnection.zAdd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        assertThat(clusterConnection.zCard(KEY_1_BYTES)).isEqualTo(3L);
+    }
 
-		assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(2L);
-	}
+    @Test // DATAREDIS-315
+    public void zCountShouldCountValuesInRange() {
 
-	@Test // DATAREDIS-315
-	public void zCardShouldReturnTotalNumberOfValues() {
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+        assertThat(clusterConnection.zCount(KEY_1_BYTES, 10, 20)).isEqualTo(2L);
+    }
 
-		assertThat(clusterConnection.zCard(KEY_1_BYTES)).isEqualTo(3L);
-	}
+    @Test // DATAREDIS-315
+    public void zIncrByShouldIncScoreForValueCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void zCountShouldCountValuesInRange() {
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+        clusterConnection.zIncrBy(KEY_1_BYTES, 100D, VALUE_1_BYTES);
 
-		assertThat(clusterConnection.zCount(KEY_1_BYTES, 10, 20)).isEqualTo(2L);
-	}
+        assertThat(nativeConnection.zrank(KEY_1_BYTES, VALUE_1_BYTES)).isEqualTo(1L);
+    }
 
-	@Test // DATAREDIS-315
-	public void zIncrByShouldIncScoreForValueCorrectly() {
+    @Test // GH-2041
+    public void zDiffShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.zDiff(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.zDiffStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.zDiffWithScores(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+    }
 
-		clusterConnection.zIncrBy(KEY_1_BYTES, 100D, VALUE_1_BYTES);
+    @Test // GH-2041
+    @EnabledOnCommand("ZDIFF")
+    public void zDiffShouldWorkForSameSlotKeys() {
 
-		assertThat(nativeConnection.zrank(KEY_1_BYTES, VALUE_1_BYTES)).isEqualTo(1L);
-	}
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-	@Test // GH-2041
-	public void zDiffShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
+        nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
 
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zDiff(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zDiffStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zDiffWithScores(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-	}
+        assertThat(clusterConnection.zDiff(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(VALUE_1_BYTES);
+        assertThat(clusterConnection.zDiffWithScores(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(new DefaultTuple(VALUE_1_BYTES, 10D));
+    }
 
-	@Test // GH-2041
-	@EnabledOnCommand("ZDIFF")
-	public void zDiffShouldWorkForSameSlotKeys() {
+    @Test // GH-2041
+    @EnabledOnCommand("ZDIFFSTORE")
+    public void zDiffStoreShouldWorkForSameSlotKeys() {
 
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-		nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
 
-		assertThat(clusterConnection.zDiff(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).contains(VALUE_1_BYTES);
-		assertThat(clusterConnection.zDiffWithScores(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
-				.contains(new DefaultTuple(VALUE_1_BYTES, 10D));
-	}
+        clusterConnection.zDiffStore(
+                SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-	@Test // GH-2041
-	@EnabledOnCommand("ZDIFFSTORE")
-	public void zDiffStoreShouldWorkForSameSlotKeys() {
+        assertThat(nativeConnection.zrange(SAME_SLOT_KEY_3_BYTES, 0, -1)).contains(VALUE_1_BYTES);
+    }
 
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 20D, VALUE_2_BYTES);
+    @Test // GH-2042
+    public void zInterShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
 
-		nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.zInter(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(
+                        () -> clusterConnection.zInterWithScores(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+    }
 
-		clusterConnection.zDiffStore(SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+    @Test // GH-2042
+    @EnabledOnCommand("ZINTER")
+    public void zInterShouldWorkForSameSlotKeys() {
 
-		assertThat(nativeConnection.zrange(SAME_SLOT_KEY_3_BYTES, 0, -1)).contains(VALUE_1_BYTES);
-	}
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-	@Test // GH-2042
-	public void zInterShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
+        nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
 
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zInter(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zInterWithScores(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-	}
+        assertThat(clusterConnection.zInter(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(VALUE_2_BYTES);
+        assertThat(clusterConnection.zInterWithScores(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(new DefaultTuple(VALUE_2_BYTES, 40D));
+    }
 
-	@Test // GH-2042
-	@EnabledOnCommand("ZINTER")
-	public void zInterShouldWorkForSameSlotKeys() {
+    @Test // GH-2042
+    public void zInterStoreShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
 
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.zInterStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+    }
 
-		nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
+    @Test // DATAREDIS-315
+    public void zInterStoreShouldWorkForSameSlotKeys() {
 
-		assertThat(clusterConnection.zInter(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).contains(VALUE_2_BYTES);
-		assertThat(clusterConnection.zInterWithScores(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
-				.contains(new DefaultTuple(VALUE_2_BYTES, 40D));
-	}
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-	@Test // GH-2042
-	public void zInterStoreShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
+        nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 30D, VALUE_3_BYTES);
 
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zInterStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-	}
+        clusterConnection.zInterStore(
+                SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zInterStoreShouldWorkForSameSlotKeys() {
+        assertThat(nativeConnection.zrange(SAME_SLOT_KEY_3_BYTES, 0, -1)).contains(VALUE_2_BYTES);
+    }
 
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 20D, VALUE_2_BYTES);
+    @Test // GH-2007
+    @EnabledOnCommand("ZPOPMIN")
+    public void zPopMinShouldWorkCorrectly() {
 
-		nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 30D, VALUE_3_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
 
-		clusterConnection.zInterStore(SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+        assertThat(clusterConnection.zPopMin(KEY_1_BYTES))
+                .isEqualTo(new DefaultTuple(VALUE_1_BYTES, 10D));
+        assertThat(clusterConnection.zPopMin(KEY_1_BYTES, 2))
+                .containsExactly(
+                        new DefaultTuple(VALUE_2_BYTES, 20D), new DefaultTuple(VALUE_3_BYTES, 30D));
+    }
 
-		assertThat(nativeConnection.zrange(SAME_SLOT_KEY_3_BYTES, 0, -1)).contains(VALUE_2_BYTES);
-	}
+    @Test // GH-2007
+    @EnabledOnCommand("BZPOPMIN")
+    public void bzPopMinShouldWorkCorrectly() {
 
-	@Test // GH-2007
-	@EnabledOnCommand("ZPOPMIN")
-	public void zPopMinShouldWorkCorrectly() {
+        assertThat(clusterConnection.zSetCommands().zCard(KEY_1_BYTES)).isZero();
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
 
-		assertThat(clusterConnection.zPopMin(KEY_1_BYTES)).isEqualTo(new DefaultTuple(VALUE_1_BYTES, 10D));
-		assertThat(clusterConnection.zPopMin(KEY_1_BYTES, 2)).containsExactly(new DefaultTuple(VALUE_2_BYTES, 20D),
-				new DefaultTuple(VALUE_3_BYTES, 30D));
-	}
+        assertThat(clusterConnection.bZPopMin(KEY_1_BYTES, 1, TimeUnit.SECONDS))
+                .isEqualTo(new DefaultTuple(VALUE_1_BYTES, 10D));
+    }
 
-	@Test // GH-2007
-	@EnabledOnCommand("BZPOPMIN")
-	public void bzPopMinShouldWorkCorrectly() {
+    @Test // GH-2007
+    @EnabledOnCommand("ZPOPMAX")
+    public void zPopMaxShouldWorkCorrectly() {
 
-		assertThat(clusterConnection.zSetCommands().zCard(KEY_1_BYTES)).isZero();
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
+        assertThat(clusterConnection.zPopMax(KEY_1_BYTES))
+                .isEqualTo(new DefaultTuple(VALUE_3_BYTES, 30D));
+        assertThat(clusterConnection.zPopMax(KEY_1_BYTES, 2))
+                .containsExactly(
+                        new DefaultTuple(VALUE_2_BYTES, 20D), new DefaultTuple(VALUE_1_BYTES, 10D));
+    }
 
-		assertThat(clusterConnection.bZPopMin(KEY_1_BYTES, 1, TimeUnit.SECONDS))
-				.isEqualTo(new DefaultTuple(VALUE_1_BYTES, 10D));
-	}
+    @Test // GH-2007
+    @EnabledOnCommand("BZPOPMAX")
+    public void bzPopMaxShouldWorkCorrectly() {
 
-	@Test // GH-2007
-	@EnabledOnCommand("ZPOPMAX")
-	public void zPopMaxShouldWorkCorrectly() {
+        assertThat(clusterConnection.zSetCommands().zCard(KEY_1_BYTES)).isZero();
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
 
-		assertThat(clusterConnection.zPopMax(KEY_1_BYTES)).isEqualTo(new DefaultTuple(VALUE_3_BYTES, 30D));
-		assertThat(clusterConnection.zPopMax(KEY_1_BYTES, 2)).containsExactly(new DefaultTuple(VALUE_2_BYTES, 20D),
-				new DefaultTuple(VALUE_1_BYTES, 10D));
-	}
+        assertThat(clusterConnection.bZPopMax(KEY_1_BYTES, 1, TimeUnit.SECONDS))
+                .isEqualTo(new DefaultTuple(VALUE_3_BYTES, 30D));
+    }
 
-	@Test // GH-2007
-	@EnabledOnCommand("BZPOPMAX")
-	public void bzPopMaxShouldWorkCorrectly() {
+    @Test // GH-2049
+    @EnabledOnCommand("ZRANDMEMBER")
+    public void zRandMemberShouldReturnResultCorrectly() {
 
-		assertThat(clusterConnection.zSetCommands().zCard(KEY_1_BYTES)).isZero();
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
+        assertThat(clusterConnection.zRandMember(KEY_1_BYTES)).isIn(VALUE_1_BYTES, VALUE_2_BYTES);
+        assertThat(clusterConnection.zRandMember(KEY_1_BYTES, 2))
+                .hasSize(2)
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		assertThat(clusterConnection.bZPopMax(KEY_1_BYTES, 1, TimeUnit.SECONDS))
-				.isEqualTo(new DefaultTuple(VALUE_3_BYTES, 30D));
-	}
+    @Test // GH-2049
+    @EnabledOnCommand("ZRANDMEMBER")
+    public void zRandMemberWithScoreShouldReturnResultCorrectly() {
 
-	@Test // GH-2049
-	@EnabledOnCommand("ZRANDMEMBER")
-	public void zRandMemberShouldReturnResultCorrectly() {
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        assertThat(clusterConnection.zRandMemberWithScore(KEY_1_BYTES)).isNotNull();
+        assertThat(clusterConnection.zRandMemberWithScore(KEY_1_BYTES, 2)).hasSize(2);
+    }
 
-		assertThat(clusterConnection.zRandMember(KEY_1_BYTES)).isIn(VALUE_1_BYTES, VALUE_2_BYTES);
-		assertThat(clusterConnection.zRandMember(KEY_1_BYTES, 2)).hasSize(2).contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    @Test // DATAREDIS-315
+    public void zRangeByLexShouldReturnResultCorrectly() {
 
-	}
+        nativeConnection.zadd(KEY_1, 0, "a");
+        nativeConnection.zadd(KEY_1, 0, "b");
+        nativeConnection.zadd(KEY_1, 0, "c");
+        nativeConnection.zadd(KEY_1, 0, "d");
+        nativeConnection.zadd(KEY_1, 0, "e");
+        nativeConnection.zadd(KEY_1, 0, "f");
+        nativeConnection.zadd(KEY_1, 0, "g");
 
-	@Test // GH-2049
-	@EnabledOnCommand("ZRANDMEMBER")
-	public void zRandMemberWithScoreShouldReturnResultCorrectly() {
+        Set<byte[]> values =
+                clusterConnection.zRangeByLex(KEY_1_BYTES, Range.range().lte("c").toRange());
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        assertThat(values)
+                .contains(
+                        JedisConverters.toBytes("a"),
+                        JedisConverters.toBytes("b"),
+                        JedisConverters.toBytes("c"));
+        assertThat(values)
+                .doesNotContain(
+                        JedisConverters.toBytes("d"),
+                        JedisConverters.toBytes("e"),
+                        JedisConverters.toBytes("f"),
+                        JedisConverters.toBytes("g"));
 
-		assertThat(clusterConnection.zRandMemberWithScore(KEY_1_BYTES)).isNotNull();
-		assertThat(clusterConnection.zRandMemberWithScore(KEY_1_BYTES, 2)).hasSize(2);
-	}
+        values = clusterConnection.zRangeByLex(KEY_1_BYTES, Range.range().lt("c").toRange());
+        assertThat(values).contains(JedisConverters.toBytes("a"), JedisConverters.toBytes("b"));
+        assertThat(values).doesNotContain(JedisConverters.toBytes("c"));
 
-	@Test // DATAREDIS-315
-	public void zRangeByLexShouldReturnResultCorrectly() {
+        values = clusterConnection.zRangeByLex(KEY_1_BYTES, Range.range().gte("aaa").lt("g").toRange());
+        assertThat(values)
+                .contains(
+                        JedisConverters.toBytes("b"),
+                        JedisConverters.toBytes("c"),
+                        JedisConverters.toBytes("d"),
+                        JedisConverters.toBytes("e"),
+                        JedisConverters.toBytes("f"));
+        assertThat(values).doesNotContain(JedisConverters.toBytes("a"), JedisConverters.toBytes("g"));
 
-		nativeConnection.zadd(KEY_1, 0, "a");
-		nativeConnection.zadd(KEY_1, 0, "b");
-		nativeConnection.zadd(KEY_1, 0, "c");
-		nativeConnection.zadd(KEY_1, 0, "d");
-		nativeConnection.zadd(KEY_1, 0, "e");
-		nativeConnection.zadd(KEY_1, 0, "f");
-		nativeConnection.zadd(KEY_1, 0, "g");
+        values = clusterConnection.zRangeByLex(KEY_1_BYTES, Range.range().gte("e").toRange());
+        assertThat(values)
+                .contains(
+                        JedisConverters.toBytes("e"),
+                        JedisConverters.toBytes("f"),
+                        JedisConverters.toBytes("g"));
+        assertThat(values)
+                .doesNotContain(
+                        JedisConverters.toBytes("a"),
+                        JedisConverters.toBytes("b"),
+                        JedisConverters.toBytes("c"),
+                        JedisConverters.toBytes("d"));
+    }
 
-		Set<byte[]> values = clusterConnection.zRangeByLex(KEY_1_BYTES, Range.range().lte("c").toRange());
+    @Test // GH-1998
+    public void zRevRangeByLexShouldReturnValuesCorrectly() {
 
-		assertThat(values).contains(JedisConverters.toBytes("a"), JedisConverters.toBytes("b"),
-				JedisConverters.toBytes("c"));
-		assertThat(values).doesNotContain(JedisConverters.toBytes("d"), JedisConverters.toBytes("e"),
-				JedisConverters.toBytes("f"), JedisConverters.toBytes("g"));
+        nativeConnection.zadd(KEY_1, 0, "a");
+        nativeConnection.zadd(KEY_1, 0, "b");
+        nativeConnection.zadd(KEY_1, 0, "c");
+        nativeConnection.zadd(KEY_1, 0, "d");
+        nativeConnection.zadd(KEY_1, 0, "e");
+        nativeConnection.zadd(KEY_1, 0, "f");
+        nativeConnection.zadd(KEY_1, 0, "g");
 
-		values = clusterConnection.zRangeByLex(KEY_1_BYTES, Range.range().lt("c").toRange());
-		assertThat(values).contains(JedisConverters.toBytes("a"), JedisConverters.toBytes("b"));
-		assertThat(values).doesNotContain(JedisConverters.toBytes("c"));
+        Set<byte[]> values =
+                clusterConnection.zRevRangeByLex(KEY_1_BYTES, Range.range().lte("c").toRange());
 
-		values = clusterConnection.zRangeByLex(KEY_1_BYTES, Range.range().gte("aaa").lt("g").toRange());
-		assertThat(values).contains(JedisConverters.toBytes("b"), JedisConverters.toBytes("c"),
-				JedisConverters.toBytes("d"), JedisConverters.toBytes("e"), JedisConverters.toBytes("f"));
-		assertThat(values).doesNotContain(JedisConverters.toBytes("a"), JedisConverters.toBytes("g"));
+        assertThat(values)
+                .containsExactly(
+                        JedisConverters.toBytes("c"),
+                        JedisConverters.toBytes("b"),
+                        JedisConverters.toBytes("a"));
+        assertThat(values)
+                .doesNotContain(
+                        JedisConverters.toBytes("d"),
+                        JedisConverters.toBytes("e"),
+                        JedisConverters.toBytes("f"),
+                        JedisConverters.toBytes("g"));
 
-		values = clusterConnection.zRangeByLex(KEY_1_BYTES, Range.range().gte("e").toRange());
-		assertThat(values).contains(JedisConverters.toBytes("e"), JedisConverters.toBytes("f"),
-				JedisConverters.toBytes("g"));
-		assertThat(values).doesNotContain(JedisConverters.toBytes("a"), JedisConverters.toBytes("b"),
-				JedisConverters.toBytes("c"), JedisConverters.toBytes("d"));
-	}
+        values = clusterConnection.zRevRangeByLex(KEY_1_BYTES, Range.range().lt("c").toRange());
+        assertThat(values).containsExactly(JedisConverters.toBytes("b"), JedisConverters.toBytes("a"));
+        assertThat(values).doesNotContain(JedisConverters.toBytes("c"));
 
-	@Test // GH-1998
-	public void zRevRangeByLexShouldReturnValuesCorrectly() {
+        values =
+                clusterConnection.zRevRangeByLex(KEY_1_BYTES, Range.range().gte("aaa").lt("g").toRange());
+        assertThat(values)
+                .containsExactly(
+                        JedisConverters.toBytes("f"),
+                        JedisConverters.toBytes("e"),
+                        JedisConverters.toBytes("d"),
+                        JedisConverters.toBytes("c"),
+                        JedisConverters.toBytes("b"));
+        assertThat(values).doesNotContain(JedisConverters.toBytes("a"), JedisConverters.toBytes("g"));
 
-		nativeConnection.zadd(KEY_1, 0, "a");
-		nativeConnection.zadd(KEY_1, 0, "b");
-		nativeConnection.zadd(KEY_1, 0, "c");
-		nativeConnection.zadd(KEY_1, 0, "d");
-		nativeConnection.zadd(KEY_1, 0, "e");
-		nativeConnection.zadd(KEY_1, 0, "f");
-		nativeConnection.zadd(KEY_1, 0, "g");
+        values =
+                clusterConnection.zRevRangeByLex(
+                        KEY_1_BYTES, Range.range().lte("d").toRange(), Limit.limit().count(2).offset(1));
 
-		Set<byte[]> values = clusterConnection.zRevRangeByLex(KEY_1_BYTES, Range.range().lte("c").toRange());
+        assertThat(values)
+                .hasSize(2)
+                .containsExactly(JedisConverters.toBytes("c"), JedisConverters.toBytes("b"));
+        assertThat(values)
+                .doesNotContain(
+                        JedisConverters.toBytes("a"),
+                        JedisConverters.toBytes("d"),
+                        JedisConverters.toBytes("e"),
+                        JedisConverters.toBytes("f"),
+                        JedisConverters.toBytes("g"));
+    }
 
-		assertThat(values).containsExactly(JedisConverters.toBytes("c"), JedisConverters.toBytes("b"),
-				JedisConverters.toBytes("a"));
-		assertThat(values).doesNotContain(JedisConverters.toBytes("d"), JedisConverters.toBytes("e"),
-				JedisConverters.toBytes("f"), JedisConverters.toBytes("g"));
+    @Test // DATAREDIS-315
+    public void zRangeByScoreShouldReturnValuesCorrectly() {
 
-		values = clusterConnection.zRevRangeByLex(KEY_1_BYTES, Range.range().lt("c").toRange());
-		assertThat(values).containsExactly(JedisConverters.toBytes("b"), JedisConverters.toBytes("a"));
-		assertThat(values).doesNotContain(JedisConverters.toBytes("c"));
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-		values = clusterConnection.zRevRangeByLex(KEY_1_BYTES, Range.range().gte("aaa").lt("g").toRange());
-		assertThat(values).containsExactly(JedisConverters.toBytes("f"), JedisConverters.toBytes("e"),
-				JedisConverters.toBytes("d"), JedisConverters.toBytes("c"), JedisConverters.toBytes("b"));
-		assertThat(values).doesNotContain(JedisConverters.toBytes("a"), JedisConverters.toBytes("g"));
+        assertThat(clusterConnection.zRangeByScore(KEY_1_BYTES, 10, 20))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		values = clusterConnection.zRevRangeByLex(KEY_1_BYTES, Range.range().lte("d").toRange(),
-				Limit.limit().count(2).offset(1));
+    @Test // DATAREDIS-315
+    public void zRangeByScoreShouldReturnValuesCorrectlyWhenGivenOffsetAndScore() {
 
-		assertThat(values).hasSize(2).containsExactly(JedisConverters.toBytes("c"), JedisConverters.toBytes("b"));
-		assertThat(values).doesNotContain(JedisConverters.toBytes("a"), JedisConverters.toBytes("d"),
-				JedisConverters.toBytes("e"), JedisConverters.toBytes("f"), JedisConverters.toBytes("g"));
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRangeByScoreShouldReturnValuesCorrectly() {
+        assertThat(clusterConnection.zRangeByScore(KEY_1_BYTES, 10D, 20D, 0L, 1L))
+                .contains(VALUE_1_BYTES);
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRangeByScoreWithScoresShouldReturnValuesAndScoreCorrectly() {
 
-		assertThat(clusterConnection.zRangeByScore(KEY_1_BYTES, 10, 20)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRangeByScoreShouldReturnValuesCorrectlyWhenGivenOffsetAndScore() {
+        assertThat(clusterConnection.zRangeByScoreWithScores(KEY_1_BYTES, 10, 20))
+                .contains(
+                        (Tuple) new DefaultTuple(VALUE_1_BYTES, 10D),
+                        (Tuple) new DefaultTuple(VALUE_2_BYTES, 20D));
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRangeByScoreWithScoresShouldReturnValuesCorrectlyWhenGivenOffsetAndScore() {
 
-		assertThat(clusterConnection.zRangeByScore(KEY_1_BYTES, 10D, 20D, 0L, 1L)).contains(VALUE_1_BYTES);
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRangeByScoreWithScoresShouldReturnValuesAndScoreCorrectly() {
+        assertThat(clusterConnection.zRangeByScoreWithScores(KEY_1_BYTES, 10D, 20D, 0L, 1L))
+                .contains((Tuple) new DefaultTuple(VALUE_1_BYTES, 10D));
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRangeShouldReturnValuesCorrectly() {
 
-		assertThat(clusterConnection.zRangeByScoreWithScores(KEY_1_BYTES, 10, 20))
-				.contains((Tuple) new DefaultTuple(VALUE_1_BYTES, 10D), (Tuple) new DefaultTuple(VALUE_2_BYTES, 20D));
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRangeByScoreWithScoresShouldReturnValuesCorrectlyWhenGivenOffsetAndScore() {
+        assertThat(clusterConnection.zRange(KEY_1_BYTES, 1, 2)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRangeWithScoresShouldReturnValuesAndScoreCorrectly() {
 
-		assertThat(clusterConnection.zRangeByScoreWithScores(KEY_1_BYTES, 10D, 20D, 0L, 1L))
-				.contains((Tuple) new DefaultTuple(VALUE_1_BYTES, 10D));
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRangeShouldReturnValuesCorrectly() {
+        assertThat(clusterConnection.zRangeWithScores(KEY_1_BYTES, 1, 2))
+                .contains(
+                        (Tuple) new DefaultTuple(VALUE_1_BYTES, 10D),
+                        (Tuple) new DefaultTuple(VALUE_2_BYTES, 20D));
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRankShouldReturnPositionForValueCorrectly() {
 
-		assertThat(clusterConnection.zRange(KEY_1_BYTES, 1, 2)).contains(VALUE_1_BYTES, VALUE_2_BYTES);
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRangeWithScoresShouldReturnValuesAndScoreCorrectly() {
+        assertThat(clusterConnection.zRank(KEY_1_BYTES, VALUE_2_BYTES)).isEqualTo(1L);
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRankShouldReturnReversePositionForValueCorrectly() {
 
-		assertThat(clusterConnection.zRangeWithScores(KEY_1_BYTES, 1, 2))
-				.contains((Tuple) new DefaultTuple(VALUE_1_BYTES, 10D), (Tuple) new DefaultTuple(VALUE_2_BYTES, 20D));
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRankShouldReturnPositionForValueCorrectly() {
+        assertThat(clusterConnection.zRevRank(KEY_1_BYTES, VALUE_2_BYTES)).isEqualTo(0L);
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+    @Test // DATAREDIS-315
+    public void zRemRangeByScoreShouldRemoveValues() {
 
-		assertThat(clusterConnection.zRank(KEY_1_BYTES, VALUE_2_BYTES)).isEqualTo(1L);
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRankShouldReturnReversePositionForValueCorrectly() {
+        clusterConnection.zRemRangeByScore(KEY_1_BYTES, 15D, 25D);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(2L);
+        assertThat(nativeConnection.zrange(KEY_1_BYTES, 0, -1)).contains(VALUE_1_BYTES, VALUE_3_BYTES);
+    }
 
-		assertThat(clusterConnection.zRevRank(KEY_1_BYTES, VALUE_2_BYTES)).isEqualTo(0L);
-	}
+    @Test // DATAREDIS-315
+    public void zRemRangeShouldRemoveValues() {
 
-	@Test // DATAREDIS-315
-	public void zRemRangeByScoreShouldRemoveValues() {
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
+        clusterConnection.zRemRange(KEY_1_BYTES, 1, 2);
 
-		clusterConnection.zRemRangeByScore(KEY_1_BYTES, 15D, 25D);
+        assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(1L);
+        assertThat(nativeConnection.zrange(KEY_1_BYTES, 0, -1)).contains(VALUE_1_BYTES);
+    }
 
-		assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(2L);
-		assertThat(nativeConnection.zrange(KEY_1_BYTES, 0, -1)).contains(VALUE_1_BYTES, VALUE_3_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void zRemShouldRemoveValueWithScoreCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void zRemRangeShouldRemoveValues() {
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 30D, VALUE_3_BYTES);
+        clusterConnection.zRem(KEY_1_BYTES, VALUE_1_BYTES);
 
-		clusterConnection.zRemRange(KEY_1_BYTES, 1, 2);
+        assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(1L);
+    }
 
-		assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(1L);
-		assertThat(nativeConnection.zrange(KEY_1_BYTES, 0, -1)).contains(VALUE_1_BYTES);
-	}
+    @Test // DATAREDIS-315
+    public void zRevRangeByScoreShouldReturnValuesCorrectly() {
 
-	@Test // DATAREDIS-315
-	public void zRemShouldRemoveValueWithScoreCorrectly() {
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        assertThat(clusterConnection.zRevRangeByScore(KEY_1_BYTES, 10D, 20D))
+                .contains(VALUE_2_BYTES, VALUE_1_BYTES);
+    }
 
-		clusterConnection.zRem(KEY_1_BYTES, VALUE_1_BYTES);
+    @Test // DATAREDIS-315
+    public void zRevRangeByScoreShouldReturnValuesCorrectlyWhenGivenOffsetAndScore() {
 
-		assertThat(nativeConnection.zcard(KEY_1_BYTES)).isEqualTo(1L);
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRevRangeByScoreShouldReturnValuesCorrectly() {
+        assertThat(clusterConnection.zRevRangeByScore(KEY_1_BYTES, 10D, 20D, 0L, 1L))
+                .contains(VALUE_2_BYTES);
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRevRangeByScoreWithScoresShouldReturnValuesAndScoreCorrectly() {
 
-		assertThat(clusterConnection.zRevRangeByScore(KEY_1_BYTES, 10D, 20D)).contains(VALUE_2_BYTES, VALUE_1_BYTES);
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRevRangeByScoreShouldReturnValuesCorrectlyWhenGivenOffsetAndScore() {
+        assertThat(clusterConnection.zRevRangeByScoreWithScores(KEY_1_BYTES, 10D, 20D))
+                .contains(
+                        (Tuple) new DefaultTuple(VALUE_2_BYTES, 20D),
+                        (Tuple) new DefaultTuple(VALUE_1_BYTES, 10D));
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRevRangeByScoreWithScoresShouldReturnValuesCorrectlyWhenGivenOffsetAndScore() {
 
-		assertThat(clusterConnection.zRevRangeByScore(KEY_1_BYTES, 10D, 20D, 0L, 1L)).contains(VALUE_2_BYTES);
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRevRangeByScoreWithScoresShouldReturnValuesAndScoreCorrectly() {
+        assertThat(clusterConnection.zRevRangeByScoreWithScores(KEY_1_BYTES, 10D, 20D, 0L, 1L))
+                .contains((Tuple) new DefaultTuple(VALUE_2_BYTES, 20D));
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRevRangeShouldReturnValuesCorrectly() {
 
-		assertThat(clusterConnection.zRevRangeByScoreWithScores(KEY_1_BYTES, 10D, 20D))
-				.contains((Tuple) new DefaultTuple(VALUE_2_BYTES, 20D), (Tuple) new DefaultTuple(VALUE_1_BYTES, 10D));
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRevRangeByScoreWithScoresShouldReturnValuesCorrectlyWhenGivenOffsetAndScore() {
+        assertThat(clusterConnection.zRevRange(KEY_1_BYTES, 1, 2))
+                .contains(VALUE_3_BYTES, VALUE_1_BYTES);
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-315
+    public void zRevRangeWithScoresShouldReturnValuesAndScoreCorrectly() {
 
-		assertThat(clusterConnection.zRevRangeByScoreWithScores(KEY_1_BYTES, 10D, 20D, 0L, 1L))
-				.contains((Tuple) new DefaultTuple(VALUE_2_BYTES, 20D));
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zRevRangeShouldReturnValuesCorrectly() {
+        assertThat(clusterConnection.zRevRangeWithScores(KEY_1_BYTES, 1, 2))
+                .contains(
+                        (Tuple) new DefaultTuple(VALUE_3_BYTES, 5D),
+                        (Tuple) new DefaultTuple(VALUE_1_BYTES, 10D));
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+    @Test // DATAREDIS-479
+    public void zScanShouldReadEntireValueRange() {
 
-		assertThat(clusterConnection.zRevRange(KEY_1_BYTES, 1, 2)).contains(VALUE_3_BYTES, VALUE_1_BYTES);
-	}
+        int nrOfValues = 321;
+        for (int i = 0; i < nrOfValues; i++) {
+            nativeConnection.zadd(KEY_1_BYTES, i, JedisConverters.toBytes("value-" + i));
+        }
 
-	@Test // DATAREDIS-315
-	public void zRevRangeWithScoresShouldReturnValuesAndScoreCorrectly() {
+        Cursor<Tuple> tuples = clusterConnection.zScan(KEY_1_BYTES, ScanOptions.NONE);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 5D, VALUE_3_BYTES);
+        int count = 0;
+        while (tuples.hasNext()) {
 
-		assertThat(clusterConnection.zRevRangeWithScores(KEY_1_BYTES, 1, 2))
-				.contains((Tuple) new DefaultTuple(VALUE_3_BYTES, 5D), (Tuple) new DefaultTuple(VALUE_1_BYTES, 10D));
-	}
+            tuples.next();
+            count++;
+        }
 
-	@Test // DATAREDIS-479
-	public void zScanShouldReadEntireValueRange() {
+        assertThat(count).isEqualTo(nrOfValues);
+    }
 
-		int nrOfValues = 321;
-		for (int i = 0; i < nrOfValues; i++) {
-			nativeConnection.zadd(KEY_1_BYTES, i, JedisConverters.toBytes("value-" + i));
-		}
+    @Test // DATAREDIS-315
+    public void zScoreShouldRetrieveScoreForValue() {
 
-		Cursor<Tuple> tuples = clusterConnection.zScan(KEY_1_BYTES, ScanOptions.NONE);
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-		int count = 0;
-		while (tuples.hasNext()) {
+        assertThat(clusterConnection.zScore(KEY_1_BYTES, VALUE_2_BYTES)).isEqualTo(20D);
+    }
 
-			tuples.next();
-			count++;
-		}
+    @Test // GH-2038
+    @EnabledOnCommand("ZMSCORE")
+    public void zMScoreShouldRetrieveScoreForValues() {
 
-		assertThat(count).isEqualTo(nrOfValues);
-	}
+        nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
 
-	@Test // DATAREDIS-315
-	public void zScoreShouldRetrieveScoreForValue() {
+        assertThat(clusterConnection.zMScore(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES))
+                .containsSequence(10D, 20D);
+    }
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+    @Test // GH-2042
+    public void zUnionShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.zUnion(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(
+                        () -> clusterConnection.zUnionWithScores(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+    }
 
-		assertThat(clusterConnection.zScore(KEY_1_BYTES, VALUE_2_BYTES)).isEqualTo(20D);
-	}
+    @Test // GH-2042
+    @EnabledOnCommand("ZUNION")
+    public void zUnionShouldWorkForSameSlotKeys() {
 
-	@Test // GH-2038
-	@EnabledOnCommand("ZMSCORE")
-	public void zMScoreShouldRetrieveScoreForValues() {
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 30D, VALUE_3_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
 
-		nativeConnection.zadd(KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(KEY_1_BYTES, 20D, VALUE_2_BYTES);
+        assertThat(clusterConnection.zUnion(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+        assertThat(clusterConnection.zUnionWithScores(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES))
+                .contains(
+                        new DefaultTuple(VALUE_1_BYTES, 10D),
+                        new DefaultTuple(VALUE_2_BYTES, 20D),
+                        new DefaultTuple(VALUE_3_BYTES, 30D));
+    }
 
-		assertThat(clusterConnection.zMScore(KEY_1_BYTES, VALUE_1_BYTES, VALUE_2_BYTES)).containsSequence(10D, 20D);
-	}
+    @Test // DATAREDIS-315
+    public void zUnionStoreShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
+        assertThatExceptionOfType(DataAccessException.class)
+                .isThrownBy(() -> clusterConnection.zUnionStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
+    }
 
-	@Test // GH-2042
-	public void zUnionShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zUnion(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zUnionWithScores(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-	}
+    @Test // DATAREDIS-315
+    public void zUnionStoreShouldWorkForSameSlotKeys() {
 
-	@Test // GH-2042
-	@EnabledOnCommand("ZUNION")
-	public void zUnionShouldWorkForSameSlotKeys() {
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 30D, VALUE_3_BYTES);
+        nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
 
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 30D, VALUE_3_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
+        clusterConnection.zUnionStore(
+                SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
 
-		assertThat(clusterConnection.zUnion(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).contains(VALUE_1_BYTES,
-				VALUE_2_BYTES, VALUE_3_BYTES);
-		assertThat(clusterConnection.zUnionWithScores(SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES)).contains(
-				new DefaultTuple(VALUE_1_BYTES, 10D), new DefaultTuple(VALUE_2_BYTES, 20D),
-				new DefaultTuple(VALUE_3_BYTES, 30D));
-	}
+        assertThat(nativeConnection.zrange(SAME_SLOT_KEY_3_BYTES, 0, -1))
+                .contains(VALUE_1_BYTES, VALUE_2_BYTES, VALUE_3_BYTES);
+    }
 
-	@Test // DATAREDIS-315
-	public void zUnionStoreShouldThrowExceptionWhenKeysDoNotMapToSameSlots() {
-		assertThatExceptionOfType(DataAccessException.class)
-				.isThrownBy(() -> clusterConnection.zUnionStore(KEY_3_BYTES, KEY_1_BYTES, KEY_2_BYTES));
-	}
+    @Test // DATAREDIS-694
+    void touchReturnsNrOfKeysTouched() {
 
-	@Test // DATAREDIS-315
-	public void zUnionStoreShouldWorkForSameSlotKeys() {
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_1);
 
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 10D, VALUE_1_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_1_BYTES, 30D, VALUE_3_BYTES);
-		nativeConnection.zadd(SAME_SLOT_KEY_2_BYTES, 20D, VALUE_2_BYTES);
+        assertThat(clusterConnection.keyCommands().touch(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES))
+                .isEqualTo(2L);
+    }
 
-		clusterConnection.zUnionStore(SAME_SLOT_KEY_3_BYTES, SAME_SLOT_KEY_1_BYTES, SAME_SLOT_KEY_2_BYTES);
+    @Test // DATAREDIS-694
+    void touchReturnsZeroIfNoKeysTouched() {
+        assertThat(clusterConnection.keyCommands().touch(KEY_1_BYTES)).isEqualTo(0L);
+    }
 
-		assertThat(nativeConnection.zrange(SAME_SLOT_KEY_3_BYTES, 0, -1)).contains(VALUE_1_BYTES, VALUE_2_BYTES,
-				VALUE_3_BYTES);
-	}
+    @Test // DATAREDIS-693
+    void unlinkReturnsNrOfKeysTouched() {
 
-	@Test // DATAREDIS-694
-	void touchReturnsNrOfKeysTouched() {
+        nativeConnection.set(KEY_1, VALUE_1);
+        nativeConnection.set(KEY_2, VALUE_1);
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_1);
+        assertThat(clusterConnection.keyCommands().unlink(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES))
+                .isEqualTo(2L);
+    }
 
-		assertThat(clusterConnection.keyCommands().touch(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES)).isEqualTo(2L);
-	}
+    @Test // DATAREDIS-693
+    void unlinkReturnsZeroIfNoKeysTouched() {
+        assertThat(clusterConnection.keyCommands().unlink(KEY_1_BYTES)).isEqualTo(0L);
+    }
 
-	@Test // DATAREDIS-694
-	void touchReturnsZeroIfNoKeysTouched() {
-		assertThat(clusterConnection.keyCommands().touch(KEY_1_BYTES)).isEqualTo(0L);
-	}
+    @Test // DATAREDIS-697
+    void bitPosShouldReturnPositionCorrectly() {
 
-	@Test // DATAREDIS-693
-	void unlinkReturnsNrOfKeysTouched() {
+        nativeConnection.set(KEY_1_BYTES, HexStringUtils.hexToBytes("fff000"));
 
-		nativeConnection.set(KEY_1, VALUE_1);
-		nativeConnection.set(KEY_2, VALUE_1);
+        assertThat(clusterConnection.stringCommands().bitPos(KEY_1_BYTES, false)).isEqualTo(12L);
+    }
 
-		assertThat(clusterConnection.keyCommands().unlink(KEY_1_BYTES, KEY_2_BYTES, KEY_3_BYTES)).isEqualTo(2L);
-	}
+    @Test // DATAREDIS-697
+    void bitPosShouldReturnPositionInRangeCorrectly() {
 
-	@Test // DATAREDIS-693
-	void unlinkReturnsZeroIfNoKeysTouched() {
-		assertThat(clusterConnection.keyCommands().unlink(KEY_1_BYTES)).isEqualTo(0L);
-	}
+        nativeConnection.set(KEY_1_BYTES, HexStringUtils.hexToBytes("fff0f0"));
 
-	@Test // DATAREDIS-697
-	void bitPosShouldReturnPositionCorrectly() {
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitPos(
+                                        KEY_1_BYTES,
+                                        true,
+                                        org.springframework.data.domain.Range.of(
+                                                Bound.inclusive(2L), Bound.unbounded())))
+                .isEqualTo(16L);
+    }
 
-		nativeConnection.set(KEY_1_BYTES, HexStringUtils.hexToBytes("fff000"));
+    @Test // DATAREDIS-716
+    void encodingReturnsCorrectly() {
 
-		assertThat(clusterConnection.stringCommands().bitPos(KEY_1_BYTES, false)).isEqualTo(12L);
-	}
+        nativeConnection.set(KEY_1_BYTES, "1000".getBytes());
 
-	@Test // DATAREDIS-697
-	void bitPosShouldReturnPositionInRangeCorrectly() {
+        assertThat(clusterConnection.keyCommands().encodingOf(KEY_1_BYTES))
+                .isEqualTo(ValkeyValueEncoding.INT);
+    }
 
-		nativeConnection.set(KEY_1_BYTES, HexStringUtils.hexToBytes("fff0f0"));
+    @Test // DATAREDIS-716
+    void encodingReturnsVacantWhenKeyDoesNotExist() {
+        assertThat(clusterConnection.keyCommands().encodingOf(KEY_2_BYTES))
+                .isEqualTo(ValkeyValueEncoding.VACANT);
+    }
 
-		assertThat(clusterConnection.stringCommands().bitPos(KEY_1_BYTES, true,
-				org.springframework.data.domain.Range.of(Bound.inclusive(2L), Bound.unbounded()))).isEqualTo(16L);
-	}
+    @Test // DATAREDIS-716
+    void idletimeReturnsCorrectly() {
 
-	@Test // DATAREDIS-716
-	void encodingReturnsCorrectly() {
+        nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
+        nativeConnection.get(KEY_1_BYTES);
 
-		nativeConnection.set(KEY_1_BYTES, "1000".getBytes());
+        assertThat(clusterConnection.keyCommands().idletime(KEY_1_BYTES))
+                .isLessThan(Duration.ofSeconds(5));
+    }
 
-		assertThat(clusterConnection.keyCommands().encodingOf(KEY_1_BYTES)).isEqualTo(ValkeyValueEncoding.INT);
-	}
+    @Test // DATAREDIS-716
+    void idldetimeReturnsNullWhenKeyDoesNotExist() {
+        assertThat(clusterConnection.keyCommands().idletime(KEY_3_BYTES)).isNull();
+    }
 
-	@Test // DATAREDIS-716
-	void encodingReturnsVacantWhenKeyDoesNotExist() {
-		assertThat(clusterConnection.keyCommands().encodingOf(KEY_2_BYTES)).isEqualTo(ValkeyValueEncoding.VACANT);
-	}
+    @Test // DATAREDIS-716
+    void refcountReturnsCorrectly() {
 
-	@Test // DATAREDIS-716
-	void idletimeReturnsCorrectly() {
+        nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES);
 
-		nativeConnection.set(KEY_1_BYTES, VALUE_1_BYTES);
-		nativeConnection.get(KEY_1_BYTES);
+        assertThat(clusterConnection.keyCommands().refcount(KEY_1_BYTES)).isEqualTo(1L);
+    }
 
-		assertThat(clusterConnection.keyCommands().idletime(KEY_1_BYTES)).isLessThan(Duration.ofSeconds(5));
-	}
+    @Test // DATAREDIS-716
+    void refcountReturnsNullWhenKeyDoesNotExist() {
+        assertThat(clusterConnection.keyCommands().refcount(KEY_3_BYTES)).isNull();
+    }
 
-	@Test // DATAREDIS-716
-	void idldetimeReturnsNullWhenKeyDoesNotExist() {
-		assertThat(clusterConnection.keyCommands().idletime(KEY_3_BYTES)).isNull();
-	}
+    @Test // DATAREDIS-562
+    void bitFieldSetShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-716
-	void refcountReturnsCorrectly() {
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create().set(INT_8).valueAt(BitFieldSubCommands.Offset.offset(0L)).to(10L)))
+                .containsExactly(0L);
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create().set(INT_8).valueAt(BitFieldSubCommands.Offset.offset(0L)).to(20L)))
+                .containsExactly(10L);
+    }
 
-		nativeConnection.lpush(KEY_1_BYTES, VALUE_1_BYTES);
+    @Test // DATAREDIS-562
+    void bitFieldGetShouldWorkCorrectly() {
 
-		assertThat(clusterConnection.keyCommands().refcount(KEY_1_BYTES)).isEqualTo(1L);
-	}
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create().get(INT_8).valueAt(BitFieldSubCommands.Offset.offset(0L))))
+                .containsExactly(0L);
+    }
 
-	@Test // DATAREDIS-716
-	void refcountReturnsNullWhenKeyDoesNotExist() {
-		assertThat(clusterConnection.keyCommands().refcount(KEY_3_BYTES)).isNull();
-	}
+    @Test // DATAREDIS-562
+    void bitFieldIncrByShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-562
-	void bitFieldSetShouldWorkCorrectly() {
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create().incr(INT_8).valueAt(BitFieldSubCommands.Offset.offset(100L)).by(1L)))
+                .containsExactly(1L);
+    }
 
-		assertThat(clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-				create().set(INT_8).valueAt(BitFieldSubCommands.Offset.offset(0L)).to(10L))).containsExactly(0L);
-		assertThat(clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-				create().set(INT_8).valueAt(BitFieldSubCommands.Offset.offset(0L)).to(20L))).containsExactly(10L);
-	}
+    @Test // DATAREDIS-562
+    void bitFieldIncrByWithOverflowShouldWorkCorrectly() {
 
-	@Test // DATAREDIS-562
-	void bitFieldGetShouldWorkCorrectly() {
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create()
+                                                .incr(unsigned(2))
+                                                .valueAt(BitFieldSubCommands.Offset.offset(102L))
+                                                .overflow(FAIL)
+                                                .by(1L)))
+                .containsExactly(1L);
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create()
+                                                .incr(unsigned(2))
+                                                .valueAt(BitFieldSubCommands.Offset.offset(102L))
+                                                .overflow(FAIL)
+                                                .by(1L)))
+                .containsExactly(2L);
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create()
+                                                .incr(unsigned(2))
+                                                .valueAt(BitFieldSubCommands.Offset.offset(102L))
+                                                .overflow(FAIL)
+                                                .by(1L)))
+                .containsExactly(3L);
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create()
+                                                .incr(unsigned(2))
+                                                .valueAt(BitFieldSubCommands.Offset.offset(102L))
+                                                .overflow(FAIL)
+                                                .by(1L))
+                                .get(0))
+                .isNull();
+    }
 
-		assertThat(clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-				create().get(INT_8).valueAt(BitFieldSubCommands.Offset.offset(0L)))).containsExactly(0L);
-	}
+    @Test // DATAREDIS-562
+    void bitfieldShouldAllowMultipleSubcommands() {
 
-	@Test // DATAREDIS-562
-	void bitFieldIncrByShouldWorkCorrectly() {
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create()
+                                                .incr(signed(5))
+                                                .valueAt(BitFieldSubCommands.Offset.offset(100L))
+                                                .by(1L)
+                                                .get(unsigned(4))
+                                                .valueAt(0L)))
+                .containsExactly(1L, 0L);
+    }
 
-		assertThat(clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-				create().incr(INT_8).valueAt(BitFieldSubCommands.Offset.offset(100L)).by(1L))).containsExactly(1L);
-	}
+    @Test // DATAREDIS-562
+    void bitfieldShouldWorkUsingNonZeroBasedOffset() {
 
-	@Test // DATAREDIS-562
-	void bitFieldIncrByWithOverflowShouldWorkCorrectly() {
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create()
+                                                .set(INT_8)
+                                                .valueAt(BitFieldSubCommands.Offset.offset(0L).multipliedByTypeLength())
+                                                .to(100L)
+                                                .set(INT_8)
+                                                .valueAt(BitFieldSubCommands.Offset.offset(1L).multipliedByTypeLength())
+                                                .to(200L)))
+                .containsExactly(0L, 0L);
+        assertThat(
+                        clusterConnection
+                                .stringCommands()
+                                .bitField(
+                                        JedisConverters.toBytes(KEY_1),
+                                        create()
+                                                .get(INT_8)
+                                                .valueAt(BitFieldSubCommands.Offset.offset(0L).multipliedByTypeLength())
+                                                .get(INT_8)
+                                                .valueAt(BitFieldSubCommands.Offset.offset(1L).multipliedByTypeLength())))
+                .containsExactly(100L, -56L);
+    }
 
-		assertThat(clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-				create().incr(unsigned(2)).valueAt(BitFieldSubCommands.Offset.offset(102L)).overflow(FAIL).by(1L)))
-				.containsExactly(1L);
-		assertThat(clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-				create().incr(unsigned(2)).valueAt(BitFieldSubCommands.Offset.offset(102L)).overflow(FAIL).by(1L)))
-				.containsExactly(2L);
-		assertThat(clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-				create().incr(unsigned(2)).valueAt(BitFieldSubCommands.Offset.offset(102L)).overflow(FAIL).by(1L)))
-				.containsExactly(3L);
-		assertThat(clusterConnection.stringCommands()
-				.bitField(JedisConverters.toBytes(KEY_1),
-						create().incr(unsigned(2)).valueAt(BitFieldSubCommands.Offset.offset(102L)).overflow(FAIL).by(1L))
-				.get(0)).isNull();
-	}
+    @Test // DATAREDIS-1005
+    void evalShouldRunScript() {
 
-	@Test // DATAREDIS-562
-	void bitfieldShouldAllowMultipleSubcommands() {
+        byte[] keyAndArgs = JedisConverters.toBytes("FOO");
+        String luaScript = "return redis.call(\"INCR\", KEYS[1])";
+        byte[] luaScriptBin = JedisConverters.toBytes(luaScript);
 
-		assertThat(clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-				create().incr(signed(5)).valueAt(BitFieldSubCommands.Offset.offset(100L)).by(1L).get(unsigned(4)).valueAt(0L)))
-				.containsExactly(1L, 0L);
-	}
+        Long result =
+                clusterConnection.scriptingCommands().eval(luaScriptBin, ReturnType.VALUE, 1, keyAndArgs);
 
-	@Test // DATAREDIS-562
-	void bitfieldShouldWorkUsingNonZeroBasedOffset() {
+        assertThat(result).isEqualTo(1L);
+    }
 
-		assertThat(
-				clusterConnection.stringCommands().bitField(JedisConverters.toBytes(KEY_1),
-						create().set(INT_8).valueAt(BitFieldSubCommands.Offset.offset(0L).multipliedByTypeLength()).to(100L)
-								.set(INT_8).valueAt(BitFieldSubCommands.Offset.offset(1L).multipliedByTypeLength()).to(200L)))
-				.containsExactly(0L, 0L);
-		assertThat(
-				clusterConnection.stringCommands()
-						.bitField(JedisConverters.toBytes(KEY_1),
-								create().get(INT_8).valueAt(BitFieldSubCommands.Offset.offset(0L).multipliedByTypeLength()).get(INT_8)
-										.valueAt(BitFieldSubCommands.Offset.offset(1L).multipliedByTypeLength())))
-				.containsExactly(100L, -56L);
-	}
+    @Test // DATAREDIS-1005
+    void scriptLoadShouldLoadScript() {
 
-	@Test // DATAREDIS-1005
-	void evalShouldRunScript() {
+        String luaScript = "return redis.call(\"INCR\", KEYS[1])";
+        String digest = DigestUtils.sha1DigestAsHex(luaScript);
+        byte[] luaScriptBin = JedisConverters.toBytes(luaScript);
 
-		byte[] keyAndArgs = JedisConverters.toBytes("FOO");
-		String luaScript = "return redis.call(\"INCR\", KEYS[1])";
-		byte[] luaScriptBin = JedisConverters.toBytes(luaScript);
+        String result = clusterConnection.scriptingCommands().scriptLoad(luaScriptBin);
 
-		Long result = clusterConnection.scriptingCommands().eval(luaScriptBin, ReturnType.VALUE, 1, keyAndArgs);
+        assertThat(result).isEqualTo(digest);
+    }
 
-		assertThat(result).isEqualTo(1L);
-	}
+    @Test // DATAREDIS-1005
+    void scriptFlushShouldRemoveScripts() {
 
-	@Test // DATAREDIS-1005
-	void scriptLoadShouldLoadScript() {
+        byte[] keyAndArgs = JedisConverters.toBytes("FOO");
+        String luaScript = "return redis.call(\"GET\", KEYS[1])";
+        byte[] luaScriptBin = JedisConverters.toBytes(luaScript);
 
-		String luaScript = "return redis.call(\"INCR\", KEYS[1])";
-		String digest = DigestUtils.sha1DigestAsHex(luaScript);
-		byte[] luaScriptBin = JedisConverters.toBytes(luaScript);
+        clusterConnection.scriptingCommands().scriptLoad(luaScriptBin);
+        clusterConnection.scriptingCommands().scriptFlush();
 
-		String result = clusterConnection.scriptingCommands().scriptLoad(luaScriptBin);
+        try {
+            clusterConnection.scriptingCommands().evalSha(luaScriptBin, ReturnType.VALUE, 1, keyAndArgs);
+            fail("expected InvalidDataAccessApiUsageException");
+        } catch (InvalidDataAccessApiUsageException ex) {
+            assertThat(ex.getMessage()).contains("NOSCRIPT");
+        }
+    }
 
-		assertThat(result).isEqualTo(digest);
-	}
+    @Test // DATAREDIS-1005
+    void evelShaShouldRunScript() {
 
-	@Test // DATAREDIS-1005
-	void scriptFlushShouldRemoveScripts() {
+        byte[] keyAndArgs = JedisConverters.toBytes("FOO");
+        String luaScript = "return redis.call(\"INCR\", KEYS[1])";
+        byte[] digest = JedisConverters.toBytes(DigestUtils.sha1DigestAsHex(luaScript));
 
-		byte[] keyAndArgs = JedisConverters.toBytes("FOO");
-		String luaScript = "return redis.call(\"GET\", KEYS[1])";
-		byte[] luaScriptBin = JedisConverters.toBytes(luaScript);
+        clusterConnection.scriptingCommands().scriptLoad(JedisConverters.toBytes(luaScript));
 
-		clusterConnection.scriptingCommands().scriptLoad(luaScriptBin);
-		clusterConnection.scriptingCommands().scriptFlush();
+        Long result =
+                clusterConnection.scriptingCommands().evalSha(digest, ReturnType.VALUE, 1, keyAndArgs);
+        assertThat(result).isEqualTo(1L);
+    }
 
-		try {
-			clusterConnection.scriptingCommands().evalSha(luaScriptBin, ReturnType.VALUE, 1, keyAndArgs);
-			fail("expected InvalidDataAccessApiUsageException");
-		} catch (InvalidDataAccessApiUsageException ex) {
-			assertThat(ex.getMessage()).contains("NOSCRIPT");
-		}
-	}
+    @Test // GH-1957
+    @EnabledOnCommand("LPOS")
+    void lPos() {
 
-	@Test // DATAREDIS-1005
-	void evelShaShouldRunScript() {
+        nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
+        List<Long> result =
+                clusterConnection
+                        .listCommands()
+                        .lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), null, null);
 
-		byte[] keyAndArgs = JedisConverters.toBytes("FOO");
-		String luaScript = "return redis.call(\"INCR\", KEYS[1])";
-		byte[] digest = JedisConverters.toBytes(DigestUtils.sha1DigestAsHex(luaScript));
+        assertThat(result).containsOnly(2L);
+    }
 
-		clusterConnection.scriptingCommands().scriptLoad(JedisConverters.toBytes(luaScript));
+    @Test // GH-1957
+    @EnabledOnCommand("LPOS")
+    void lPosRank() {
 
-		Long result = clusterConnection.scriptingCommands().evalSha(digest, ReturnType.VALUE, 1, keyAndArgs);
-		assertThat(result).isEqualTo(1L);
-	}
+        nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
+        List<Long> result =
+                clusterConnection
+                        .listCommands()
+                        .lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), 2, null);
 
-	@Test // GH-1957
-	@EnabledOnCommand("LPOS")
-	void lPos() {
+        assertThat(result).containsExactly(6L);
+    }
 
-		nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
-		List<Long> result = clusterConnection.listCommands().lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), null,
-				null);
+    @Test // GH-1957
+    @EnabledOnCommand("LPOS")
+    void lPosNegativeRank() {
 
-		assertThat(result).containsOnly(2L);
-	}
+        nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
+        List<Long> result =
+                clusterConnection
+                        .listCommands()
+                        .lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), -1, null);
 
-	@Test // GH-1957
-	@EnabledOnCommand("LPOS")
-	void lPosRank() {
+        assertThat(result).containsExactly(7L);
+    }
 
-		nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
-		List<Long> result = clusterConnection.listCommands().lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), 2,
-				null);
+    @Test // GH-1957
+    @EnabledOnCommand("LPOS")
+    void lPosCount() {
 
-		assertThat(result).containsExactly(6L);
-	}
+        nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
+        List<Long> result =
+                clusterConnection
+                        .listCommands()
+                        .lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), null, 2);
 
-	@Test // GH-1957
-	@EnabledOnCommand("LPOS")
-	void lPosNegativeRank() {
+        assertThat(result).containsExactly(2L, 6L);
+    }
 
-		nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
-		List<Long> result = clusterConnection.listCommands().lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), -1,
-				null);
+    @Test // GH-1957
+    @EnabledOnCommand("LPOS")
+    void lPosRankCount() {
 
-		assertThat(result).containsExactly(7L);
-	}
+        nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
+        List<Long> result =
+                clusterConnection
+                        .listCommands()
+                        .lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), -1, 2);
 
-	@Test // GH-1957
-	@EnabledOnCommand("LPOS")
-	void lPosCount() {
+        assertThat(result).containsExactly(7L, 6L);
+    }
 
-		nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
-		List<Long> result = clusterConnection.listCommands().lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), null,
-				2);
+    @Test // GH-1957
+    @EnabledOnCommand("LPOS")
+    void lPosCountZero() {
 
-		assertThat(result).containsExactly(2L, 6L);
-	}
+        nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
+        List<Long> result =
+                clusterConnection
+                        .listCommands()
+                        .lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), null, 0);
 
-	@Test // GH-1957
-	@EnabledOnCommand("LPOS")
-	void lPosRankCount() {
+        assertThat(result).containsExactly(2L, 6L, 7L);
+    }
 
-		nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
-		List<Long> result = clusterConnection.listCommands().lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), -1, 2);
+    @Test // GH-1957
+    @EnabledOnCommand("LPOS")
+    void lPosNonExisting() {
 
-		assertThat(result).containsExactly(7L, 6L);
-	}
+        nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
+        List<Long> result =
+                clusterConnection
+                        .listCommands()
+                        .lPos(KEY_1_BYTES, "x".getBytes(StandardCharsets.UTF_8), null, null);
 
-	@Test // GH-1957
-	@EnabledOnCommand("LPOS")
-	void lPosCountZero() {
+        assertThat(result).isEmpty();
+    }
 
-		nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
-		List<Long> result = clusterConnection.listCommands().lPos(KEY_1_BYTES, "c".getBytes(StandardCharsets.UTF_8), null,
-				0);
+    @Test // GH-2986
+    void shouldUseCachedTopology() {
 
-		assertThat(result).containsExactly(2L, 6L, 7L);
-	}
+        JedisClusterConnection.JedisClusterTopologyProvider provider =
+                (JedisClusterConnection.JedisClusterTopologyProvider)
+                        clusterConnection.getTopologyProvider();
+        ReflectionTestUtils.setField(provider, "cached", null);
 
-	@Test // GH-1957
-	@EnabledOnCommand("LPOS")
-	void lPosNonExisting() {
+        ClusterTopology topology = provider.getTopology();
+        assertThat(topology).isInstanceOf(JedisClusterConnection.JedisClusterTopology.class);
 
-		nativeConnection.rpush(KEY_1, "a", "b", "c", "1", "2", "3", "c", "c");
-		List<Long> result = clusterConnection.listCommands().lPos(KEY_1_BYTES, "x".getBytes(StandardCharsets.UTF_8), null,
-				null);
-
-		assertThat(result).isEmpty();
-	}
-
-	@Test // GH-2986
-	void shouldUseCachedTopology() {
-
-		JedisClusterConnection.JedisClusterTopologyProvider provider = (JedisClusterConnection.JedisClusterTopologyProvider) clusterConnection
-				.getTopologyProvider();
-		ReflectionTestUtils.setField(provider, "cached", null);
-
-		ClusterTopology topology = provider.getTopology();
-		assertThat(topology).isInstanceOf(JedisClusterConnection.JedisClusterTopology.class);
-
-		assertThat(provider.shouldUseCachedValue(null)).isFalse();
-		assertThat(provider.shouldUseCachedValue(
-				new JedisClusterConnection.JedisClusterTopology(Set.of(), System.currentTimeMillis() - 101, 100))).isFalse();
-		assertThat(provider.shouldUseCachedValue(
-				new JedisClusterConnection.JedisClusterTopology(Set.of(), System.currentTimeMillis() + 100, 100))).isTrue();
-	}
+        assertThat(provider.shouldUseCachedValue(null)).isFalse();
+        assertThat(
+                        provider.shouldUseCachedValue(
+                                new JedisClusterConnection.JedisClusterTopology(
+                                        Set.of(), System.currentTimeMillis() - 101, 100)))
+                .isFalse();
+        assertThat(
+                        provider.shouldUseCachedValue(
+                                new JedisClusterConnection.JedisClusterTopology(
+                                        Set.of(), System.currentTimeMillis() + 100, 100)))
+                .isTrue();
+    }
 }

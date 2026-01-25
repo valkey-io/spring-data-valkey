@@ -15,9 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.repository.cdi;
 
-import org.springframework.data.annotation.Id;
 import io.valkey.springframework.data.valkey.core.ValkeyHash;
 import io.valkey.springframework.data.valkey.core.index.Indexed;
+import org.springframework.data.annotation.Id;
 import org.springframework.lang.Nullable;
 
 /**
@@ -26,42 +26,39 @@ import org.springframework.lang.Nullable;
 @ValkeyHash
 class Person {
 
-	@Id private String id;
+    @Id private String id;
 
-	@Indexed private String name;
+    @Indexed private String name;
 
-	public String getId() {
-		return id;
-	}
+    public String getId() {
+        return id;
+    }
 
-	public void setId(String id) {
-		this.id = id;
-	}
+    public void setId(String id) {
+        this.id = id;
+    }
 
-	public String getName() {
-		return name;
-	}
+    public String getName() {
+        return name;
+    }
 
-	public void setName(String name) {
-		this.name = name;
-	}
+    public void setName(String name) {
+        this.name = name;
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
-		if (this == o)
-			return true;
-		if (!(o instanceof Person person))
-			return false;
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Person person)) return false;
 
-		if (id != null ? !id.equals(person.id) : person.id != null)
-			return false;
-		return name != null ? name.equals(person.name) : person.name == null;
-	}
+        if (id != null ? !id.equals(person.id) : person.id != null) return false;
+        return name != null ? name.equals(person.name) : person.name == null;
+    }
 
-	@Override
-	public int hashCode() {
-		int result = id != null ? id.hashCode() : 0;
-		result = 31 * result + (name != null ? name.hashCode() : 0);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (name != null ? name.hashCode() : 0);
+        return result;
+    }
 }

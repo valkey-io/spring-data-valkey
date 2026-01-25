@@ -18,11 +18,10 @@ package io.valkey.springframework.data.valkey.core.index;
 import org.springframework.core.convert.converter.Converter;
 
 /**
- * {@link Converter} implementation that is used to transform values for usage in a particular secondary index.
+ * {@link Converter} implementation that is used to transform values for usage in a particular
+ * secondary index.
  *
  * @author Christoph Strobl
  * @since 1.7
  */
-public interface IndexValueTransformer extends Converter<Object, Object> {
-
-}
+public interface IndexValueTransformer extends Converter<Object, Object> {}

@@ -16,15 +16,13 @@
 
 package io.valkey.springframework.boot.actuate.metrics.cache;
 
-import java.util.concurrent.TimeUnit;
-
 import io.micrometer.core.instrument.FunctionCounter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.TimeGauge;
 import io.micrometer.core.instrument.binder.cache.CacheMeterBinder;
-
 import io.valkey.springframework.data.valkey.cache.ValkeyCache;
+import java.util.concurrent.TimeUnit;
 
 /**
  * {@link CacheMeterBinder} for {@link ValkeyCache}.
@@ -34,55 +32,57 @@ import io.valkey.springframework.data.valkey.cache.ValkeyCache;
  */
 public class ValkeyCacheMetrics extends CacheMeterBinder<ValkeyCache> {
 
-	private final ValkeyCache cache;
+    private final ValkeyCache cache;
 
-	public ValkeyCacheMetrics(ValkeyCache cache, Iterable<Tag> tags) {
-		super(cache, cache.getName(), tags);
-		this.cache = cache;
-	}
+    public ValkeyCacheMetrics(ValkeyCache cache, Iterable<Tag> tags) {
+        super(cache, cache.getName(), tags);
+        this.cache = cache;
+    }
 
-	@Override
-	protected Long size() {
-		return null;
-	}
+    @Override
+    protected Long size() {
+        return null;
+    }
 
-	@Override
-	protected long hitCount() {
-		return this.cache.getStatistics().getHits();
-	}
+    @Override
+    protected long hitCount() {
+        return this.cache.getStatistics().getHits();
+    }
 
-	@Override
-	protected Long missCount() {
-		return this.cache.getStatistics().getMisses();
-	}
+    @Override
+    protected Long missCount() {
+        return this.cache.getStatistics().getMisses();
+    }
 
-	@Override
-	protected Long evictionCount() {
-		return null;
-	}
+    @Override
+    protected Long evictionCount() {
+        return null;
+    }
 
-	@Override
-	protected long putCount() {
-		return this.cache.getStatistics().getPuts();
-	}
+    @Override
+    protected long putCount() {
+        return this.cache.getStatistics().getPuts();
+    }
 
-	@Override
-	protected void bindImplementationSpecificMetrics(MeterRegistry registry) {
-		FunctionCounter.builder("cache.removals", this.cache, (cache) -> cache.getStatistics().getDeletes())
-			.tags(getTagsWithCacheName())
-			.description("Cache removals")
-			.register(registry);
-		FunctionCounter.builder("cache.gets", this.cache, (cache) -> cache.getStatistics().getPending())
-			.tags(getTagsWithCacheName())
-			.tag("result", "pending")
-			.description("The number of pending requests")
-			.register(registry);
-		TimeGauge
-			.builder("cache.lock.duration", this.cache, TimeUnit.NANOSECONDS,
-					(cache) -> cache.getStatistics().getLockWaitDuration(TimeUnit.NANOSECONDS))
-			.tags(getTagsWithCacheName())
-			.description("The time the cache has spent waiting on a lock")
-			.register(registry);
-	}
-
+    @Override
+    protected void bindImplementationSpecificMetrics(MeterRegistry registry) {
+        FunctionCounter.builder(
+                        "cache.removals", this.cache, (cache) -> cache.getStatistics().getDeletes())
+                .tags(getTagsWithCacheName())
+                .description("Cache removals")
+                .register(registry);
+        FunctionCounter.builder("cache.gets", this.cache, (cache) -> cache.getStatistics().getPending())
+                .tags(getTagsWithCacheName())
+                .tag("result", "pending")
+                .description("The number of pending requests")
+                .register(registry);
+        TimeGauge.builder(
+                        "cache.lock.duration",
+                        this.cache,
+                        TimeUnit.NANOSECONDS,
+                        (cache) -> cache.getStatistics().getLockWaitDuration(TimeUnit.NANOSECONDS))
+                .tags(getTagsWithCacheName())
+                .description("The time the cache has spent waiting on a lock")
+                .register(registry);
+    }
 }

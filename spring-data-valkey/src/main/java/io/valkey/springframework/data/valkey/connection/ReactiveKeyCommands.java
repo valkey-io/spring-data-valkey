@@ -15,17 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
-
-import org.reactivestreams.Publisher;
-
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.CommandResponse;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
@@ -34,8 +23,16 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
 import io.valkey.springframework.data.valkey.core.KeyScanOptions;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
+import org.reactivestreams.Publisher;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Valkey Key commands executed using reactive infrastructure.
@@ -47,958 +44,987 @@ import org.springframework.util.Assert;
  */
 public interface ReactiveKeyCommands {
 
-	/**
-	 * {@code MOVE} command parameters.
-	 *
-	 * @author Mark Paluch
-	 * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
-	 */
-	class CopyCommand extends KeyCommand {
-
-		private final @Nullable ByteBuffer target;
-		private final boolean replace;
-		private final @Nullable Integer database;
-
-		public CopyCommand(ByteBuffer key, @Nullable ByteBuffer target, boolean replace, @Nullable Integer database) {
-			super(key);
-			this.target = target;
-			this.replace = replace;
-			this.database = database;
-		}
-
-		/**
-		 * Creates a new {@link CopyCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link CopyCommand} for {@link ByteBuffer key}.
-		 */
-		public static CopyCommand key(ByteBuffer key) {
-
-			Assert.notNull(key, "Key must not be null");
-
-			return new CopyCommand(key, null, false, null);
-		}
-
-		/**
-		 * Applies the {@link ByteBuffer targetKey}. Constructs a new command instance with all previously configured
-		 * properties.
-		 *
-		 * @param targetKey must not be {@literal null}.
-		 * @return a new {@link CopyCommand} with {@literal database} applied.
-		 */
-		public CopyCommand to(ByteBuffer targetKey) {
-
-			Assert.notNull(targetKey, "Key must not be null");
-
-			return new CopyCommand(getKey(), targetKey, isReplace(), database);
-		}
-
-		/**
-		 * Applies {@code replace}. Constructs a new command instance with all previously configured properties.
-		 *
-		 * @param replace
-		 * @return a new {@link CopyCommand} with {@literal replace} applied.
-		 */
-		public CopyCommand replace(boolean replace) {
-			return new CopyCommand(getKey(), this.target, replace, database);
-		}
-
-		/**
-		 * Applies the {@literal database} index. Constructs a new command instance with all previously configured
-		 * properties.
-		 *
-		 * @param database
-		 * @return a new {@link CopyCommand} with {@literal database} applied.
-		 */
-		public CopyCommand database(int database) {
-			return new CopyCommand(getKey(), this.target, isReplace(), database);
-		}
-
-		/**
-		 * @return can be {@literal null}.
-		 */
-		@Nullable
-		public ByteBuffer getTarget() {
-			return target;
-		}
-
-		public boolean isReplace() {
-			return replace;
-		}
-
-		/**
-		 * @return can be {@literal null}.
-		 */
-		@Nullable
-		public Integer getDatabase() {
-			return database;
-		}
-
-	}
-
-	/**
-	 * Copy given {@code key} to a target {@code key}.
-	 *
-	 * @param sourceKey must not be {@literal null}.
-	 * @param targetKey must not be {@literal null}.
-	 * @param replace whether to replace existing keys.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/copy">Valkey Documentation: COPY</a>
-	 * @since 2.6
-	 */
-	default Mono<Boolean> copy(ByteBuffer sourceKey, ByteBuffer targetKey, boolean replace) {
-
-		Assert.notNull(sourceKey, "Source key must not be null");
-		Assert.notNull(targetKey, "Targetk ey must not be null");
-
-		return copy(Mono.just(CopyCommand.key(sourceKey).to(targetKey).replace(replace))).next()
-				.map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Copy keys one-by-one.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} to move along with the copy result.
-	 * @see <a href="https://valkey.io/commands/copy">Valkey Documentation: COPY</a>
-	 * @since 2.6
-	 */
-	Flux<BooleanResponse<CopyCommand>> copy(Publisher<CopyCommand> commands);
-
-	/**
-	 * Determine if given {@literal key} exists.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/exists">Valkey Documentation: EXISTS</a>
-	 */
-	default Mono<Boolean> exists(ByteBuffer key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return exists(Mono.just(new KeyCommand(key))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Determine the number of given {@literal keys} that exist.
-	 *
-	 * @param keys must not be {@literal null} or {@literal empty}.
-	 * @return {@link Mono} emitting {@literal the number of existing keys}.
-	 * @see <a href="https://valkey.io/docs/commands/exists/">Valkey Documentation: EXISTS</a>
-	 * @since 3.5
-	 */
-	Mono<Long> exists(List<ByteBuffer> keys);
-
-	/**
-	 * Determine if given {@literal key} exists.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/exists">Valkey Documentation: EXISTS</a>
-	 */
-	Flux<BooleanResponse<KeyCommand>> exists(Publisher<KeyCommand> keys);
-
-	/**
-	 * Determine the type stored at {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/type">Valkey Documentation: TYPE</a>
-	 */
-	default Mono<DataType> type(ByteBuffer key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return type(Mono.just(new KeyCommand(key))).next().map(CommandResponse::getOutput);
-	}
-
-	/**
-	 * Determine the type stored at {@literal key}.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/type">Valkey Documentation: TYPE</a>
-	 */
-	Flux<CommandResponse<KeyCommand, DataType>> type(Publisher<KeyCommand> keys);
-
-	/**
-	 * Alter the last access time of given {@code key(s)}.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return {@link Mono} emitting the number of keys touched.
-	 * @see <a href="https://valkey.io/commands/touch">Valkey Documentation: TOUCH</a>
-	 * @since 2.1
-	 */
-	default Mono<Long> touch(Collection<ByteBuffer> keys) {
-		return touch(Mono.just(keys)).next().map(NumericResponse::getOutput);
-	}
-
-	/**
-	 * Alter the last access time of given {@code key(s)}.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/touch">Valkey Documentation: TOUCH</a>
-	 * @since 2.1
-	 */
-	Flux<NumericResponse<Collection<ByteBuffer>, Long>> touch(Publisher<Collection<ByteBuffer>> keys);
-
-	/**
-	 * Find all keys matching the given {@literal pattern}.<br />
-	 * It is recommended to use {@link #scan(ScanOptions)} to iterate over the keyspace as {@link #keys(ByteBuffer)} is a
-	 * non-interruptible and expensive Valkey operation.
-	 *
-	 * @param pattern must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/keys">Valkey Documentation: KEYS</a>
-	 */
-	default Mono<List<ByteBuffer>> keys(ByteBuffer pattern) {
-
-		Assert.notNull(pattern, "Pattern must not be null");
-
-		return keys(Mono.just(pattern)).next().map(MultiValueResponse::getOutput);
-	}
-
-	/**
-	 * Find all keys matching the given {@literal pattern}.<br />
-	 * It is recommended to use {@link #scan(ScanOptions)} to iterate over the keyspace as {@link #keys(Publisher)} is a
-	 * non-interruptible and expensive Valkey operation.
-	 *
-	 * @param patterns must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/keys">Valkey Documentation: KEYS</a>
-	 */
-	Flux<MultiValueResponse<ByteBuffer, ByteBuffer>> keys(Publisher<ByteBuffer> patterns);
-
-	/**
-	 * Use a {@link Flux} to iterate over keys. The resulting {@link Flux} acts as a cursor and issues {@code SCAN}
-	 * commands itself as long as the subscriber signals demand.
-	 *
-	 * @return never {@literal null}.
-	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
-	 * @since 2.1
-	 */
-	default Flux<ByteBuffer> scan() {
-		return scan(ScanOptions.NONE);
-	}
-
-	/**
-	 * Use a {@link Flux} to iterate over keys. The resulting {@link Flux} acts as a cursor and issues {@code SCAN}
-	 * commands itself as long as the subscriber signals demand.
-	 *
-	 * @param options must not be {@literal null}.
-	 * @return the {@link Flux} emitting {@link ByteBuffer keys} one by one.
-	 * @throws IllegalArgumentException when options is {@literal null}.
-	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
-	 * @since 2.6
-	 */
-	default Flux<ByteBuffer> scan(KeyScanOptions options) {
-		return scan((ScanOptions) options);
-	}
-
-	/**
-	 * Use a {@link Flux} to iterate over keys. The resulting {@link Flux} acts as a cursor and issues {@code SCAN}
-	 * commands itself as long as the subscriber signals demand.
-	 *
-	 * @param options must not be {@literal null}.
-	 * @return the {@link Flux} emitting {@link ByteBuffer keys} one by one.
-	 * @throws IllegalArgumentException when options is {@literal null}.
-	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
-	 * @since 2.1
-	 */
-	Flux<ByteBuffer> scan(ScanOptions options);
-
-	/**
-	 * Return a random key from the keyspace.
-	 *
-	 * @return
-	 * @see <a href="https://valkey.io/commands/randomkey">Valkey Documentation: RANDOMKEY</a>
-	 */
-	Mono<ByteBuffer> randomKey();
-
-	/**
-	 * {@code RENAME} command parameters.
-	 *
-	 * @author Christoph Strobl
-	 * @see <a href="https://valkey.io/commands/rename">Valkey Documentation: RENAME</a>
-	 */
-	class RenameCommand extends KeyCommand {
-
-		private @Nullable ByteBuffer newKey;
-
-		private RenameCommand(ByteBuffer key, @Nullable ByteBuffer newKey) {
-
-			super(key);
-
-			this.newKey = newKey;
-		}
-
-		/**
-		 * Creates a new {@link RenameCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link RenameCommand} for {@link ByteBuffer key}.
-		 */
-		public static RenameCommand key(ByteBuffer key) {
-
-			Assert.notNull(key, "Key must not be null");
-
-			return new RenameCommand(key, null);
-		}
-
-		/**
-		 * Applies the {@literal newKey}. Constructs a new command instance with all previously configured properties.
-		 *
-		 * @param newKey must not be {@literal null}.
-		 * @return a new {@link RenameCommand} with {@literal newKey} applied.
-		 */
-		public RenameCommand to(ByteBuffer newKey) {
-
-			Assert.notNull(newKey, "New key name must not be null");
-
-			return new RenameCommand(getKey(), newKey);
-		}
-
-		/**
-		 * @return can be {@literal null}.
-		 * @since 2.5.7
-		 */
-		@Nullable
-		public ByteBuffer getNewKey() {
-			return newKey;
-		}
-	}
-
-	/**
-	 * Rename key {@literal oldKey} to {@literal newKey}.
-	 *
-	 * @param oldKey must not be {@literal null}.
-	 * @param newKey must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/rename">Valkey Documentation: RENAME</a>
-	 */
-	default Mono<Boolean> rename(ByteBuffer oldKey, ByteBuffer newKey) {
-
-		Assert.notNull(oldKey, "Key must not be null");
-
-		return rename(Mono.just(RenameCommand.key(oldKey).to(newKey))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Rename key {@literal oldKey} to {@literal newKey}.
-	 *
-	 * @param command must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/rename">Valkey Documentation: RENAME</a>
-	 */
-	Flux<BooleanResponse<RenameCommand>> rename(Publisher<RenameCommand> command);
-
-	/**
-	 * Rename key {@literal oldKey} to {@literal newKey} only if {@literal newKey} does not exist.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param newKey must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/renamenx">Valkey Documentation: RENAMENX</a>
-	 */
-	default Mono<Boolean> renameNX(ByteBuffer key, ByteBuffer newKey) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return renameNX(Mono.just(RenameCommand.key(key).to(newKey))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Rename key {@literal oldKey} to {@literal newKey} only if {@literal newKey} does not exist.
-	 *
-	 * @param command must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/renamenx">Valkey Documentation: RENAMENX</a>
-	 */
-	Flux<BooleanResponse<RenameCommand>> renameNX(Publisher<RenameCommand> command);
-
-	/**
-	 * Delete {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
-	 */
-	default Mono<Long> del(ByteBuffer key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return del(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
-	}
-
-	/**
-	 * Delete {@literal keys} one by one.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} removed along with the deletion result.
-	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
-	 */
-	Flux<NumericResponse<KeyCommand, Long>> del(Publisher<KeyCommand> keys);
-
-	/**
-	 * Delete multiple {@literal keys} one in one batch.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
-	 */
-	default Mono<Long> mDel(List<ByteBuffer> keys) {
-
-		Assert.notEmpty(keys, "Keys must not be empty or null");
-
-		return mDel(Mono.just(keys)).next().map(NumericResponse::getOutput);
-	}
-
-	/**
-	 * Delete multiple {@literal keys} in batches.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return {@link Flux} of {@link NumericResponse} holding the {@literal keys} removed along with the deletion result.
-	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
-	 */
-	Flux<NumericResponse<List<ByteBuffer>, Long>> mDel(Publisher<List<ByteBuffer>> keys);
-
-	/**
-	 * Unlink the {@code key} from the keyspace. Unlike with {@link #del(ByteBuffer)} the actual memory reclaiming here
-	 * happens asynchronously.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
-	 * @since 2.1
-	 */
-	default Mono<Long> unlink(ByteBuffer key) {
-
-		Assert.notNull(key, "Keys must not be null");
-
-		return unlink(Mono.just(key).map(KeyCommand::new)).next().map(NumericResponse::getOutput);
-	}
-
-	/**
-	 * Unlink the {@code key} from the keyspace. Unlike with {@link #del(ByteBuffer)} the actual memory reclaiming here
-	 * happens asynchronously.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} removed along with the unlink result.
-	 * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
-	 * @since 2.1
-	 */
-	Flux<NumericResponse<KeyCommand, Long>> unlink(Publisher<KeyCommand> keys);
-
-	/**
-	 * Unlink the {@code keys} from the keyspace. Unlike with {@link #mDel(List)} the actual memory reclaiming here
-	 * happens asynchronously.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
-	 * @since 2.1
-	 */
-	default Mono<Long> mUnlink(List<ByteBuffer> keys) {
-
-		Assert.notNull(keys, "Keys must not be null");
-
-		return mUnlink(Mono.just(keys)).next().map(NumericResponse::getOutput);
-	}
-
-	/**
-	 * Unlink the {@code keys} from the keyspace. Unlike with {@link #mDel(Publisher)} the actual memory reclaiming here
-	 * happens asynchronously.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} removed along with the deletion result.
-	 * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
-	 * @since 2.1
-	 */
-	Flux<NumericResponse<List<ByteBuffer>, Long>> mUnlink(Publisher<List<ByteBuffer>> keys);
-
-	/**
-	 * {@code EXPIRE}/{@code PEXPIRE} command parameters.
-	 *
-	 * @author Mark Paluch
-	 * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
-	 * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
-	 */
-	class ExpireCommand extends KeyCommand {
-
-		private final Expiration expiration;
-		private final ExpirationOptions options;
-
-		private ExpireCommand(ByteBuffer key, Duration timeout) {
-			this(key, Expiration.from(timeout), ExpirationOptions.none());
-		}
-
-		private ExpireCommand(@Nullable ByteBuffer key, Expiration expiration, ExpirationOptions options) {
-
-			super(key);
-
-			this.expiration = expiration;
-			this.options = options;
-		}
-
-		/**
-		 * Creates a new {@link ExpireCommand} given a {@link ByteBuffer key} and {@link Expiration}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @param expiration must not be {@literal null}.
-		 * @return a new {@link ExpireCommand} for {@link ByteBuffer key} and {@link Expiration}.
-		 * @since 3.5
-		 */
-		public static ExpireCommand expire(ByteBuffer key, Expiration expiration) {
-
-			Assert.notNull(key, "Key must not be null");
-			Assert.notNull(expiration, "Expiration must not be null");
-
-			return new ExpireCommand(key, expiration, ExpirationOptions.none());
-		}
-
-		/**
-		 * Creates a new {@link ExpireCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link ExpireCommand} for {@link ByteBuffer key}.
-		 */
-		public static ExpireCommand key(ByteBuffer key) {
-
-			Assert.notNull(key, "Key must not be null");
-
-			return new ExpireCommand(key, Expiration.persistent(), ExpirationOptions.none());
-		}
-
-		/**
-		 * Applies the {@literal timeout}. Constructs a new command instance with all previously configured properties.
-		 *
-		 * @param timeout must not be {@literal null}.
-		 * @return a new {@link ExpireCommand} with {@literal timeout} applied.
-		 */
-		public ExpireCommand timeout(Duration timeout) {
-
-			Assert.notNull(timeout, "Timeout must not be null");
-
-			return new ExpireCommand(getKey(), Expiration.from(timeout), options);
-		}
-
-		/**
-		 * Applies the {@literal timeout}. Constructs a new command instance with all previously configured properties.
-		 *
-		 * @param timeout must not be {@literal null}.
-		 * @return a new {@link ExpireCommand} with {@literal timeout} applied.
-		 * @since 3.5
-		 */
-		public ExpireCommand expire(Duration timeout) {
-
-			Assert.notNull(timeout, "Timeout must not be null");
-
-			return new ExpireCommand(getKey(), Expiration.from(timeout), options);
-		}
-
-		/**
-		 * @return can be {@literal null}.
-		 */
-		@Nullable
-		public Duration getTimeout() {
-
-			if (expiration.isUnixTimestamp() || expiration.isPersistent()) {
-				return null;
-			}
-
-			return Duration.ofMillis(expiration.getExpirationTimeInMilliseconds());
-		}
-
-		/**
-		 * @param options additional options to be sent along with the command.
-		 * @return new instance of {@link ExpireCommand}.
-		 * @since 3.5
-		 */
-		public ExpireCommand withOptions(ExpirationOptions options) {
-			return new ExpireCommand(getKey(), getExpiration(), options);
-		}
-
-		public Expiration getExpiration() {
-			return expiration;
-		}
-
-		public ExpirationOptions getOptions() {
-			return options;
-		}
-
-	}
-
-	/**
-	 * Expire a {@link List} of {@literal field} after a given {@link Duration} of time, measured in milliseconds, has
-	 * passed.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return a {@link Flux} emitting the expiration results one by one, {@literal true} if the timeout was set or
-	 *         {@literal false} if the timeout was not set; for example, the key doesn't exist, or the operation was
-	 *         skipped because of the provided arguments.
-	 * @since 3.5
-	 * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
-	 * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
-	 * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
-	 * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
-	 * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
-	 */
-	Flux<BooleanResponse<ExpireCommand>> applyExpiration(Publisher<ExpireCommand> commands);
-
-	/**
-	 * Set time to live for given {@code key} in seconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param timeout must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
-	 */
-	default Mono<Boolean> expire(ByteBuffer key, Duration timeout) {
-
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Timeout must not be null");
-
-		return expire(Mono.just(new ExpireCommand(key, timeout))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Expire {@literal keys} one by one.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} removed along with the expiration
-	 *         result.
-	 * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
-	 */
-	default Flux<BooleanResponse<ExpireCommand>> expire(Publisher<ExpireCommand> commands) {
-		return applyExpiration(commands);
-	}
-
-	/**
-	 * Set time to live for given {@code key} in milliseconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param timeout must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
-	 */
-	default Mono<Boolean> pExpire(ByteBuffer key, Duration timeout) {
-
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Timeout must not be null");
-
-		return pExpire(Mono.just(new ExpireCommand(key, timeout))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Expire {@literal keys} one by one.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} removed along with the expiration
-	 *         result.
-	 * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
-	 */
-	default Flux<BooleanResponse<ExpireCommand>> pExpire(Publisher<ExpireCommand> commands) {
-		return applyExpiration(commands);
-	}
-
-	/**
-	 * {@code EXPIREAT}/{@code PEXPIREAT} command parameters.
-	 *
-	 * @author Mark Paluch
-	 * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIREAT</a>
-	 * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIREAT</a>
-	 */
-	class ExpireAtCommand extends KeyCommand {
-
-		private @Nullable Instant expireAt;
-		private final ExpirationOptions options;
-
-		private ExpireAtCommand(ByteBuffer key, Instant expireAt) {
-			this(key, expireAt, ExpirationOptions.none());
-		}
-
-		private ExpireAtCommand(@Nullable ByteBuffer key, Instant expireAt, ExpirationOptions options) {
-
-			super(key);
-
-			this.expireAt = expireAt;
-			this.options = options;
-		}
-
-		/**
-		 * Creates a new {@link ExpireAtCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link ExpireCommand} for {@link ByteBuffer key}.
-		 */
-		public static ExpireAtCommand key(ByteBuffer key) {
-
-			Assert.notNull(key, "Key must not be null");
-
-			return new ExpireAtCommand(key, null);
-		}
-
-		/**
-		 * Applies the {@literal expireAt}. Constructs a new command instance with all previously configured properties.
-		 *
-		 * @param expireAt must not be {@literal null}.
-		 * @return a new {@link ExpireAtCommand} with {@literal expireAt} applied.
-		 */
-		public ExpireAtCommand timeout(Instant expireAt) {
-
-			Assert.notNull(expireAt, "Expire at must not be null");
-
-			return new ExpireAtCommand(getKey(), expireAt);
-		}
-
-		/**
-		 * @param options additional options to be sent along with the command.
-		 * @return new instance of {@link ExpireAtCommand}.
-		 * @since 3.5
-		 */
-		public ExpireAtCommand withOptions(ExpirationOptions options) {
-			return new ExpireAtCommand(getKey(), getExpireAt(), options);
-		}
-
-		/**
-		 * @return can be {@literal null}.
-		 */
-		@Nullable
-		public Instant getExpireAt() {
-			return expireAt;
-		}
-
-		public ExpirationOptions getOptions() {
-			return options;
-		}
-
-	}
-
-	/**
-	 * Set the expiration for given {@code key} as a {@literal UNIX} timestamp.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param expireAt must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
-	 */
-	default Mono<Boolean> expireAt(ByteBuffer key, Instant expireAt) {
-
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(expireAt, "Expire at must not be null");
-
-		return expireAt(Mono.just(new ExpireAtCommand(key, expireAt))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Set one-by-one the expiration for given {@code key} as a {@literal UNIX} timestamp.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} removed along with the expiration
-	 *         result.
-	 * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
-	 */
-	Flux<BooleanResponse<ExpireAtCommand>> expireAt(Publisher<ExpireAtCommand> commands);
-
-	/**
-	 * Set the expiration for given {@code key} as a {@literal UNIX} timestamp.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param expireAt must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
-	 */
-	default Mono<Boolean> pExpireAt(ByteBuffer key, Instant expireAt) {
-
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(expireAt, "Expire at must not be null");
-
-		return pExpireAt(Mono.just(new ExpireAtCommand(key, expireAt))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Set one-by-one the expiration for given {@code key} as a {@literal UNIX} timestamp in milliseconds.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} removed along with the expiration
-	 *         result.
-	 * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
-	 */
-	Flux<BooleanResponse<ExpireAtCommand>> pExpireAt(Publisher<ExpireAtCommand> commands);
-
-	/**
-	 * Remove the expiration from given {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
-	 */
-	default Mono<Boolean> persist(ByteBuffer key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return persist(Mono.just(new KeyCommand(key))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Remove one-by-one the expiration from given {@code key}.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} persisted along with the persist result.
-	 * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
-	 */
-	Flux<BooleanResponse<KeyCommand>> persist(Publisher<KeyCommand> commands);
-
-	/**
-	 * Get the time to live for {@code key} in seconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
-	 */
-	default Mono<Long> ttl(ByteBuffer key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return ttl(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
-	}
-
-	/**
-	 * Get one-by-one the time to live for keys.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} along with the time to live result.
-	 * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
-	 */
-	Flux<NumericResponse<KeyCommand, Long>> ttl(Publisher<KeyCommand> commands);
-
-	/**
-	 * Get the time to live for {@code key} in milliseconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
-	 */
-	default Mono<Long> pTtl(ByteBuffer key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return pTtl(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
-	}
-
-	/**
-	 * Get one-by-one the time to live for keys.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} along with the time to live result.
-	 * @see <a href="https://valkey.io/commands/pttl">Valkey Documentation: PTTL</a>
-	 */
-	Flux<NumericResponse<KeyCommand, Long>> pTtl(Publisher<KeyCommand> commands);
-
-	/**
-	 * {@code MOVE} command parameters.
-	 *
-	 * @author Mark Paluch
-	 * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
-	 */
-	class MoveCommand extends KeyCommand {
-
-		private @Nullable Integer database;
-
-		private MoveCommand(ByteBuffer key, @Nullable Integer database) {
-
-			super(key);
-
-			this.database = database;
-		}
-
-		/**
-		 * Creates a new {@link MoveCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link MoveCommand} for {@link ByteBuffer key}.
-		 */
-		public static MoveCommand key(ByteBuffer key) {
-
-			Assert.notNull(key, "Key must not be null");
-
-			return new MoveCommand(key, null);
-		}
-
-		/**
-		 * Applies the {@literal database} index. Constructs a new command instance with all previously configured
-		 * properties.
-		 *
-		 * @param database
-		 * @return a new {@link MoveCommand} with {@literal database} applied.
-		 */
-		public MoveCommand timeout(int database) {
-			return new MoveCommand(getKey(), database);
-		}
-
-		/**
-		 * @return can be {@literal null}.
-		 */
-		@Nullable
-		public Integer getDatabase() {
-			return database;
-		}
-	}
-
-	/**
-	 * Move given {@code key} to database with {@code index}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
-	 */
-	default Mono<Boolean> move(ByteBuffer key, int database) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return move(Mono.just(new MoveCommand(key, database))).next().map(BooleanResponse::getOutput);
-	}
-
-	/**
-	 * Move keys one-by-one between databases.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} to move along with the move result.
-	 * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
-	 */
-	Flux<BooleanResponse<MoveCommand>> move(Publisher<MoveCommand> commands);
-
-	/**
-	 * Get the type of internal representation used for storing the value at the given {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return the {@link Mono} emitting {@link io.valkey.springframework.data.valkey.connection.ValueEncoding}.
-	 * @throws IllegalArgumentException if {@code key} is {@literal null}.
-	 * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT ENCODING</a>
-	 * @since 2.1
-	 */
-	Mono<ValueEncoding> encodingOf(ByteBuffer key);
-
-	/**
-	 * Get the {@link Duration} since the object stored at the given {@code key} is idle.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return the {@link Mono} emitting the idletime of the key of {@link Mono#empty()} if the key does not exist.
-	 * @throws IllegalArgumentException if {@code key} is {@literal null}.
-	 * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT IDLETIME</a>
-	 * @since 2.1
-	 */
-	Mono<Duration> idletime(ByteBuffer key);
-
-	/**
-	 * Get the number of references of the value associated with the specified {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return {@link Mono#empty()} if key does not exist.
-	 * @throws IllegalArgumentException if {@code key} is {@literal null}.
-	 * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT REFCOUNT</a>
-	 * @since 2.1
-	 */
-	Mono<Long> refcount(ByteBuffer key);
+    /**
+     * {@code MOVE} command parameters.
+     *
+     * @author Mark Paluch
+     * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
+     */
+    class CopyCommand extends KeyCommand {
+
+        private final @Nullable ByteBuffer target;
+        private final boolean replace;
+        private final @Nullable Integer database;
+
+        public CopyCommand(
+                ByteBuffer key, @Nullable ByteBuffer target, boolean replace, @Nullable Integer database) {
+            super(key);
+            this.target = target;
+            this.replace = replace;
+            this.database = database;
+        }
+
+        /**
+         * Creates a new {@link CopyCommand} given a {@link ByteBuffer key}.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link CopyCommand} for {@link ByteBuffer key}.
+         */
+        public static CopyCommand key(ByteBuffer key) {
+
+            Assert.notNull(key, "Key must not be null");
+
+            return new CopyCommand(key, null, false, null);
+        }
+
+        /**
+         * Applies the {@link ByteBuffer targetKey}. Constructs a new command instance with all
+         * previously configured properties.
+         *
+         * @param targetKey must not be {@literal null}.
+         * @return a new {@link CopyCommand} with {@literal database} applied.
+         */
+        public CopyCommand to(ByteBuffer targetKey) {
+
+            Assert.notNull(targetKey, "Key must not be null");
+
+            return new CopyCommand(getKey(), targetKey, isReplace(), database);
+        }
+
+        /**
+         * Applies {@code replace}. Constructs a new command instance with all previously configured
+         * properties.
+         *
+         * @param replace
+         * @return a new {@link CopyCommand} with {@literal replace} applied.
+         */
+        public CopyCommand replace(boolean replace) {
+            return new CopyCommand(getKey(), this.target, replace, database);
+        }
+
+        /**
+         * Applies the {@literal database} index. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param database
+         * @return a new {@link CopyCommand} with {@literal database} applied.
+         */
+        public CopyCommand database(int database) {
+            return new CopyCommand(getKey(), this.target, isReplace(), database);
+        }
+
+        /**
+         * @return can be {@literal null}.
+         */
+        @Nullable
+        public ByteBuffer getTarget() {
+            return target;
+        }
+
+        public boolean isReplace() {
+            return replace;
+        }
+
+        /**
+         * @return can be {@literal null}.
+         */
+        @Nullable
+        public Integer getDatabase() {
+            return database;
+        }
+    }
+
+    /**
+     * Copy given {@code key} to a target {@code key}.
+     *
+     * @param sourceKey must not be {@literal null}.
+     * @param targetKey must not be {@literal null}.
+     * @param replace whether to replace existing keys.
+     * @return
+     * @see <a href="https://valkey.io/commands/copy">Valkey Documentation: COPY</a>
+     * @since 2.6
+     */
+    default Mono<Boolean> copy(ByteBuffer sourceKey, ByteBuffer targetKey, boolean replace) {
+
+        Assert.notNull(sourceKey, "Source key must not be null");
+        Assert.notNull(targetKey, "Targetk ey must not be null");
+
+        return copy(Mono.just(CopyCommand.key(sourceKey).to(targetKey).replace(replace)))
+                .next()
+                .map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Copy keys one-by-one.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} to move along with
+     *     the copy result.
+     * @see <a href="https://valkey.io/commands/copy">Valkey Documentation: COPY</a>
+     * @since 2.6
+     */
+    Flux<BooleanResponse<CopyCommand>> copy(Publisher<CopyCommand> commands);
+
+    /**
+     * Determine if given {@literal key} exists.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/exists">Valkey Documentation: EXISTS</a>
+     */
+    default Mono<Boolean> exists(ByteBuffer key) {
+
+        Assert.notNull(key, "Key must not be null");
+
+        return exists(Mono.just(new KeyCommand(key))).next().map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Determine the number of given {@literal keys} that exist.
+     *
+     * @param keys must not be {@literal null} or {@literal empty}.
+     * @return {@link Mono} emitting {@literal the number of existing keys}.
+     * @see <a href="https://valkey.io/docs/commands/exists/">Valkey Documentation: EXISTS</a>
+     * @since 3.5
+     */
+    Mono<Long> exists(List<ByteBuffer> keys);
+
+    /**
+     * Determine if given {@literal key} exists.
+     *
+     * @param keys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/exists">Valkey Documentation: EXISTS</a>
+     */
+    Flux<BooleanResponse<KeyCommand>> exists(Publisher<KeyCommand> keys);
+
+    /**
+     * Determine the type stored at {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/type">Valkey Documentation: TYPE</a>
+     */
+    default Mono<DataType> type(ByteBuffer key) {
+
+        Assert.notNull(key, "Key must not be null");
+
+        return type(Mono.just(new KeyCommand(key))).next().map(CommandResponse::getOutput);
+    }
+
+    /**
+     * Determine the type stored at {@literal key}.
+     *
+     * @param keys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/type">Valkey Documentation: TYPE</a>
+     */
+    Flux<CommandResponse<KeyCommand, DataType>> type(Publisher<KeyCommand> keys);
+
+    /**
+     * Alter the last access time of given {@code key(s)}.
+     *
+     * @param keys must not be {@literal null}.
+     * @return {@link Mono} emitting the number of keys touched.
+     * @see <a href="https://valkey.io/commands/touch">Valkey Documentation: TOUCH</a>
+     * @since 2.1
+     */
+    default Mono<Long> touch(Collection<ByteBuffer> keys) {
+        return touch(Mono.just(keys)).next().map(NumericResponse::getOutput);
+    }
+
+    /**
+     * Alter the last access time of given {@code key(s)}.
+     *
+     * @param keys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/touch">Valkey Documentation: TOUCH</a>
+     * @since 2.1
+     */
+    Flux<NumericResponse<Collection<ByteBuffer>, Long>> touch(Publisher<Collection<ByteBuffer>> keys);
+
+    /**
+     * Find all keys matching the given {@literal pattern}.<br>
+     * It is recommended to use {@link #scan(ScanOptions)} to iterate over the keyspace as {@link
+     * #keys(ByteBuffer)} is a non-interruptible and expensive Valkey operation.
+     *
+     * @param pattern must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/keys">Valkey Documentation: KEYS</a>
+     */
+    default Mono<List<ByteBuffer>> keys(ByteBuffer pattern) {
+
+        Assert.notNull(pattern, "Pattern must not be null");
+
+        return keys(Mono.just(pattern)).next().map(MultiValueResponse::getOutput);
+    }
+
+    /**
+     * Find all keys matching the given {@literal pattern}.<br>
+     * It is recommended to use {@link #scan(ScanOptions)} to iterate over the keyspace as {@link
+     * #keys(Publisher)} is a non-interruptible and expensive Valkey operation.
+     *
+     * @param patterns must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/keys">Valkey Documentation: KEYS</a>
+     */
+    Flux<MultiValueResponse<ByteBuffer, ByteBuffer>> keys(Publisher<ByteBuffer> patterns);
+
+    /**
+     * Use a {@link Flux} to iterate over keys. The resulting {@link Flux} acts as a cursor and issues
+     * {@code SCAN} commands itself as long as the subscriber signals demand.
+     *
+     * @return never {@literal null}.
+     * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
+     * @since 2.1
+     */
+    default Flux<ByteBuffer> scan() {
+        return scan(ScanOptions.NONE);
+    }
+
+    /**
+     * Use a {@link Flux} to iterate over keys. The resulting {@link Flux} acts as a cursor and issues
+     * {@code SCAN} commands itself as long as the subscriber signals demand.
+     *
+     * @param options must not be {@literal null}.
+     * @return the {@link Flux} emitting {@link ByteBuffer keys} one by one.
+     * @throws IllegalArgumentException when options is {@literal null}.
+     * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
+     * @since 2.6
+     */
+    default Flux<ByteBuffer> scan(KeyScanOptions options) {
+        return scan((ScanOptions) options);
+    }
+
+    /**
+     * Use a {@link Flux} to iterate over keys. The resulting {@link Flux} acts as a cursor and issues
+     * {@code SCAN} commands itself as long as the subscriber signals demand.
+     *
+     * @param options must not be {@literal null}.
+     * @return the {@link Flux} emitting {@link ByteBuffer keys} one by one.
+     * @throws IllegalArgumentException when options is {@literal null}.
+     * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
+     * @since 2.1
+     */
+    Flux<ByteBuffer> scan(ScanOptions options);
+
+    /**
+     * Return a random key from the keyspace.
+     *
+     * @return
+     * @see <a href="https://valkey.io/commands/randomkey">Valkey Documentation: RANDOMKEY</a>
+     */
+    Mono<ByteBuffer> randomKey();
+
+    /**
+     * {@code RENAME} command parameters.
+     *
+     * @author Christoph Strobl
+     * @see <a href="https://valkey.io/commands/rename">Valkey Documentation: RENAME</a>
+     */
+    class RenameCommand extends KeyCommand {
+
+        private @Nullable ByteBuffer newKey;
+
+        private RenameCommand(ByteBuffer key, @Nullable ByteBuffer newKey) {
+
+            super(key);
+
+            this.newKey = newKey;
+        }
+
+        /**
+         * Creates a new {@link RenameCommand} given a {@link ByteBuffer key}.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link RenameCommand} for {@link ByteBuffer key}.
+         */
+        public static RenameCommand key(ByteBuffer key) {
+
+            Assert.notNull(key, "Key must not be null");
+
+            return new RenameCommand(key, null);
+        }
+
+        /**
+         * Applies the {@literal newKey}. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param newKey must not be {@literal null}.
+         * @return a new {@link RenameCommand} with {@literal newKey} applied.
+         */
+        public RenameCommand to(ByteBuffer newKey) {
+
+            Assert.notNull(newKey, "New key name must not be null");
+
+            return new RenameCommand(getKey(), newKey);
+        }
+
+        /**
+         * @return can be {@literal null}.
+         * @since 2.5.7
+         */
+        @Nullable
+        public ByteBuffer getNewKey() {
+            return newKey;
+        }
+    }
+
+    /**
+     * Rename key {@literal oldKey} to {@literal newKey}.
+     *
+     * @param oldKey must not be {@literal null}.
+     * @param newKey must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/rename">Valkey Documentation: RENAME</a>
+     */
+    default Mono<Boolean> rename(ByteBuffer oldKey, ByteBuffer newKey) {
+
+        Assert.notNull(oldKey, "Key must not be null");
+
+        return rename(Mono.just(RenameCommand.key(oldKey).to(newKey)))
+                .next()
+                .map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Rename key {@literal oldKey} to {@literal newKey}.
+     *
+     * @param command must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/rename">Valkey Documentation: RENAME</a>
+     */
+    Flux<BooleanResponse<RenameCommand>> rename(Publisher<RenameCommand> command);
+
+    /**
+     * Rename key {@literal oldKey} to {@literal newKey} only if {@literal newKey} does not exist.
+     *
+     * @param key must not be {@literal null}.
+     * @param newKey must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/renamenx">Valkey Documentation: RENAMENX</a>
+     */
+    default Mono<Boolean> renameNX(ByteBuffer key, ByteBuffer newKey) {
+
+        Assert.notNull(key, "Key must not be null");
+
+        return renameNX(Mono.just(RenameCommand.key(key).to(newKey)))
+                .next()
+                .map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Rename key {@literal oldKey} to {@literal newKey} only if {@literal newKey} does not exist.
+     *
+     * @param command must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/renamenx">Valkey Documentation: RENAMENX</a>
+     */
+    Flux<BooleanResponse<RenameCommand>> renameNX(Publisher<RenameCommand> command);
+
+    /**
+     * Delete {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
+     */
+    default Mono<Long> del(ByteBuffer key) {
+
+        Assert.notNull(key, "Key must not be null");
+
+        return del(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
+    }
+
+    /**
+     * Delete {@literal keys} one by one.
+     *
+     * @param keys must not be {@literal null}.
+     * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} removed along with
+     *     the deletion result.
+     * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
+     */
+    Flux<NumericResponse<KeyCommand, Long>> del(Publisher<KeyCommand> keys);
+
+    /**
+     * Delete multiple {@literal keys} one in one batch.
+     *
+     * @param keys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
+     */
+    default Mono<Long> mDel(List<ByteBuffer> keys) {
+
+        Assert.notEmpty(keys, "Keys must not be empty or null");
+
+        return mDel(Mono.just(keys)).next().map(NumericResponse::getOutput);
+    }
+
+    /**
+     * Delete multiple {@literal keys} in batches.
+     *
+     * @param keys must not be {@literal null}.
+     * @return {@link Flux} of {@link NumericResponse} holding the {@literal keys} removed along with
+     *     the deletion result.
+     * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
+     */
+    Flux<NumericResponse<List<ByteBuffer>, Long>> mDel(Publisher<List<ByteBuffer>> keys);
+
+    /**
+     * Unlink the {@code key} from the keyspace. Unlike with {@link #del(ByteBuffer)} the actual
+     * memory reclaiming here happens asynchronously.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
+     * @since 2.1
+     */
+    default Mono<Long> unlink(ByteBuffer key) {
+
+        Assert.notNull(key, "Keys must not be null");
+
+        return unlink(Mono.just(key).map(KeyCommand::new)).next().map(NumericResponse::getOutput);
+    }
+
+    /**
+     * Unlink the {@code key} from the keyspace. Unlike with {@link #del(ByteBuffer)} the actual
+     * memory reclaiming here happens asynchronously.
+     *
+     * @param keys must not be {@literal null}.
+     * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} removed along with
+     *     the unlink result.
+     * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
+     * @since 2.1
+     */
+    Flux<NumericResponse<KeyCommand, Long>> unlink(Publisher<KeyCommand> keys);
+
+    /**
+     * Unlink the {@code keys} from the keyspace. Unlike with {@link #mDel(List)} the actual memory
+     * reclaiming here happens asynchronously.
+     *
+     * @param keys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
+     * @since 2.1
+     */
+    default Mono<Long> mUnlink(List<ByteBuffer> keys) {
+
+        Assert.notNull(keys, "Keys must not be null");
+
+        return mUnlink(Mono.just(keys)).next().map(NumericResponse::getOutput);
+    }
+
+    /**
+     * Unlink the {@code keys} from the keyspace. Unlike with {@link #mDel(Publisher)} the actual
+     * memory reclaiming here happens asynchronously.
+     *
+     * @param keys must not be {@literal null}.
+     * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} removed along with
+     *     the deletion result.
+     * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
+     * @since 2.1
+     */
+    Flux<NumericResponse<List<ByteBuffer>, Long>> mUnlink(Publisher<List<ByteBuffer>> keys);
+
+    /**
+     * {@code EXPIRE}/{@code PEXPIRE} command parameters.
+     *
+     * @author Mark Paluch
+     * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
+     * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
+     */
+    class ExpireCommand extends KeyCommand {
+
+        private final Expiration expiration;
+        private final ExpirationOptions options;
+
+        private ExpireCommand(ByteBuffer key, Duration timeout) {
+            this(key, Expiration.from(timeout), ExpirationOptions.none());
+        }
+
+        private ExpireCommand(
+                @Nullable ByteBuffer key, Expiration expiration, ExpirationOptions options) {
+
+            super(key);
+
+            this.expiration = expiration;
+            this.options = options;
+        }
+
+        /**
+         * Creates a new {@link ExpireCommand} given a {@link ByteBuffer key} and {@link Expiration}.
+         *
+         * @param key must not be {@literal null}.
+         * @param expiration must not be {@literal null}.
+         * @return a new {@link ExpireCommand} for {@link ByteBuffer key} and {@link Expiration}.
+         * @since 3.5
+         */
+        public static ExpireCommand expire(ByteBuffer key, Expiration expiration) {
+
+            Assert.notNull(key, "Key must not be null");
+            Assert.notNull(expiration, "Expiration must not be null");
+
+            return new ExpireCommand(key, expiration, ExpirationOptions.none());
+        }
+
+        /**
+         * Creates a new {@link ExpireCommand} given a {@link ByteBuffer key}.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link ExpireCommand} for {@link ByteBuffer key}.
+         */
+        public static ExpireCommand key(ByteBuffer key) {
+
+            Assert.notNull(key, "Key must not be null");
+
+            return new ExpireCommand(key, Expiration.persistent(), ExpirationOptions.none());
+        }
+
+        /**
+         * Applies the {@literal timeout}. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param timeout must not be {@literal null}.
+         * @return a new {@link ExpireCommand} with {@literal timeout} applied.
+         */
+        public ExpireCommand timeout(Duration timeout) {
+
+            Assert.notNull(timeout, "Timeout must not be null");
+
+            return new ExpireCommand(getKey(), Expiration.from(timeout), options);
+        }
+
+        /**
+         * Applies the {@literal timeout}. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param timeout must not be {@literal null}.
+         * @return a new {@link ExpireCommand} with {@literal timeout} applied.
+         * @since 3.5
+         */
+        public ExpireCommand expire(Duration timeout) {
+
+            Assert.notNull(timeout, "Timeout must not be null");
+
+            return new ExpireCommand(getKey(), Expiration.from(timeout), options);
+        }
+
+        /**
+         * @return can be {@literal null}.
+         */
+        @Nullable
+        public Duration getTimeout() {
+
+            if (expiration.isUnixTimestamp() || expiration.isPersistent()) {
+                return null;
+            }
+
+            return Duration.ofMillis(expiration.getExpirationTimeInMilliseconds());
+        }
+
+        /**
+         * @param options additional options to be sent along with the command.
+         * @return new instance of {@link ExpireCommand}.
+         * @since 3.5
+         */
+        public ExpireCommand withOptions(ExpirationOptions options) {
+            return new ExpireCommand(getKey(), getExpiration(), options);
+        }
+
+        public Expiration getExpiration() {
+            return expiration;
+        }
+
+        public ExpirationOptions getOptions() {
+            return options;
+        }
+    }
+
+    /**
+     * Expire a {@link List} of {@literal field} after a given {@link Duration} of time, measured in
+     * milliseconds, has passed.
+     *
+     * @param commands must not be {@literal null}.
+     * @return a {@link Flux} emitting the expiration results one by one, {@literal true} if the
+     *     timeout was set or {@literal false} if the timeout was not set; for example, the key
+     *     doesn't exist, or the operation was skipped because of the provided arguments.
+     * @since 3.5
+     * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
+     * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
+     * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
+     * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
+     * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
+     */
+    Flux<BooleanResponse<ExpireCommand>> applyExpiration(Publisher<ExpireCommand> commands);
+
+    /**
+     * Set time to live for given {@code key} in seconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param timeout must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
+     */
+    default Mono<Boolean> expire(ByteBuffer key, Duration timeout) {
+
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
+
+        return expire(Mono.just(new ExpireCommand(key, timeout)))
+                .next()
+                .map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Expire {@literal keys} one by one.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} removed along with
+     *     the expiration result.
+     * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
+     */
+    default Flux<BooleanResponse<ExpireCommand>> expire(Publisher<ExpireCommand> commands) {
+        return applyExpiration(commands);
+    }
+
+    /**
+     * Set time to live for given {@code key} in milliseconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param timeout must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
+     */
+    default Mono<Boolean> pExpire(ByteBuffer key, Duration timeout) {
+
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeout, "Timeout must not be null");
+
+        return pExpire(Mono.just(new ExpireCommand(key, timeout)))
+                .next()
+                .map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Expire {@literal keys} one by one.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} removed along with
+     *     the expiration result.
+     * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
+     */
+    default Flux<BooleanResponse<ExpireCommand>> pExpire(Publisher<ExpireCommand> commands) {
+        return applyExpiration(commands);
+    }
+
+    /**
+     * {@code EXPIREAT}/{@code PEXPIREAT} command parameters.
+     *
+     * @author Mark Paluch
+     * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIREAT</a>
+     * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIREAT</a>
+     */
+    class ExpireAtCommand extends KeyCommand {
+
+        private @Nullable Instant expireAt;
+        private final ExpirationOptions options;
+
+        private ExpireAtCommand(ByteBuffer key, Instant expireAt) {
+            this(key, expireAt, ExpirationOptions.none());
+        }
+
+        private ExpireAtCommand(@Nullable ByteBuffer key, Instant expireAt, ExpirationOptions options) {
+
+            super(key);
+
+            this.expireAt = expireAt;
+            this.options = options;
+        }
+
+        /**
+         * Creates a new {@link ExpireAtCommand} given a {@link ByteBuffer key}.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link ExpireCommand} for {@link ByteBuffer key}.
+         */
+        public static ExpireAtCommand key(ByteBuffer key) {
+
+            Assert.notNull(key, "Key must not be null");
+
+            return new ExpireAtCommand(key, null);
+        }
+
+        /**
+         * Applies the {@literal expireAt}. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param expireAt must not be {@literal null}.
+         * @return a new {@link ExpireAtCommand} with {@literal expireAt} applied.
+         */
+        public ExpireAtCommand timeout(Instant expireAt) {
+
+            Assert.notNull(expireAt, "Expire at must not be null");
+
+            return new ExpireAtCommand(getKey(), expireAt);
+        }
+
+        /**
+         * @param options additional options to be sent along with the command.
+         * @return new instance of {@link ExpireAtCommand}.
+         * @since 3.5
+         */
+        public ExpireAtCommand withOptions(ExpirationOptions options) {
+            return new ExpireAtCommand(getKey(), getExpireAt(), options);
+        }
+
+        /**
+         * @return can be {@literal null}.
+         */
+        @Nullable
+        public Instant getExpireAt() {
+            return expireAt;
+        }
+
+        public ExpirationOptions getOptions() {
+            return options;
+        }
+    }
+
+    /**
+     * Set the expiration for given {@code key} as a {@literal UNIX} timestamp.
+     *
+     * @param key must not be {@literal null}.
+     * @param expireAt must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
+     */
+    default Mono<Boolean> expireAt(ByteBuffer key, Instant expireAt) {
+
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(expireAt, "Expire at must not be null");
+
+        return expireAt(Mono.just(new ExpireAtCommand(key, expireAt)))
+                .next()
+                .map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Set one-by-one the expiration for given {@code key} as a {@literal UNIX} timestamp.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} removed along with
+     *     the expiration result.
+     * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
+     */
+    Flux<BooleanResponse<ExpireAtCommand>> expireAt(Publisher<ExpireAtCommand> commands);
+
+    /**
+     * Set the expiration for given {@code key} as a {@literal UNIX} timestamp.
+     *
+     * @param key must not be {@literal null}.
+     * @param expireAt must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
+     */
+    default Mono<Boolean> pExpireAt(ByteBuffer key, Instant expireAt) {
+
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(expireAt, "Expire at must not be null");
+
+        return pExpireAt(Mono.just(new ExpireAtCommand(key, expireAt)))
+                .next()
+                .map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Set one-by-one the expiration for given {@code key} as a {@literal UNIX} timestamp in
+     * milliseconds.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} removed along with
+     *     the expiration result.
+     * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
+     */
+    Flux<BooleanResponse<ExpireAtCommand>> pExpireAt(Publisher<ExpireAtCommand> commands);
+
+    /**
+     * Remove the expiration from given {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
+     */
+    default Mono<Boolean> persist(ByteBuffer key) {
+
+        Assert.notNull(key, "Key must not be null");
+
+        return persist(Mono.just(new KeyCommand(key))).next().map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Remove one-by-one the expiration from given {@code key}.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} persisted along with
+     *     the persist result.
+     * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
+     */
+    Flux<BooleanResponse<KeyCommand>> persist(Publisher<KeyCommand> commands);
+
+    /**
+     * Get the time to live for {@code key} in seconds.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
+     */
+    default Mono<Long> ttl(ByteBuffer key) {
+
+        Assert.notNull(key, "Key must not be null");
+
+        return ttl(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
+    }
+
+    /**
+     * Get one-by-one the time to live for keys.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} along with the time
+     *     to live result.
+     * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
+     */
+    Flux<NumericResponse<KeyCommand, Long>> ttl(Publisher<KeyCommand> commands);
+
+    /**
+     * Get the time to live for {@code key} in milliseconds.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
+     */
+    default Mono<Long> pTtl(ByteBuffer key) {
+
+        Assert.notNull(key, "Key must not be null");
+
+        return pTtl(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
+    }
+
+    /**
+     * Get one-by-one the time to live for keys.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link NumericResponse} holding the {@literal key} along with the time
+     *     to live result.
+     * @see <a href="https://valkey.io/commands/pttl">Valkey Documentation: PTTL</a>
+     */
+    Flux<NumericResponse<KeyCommand, Long>> pTtl(Publisher<KeyCommand> commands);
+
+    /**
+     * {@code MOVE} command parameters.
+     *
+     * @author Mark Paluch
+     * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
+     */
+    class MoveCommand extends KeyCommand {
+
+        private @Nullable Integer database;
+
+        private MoveCommand(ByteBuffer key, @Nullable Integer database) {
+
+            super(key);
+
+            this.database = database;
+        }
+
+        /**
+         * Creates a new {@link MoveCommand} given a {@link ByteBuffer key}.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link MoveCommand} for {@link ByteBuffer key}.
+         */
+        public static MoveCommand key(ByteBuffer key) {
+
+            Assert.notNull(key, "Key must not be null");
+
+            return new MoveCommand(key, null);
+        }
+
+        /**
+         * Applies the {@literal database} index. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param database
+         * @return a new {@link MoveCommand} with {@literal database} applied.
+         */
+        public MoveCommand timeout(int database) {
+            return new MoveCommand(getKey(), database);
+        }
+
+        /**
+         * @return can be {@literal null}.
+         */
+        @Nullable
+        public Integer getDatabase() {
+            return database;
+        }
+    }
+
+    /**
+     * Move given {@code key} to database with {@code index}.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
+     */
+    default Mono<Boolean> move(ByteBuffer key, int database) {
+
+        Assert.notNull(key, "Key must not be null");
+
+        return move(Mono.just(new MoveCommand(key, database))).next().map(BooleanResponse::getOutput);
+    }
+
+    /**
+     * Move keys one-by-one between databases.
+     *
+     * @param commands must not be {@literal null}.
+     * @return {@link Flux} of {@link BooleanResponse} holding the {@literal key} to move along with
+     *     the move result.
+     * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
+     */
+    Flux<BooleanResponse<MoveCommand>> move(Publisher<MoveCommand> commands);
+
+    /**
+     * Get the type of internal representation used for storing the value at the given {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return the {@link Mono} emitting {@link
+     *     io.valkey.springframework.data.valkey.connection.ValueEncoding}.
+     * @throws IllegalArgumentException if {@code key} is {@literal null}.
+     * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT ENCODING</a>
+     * @since 2.1
+     */
+    Mono<ValueEncoding> encodingOf(ByteBuffer key);
+
+    /**
+     * Get the {@link Duration} since the object stored at the given {@code key} is idle.
+     *
+     * @param key must not be {@literal null}.
+     * @return the {@link Mono} emitting the idletime of the key of {@link Mono#empty()} if the key
+     *     does not exist.
+     * @throws IllegalArgumentException if {@code key} is {@literal null}.
+     * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT IDLETIME</a>
+     * @since 2.1
+     */
+    Mono<Duration> idletime(ByteBuffer key);
+
+    /**
+     * Get the number of references of the value associated with the specified {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return {@link Mono#empty()} if key does not exist.
+     * @throws IllegalArgumentException if {@code key} is {@literal null}.
+     * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT REFCOUNT</a>
+     * @since 2.1
+     */
+    Mono<Long> refcount(ByteBuffer key);
 }

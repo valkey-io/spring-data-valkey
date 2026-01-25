@@ -15,13 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.support.collections;
 
+import io.valkey.springframework.data.valkey.core.BoundHashFieldExpirationOperations;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-
-import io.valkey.springframework.data.valkey.core.BoundHashFieldExpirationOperations;
 import org.springframework.lang.Nullable;
 
 /**
@@ -34,79 +33,78 @@ import org.springframework.lang.Nullable;
  */
 public interface ValkeyMap<K, V> extends ValkeyStore, ConcurrentMap<K, V> {
 
-	/**
-	 * Increment {@code value} of the hash {@code key} by the given {@code delta}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param delta
-	 * @return {@literal null} if hash does not exist.
-	 * @since 1.0
-	 */
-	Long increment(K key, long delta);
+    /**
+     * Increment {@code value} of the hash {@code key} by the given {@code delta}.
+     *
+     * @param key must not be {@literal null}.
+     * @param delta
+     * @return {@literal null} if hash does not exist.
+     * @since 1.0
+     */
+    Long increment(K key, long delta);
 
-	/**
-	 * Increment {@code value} of the hash {@code key} by the given {@code delta}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param delta
-	 * @return {@literal null} if hash does not exist.
-	 * @since 1.1
-	 */
-	Double increment(K key, double delta);
+    /**
+     * Increment {@code value} of the hash {@code key} by the given {@code delta}.
+     *
+     * @param key must not be {@literal null}.
+     * @param delta
+     * @return {@literal null} if hash does not exist.
+     * @since 1.1
+     */
+    Double increment(K key, double delta);
 
-	/**
-	 * Get a random key from the hash.
-	 *
-	 * @return {@literal null} if the hash does not exist.
-	 * @since 2.6
-	 */
-	K randomKey();
+    /**
+     * Get a random key from the hash.
+     *
+     * @return {@literal null} if the hash does not exist.
+     * @since 2.6
+     */
+    K randomKey();
 
-	/**
-	 * Get a random entry from the hash.
-	 *
-	 * @return {@literal null} if the hash does not exist.
-	 * @since 2.6
-	 */
-	@Nullable
-	Map.Entry<K, V> randomEntry();
+    /**
+     * Get a random entry from the hash.
+     *
+     * @return {@literal null} if the hash does not exist.
+     * @since 2.6
+     */
+    @Nullable
+    Map.Entry<K, V> randomEntry();
 
-	/**
-	 * @since 1.4
-	 * @return
-	 */
-	Iterator<Map.Entry<K, V>> scan();
+    /**
+     * @since 1.4
+     * @return
+     */
+    Iterator<Map.Entry<K, V>> scan();
 
-	/**
-	 * Returns a bound operations object to perform operations on the hash field expiration for all hash fields at the
-	 * bound {@link #getKey()}. Operations on the expiration object obtain keys at the time of invoking any expiration
-	 * operation.
-	 *
-	 * @return the bound operations object to perform operations on the hash field expiration.
-	 * @since 3.5
-	 */
-	BoundHashFieldExpirationOperations<K> hashFieldExpiration();
+    /**
+     * Returns a bound operations object to perform operations on the hash field expiration for all
+     * hash fields at the bound {@link #getKey()}. Operations on the expiration object obtain keys at
+     * the time of invoking any expiration operation.
+     *
+     * @return the bound operations object to perform operations on the hash field expiration.
+     * @since 3.5
+     */
+    BoundHashFieldExpirationOperations<K> hashFieldExpiration();
 
-	/**
-	 * Returns a bound operations object to perform operations on the hash field expiration for all hash fields at the
-	 * bound {@link #getKey()} for the given hash fields.
-	 *
-	 * @param hashFields collection of hash fields to operate on.
-	 * @return the bound operations object to perform operations on the hash field expiration.
-	 * @since 3.5
-	 */
-	default BoundHashFieldExpirationOperations<K> hashFieldExpiration(K... hashFields) {
-		return hashFieldExpiration(Arrays.asList(hashFields));
-	}
+    /**
+     * Returns a bound operations object to perform operations on the hash field expiration for all
+     * hash fields at the bound {@link #getKey()} for the given hash fields.
+     *
+     * @param hashFields collection of hash fields to operate on.
+     * @return the bound operations object to perform operations on the hash field expiration.
+     * @since 3.5
+     */
+    default BoundHashFieldExpirationOperations<K> hashFieldExpiration(K... hashFields) {
+        return hashFieldExpiration(Arrays.asList(hashFields));
+    }
 
-	/**
-	 * Returns a bound operations object to perform operations on the hash field expiration for all hash fields at the
-	 * bound {@link #getKey()} for the given hash fields.
-	 *
-	 * @param hashFields collection of hash fields to operate on.
-	 * @return the bound operations object to perform operations on the hash field expiration.
-	 * @since 3.5
-	 */
-	BoundHashFieldExpirationOperations<K> hashFieldExpiration(Collection<K> hashFields);
-
+    /**
+     * Returns a bound operations object to perform operations on the hash field expiration for all
+     * hash fields at the bound {@link #getKey()} for the given hash fields.
+     *
+     * @param hashFields collection of hash fields to operate on.
+     * @return the bound operations object to perform operations on the hash field expiration.
+     * @since 3.5
+     */
+    BoundHashFieldExpirationOperations<K> hashFieldExpiration(Collection<K> hashFields);
 }

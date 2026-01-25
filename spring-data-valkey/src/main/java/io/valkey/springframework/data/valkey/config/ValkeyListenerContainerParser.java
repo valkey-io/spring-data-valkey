@@ -15,20 +15,19 @@
  */
 package io.valkey.springframework.data.valkey.config;
 
+import io.valkey.springframework.data.valkey.listener.ChannelTopic;
+import io.valkey.springframework.data.valkey.listener.PatternTopic;
+import io.valkey.springframework.data.valkey.listener.Topic;
+import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer;
+import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAdapter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-
 import org.springframework.beans.factory.config.BeanDefinition;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.ManagedMap;
 import org.springframework.beans.factory.xml.AbstractSimpleBeanDefinitionParser;
 import org.springframework.beans.factory.xml.ParserContext;
-import io.valkey.springframework.data.valkey.listener.ChannelTopic;
-import io.valkey.springframework.data.valkey.listener.PatternTopic;
-import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer;
-import io.valkey.springframework.data.valkey.listener.Topic;
-import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAdapter;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 import org.springframework.util.xml.DomUtils;
@@ -43,95 +42,101 @@ import org.w3c.dom.NamedNodeMap;
  */
 class ValkeyListenerContainerParser extends AbstractSimpleBeanDefinitionParser {
 
-	protected Class<ValkeyMessageListenerContainer> getBeanClass(Element element) {
-		return ValkeyMessageListenerContainer.class;
-	}
+    protected Class<ValkeyMessageListenerContainer> getBeanClass(Element element) {
+        return ValkeyMessageListenerContainer.class;
+    }
 
-	@SuppressWarnings("unchecked")
-	protected void doParse(Element element, ParserContext parserContext, BeanDefinitionBuilder builder) {
+    @SuppressWarnings("unchecked")
+    protected void doParse(
+            Element element, ParserContext parserContext, BeanDefinitionBuilder builder) {
 
-		// parse attributes (but replace the value assignment with references)
-		NamedNodeMap attributes = element.getAttributes();
+        // parse attributes (but replace the value assignment with references)
+        NamedNodeMap attributes = element.getAttributes();
 
-		for (int x = 0; x < attributes.getLength(); x++) {
-			Attr attribute = (Attr) attributes.item(x);
-			if (isEligibleAttribute(attribute, parserContext)) {
-				String propertyName = extractPropertyName(attribute.getLocalName());
-				Assert.state(StringUtils.hasText(propertyName),
-						"Illegal property name returned from 'extractPropertyName(String)': cannot be null or empty");
-				builder.addPropertyReference(propertyName, attribute.getValue());
-			}
-		}
+        for (int x = 0; x < attributes.getLength(); x++) {
+            Attr attribute = (Attr) attributes.item(x);
+            if (isEligibleAttribute(attribute, parserContext)) {
+                String propertyName = extractPropertyName(attribute.getLocalName());
+                Assert.state(
+                        StringUtils.hasText(propertyName),
+                        "Illegal property name returned from 'extractPropertyName(String)': cannot be null or"
+                                + " empty");
+                builder.addPropertyReference(propertyName, attribute.getValue());
+            }
+        }
 
-		String phase = element.getAttribute("phase");
-		if (StringUtils.hasText(phase)) {
-			builder.addPropertyValue("phase", phase);
-		}
+        String phase = element.getAttribute("phase");
+        if (StringUtils.hasText(phase)) {
+            builder.addPropertyValue("phase", phase);
+        }
 
-		postProcess(builder, element);
+        postProcess(builder, element);
 
-		// parse nested listeners
-		List<Element> listDefs = DomUtils.getChildElementsByTagName(element, "listener");
+        // parse nested listeners
+        List<Element> listDefs = DomUtils.getChildElementsByTagName(element, "listener");
 
-		if (!listDefs.isEmpty()) {
-			ManagedMap<BeanDefinition, Collection<? extends BeanDefinition>> listeners = new ManagedMap<>(listDefs.size());
-			for (Element listElement : listDefs) {
-				Object[] listenerDefinition = parseListener(listElement);
-				listeners.put((BeanDefinition) listenerDefinition[0],
-						(Collection<? extends BeanDefinition>) listenerDefinition[1]);
-			}
+        if (!listDefs.isEmpty()) {
+            ManagedMap<BeanDefinition, Collection<? extends BeanDefinition>> listeners =
+                    new ManagedMap<>(listDefs.size());
+            for (Element listElement : listDefs) {
+                Object[] listenerDefinition = parseListener(listElement);
+                listeners.put(
+                        (BeanDefinition) listenerDefinition[0],
+                        (Collection<? extends BeanDefinition>) listenerDefinition[1]);
+            }
 
-			builder.addPropertyValue("messageListeners", listeners);
-		}
-	}
+            builder.addPropertyValue("messageListeners", listeners);
+        }
+    }
 
-	protected boolean isEligibleAttribute(String attributeName) {
-		return (!"phase".equals(attributeName));
-	}
+    protected boolean isEligibleAttribute(String attributeName) {
+        return (!"phase".equals(attributeName));
+    }
 
-	/**
-	 * Parses a listener definition. Returns the listener bean reference definition (as the array first entry) and its
-	 * associated topics (also as bean definitions).
-	 *
-	 * @param element
-	 * @return
-	 */
-	private Object[] parseListener(Element element) {
+    /**
+     * Parses a listener definition. Returns the listener bean reference definition (as the array
+     * first entry) and its associated topics (also as bean definitions).
+     *
+     * @param element
+     * @return
+     */
+    private Object[] parseListener(Element element) {
 
-		Object[] ret = new Object[2];
+        Object[] ret = new Object[2];
 
-		BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(MessageListenerAdapter.class);
-		builder.addConstructorArgReference(element.getAttribute("ref"));
+        BeanDefinitionBuilder builder =
+                BeanDefinitionBuilder.genericBeanDefinition(MessageListenerAdapter.class);
+        builder.addConstructorArgReference(element.getAttribute("ref"));
 
-		String method = element.getAttribute("method");
-		if (StringUtils.hasText(method)) {
-			builder.addPropertyValue("defaultListenerMethod", method);
-		}
+        String method = element.getAttribute("method");
+        if (StringUtils.hasText(method)) {
+            builder.addPropertyValue("defaultListenerMethod", method);
+        }
 
-		String serializer = element.getAttribute("serializer");
-		if (StringUtils.hasText(serializer)) {
-			builder.addPropertyReference("serializer", serializer);
-		}
+        String serializer = element.getAttribute("serializer");
+        if (StringUtils.hasText(serializer)) {
+            builder.addPropertyReference("serializer", serializer);
+        }
 
-		// assemble topics
-		Collection<Topic> topics = new ArrayList<>();
+        // assemble topics
+        Collection<Topic> topics = new ArrayList<>();
 
-		// get topic
-		String xTopics = element.getAttribute("topic");
-		if (StringUtils.hasText(xTopics)) {
-			String[] array = StringUtils.delimitedListToStringArray(xTopics, " ");
+        // get topic
+        String xTopics = element.getAttribute("topic");
+        if (StringUtils.hasText(xTopics)) {
+            String[] array = StringUtils.delimitedListToStringArray(xTopics, " ");
 
-			for (String string : array) {
-				topics.add(string.contains("*") ? new PatternTopic(string) : new ChannelTopic(string));
-			}
-		}
-		ret[0] = builder.getBeanDefinition();
-		ret[1] = topics;
+            for (String string : array) {
+                topics.add(string.contains("*") ? new PatternTopic(string) : new ChannelTopic(string));
+            }
+        }
+        ret[0] = builder.getBeanDefinition();
+        ret[1] = topics;
 
-		return ret;
-	}
+        return ret;
+    }
 
-	protected boolean shouldGenerateId() {
-		return true;
-	}
+    protected boolean shouldGenerateId() {
+        return true;
+    }
 }

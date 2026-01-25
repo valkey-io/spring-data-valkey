@@ -18,42 +18,46 @@ package io.valkey.springframework.data.valkey.connection.stream;
 import java.util.Map;
 
 /**
- * A {@link Record} within the stream backed by a collection of {@link String} {@literal field/value} pairs.
+ * A {@link Record} within the stream backed by a collection of {@link String} {@literal
+ * field/value} pairs.
  *
  * @author Christoph Strobl
  * @since 2.2
  */
 public interface StringRecord extends MapRecord<String, String, String> {
 
-	@Override
-	StringRecord withId(RecordId id);
+    @Override
+    StringRecord withId(RecordId id);
 
-	/**
-	 * Create a new {@link StringRecord} with the associated stream {@literal key}.
-	 *
-	 * @param key the stream key.
-	 * @return a new {@link StringRecord}.
-	 */
-	StringRecord withStreamKey(String key);
+    /**
+     * Create a new {@link StringRecord} with the associated stream {@literal key}.
+     *
+     * @param key the stream key.
+     * @return a new {@link StringRecord}.
+     */
+    StringRecord withStreamKey(String key);
 
-	/**
-	 * Create a {@link StringRecord} from a {@link Map} of {@link String strings}.
-	 *
-	 * @param source must not be {@literal null}.
-	 * @return new instance of {@link StringRecord}.
-	 * @since 2.7
-	 */
-	static StringRecord of(Map<String, String> source) {
-		return StreamRecords.newRecord().ofStrings(source);
-	}
+    /**
+     * Create a {@link StringRecord} from a {@link Map} of {@link String strings}.
+     *
+     * @param source must not be {@literal null}.
+     * @return new instance of {@link StringRecord}.
+     * @since 2.7
+     */
+    static StringRecord of(Map<String, String> source) {
+        return StreamRecords.newRecord().ofStrings(source);
+    }
 
-	/**
-	 * Convert a {@link MapRecord} of {@link String strings} into a {@link StringRecord}.
-	 *
-	 * @param source must not be {@literal null}.
-	 * @return new instance of {@link StringRecord}.
-	 */
-	static StringRecord of(MapRecord<String, String, String> source) {
-		return StreamRecords.newRecord().in(source.getRequiredStream()).withId(source.getId()).ofStrings(source.getValue());
-	}
+    /**
+     * Convert a {@link MapRecord} of {@link String strings} into a {@link StringRecord}.
+     *
+     * @param source must not be {@literal null}.
+     * @return new instance of {@link StringRecord}.
+     */
+    static StringRecord of(MapRecord<String, String, String> source) {
+        return StreamRecords.newRecord()
+                .in(source.getRequiredStream())
+                .withId(source.getId())
+                .ofStrings(source.getValue());
+    }
 }
