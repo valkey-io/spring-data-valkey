@@ -5,4 +5,4 @@ description: Core Extensions documentation
 
 ## Querydsl
 
-Spring Data Redis does not support Querydsl.
+Spring Data Valkey does not support Querydsl.

@@ -3,20 +3,20 @@ title: Hash Mappers
 description: Hash Mappers documentation
 ---
 
-Data can be stored by using various data structures within Redis. `org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer` can convert objects in [JSON](https://en.wikipedia.org/wiki/JSON) format. Ideally, JSON can be stored as a value by using plain keys. You can achieve a more sophisticated mapping of structured objects by using Redis hashes. Spring Data Redis offers various strategies for mapping data to hashes (depending on the use case):
+Data can be stored by using various data structures within Valkey. `io.valkey.springframework.data.serializer.Jackson2JsonValkeySerializer` can convert objects in [JSON](https://en.wikipedia.org/wiki/JSON) format. Ideally, JSON can be stored as a value by using plain keys. You can achieve a more sophisticated mapping of structured objects by using Valkey hashes. Spring Data Valkey offers various strategies for mapping data to hashes (depending on the use case):
 
-* Direct mapping, by using `org.springframework.data.redis.core.HashOperations` and a [serializer](/redis/template#serializers)
-* Using [Redis Repositories](/repositories)
-* Using `org.springframework.data.redis.hash.HashMapper` and `org.springframework.data.redis.core.HashOperations`
+* Direct mapping, by using `io.valkey.springframework.data.core.HashOperations` and a [serializer](/valkey/template#serializers)
+* Using [Valkey Repositories](/repositories)
+* Using `io.valkey.springframework.data.hash.HashMapper` and `io.valkey.springframework.data.core.HashOperations`
 
 ## Hash Mappers
 
-Hash mappers are converters of map objects to a `Map<K, V>` and back. `org.springframework.data.redis.hash.HashMapper` is intended for using with Redis Hashes.
+Hash mappers are converters of map objects to a `Map<K, V>` and back. `io.valkey.springframework.data.hash.HashMapper` is intended for using with Valkey Hashes.
 
 Multiple implementations are available:
 
-* `org.springframework.data.redis.hash.BeanUtilsHashMapper` using Spring's [BeanUtils](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/beans/BeanUtils.html).
-* `org.springframework.data.redis.hash.ObjectHashMapper` using [Object-to-Hash Mapping](/redis/redis-repositories/mapping).
+* `io.valkey.springframework.data.hash.BeanUtilsHashMapper` using Spring's [BeanUtils](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/beans/BeanUtils.html).
+* `io.valkey.springframework.data.hash.ObjectHashMapper` using [Object-to-Hash Mapping](/valkey/valkey-repositories/mapping).
 * [`Jackson2HashMapper`](#jackson2hashmapper) using [FasterXML Jackson](https://github.com/FasterXML/jackson).
 
 The following example shows one way to implement hash mapping:
@@ -31,7 +31,7 @@ public class Person {
 
 public class HashMapping {
 
-  @Resource(name = "redisTemplate")
+  @Resource(name = "valkeyTemplate")
   HashOperations<String, byte[], byte[]> hashOperations;
 
   HashMapper<Object, byte[], byte[]> mapper = new ObjectHashMapper();
@@ -52,7 +52,7 @@ public class HashMapping {
 
 ## Jackson2HashMapper
 
-`org.springframework.data.redis.hash.Jackson2HashMapper` provides Redis Hash mapping for domain objects by using [FasterXML Jackson](https://github.com/FasterXML/jackson).
+`io.valkey.springframework.data.hash.Jackson2HashMapper` provides Valkey Hash mapping for domain objects by using [FasterXML Jackson](https://github.com/FasterXML/jackson).
 `Jackson2HashMapper` can map top-level properties as Hash field names and, optionally, flatten the structure.
 Simple types map to simple values. Complex types (nested objects, collections, maps, and so on) are represented as nested JSON.
 

@@ -11,16 +11,16 @@ This section contains details about migration steps, deprecations, and removals.
 
 | Type | Replacement |
 |------|-------------|
-| o.s.d.redis.Version | o.s.d.util.Version |
-| o.s.d.redis.VersionParser | - |
-| o.s.d.redis.connection.RedisZSetCommands.Aggregate | o.s.d.redis.connection.zset.Aggregate |
-| o.s.d.redis.connection.RedisZSetCommands.Tuple | o.s.d.redis.connection.zset.Tuple |
-| o.s.d.redis.connection.RedisZSetCommands.Weights | o.s.d.redis.connection.zset.Weights |
-| o.s.d.redis.connection.RedisZSetCommands.Range | o.s.d.domain.Range |
-| o.s.d.redis.connection.RedisZSetCommands.Limit | o.s.d.redis.connection.Limit.java |
-| o.s.d.redis.connection.jedis.JedisUtils | - |
-| o.s.d.redis.connection.jedis.JedisVersionUtil | - |
-| o.s.d.redis.core.convert.CustomConversions | o.s.d.convert.CustomConversions |
+| o.s.d.valkey.Version | o.s.d.util.Version |
+| o.s.d.valkey.VersionParser | - |
+| o.s.d.valkey.connection.ValkeyZSetCommands.Aggregate | o.s.d.valkey.connection.zset.Aggregate |
+| o.s.d.valkey.connection.ValkeyZSetCommands.Tuple | o.s.d.valkey.connection.zset.Tuple |
+| o.s.d.valkey.connection.ValkeyZSetCommands.Weights | o.s.d.valkey.connection.zset.Weights |
+| o.s.d.valkey.connection.ValkeyZSetCommands.Range | o.s.d.domain.Range |
+| o.s.d.valkey.connection.ValkeyZSetCommands.Limit | o.s.d.valkey.connection.Limit.java |
+| o.s.d.valkey.connection.jedis.JedisUtils | - |
+| o.s.d.valkey.connection.jedis.JedisVersionUtil | - |
+| o.s.d.valkey.core.convert.CustomConversions | o.s.d.convert.CustomConversions |
 
 ### Changed Methods and Types
 
@@ -28,69 +28,69 @@ This section contains details about migration steps, deprecations, and removals.
 
 | Type | Method | Replacement |
 |------|--------|-------------|
-| o.s.d.redis.core.Cursor | open | - |
-| o.s.d.redis.core.RedisTemplate | execute | doWithKeys |
-| o.s.d.redis.stream.StreamMessageListenerContainer | isAutoAck | isAutoAcknowledge |
-| o.s.d.redis.stream.StreamMessageListenerContainer | autoAck | autoAcknowledge |
+| o.s.d.valkey.core.Cursor | open | - |
+| o.s.d.valkey.core.ValkeyTemplate | execute | doWithKeys |
+| o.s.d.valkey.stream.StreamMessageListenerContainer | isAutoAck | isAutoAcknowledge |
+| o.s.d.valkey.stream.StreamMessageListenerContainer | autoAck | autoAcknowledge |
 
-*Table 2. Redis Connection*
-
-| Type | Method | Replacement |
-|------|--------|-------------|
-| o.s.d.redis.connection.ClusterCommandExecutionFailureException | getCauses | getSuppressed |
-| o.s.d.redis.connection.RedisConnection | bgWriteAof | bgReWriteAof |
-| o.s.d.redis.connection.RedisConnection | slaveOf | replicaOf |
-| o.s.d.redis.connection.RedisConnection | slaveOfNoOne | replicaOfNoOne |
-| o.s.d.redis.connection.ReactiveClusterCommands | clusterGetSlaves | clusterGetReplicas |
-| o.s.d.redis.connection.ReactiveClusterCommands | clusterGetMasterSlaveMap | clusterGetMasterReplicaMap |
-| o.s.d.redis.connection.ReactiveKeyCommands | getNewName | getNewKey |
-| o.s.d.redis.connection.RedisClusterNode.Flag | SLAVE | REPLICA |
-| o.s.d.redis.connection.RedisClusterNode.Builder | slaveOf | replicaOf |
-| o.s.d.redis.connection.RedisNode | isSlave | isReplica |
-| o.s.d.redis.connection.RedisSentinelCommands | slaves | replicas |
-| o.s.d.redis.connection.RedisServer | getNumberSlaves | getNumberReplicas |
-| o.s.d.redis.connection.RedisServerCommands | slaveOf | replicaOf |
-| o.s.d.redis.core.ClusterOperations | getSlaves | getReplicas |
-| o.s.d.redis.core.RedisOperations | slaveOf | replicaOf |
-
-*Table 3. Redis Operations*
+*Table 2. Valkey Connection*
 
 | Type | Method | Replacement |
 |------|--------|-------------|
-| o.s.d.redis.core.GeoOperations & BoundGeoOperations | geoAdd | add |
-| o.s.d.redis.core.GeoOperations & BoundGeoOperations | geoDist | distance |
-| o.s.d.redis.core.GeoOperations & BoundGeoOperations | geoHash | hash |
-| o.s.d.redis.core.GeoOperations & BoundGeoOperations | geoPos | position |
-| o.s.d.redis.core.GeoOperations & BoundGeoOperations | geoRadius | radius |
-| o.s.d.redis.core.GeoOperations & BoundGeoOperations | geoRadiusByMember | radius |
-| o.s.d.redis.core.GeoOperations & BoundGeoOperations | geoRemove | remove |
+| o.s.d.valkey.connection.ClusterCommandExecutionFailureException | getCauses | getSuppressed |
+| o.s.d.valkey.connection.ValkeyConnection | bgWriteAof | bgReWriteAof |
+| o.s.d.valkey.connection.ValkeyConnection | slaveOf | replicaOf |
+| o.s.d.valkey.connection.ValkeyConnection | slaveOfNoOne | replicaOfNoOne |
+| o.s.d.valkey.connection.ReactiveClusterCommands | clusterGetSlaves | clusterGetReplicas |
+| o.s.d.valkey.connection.ReactiveClusterCommands | clusterGetMasterSlaveMap | clusterGetMasterReplicaMap |
+| o.s.d.valkey.connection.ReactiveKeyCommands | getNewName | getNewKey |
+| o.s.d.valkey.connection.ValkeyClusterNode.Flag | SLAVE | REPLICA |
+| o.s.d.valkey.connection.ValkeyClusterNode.Builder | slaveOf | replicaOf |
+| o.s.d.valkey.connection.ValkeyNode | isSlave | isReplica |
+| o.s.d.valkey.connection.ValkeySentinelCommands | slaves | replicas |
+| o.s.d.valkey.connection.ValkeyServer | getNumberSlaves | getNumberReplicas |
+| o.s.d.valkey.connection.ValkeyServerCommands | slaveOf | replicaOf |
+| o.s.d.valkey.core.ClusterOperations | getSlaves | getReplicas |
+| o.s.d.valkey.core.ValkeyOperations | slaveOf | replicaOf |
 
-*Table 4. Redis Cache*
+*Table 3. Valkey Operations*
 
 | Type | Method | Replacement |
 |------|--------|-------------|
-| o.s.d.redis.cache.RedisCacheConfiguration | prefixKeysWith | prefixCacheNameWith |
-| o.s.d.redis.cache.RedisCacheConfiguration | getKeyPrefix | getKeyPrefixFor |
+| o.s.d.valkey.core.GeoOperations & BoundGeoOperations | geoAdd | add |
+| o.s.d.valkey.core.GeoOperations & BoundGeoOperations | geoDist | distance |
+| o.s.d.valkey.core.GeoOperations & BoundGeoOperations | geoHash | hash |
+| o.s.d.valkey.core.GeoOperations & BoundGeoOperations | geoPos | position |
+| o.s.d.valkey.core.GeoOperations & BoundGeoOperations | geoRadius | radius |
+| o.s.d.valkey.core.GeoOperations & BoundGeoOperations | geoRadiusByMember | radius |
+| o.s.d.valkey.core.GeoOperations & BoundGeoOperations | geoRemove | remove |
+
+*Table 4. Valkey Cache*
+
+| Type | Method | Replacement |
+|------|--------|-------------|
+| o.s.d.valkey.cache.ValkeyCacheConfiguration | prefixKeysWith | prefixCacheNameWith |
+| o.s.d.valkey.cache.ValkeyCacheConfiguration | getKeyPrefix | getKeyPrefixFor |
 
 ### Jedis
 
-Please read the Jedis [upgrading guide](https://github.com/redis/jedis/blob/v4.0.0/docs/3to4.md) which covers important driver changes.
+Please read the Jedis [upgrading guide](https://github.com/valkey/jedis/blob/v4.0.0/docs/3to4.md) which covers important driver changes.
 
-*Table 5. Jedis Redis Connection*
+*Table 5. Jedis Valkey Connection*
 
 | Type | Method | Replacement |
 |------|--------|-------------|
-| o.s.d.redis.connection.jedis.JedisConnectionFactory | getShardInfo | _can be obtained via JedisClientConfiguration_ |
-| o.s.d.redis.connection.jedis.JedisConnectionFactory | setShardInfo | _can be set via JedisClientConfiguration_ |
-| o.s.d.redis.connection.jedis.JedisConnectionFactory | createCluster | _now requires a `Connection` instead of `Jedis` instance_ |
-| o.s.d.redis.connection.jedis.JedisConverters | | has package visibility now |
-| o.s.d.redis.connection.jedis.JedisConverters | tuplesToTuples | - |
-| o.s.d.redis.connection.jedis.JedisConverters | stringListToByteList | - |
-| o.s.d.redis.connection.jedis.JedisConverters | stringSetToByteSet | - |
-| o.s.d.redis.connection.jedis.JedisConverters | stringMapToByteMap | - |
-| o.s.d.redis.connection.jedis.JedisConverters | tupleSetToTupleSet | - |
-| o.s.d.redis.connection.jedis.JedisConverters | toTupleSet | - |
-| o.s.d.redis.connection.jedis.JedisConverters | toDataAccessException | o.s.d.redis.connection.jedis.JedisExceptionConverter#convert |
+| o.s.d.valkey.connection.jedis.JedisConnectionFactory | getShardInfo | _can be obtained via JedisClientConfiguration_ |
+| o.s.d.valkey.connection.jedis.JedisConnectionFactory | setShardInfo | _can be set via JedisClientConfiguration_ |
+| o.s.d.valkey.connection.jedis.JedisConnectionFactory | createCluster | _now requires a `Connection` instead of `Jedis` instance_ |
+| o.s.d.valkey.connection.jedis.JedisConverters | | has package visibility now |
+| o.s.d.valkey.connection.jedis.JedisConverters | tuplesToTuples | - |
+| o.s.d.valkey.connection.jedis.JedisConverters | stringListToByteList | - |
+| o.s.d.valkey.connection.jedis.JedisConverters | stringSetToByteSet | - |
+| o.s.d.valkey.connection.jedis.JedisConverters | stringMapToByteMap | - |
+| o.s.d.valkey.connection.jedis.JedisConverters | tupleSetToTupleSet | - |
+| o.s.d.valkey.connection.jedis.JedisConverters | toTupleSet | - |
+| o.s.d.valkey.connection.jedis.JedisConverters | toDataAccessException | o.s.d.valkey.connection.jedis.JedisExceptionConverter#convert |
 
 #### Transactions / Pipelining
 

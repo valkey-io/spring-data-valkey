@@ -1,15 +1,15 @@
 ---
-title: Spring Data Redis
-description: Spring Data Redis provides Redis connectivity and repository support for the Redis database.
+title: Spring Data Valkey
+description: Spring Data Valkey provides Valkey connectivity and repository support for the Valkey database.
 ---
 
 
-_Spring Data Redis provides Redis connectivity and repository support for the Redis database. It eases development of applications with a consistent programming model that need to access Redis data sources._
+_Spring Data Valkey provides Valkey connectivity and repository support for the Valkey database. It eases development of applications with a consistent programming model that need to access Valkey data sources._
 
 | Section | Description |
 |---------|-------------|
-| [Redis](../redis) | Redis support and connectivity |
-| [Redis Repositories](../repositories) | Redis Repositories |
+| [Valkey](../valkey) | Valkey support and connectivity |
+| [Valkey Repositories](../repositories) | Valkey Repositories |
 | [Observability](../observability) | Observability Integration |
 | [Wiki](https://github.com/spring-projects/spring-data-commons/wiki) | What's New, Upgrade Notes, Supported Versions, additional cross-version information. |
 

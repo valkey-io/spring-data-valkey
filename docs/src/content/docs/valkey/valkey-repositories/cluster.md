@@ -1,10 +1,10 @@
 ---
-title: Redis Repositories Running on a Cluster
+title: Valkey Repositories Running on a Cluster
 description: Cluster documentation
 ---
 
-You can use the Redis repository support in a clustered Redis environment.
-See the "[Redis Cluster](/redis/cluster)" section for `ConnectionFactory` configuration details.
+You can use the Valkey repository support in a clustered Valkey environment.
+See the "[Valkey Cluster](/valkey/cluster)" section for `ConnectionFactory` configuration details.
 Still, some additional configuration must be done, because the default key distribution spreads entities and secondary indexes through out the whole cluster and its slots.
 
 The following table shows the details of data on a cluster (based on previous examples):
@@ -19,7 +19,7 @@ The following table shows the details of data on a cluster (based on previous ex
 
 Some commands (such as `SINTER` and `SUNION`) can only be processed on the server side when all involved keys map to the same slot.
 Otherwise, computation has to be done on client side.
-Therefore, it is useful to pin keyspaces to a single slot, which lets make use of Redis server side computation right away.
+Therefore, it is useful to pin keyspaces to a single slot, which lets make use of Valkey server side computation right away.
 The following table shows what happens when you do (note the change in the slot column and the port value in the node column):
 
 ## Pinned Keyspace Distribution
@@ -31,5 +31,5 @@ The following table shows what happens when you do (note the change in the slot 
 | {people}:firstname:rand | index | 2399 | 127.0.0.1:7379 |
 
 :::tip
-Define and pin keyspaces by using `@RedisHash("{yourkeyspace}")` to specific slots when you use Redis cluster.
+Define and pin keyspaces by using `@ValkeyHash("{yourkeyspace}")` to specific slots when you use Valkey cluster.
 :::

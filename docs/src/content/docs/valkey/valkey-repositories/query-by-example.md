@@ -1,6 +1,6 @@
 ---
 title: Query by Example
-description: Query by Example (QBE) for Redis repositories including usage, matchers, and Redis-specific limitations
+description: Query by Example (QBE) for Valkey repositories including usage, matchers, and Valkey-specific limitations
 ---
 
 ## Introduction
@@ -216,7 +216,7 @@ class PersonService {
 }
 ```
 
-Redis Repositories support, with their secondary indexes, a subset of Spring Data's Query by Example features.
+Valkey Repositories support, with their secondary indexes, a subset of Spring Data's Query by Example features.
 In particular, only exact, case-sensitive, and non-null values are used to construct a query.
 
 Secondary indexes use set-based operations (Set intersection, Set union) to determine matching keys. Adding a property to the query that is not indexed returns no result, because no index exists. Query by Example support inspects indexing configuration to include only properties in the query that are covered by an index. This is to prevent accidental inclusion of non-indexed properties.

@@ -3,21 +3,21 @@ title: Keyspaces
 description: Keyspaces documentation
 ---
 
-Keyspaces define prefixes used to create the actual key for the Redis Hash.
+Keyspaces define prefixes used to create the actual key for the Valkey Hash.
 By default, the prefix is set to `getClass().getName()`.
-You can alter this default by setting `@RedisHash` on the aggregate root level or by setting up a programmatic configuration.
+You can alter this default by setting `@ValkeyHash` on the aggregate root level or by setting up a programmatic configuration.
 However, the annotated keyspace supersedes any other configuration.
 
-The following example shows how to set the keyspace configuration with the `@EnableRedisRepositories` annotation:
+The following example shows how to set the keyspace configuration with the `@EnableValkeyRepositories` annotation:
 
-*Example 1. Keyspace Setup via `@EnableRedisRepositories`*
+*Example 1. Keyspace Setup via `@EnableValkeyRepositories`*
 
 ```java
 @Configuration
-@EnableRedisRepositories(keyspaceConfiguration = MyKeyspaceConfiguration.class)
+@EnableValkeyRepositories(keyspaceConfiguration = MyKeyspaceConfiguration.class)
 public class ApplicationConfig {
 
-  //... RedisConnectionFactory and RedisTemplate Bean definitions omitted
+  //... ValkeyConnectionFactory and ValkeyTemplate Bean definitions omitted
 
   public static class MyKeyspaceConfiguration extends KeyspaceConfiguration {
 
@@ -35,14 +35,14 @@ The following example shows how to programmatically set the keyspace:
 
 ```java
 @Configuration
-@EnableRedisRepositories
+@EnableValkeyRepositories
 public class ApplicationConfig {
 
-  //... RedisConnectionFactory and RedisTemplate Bean definitions omitted
+  //... ValkeyConnectionFactory and ValkeyTemplate Bean definitions omitted
 
   @Bean
-  public RedisMappingContext keyValueMappingContext() {
-    return new RedisMappingContext(
+  public ValkeyMappingContext keyValueMappingContext() {
+    return new ValkeyMappingContext(
       new MappingConfiguration(new IndexConfiguration(), new MyKeyspaceConfiguration()));
   }
 

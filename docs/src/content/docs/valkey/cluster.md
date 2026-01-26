@@ -1,25 +1,25 @@
 ---
-title: Redis Cluster
-description: Redis Cluster documentation
+title: Valkey Cluster
+description: Valkey Cluster documentation
 ---
 
-Working with [Redis Cluster](https://redis.io/topics/cluster-spec) requires Redis Server version 3.0+.
-See the [Cluster Tutorial](https://redis.io/topics/cluster-tutorial) for more information.
+Working with [Valkey Cluster](https://valkey.io/topics/cluster-spec) requires Valkey Server version 3.0+.
+See the [Cluster Tutorial](https://valkey.io/topics/cluster-tutorial) for more information.
 
 :::note
-When using [Redis Repositories](/repositories) with Redis Cluster, make yourself familiar with how to [run Redis Repositories on a Cluster](/redis/redis-repositories/cluster).
+When using [Valkey Repositories](/repositories) with Valkey Cluster, make yourself familiar with how to [run Valkey Repositories on a Cluster](/valkey/valkey-repositories/cluster).
 :::
 
 :::caution
-Do not rely on keyspace events when using Redis Cluster as keyspace events are not replicated across shards.
+Do not rely on keyspace events when using Valkey Cluster as keyspace events are not replicated across shards.
 :::
 
-Pub/Sub [subscribes to a random cluster node](https://github.com/spring-projects/spring-data-redis/issues/1111) which only receives keyspace events from a single shard.
-Use single-node Redis to avoid keyspace event loss.
+Pub/Sub [subscribes to a random cluster node](https://github.com/valkey-io/spring-data-valkey/issues/1111) which only receives keyspace events from a single shard.
+Use single-node Valkey to avoid keyspace event loss.
 
-## Working With Redis Cluster Connection
+## Working With Valkey Cluster Connection
 
-Redis Cluster behaves differently from single-node Redis or even a Sentinel-monitored master-replica environment.
+Valkey Cluster behaves differently from single-node Valkey or even a Sentinel-monitored master-replica environment.
 This is because the automatic sharding maps a key to one of `16384` slots, which are distributed across the nodes.
 Therefore, commands that involve more than one key must assert all keys map to the exact same slot to avoid cross-slot errors.
 A single cluster node serves only a dedicated set of keys.
@@ -28,18 +28,18 @@ As a simple example, consider the `KEYS` command.
 When issued to a server in a cluster environment, it returns only the keys served by the node the request is sent to and not necessarily all keys within the cluster.
 So, to get all keys in a cluster environment, you must read the keys from all the known master nodes.
 
-While redirects for specific keys to the corresponding slot-serving node are handled by the driver libraries, higher-level functions, such as collecting information across nodes or sending commands to all nodes in the cluster, are covered by `RedisClusterConnection`.
+While redirects for specific keys to the corresponding slot-serving node are handled by the driver libraries, higher-level functions, such as collecting information across nodes or sending commands to all nodes in the cluster, are covered by `ValkeyClusterConnection`.
 Picking up the keys example from earlier, this means that the `keys(pattern)` method picks up every master node in the cluster and simultaneously runs the `KEYS` command on every master node while picking up the results and returning the cumulated set of keys.
-To just request the keys of a single node `RedisClusterConnection` provides overloads for those methods (for example, `keys(node, pattern)`).
+To just request the keys of a single node `ValkeyClusterConnection` provides overloads for those methods (for example, `keys(node, pattern)`).
 
-A `RedisClusterNode` can be obtained from `RedisClusterConnection.clusterGetNodes` or it can be constructed by using either the host and the port or the node Id.
+A `ValkeyClusterNode` can be obtained from `ValkeyClusterConnection.clusterGetNodes` or it can be constructed by using either the host and the port or the node Id.
 
 The following example shows a set of commands being run across the cluster:
 
 *Example 1. Sample of Running Commands Across the Cluster*
 
 ```text
-redis-cli@127.0.0.1:7379 > cluster nodes
+valkey-cli@127.0.0.1:7379 > cluster nodes
 
 6b38bb... 127.0.0.1:7379 master - 0 0 25 connected 0-5460                      // (1)
 7bb78c... 127.0.0.1:7380 master - 0 1449730618304 2 connected 5461-20252       // (2)
@@ -48,7 +48,7 @@ b8b5ee... 127.0.0.1:7382 slave 6b38bb... 0 1449730618304 25 connected          /
 ```
 
 ```java
-RedisClusterConnection connection = connectionFactory.getClusterConnection();
+ValkeyClusterConnection connection = connectionFactory.getClusterConnection();
 
 connection.set("thing1", value);                                               // (5)
 connection.set("thing2", value);                                               // (6)
@@ -75,7 +75,7 @@ connection.keys(NODE_7382, "*");                                               /
 ```
 
 When all keys map to the same slot, the native driver library automatically serves cross-slot requests, such as `MGET`.
-However, once this is not the case, `RedisClusterConnection` runs multiple parallel `GET` commands against the slot-serving nodes and again returns an accumulated result.
+However, once this is not the case, `ValkeyClusterConnection` runs multiple parallel `GET` commands against the slot-serving nodes and again returns an accumulated result.
 This is less performant than the single-slot approach and, therefore, should be used with care.
 If in doubt, consider pinning keys to the same slot by providing a prefix in curly brackets, such as `{my-prefix}.thing1` and `{my-prefix}.thing2`, which will both map to the same slot number.
 The following example shows cross-slot request handling:
@@ -83,14 +83,14 @@ The following example shows cross-slot request handling:
 *Example 2. Sample of Cross-Slot Request Handling*
 
 ```text
-redis-cli@127.0.0.1:7379 > cluster nodes
+valkey-cli@127.0.0.1:7379 > cluster nodes
 
 6b38bb... 127.0.0.1:7379 master - 0 0 25 connected 0-5460                      // (1)
 7bb...
 ```
 
 ```java
-RedisClusterConnection connection = connectionFactory.getClusterConnection();
+ValkeyClusterConnection connection = connectionFactory.getClusterConnection();
 
 connection.set("thing1", value);           // slot: 12182
 connection.set("{thing1}.thing2", value);  // slot: 12182
@@ -109,30 +109,30 @@ connection.mGet("thing1", "thing2");                                           /
 ```
 
 :::tip
-The preceding examples demonstrate the general strategy followed by Spring Data Redis.
+The preceding examples demonstrate the general strategy followed by Spring Data Valkey.
 :::
 
 Be aware that some operations might require loading huge amounts of data into memory to compute the desired command.
 Additionally, not all cross-slot requests can safely be ported to multiple single slot requests and error if misused (for example, `PFCOUNT`).
 
-## Working with `RedisTemplate` and `ClusterOperations`
+## Working with `ValkeyTemplate` and `ClusterOperations`
 
-See the [Working with Objects through RedisTemplate](/redis/template) section for information about the general purpose, configuration, and usage of `RedisTemplate`.
+See the [Working with Objects through ValkeyTemplate](/valkey/template) section for information about the general purpose, configuration, and usage of `ValkeyTemplate`.
 
 :::caution
-Be careful when setting up `RedisTemplate#keySerializer` using any of the JSON `RedisSerializers`, as changing JSON structure has immediate influence on hash slot calculation.
+Be careful when setting up `ValkeyTemplate#keySerializer` using any of the JSON `ValkeySerializers`, as changing JSON structure has immediate influence on hash slot calculation.
 :::
 
-`RedisTemplate` provides access to cluster-specific operations through the `ClusterOperations` interface, which can be obtained from `RedisTemplate.opsForCluster()`.
+`ValkeyTemplate` provides access to cluster-specific operations through the `ClusterOperations` interface, which can be obtained from `ValkeyTemplate.opsForCluster()`.
 This lets you explicitly run commands on a single node within the cluster while retaining the serialization and deserialization features configured for the template.
 It also provides administrative commands (such as `CLUSTER MEET`) or more high-level operations (for example, resharding).
 
-The following example shows how to access `RedisClusterConnection` with `RedisTemplate`:
+The following example shows how to access `ValkeyClusterConnection` with `ValkeyTemplate`:
 
-*Example 3. Accessing `RedisClusterConnection` with `RedisTemplate`*
+*Example 3. Accessing `ValkeyClusterConnection` with `ValkeyTemplate`*
 
 ```java
-ClusterOperations clusterOps = redisTemplate.opsForCluster();
+ClusterOperations clusterOps = valkeyTemplate.opsForCluster();
 clusterOps.shutdown(NODE_7379);                                              // (1)
 ```
 ```text
@@ -140,5 +140,5 @@ clusterOps.shutdown(NODE_7379);                                              // 
 ```
 
 :::note
-Redis Cluster pipelining is currently only supported through the Lettuce driver except for the following commands when using cross-slot keys: `rename`, `renameNX`, `sort`, `bLPop`, `bRPop`, `rPopLPush`, `bRPopLPush`, `info`, `sMove`, `sInter`, `sInterStore`, `sUnion`, `sUnionStore`, `sDiff`, `sDiffStore`.
+Valkey Cluster pipelining is currently only supported through the Lettuce driver except for the following commands when using cross-slot keys: `rename`, `renameNX`, `sort`, `bLPop`, `bRPop`, `rPopLPush`, `bRPopLPush`, `info`, `sMove`, `sInter`, `sInterStore`, `sUnion`, `sUnionStore`, `sDiff`, `sDiffStore`.
 :::

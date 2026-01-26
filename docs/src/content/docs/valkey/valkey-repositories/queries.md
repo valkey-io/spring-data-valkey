@@ -1,5 +1,5 @@
 ---
-title: Redis-specific Query Methods
+title: Valkey-specific Query Methods
 description: Queries documentation
 ---
 
@@ -19,30 +19,30 @@ Please make sure properties used in finder methods are set up for indexing.
 :::
 
 :::note
-Query methods for Redis repositories support only queries for entities and collections of entities with paging.
+Query methods for Valkey repositories support only queries for entities and collections of entities with paging.
 :::
 
-Using derived query methods might not always be sufficient to model the queries to run. `RedisCallback` offers more control over the actual matching of index structures or even custom indexes.
-To do so, provide a `RedisCallback` that returns a single or `Iterable` set of `id` values, as shown in the following example:
+Using derived query methods might not always be sufficient to model the queries to run. `ValkeyCallback` offers more control over the actual matching of index structures or even custom indexes.
+To do so, provide a `ValkeyCallback` that returns a single or `Iterable` set of `id` values, as shown in the following example:
 
-*Example 2. Sample finder using RedisCallback*
+*Example 2. Sample finder using ValkeyCallback*
 
 ```java
 String user = //...
 
-List<RedisSession> sessionsByUser = template.find(new RedisCallback<Set<byte[]>>() {
+List<ValkeySession> sessionsByUser = template.find(new ValkeyCallback<Set<byte[]>>() {
 
-  public Set<byte[]> doInRedis(RedisConnection connection) throws DataAccessException {
+  public Set<byte[]> doInValkey(ValkeyConnection connection) throws DataAccessException {
     return connection
       .sMembers("sessions:securityContext.authentication.principal.username:" + user);
-  }}, RedisSession.class);
+  }}, ValkeySession.class);
 ```
 
-The following table provides an overview of the keywords supported for Redis and what a method containing that keyword essentially translates to:
+The following table provides an overview of the keywords supported for Valkey and what a method containing that keyword essentially translates to:
 
 *Table 1. Supported keywords inside method names*
 
-| Keyword | Sample | Redis snippet |
+| Keyword | Sample | Valkey snippet |
 |---------|--------|---------------|
 | `And` | `findByLastnameAndFirstname` | `SINTER …:firstname:rand …:lastname:al'thor` |
 | `Or` | `findByLastnameOrFirstname` | `SUNION …:firstname:rand …:lastname:al'thor` |
@@ -53,15 +53,15 @@ The following table provides an overview of the keywords supported for Redis and
 
 ## Sorting Query Method results
 
-Redis repositories allow various approaches to define sorting order.
-Redis itself does not support in-flight sorting when retrieving hashes or sets.
-Therefore, Redis repository query methods construct a `Comparator` that is applied to the result before returning results as `List`.
+Valkey repositories allow various approaches to define sorting order.
+Valkey itself does not support in-flight sorting when retrieving hashes or sets.
+Therefore, Valkey repository query methods construct a `Comparator` that is applied to the result before returning results as `List`.
 Let's take a look at the following example:
 
 *Example 3. Sorting Query Results*
 
 ```java
-interface PersonRepository extends RedisRepository<Person, String> {
+interface PersonRepository extends ValkeyRepository<Person, String> {
 
   List<Person> findByFirstnameOrderByAgeDesc(String firstname); // (1)
 

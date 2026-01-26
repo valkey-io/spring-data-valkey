@@ -3,12 +3,12 @@ title: Usage
 description: Usage documentation
 ---
 
-Spring Data Redis lets you easily implement domain entities, as shown in the following example:
+Spring Data Valkey lets you easily implement domain entities, as shown in the following example:
 
 *Example 1. Sample Person Entity*
 
 ```java
-@RedisHash("people")
+@ValkeyHash("people")
 public class Person {
 
   @Id String id;
@@ -19,7 +19,7 @@ public class Person {
 ```
 
 We have a pretty simple domain object here.
-Note that it has a `@RedisHash` annotation on its type and a property named `id` that is annotated with `org.springframework.data.annotation.Id`.
+Note that it has a `@ValkeyHash` annotation on its type and a property named `id` that is annotated with `org.springframework.data.annotation.Id`.
 Those two items are responsible for creating the actual key used to persist the hash.
 
 :::note
@@ -40,23 +40,23 @@ public interface PersonRepository extends CrudRepository<Person, String> {
 As our repository extends `CrudRepository`, it provides basic CRUD and finder operations.
 The thing we need in between to glue things together is the corresponding Spring configuration, shown in the following example:
 
-*Example 3. JavaConfig for Redis Repositories*
+*Example 3. JavaConfig for Valkey Repositories*
 
 ```java
 @Configuration
-@EnableRedisRepositories
+@EnableValkeyRepositories
 public class ApplicationConfig {
 
   @Bean
-  public RedisConnectionFactory connectionFactory() {
+  public ValkeyConnectionFactory connectionFactory() {
     return new LettuceConnectionFactory();
   }
 
   @Bean
-  public RedisTemplate<?, ?> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+  public ValkeyTemplate<?, ?> valkeyTemplate(ValkeyConnectionFactory valkeyConnectionFactory) {
 
-    RedisTemplate<byte[], byte[]> template = new RedisTemplate<byte[], byte[]>();
-    template.setConnectionFactory(redisConnectionFactory);
+    ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<byte[], byte[]>();
+    template.setConnectionFactory(valkeyConnectionFactory);
     return template;
   }
 }
@@ -84,16 +84,16 @@ public void basicCrudOperations() {
 }
 ```
 ```text
-1. Generates a new `id` if the current value is `null` or reuses an already set `id` value and stores properties of type `Person` inside the Redis Hash with a key that has a pattern of `keyspace:id` -- in this case, it might be `people:5d67b7e1-8640-2025-beeb-c666fab4c0e5`.
+1. Generates a new `id` if the current value is `null` or reuses an already set `id` value and stores properties of type `Person` inside the Valkey Hash with a key that has a pattern of `keyspace:id` -- in this case, it might be `people:5d67b7e1-8640-2025-beeb-c666fab4c0e5`.
 2. Uses the provided `id` to retrieve the object stored at `keyspace:id`.
-3. Counts the total number of entities available within the keyspace, `people`, defined by `@RedisHash` on `Person`.
-4. Removes the key for the given object from Redis.
+3. Counts the total number of entities available within the keyspace, `people`, defined by `@ValkeyHash` on `Person`.
+4. Removes the key for the given object from Valkey.
 ```
 
 ## Persisting References
 
 Marking properties with `@Reference` allows storing a simple key reference instead of copying values into the hash itself.
-On loading from Redis, references are resolved automatically and mapped back into the object, as shown in the following example:
+On loading from Valkey, references are resolved automatically and mapped back into the object, as shown in the following example:
 
 *Example 5. Sample Property Reference*
 
@@ -150,9 +150,9 @@ This does not work when a custom conversion is registered.
 3. Remove the `age` property.
 4. Set complex `address` property.
 5. Set a map of values, which removes the previously existing map and replaces the values with the given ones.
-6. Automatically update the server expiration time when altering [Time To Live](/redis/redis-repositories/expirations).
+6. Automatically update the server expiration time when altering [Time To Live](/valkey/valkey-repositories/expirations).
 ```
 
 :::note
-Updating complex objects as well as map (or other collection) structures requires further interaction with Redis to determine existing values, which means that rewriting the entire entity might be faster.
+Updating complex objects as well as map (or other collection) structures requires further interaction with Valkey to determine existing values, which means that rewriting the entire entity might be faster.
 :::

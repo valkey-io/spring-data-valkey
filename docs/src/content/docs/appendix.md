@@ -5,11 +5,11 @@ description: Additional reference information
 
 ## Schema
 
-[Spring Data Redis Schema (redis-namespace)](https://www.springframework.org/schema/redis/spring-redis-1.0.xsd)
+[Spring Data Valkey Schema (valkey-namespace)](https://www.springframework.org/schema/valkey/spring-valkey-1.0.xsd)
 
 ## Supported Commands
 
-*Table 1. Redis commands supported by `RedisTemplate`*
+*Table 1. Valkey commands supported by `ValkeyTemplate`*
 
 | Command | Template Support |
 |---------|------------------|

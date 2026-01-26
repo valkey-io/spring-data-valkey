@@ -1,9 +1,9 @@
 ---
-title: Redis Repositories Anatomy
+title: Valkey Repositories Anatomy
 description: Anatomy documentation
 ---
 
-Redis as a store itself offers a very narrow low-level API leaving higher level functions, such as secondary indexes and query operations, up to the user.
+Valkey as a store itself offers a very narrow low-level API leaving higher level functions, such as secondary indexes and query operations, up to the user.
 
 This section provides a more detailed view of commands issued by the repository abstraction for a better understanding of potential performance implications.
 
@@ -12,7 +12,7 @@ Consider the following entity class as the starting point for all operations:
 *Example 1. Example entity*
 
 ```java
-@RedisHash("people")
+@ValkeyHash("people")
 public class Person {
 
   @Id String id;

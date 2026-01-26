@@ -3,9 +3,9 @@ title: Object-to-Hash Mapping
 description: Mapping documentation
 ---
 
-The Redis Repository support persists Objects to Hashes.
-This requires an Object-to-Hash conversion which is done by a `RedisConverter`.
-The default implementation uses `Converter` for mapping property values to and from Redis native `byte[]`.
+The Valkey Repository support persists Objects to Hashes.
+This requires an Object-to-Hash conversion which is done by a `ValkeyConverter`.
+The default implementation uses `Converter` for mapping property values to and from Valkey native `byte[]`.
 
 Given the `Person` type from the previous sections, the default mapping looks like the following:
 
@@ -43,13 +43,13 @@ This section explains how types are mapped to and from a Hash representation:
 Due to the flat representation structure, Map keys need to be simple types, such as `String` or `Number`.
 :::
 
-Mapping behavior can be customized by registering the corresponding `Converter` in `RedisCustomConversions`.
+Mapping behavior can be customized by registering the corresponding `Converter` in `ValkeyCustomConversions`.
 Those converters can take care of converting from and to a single `byte[]` as well as `Map<String, byte[]>`.
 The first one is suitable for (for example) converting a complex type to (for example) a binary JSON representation that still uses the default mappings hash structure.
 The second option offers full control over the resulting hash.
 
 :::danger
-Writing objects to a Redis hash deletes the content from the hash and re-creates the whole hash, so data that has not been mapped is lost.
+Writing objects to a Valkey hash deletes the content from the hash and re-creates the whole hash, so data that has not been mapped is lost.
 :::
 
 The following example shows two sample byte array converters:
@@ -60,11 +60,11 @@ The following example shows two sample byte array converters:
 @WritingConverter
 public class AddressToBytesConverter implements Converter<Address, byte[]> {
 
-  private final Jackson2JsonRedisSerializer<Address> serializer;
+  private final Jackson2JsonValkeySerializer<Address> serializer;
 
   public AddressToBytesConverter() {
 
-    serializer = new Jackson2JsonRedisSerializer<Address>(Address.class);
+    serializer = new Jackson2JsonValkeySerializer<Address>(Address.class);
     serializer.setObjectMapper(new ObjectMapper());
   }
 
@@ -77,11 +77,11 @@ public class AddressToBytesConverter implements Converter<Address, byte[]> {
 @ReadingConverter
 public class BytesToAddressConverter implements Converter<byte[], Address> {
 
-  private final Jackson2JsonRedisSerializer<Address> serializer;
+  private final Jackson2JsonValkeySerializer<Address> serializer;
 
   public BytesToAddressConverter() {
 
-    serializer = new Jackson2JsonRedisSerializer<Address>(Address.class);
+    serializer = new Jackson2JsonValkeySerializer<Address>(Address.class);
     serializer.setObjectMapper(new ObjectMapper());
   }
 
@@ -137,14 +137,14 @@ ciudad = "emond's field"
 ```
 
 :::note
-Custom conversions have no effect on index resolution. [Secondary Indexes](/redis/redis-repositories/indexes) are still created, even for custom converted types.
+Custom conversions have no effect on index resolution. [Secondary Indexes](/valkey/valkey-repositories/indexes) are still created, even for custom converted types.
 :::
 
 ## Customizing Type Mapping
 
 If you want to avoid writing the entire Java class name as type information and would rather like to use a key, you can use the `@TypeAlias` annotation on the entity class being persisted.
 If you need to customize the mapping even more, look at the [`TypeInformationMapper`](https://docs.spring.io/spring-data/commons/docs/current/api/org/springframework/data/convert/TypeInformationMapper.html) interface.
-An instance of that interface can be configured at the `DefaultRedisTypeMapper`, which can be configured on `MappingRedisConverter`.
+An instance of that interface can be configured at the `DefaultValkeyTypeMapper`, which can be configured on `MappingValkeyConverter`.
 
 The following example shows how to define a type alias for an entity:
 
@@ -161,35 +161,35 @@ The resulting document contains `pers` as the value in a `_class` field.
 
 ### Configuring Custom Type Mapping
 
-The following example demonstrates how to configure a custom `RedisTypeMapper` in `MappingRedisConverter`:
+The following example demonstrates how to configure a custom `ValkeyTypeMapper` in `MappingValkeyConverter`:
 
-*Example 4. Configuring a custom `RedisTypeMapper` via Spring Java Config*
+*Example 4. Configuring a custom `ValkeyTypeMapper` via Spring Java Config*
 
 ```java
-class CustomRedisTypeMapper extends DefaultRedisTypeMapper {
+class CustomValkeyTypeMapper extends DefaultValkeyTypeMapper {
   //implement custom type mapping here
 }
 ```
 
 ```java
 @Configuration
-class SampleRedisConfiguration {
+class SampleValkeyConfiguration {
 
   @Bean
-  public MappingRedisConverter redisConverter(RedisMappingContext mappingContext,
-        RedisCustomConversions customConversions, ReferenceResolver referenceResolver) {
+  public MappingValkeyConverter valkeyConverter(ValkeyMappingContext mappingContext,
+        ValkeyCustomConversions customConversions, ReferenceResolver referenceResolver) {
 
-    MappingRedisConverter mappingRedisConverter = new MappingRedisConverter(mappingContext, null, referenceResolver,
+    MappingValkeyConverter mappingValkeyConverter = new MappingValkeyConverter(mappingContext, null, referenceResolver,
             customTypeMapper());
 
-    mappingRedisConverter.setCustomConversions(customConversions);
+    mappingValkeyConverter.setCustomConversions(customConversions);
 
-    return mappingRedisConverter;
+    return mappingValkeyConverter;
   }
 
   @Bean
-  public RedisTypeMapper customTypeMapper() {
-    return new CustomRedisTypeMapper();
+  public ValkeyTypeMapper customTypeMapper() {
+    return new CustomValkeyTypeMapper();
   }
 }
 ```

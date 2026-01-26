@@ -3,8 +3,8 @@ title: Secondary Indexes
 description: Indexes documentation
 ---
 
-[Secondary indexes](https://redis.io/topics/indexes) are used to enable lookup operations based on native Redis structures.
-Values are written to the according indexes on every save and are removed when objects are deleted or [expire](/redis/redis-repositories/expirations).
+[Secondary indexes](https://valkey.io/topics/indexes) are used to enable lookup operations based on native Valkey structures.
+Values are written to the according indexes on every save and are removed when objects are deleted or [expire](/valkey/valkey-repositories/expirations).
 
 ## Simple Property Index
 
@@ -13,7 +13,7 @@ Given the sample `Person` entity shown earlier, we can create an index for `firs
 *Example 1. Annotation driven indexing*
 
 ```java
-@RedisHash("people")
+@ValkeyHash("people")
 public class Person {
 
   @Id String id;
@@ -42,7 +42,7 @@ SADD people:address.city:tear e2c7dcee-b8cd-4424-883e-736ce564363e
 Furthermore, the programmatic setup lets you define indexes on map keys and list properties, as shown in the following example:
 
 ```java
-@RedisHash("people")
+@ValkeyHash("people")
 public class Person {
 
   // ... other properties omitted
@@ -59,19 +59,19 @@ public class Person {
 ```
 
 :::caution
-Indexes cannot be resolved on [References](/redis/redis-repositories/usage#redis.repositories.references).
+Indexes cannot be resolved on [References](/valkey/valkey-repositories/usage#valkey.repositories.references).
 :::
 
 As with keyspaces, you can configure indexes without needing to annotate the actual domain type, as shown in the following example:
 
-*Example 2. Index Setup with @EnableRedisRepositories*
+*Example 2. Index Setup with @EnableValkeyRepositories*
 
 ```java
 @Configuration
-@EnableRedisRepositories(indexConfiguration = MyIndexConfiguration.class)
+@EnableValkeyRepositories(indexConfiguration = MyIndexConfiguration.class)
 public class ApplicationConfig {
 
-  //... RedisConnectionFactory and RedisTemplate Bean definitions omitted
+  //... ValkeyConnectionFactory and ValkeyTemplate Bean definitions omitted
 
   public static class MyIndexConfiguration extends IndexConfiguration {
 
@@ -89,14 +89,14 @@ Again, as with keyspaces, you can programmatically configure indexes, as shown i
 
 ```java
 @Configuration
-@EnableRedisRepositories
+@EnableValkeyRepositories
 public class ApplicationConfig {
 
-  //... RedisConnectionFactory and RedisTemplate Bean definitions omitted
+  //... ValkeyConnectionFactory and ValkeyTemplate Bean definitions omitted
 
   @Bean
-  public RedisMappingContext keyValueMappingContext() {
-    return new RedisMappingContext(
+  public ValkeyMappingContext keyValueMappingContext() {
+    return new ValkeyMappingContext(
       new MappingConfiguration(
         new KeyspaceConfiguration(), new MyIndexConfiguration()));
   }
@@ -114,10 +114,10 @@ public class ApplicationConfig {
 ## Geospatial Index
 
 Assume the `Address` type contains a `location` property of type `Point` that holds the geo coordinates of the particular address.
-By annotating the property with `@GeoIndexed`, Spring Data Redis adds those values by using Redis `GEO` commands, as shown in the following example:
+By annotating the property with `@GeoIndexed`, Spring Data Valkey adds those values by using Valkey `GEO` commands, as shown in the following example:
 
 ```java
-@RedisHash("people")
+@ValkeyHash("people")
 public class Person {
 
   Address address;

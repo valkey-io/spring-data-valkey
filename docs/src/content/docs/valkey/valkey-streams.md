@@ -1,38 +1,38 @@
 ---
-title: Redis Streams
-description: Redis Streams documentation
+title: Valkey Streams
+description: Valkey Streams documentation
 ---
 
-Redis Streams model a log data structure in an abstract approach. Typically, logs are append-only data structures and are consumed from the beginning on, at a random position, or by streaming new messages.
+Valkey Streams model a log data structure in an abstract approach. Typically, logs are append-only data structures and are consumed from the beginning on, at a random position, or by streaming new messages.
 
 :::note
-Learn more about Redis Streams in the [Redis reference documentation](https://redis.io/topics/streams-intro).
+Learn more about Valkey Streams in the [Valkey reference documentation](https://valkey.io/topics/streams-intro).
 :::
 
-Redis Streams can be roughly divided into two areas of functionality:
+Valkey Streams can be roughly divided into two areas of functionality:
 
 * Appending records
 * Consuming records
 
-Although this pattern has similarities to [Pub/Sub](/redis/pubsub), the main difference lies in the persistence of messages and how they are consumed.
+Although this pattern has similarities to [Pub/Sub](/valkey/pubsub), the main difference lies in the persistence of messages and how they are consumed.
 
-While Pub/Sub relies on the broadcasting of transient messages (i.e. if you don't listen, you miss a message), Redis Stream use a persistent, append-only data type that retains messages until the stream is trimmed. Another difference in consumption is that Pub/Sub registers a server-side subscription. Redis pushes arriving messages to the client while Redis Streams require active polling.
+While Pub/Sub relies on the broadcasting of transient messages (i.e. if you don't listen, you miss a message), Valkey Stream use a persistent, append-only data type that retains messages until the stream is trimmed. Another difference in consumption is that Pub/Sub registers a server-side subscription. Valkey pushes arriving messages to the client while Valkey Streams require active polling.
 
-The `org.springframework.data.redis.connection` and `org.springframework.data.redis.stream` packages provide the core functionality for Redis Streams.
+The `io.valkey.springframework.data.connection` and `io.valkey.springframework.data.stream` packages provide the core functionality for Valkey Streams.
 
 ## Appending
 
-To send a record, you can use, as with the other operations, either the low-level `RedisConnection` or the high-level `StreamOperations`. Both entities offer the `add` (`xAdd`) method, which accepts the record and the destination stream as arguments. While `RedisConnection` requires raw data (array of bytes), the `StreamOperations` lets arbitrary objects be passed in as records, as shown in the following example:
+To send a record, you can use, as with the other operations, either the low-level `ValkeyConnection` or the high-level `StreamOperations`. Both entities offer the `add` (`xAdd`) method, which accepts the record and the destination stream as arguments. While `ValkeyConnection` requires raw data (array of bytes), the `StreamOperations` lets arbitrary objects be passed in as records, as shown in the following example:
 
 ```java
 // append message through connection
-RedisConnection con = …
+ValkeyConnection con = …
 byte[] stream = …
 ByteRecord record = StreamRecords.rawBytes(…).withStreamKey(stream);
 con.xAdd(record);
 
-// append message through RedisTemplate
-RedisTemplate template = …
+// append message through ValkeyTemplate
+ValkeyTemplate template = …
 StringRecord record = StreamRecords.string(…).withStreamKey("my-stream");
 template.opsForStream().add(record);
 ```
@@ -41,12 +41,12 @@ Stream records carry a `Map`, key-value tuples, as their payload. Appending a re
 
 ## Consuming
 
-On the consuming side, one can consume one or multiple streams. Redis Streams provide read commands that allow consumption of the stream from an arbitrary position (random access) within the known stream content and beyond the stream end to consume new stream record.
+On the consuming side, one can consume one or multiple streams. Valkey Streams provide read commands that allow consumption of the stream from an arbitrary position (random access) within the known stream content and beyond the stream end to consume new stream record.
 
-At the low-level, `RedisConnection` offers the `xRead` and `xReadGroup` methods that map the Redis commands for reading and reading within a consumer group, respectively. Note that multiple streams can be used as arguments.
+At the low-level, `ValkeyConnection` offers the `xRead` and `xReadGroup` methods that map the Valkey commands for reading and reading within a consumer group, respectively. Note that multiple streams can be used as arguments.
 
 :::note
-Subscription commands in Redis can be blocking. That is, calling `xRead` on a connection causes the current thread to block as it starts waiting for messages. The thread is released only if the read command times out or receives a message.
+Subscription commands in Valkey can be blocking. That is, calling `xRead` on a connection causes the current thread to block as it starts waiting for messages. The thread is released only if the read command times out or receives a message.
 :::
 
 To consume stream messages, one can either poll for messages in application code, or use one of the two [Asynchronous reception through Message Listener Containers](#asynchronous-reception-through-message-listener-containers), the imperative or the reactive one. Each time a new records arrives, the container notifies the application code.
@@ -56,8 +56,8 @@ To consume stream messages, one can either poll for messages in application code
 While stream consumption is typically associated with asynchronous processing, it is possible to consume messages synchronously. The overloaded `StreamOperations.read(…)` methods provide this functionality. During a synchronous receive, the calling thread potentially blocks until a message becomes available. The property `StreamReadOptions.block` specifies how long the receiver should wait before giving up waiting for a message.
 
 ```java
-// Read message through RedisTemplate
-RedisTemplate template = …
+// Read message through ValkeyTemplate
+ValkeyTemplate template = …
 
 List<MapRecord<K, HK, HV>> messages = template.opsForStream().read(StreamReadOptions.empty().count(2),
 				StreamOffset.latest("my-stream"));
@@ -73,16 +73,16 @@ Due to its blocking nature, low-level polling is not attractive, as it requires 
 
 Spring Data ships with two implementations tailored to the used programming model:
 
-* `org.springframework.data.redis.stream.StreamMessageListenerContainer` acts as message listener container for imperative programming models. It is used to consume records from a Redis Stream and drive the `org.springframework.data.redis.stream.StreamListener` instances that are injected into it.
-* `org.springframework.data.redis.stream.StreamReceiver` provides a reactive variant of a message listener. It is used to consume messages from a Redis Stream as potentially infinite stream and emit stream messages through a `Flux`.
+* `io.valkey.springframework.data.stream.StreamMessageListenerContainer` acts as message listener container for imperative programming models. It is used to consume records from a Valkey Stream and drive the `io.valkey.springframework.data.stream.StreamListener` instances that are injected into it.
+* `io.valkey.springframework.data.stream.StreamReceiver` provides a reactive variant of a message listener. It is used to consume messages from a Valkey Stream as potentially infinite stream and emit stream messages through a `Flux`.
 
-`StreamMessageListenerContainer` and `StreamReceiver` are responsible for all threading of message reception and dispatch into the listener for processing. A message listener container/receiver is the intermediary between an MDP and a messaging provider and takes care of registering to receive messages, resource acquisition and release, exception conversion, and the like. This lets you as an application developer write the (possibly complex) business logic associated with receiving a message (and reacting to it) and delegates boilerplate Redis infrastructure concerns to the framework.
+`StreamMessageListenerContainer` and `StreamReceiver` are responsible for all threading of message reception and dispatch into the listener for processing. A message listener container/receiver is the intermediary between an MDP and a messaging provider and takes care of registering to receive messages, resource acquisition and release, exception conversion, and the like. This lets you as an application developer write the (possibly complex) business logic associated with receiving a message (and reacting to it) and delegates boilerplate Valkey infrastructure concerns to the framework.
 
-Both containers allow runtime configuration changes so that you can add or remove subscriptions while an application is running without the need for a restart. Additionally, the container uses a lazy subscription approach, using a `RedisConnection` only when needed. If all the listeners are unsubscribed, it automatically performs a cleanup, and the thread is released.
+Both containers allow runtime configuration changes so that you can add or remove subscriptions while an application is running without the need for a restart. Additionally, the container uses a lazy subscription approach, using a `ValkeyConnection` only when needed. If all the listeners are unsubscribed, it automatically performs a cleanup, and the thread is released.
 
 #### Imperative `StreamMessageListenerContainer`
 
-In a fashion similar to a Message-Driven Bean (MDB) in the EJB world, the Stream-Driven POJO (SDP) acts as a receiver for Stream messages. The one restriction on an SDP is that it must implement the `org.springframework.data.redis.stream.StreamListener` interface. Please also be aware that in the case where your POJO receives messages on multiple threads, it is important to ensure that your implementation is thread-safe.
+In a fashion similar to a Message-Driven Bean (MDB) in the EJB world, the Stream-Driven POJO (SDP) acts as a receiver for Stream messages. The one restriction on an SDP is that it must implement the `io.valkey.springframework.data.stream.StreamListener` interface. Please also be aware that in the case where your POJO receives messages on multiple threads, it is important to ensure that your implementation is thread-safe.
 
 ```java
 class ExampleStreamListener implements StreamListener<String, MapRecord<String, String, String>> {
@@ -111,7 +111,7 @@ message -> {
 Once you've implemented your `StreamListener`, it's time to create a message listener container and register a subscription:
 
 ```java
-RedisConnectionFactory connectionFactory = …
+ValkeyConnectionFactory connectionFactory = …
 StreamListener<String, MapRecord<String, String, String>> streamListener = …
 
 StreamMessageListenerContainerOptions<String, MapRecord<String, String, String>> containerOptions = StreamMessageListenerContainerOptions
@@ -142,7 +142,7 @@ return messages.doOnNext(it -> {
 Now we need to create the `StreamReceiver` and register a subscription to consume stream messages:
 
 ```java
-ReactiveRedisConnectionFactory connectionFactory = …
+ReactiveValkeyConnectionFactory connectionFactory = …
 
 StreamReceiverOptions<String, MapRecord<String, String, String>> options = StreamReceiverOptions.builder().pollTimeout(Duration.ofMillis(100))
 				.build();
@@ -170,7 +170,7 @@ container.receive(Consumer.from("my-group", "my-consumer"), // (1)
     msg -> {
 
 	    // ...
-	    redisTemplate.opsForStream().acknowledge("my-group", msg); // (2)
+	    valkeyTemplate.opsForStream().acknowledge("my-group", msg); // (2)
     });
 ```
 ```text
@@ -184,7 +184,7 @@ To auto acknowledge messages on receive use `receiveAutoAck` instead of `receive
 
 ### `ReadOffset` strategies
 
-Stream read operations accept a read offset specification to consume messages from the given offset on. `ReadOffset` represents the read offset specification. Redis supports 3 variants of offsets, depending on whether you consume the stream standalone or within a consumer group:
+Stream read operations accept a read offset specification to consume messages from the given offset on. `ReadOffset` represents the read offset specification. Valkey supports 3 variants of offsets, depending on whether you consume the stream standalone or within a consumer group:
 
 * `ReadOffset.latest()` – Read the latest message.
 * `ReadOffset.from(…)` – Read after a specific message Id.
@@ -205,7 +205,7 @@ Using the latest message for read can skip messages that were added to the strea
 
 ## Serialization
 
-Any Record sent to the stream needs to be serialized to its binary format. Due to the streams closeness to the hash data structure the stream key, field names and values use the according serializers configured on the `RedisTemplate`.
+Any Record sent to the stream needs to be serialized to its binary format. Due to the streams closeness to the hash data structure the stream key, field names and values use the according serializers configured on the `ValkeyTemplate`.
 
 *Table 2. Stream Serialization*
 
@@ -215,7 +215,7 @@ Any Record sent to the stream needs to be serialized to its binary format. Due t
 | field | hashKeySerializer | used for each map key in the payload |
 | value | hashValueSerializer | used for each map value in the payload |
 
-Please make sure to review `RedisSerializer`s in use and note that if you decide to not use any serializer you need to make sure those values are binary already.
+Please make sure to review `ValkeySerializer`s in use and note that if you decide to not use any serializer you need to make sure those values are binary already.
 
 ## Object Mapping
 
@@ -229,11 +229,11 @@ ObjectRecord<String, String> record = StreamRecords.newRecord()
     .in("my-stream")
     .ofObject("my-value");
 
-redisTemplate()
+valkeyTemplate()
     .opsForStream()
     .add(record); // (1)
 
-List<ObjectRecord<String, String>> records = redisTemplate()
+List<ObjectRecord<String, String>> records = valkeyTemplate()
     .opsForStream()
     .read(String.class, StreamOffset.fromStart("my-stream"));
 ```
@@ -248,15 +248,15 @@ List<ObjectRecord<String, String>> records = redisTemplate()
 Adding a complex value to the stream can be done in 3 ways:
 
 * Convert to simple value using e. g. a String JSON representation.
-* Serialize the value with a suitable `RedisSerializer`.
-* Convert the value into a `Map` suitable for serialization using a [`HashMapper`](/redis/hash-mappers).
+* Serialize the value with a suitable `ValkeySerializer`.
+* Convert the value into a `Map` suitable for serialization using a [`HashMapper`](/valkey/hash-mappers).
 
 The first variant is the most straight forward one but neglects the field value capabilities offered by the stream structure, still the values in the stream will be readable for other consumers.
 The 2nd option holds the same benefits as the first one, but may lead to a very specific consumer limitations as the all consumers must implement the very same serialization mechanism.
 The `HashMapper` approach is the a bit more complex one making use of the steams hash structure, but flattening the source. Still other consumers remain able to read the records as long as suitable serializer combinations are chosen.
 
 :::note
-[HashMappers](/redis/hash-mappers) convert the payload to a `Map` with specific types. Make sure to use Hash-Key and Hash-Value serializers that are capable of (de-)serializing the hash.
+[HashMappers](/valkey/hash-mappers) convert the payload to a `Map` with specific types. Make sure to use Hash-Key and Hash-Value serializers that are capable of (de-)serializing the hash.
 :::
 
 ```java
@@ -264,11 +264,11 @@ ObjectRecord<String, User> record = StreamRecords.newRecord()
     .in("user-logon")
     .ofObject(new User("night", "angel"));
 
-redisTemplate()
+valkeyTemplate()
     .opsForStream()
     .add(record); // (1)
 
-List<ObjectRecord<String, User>> records = redisTemplate()
+List<ObjectRecord<String, User>> records = valkeyTemplate()
     .opsForStream()
     .read(User.class, StreamOffset.fromStart("user-logon"));
 ```
@@ -276,11 +276,11 @@ List<ObjectRecord<String, User>> records = redisTemplate()
 1. XADD user-logon * "_class" "com.example.User" "firstname" "night" "lastname" "angel"
 ```
 
-`StreamOperations` use by default [ObjectHashMapper](/redis/redis-repositories/mapping).
+`StreamOperations` use by default [ObjectHashMapper](/valkey/valkey-repositories/mapping).
 You may provide a `HashMapper` suitable for your requirements when obtaining `StreamOperations`.
 
 ```java
-redisTemplate()
+valkeyTemplate()
     .opsForStream(new Jackson2HashMapper(true))
     .add(record); // (1)
 ```
@@ -290,29 +290,29 @@ redisTemplate()
 
 :::note
 A `StreamMessageListenerContainer` may not be aware of any `@TypeAlias` used on domain types as those need to be resolved through a `MappingContext`.
-Make sure to initialize `RedisMappingContext` with a `initialEntitySet`.
+Make sure to initialize `ValkeyMappingContext` with a `initialEntitySet`.
 :::
 
 ```java
 @Bean
-RedisMappingContext redisMappingContext() {
-    RedisMappingContext ctx = new RedisMappingContext();
+ValkeyMappingContext valkeyMappingContext() {
+    ValkeyMappingContext ctx = new ValkeyMappingContext();
     ctx.setInitialEntitySet(Collections.singleton(Person.class));
     return ctx;
 }
 
 @Bean
-RedisConverter redisConverter(RedisMappingContext mappingContext) {
-    return new MappingRedisConverter(mappingContext);
+ValkeyConverter valkeyConverter(ValkeyMappingContext mappingContext) {
+    return new MappingValkeyConverter(mappingContext);
 }
 
 @Bean
-ObjectHashMapper hashMapper(RedisConverter converter) {
+ObjectHashMapper hashMapper(ValkeyConverter converter) {
     return new ObjectHashMapper(converter);
 }
 
 @Bean
-StreamMessageListenerContainer streamMessageListenerContainer(RedisConnectionFactory connectionFactory, ObjectHashMapper hashMapper) {
+StreamMessageListenerContainer streamMessageListenerContainer(ValkeyConnectionFactory connectionFactory, ObjectHashMapper hashMapper) {
     StreamMessageListenerContainerOptions<String, ObjectRecord<String, Object>> options = StreamMessageListenerContainerOptions.builder()
             .objectMapper(hashMapper)
             .build();
