@@ -3,15 +3,38 @@ title: Spring Data Valkey
 description: Spring Data Valkey provides Valkey connectivity and repository support for the Valkey database.
 ---
 
-
 _Spring Data Valkey provides Valkey connectivity and repository support for the Valkey database. It eases development of applications with a consistent programming model that need to access Valkey data sources._
 
-| Section | Description |
-|---------|-------------|
-| [Valkey](../valkey) | Valkey support and connectivity |
-| [Valkey Repositories](../repositories) | Valkey Repositories |
-| [Observability](../observability) | Observability Integration |
-| [Wiki](https://github.com/spring-projects/spring-data-commons/wiki) | What's New, Upgrade Notes, Supported Versions, additional cross-version information. |
+<table>
+<colgroup>
+<col style="width: 30%;">
+<col style="width: 70%;">
+</colgroup>
+<thead>
+<tr>
+<th>Section</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="../valkey">Valkey</a></td>
+<td>Valkey support and connectivity</td>
+</tr>
+<tr>
+<td><a href="../repositories">Valkey Repositories</a></td>
+<td>Valkey Repositories</td>
+</tr>
+<tr>
+<td><a href="../observability">Observability</a></td>
+<td>Observability Integration</td>
+</tr>
+<tr>
+<td><a href="https://github.com/spring-projects/spring-data-commons/wiki">Wiki</a></td>
+<td>What's New, Upgrade Notes, Supported Versions, additional cross-version information.</td>
+</tr>
+</tbody>
+</table>
 
 ## Authors
 

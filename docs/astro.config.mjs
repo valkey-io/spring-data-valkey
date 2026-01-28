@@ -23,8 +23,7 @@ export default defineConfig({
 					label: 'Overview',
 					items: [
 						{ label: 'Spring Data Valkey', slug: 'overview' },
-						{ label: 'Upgrading Spring Data', slug: 'commons/upgrade' },
-						{ label: 'Migration Guides', slug: 'commons/migration' },
+						{ label: 'Migrating Spring Data', slug: 'commons/migration' },
 					]
 				},
 				{
