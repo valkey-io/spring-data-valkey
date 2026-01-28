@@ -10,11 +10,19 @@ Each mode of operation requires specific configuration that is explained in the 
 
 The easiest way to get started is by using Valkey Standalone with a single Valkey server,
 
-Configure `io.valkey.springframework.data.connection.lettuce.LettuceConnectionFactory` or `io.valkey.springframework.data.connection.jedis.JedisConnectionFactory`, as shown in the following example:
+Configure `io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideConnectionFactory`, `io.valkey.springframework.data.connection.lettuce.LettuceConnectionFactory` or `io.valkey.springframework.data.connection.jedis.JedisConnectionFactory`, as shown in the following example:
 
 ```java
 @Configuration
 class ValkeyStandaloneConfiguration {
+
+  /**
+   * Valkey GLIDE
+   */
+  @Bean
+  public ValkeyConnectionFactory valkeyGlideConnectionFactory() {
+    return new ValkeyGlideConnectionFactory(new ValkeyStandaloneConfiguration("server", 6379));
+  }
 
   /**
    * Lettuce
@@ -37,23 +45,23 @@ class ValkeyStandaloneConfiguration {
 ## Write to Master, Read from Replica
 
 The Valkey Master/Replica setup -- without automatic failover (for automatic failover see: [Sentinel](/valkey/connection-modes#valkey-sentinel)) -- not only allows data to be safely stored at more nodes.
-It also allows, by using [Lettuce](/valkey/drivers#configuring-the-lettuce-connector), reading data from replicas while pushing writes to the master.
-You can set the read/write strategy to be used by using `LettuceClientConfiguration`, as shown in the following example:
+It also allows, by using [Valkey GLIDE](/valkey/drivers#configuring-the-valkey-glide-connector), reading data from replicas while pushing writes to the master.
+You can set the read/write strategy to be used by using `ValkeyGlideClientConfiguration`, as shown in the following example:
 
 ```java
 @Configuration
 class WriteToMasterReadFromReplicaConfiguration {
 
   @Bean
-  public LettuceConnectionFactory valkeyConnectionFactory() {
+  public ValkeyGlideConnectionFactory valkeyConnectionFactory() {
 
-    LettuceClientConfiguration clientConfig = LettuceClientConfiguration.builder()
-      .readFrom(REPLICA_PREFERRED)
+    ValkeyGlideClientConfiguration clientConfig = ValkeyGlideClientConfiguration.builder()
+      .readFrom(glide.api.models.configuration.ReadFrom.PREFER_REPLICA)
       .build();
 
     ValkeyStandaloneConfiguration serverConfig = new ValkeyStandaloneConfiguration("server", 6379);
 
-    return new LettuceConnectionFactory(serverConfig, clientConfig);
+    return new ValkeyGlideConnectionFactory(serverConfig, clientConfig);
   }
 }
 ```
@@ -65,6 +73,10 @@ For environments reporting non-public addresses through the `INFO` command (for 
 ## Valkey Sentinel
 
 For dealing with high-availability Valkey, Spring Data Valkey has support for [Valkey Sentinel](https://valkey.io/topics/sentinel), using `io.valkey.springframework.data.connection.ValkeySentinelConfiguration`, as shown in the following example:
+
+:::note[Driver Support]
+Valkey Sentinel is currently supported by Lettuce and Jedis drivers. Valkey GLIDE support for Sentinel is planned for a future release.
+:::
 
 ```java
 /**
@@ -149,7 +161,13 @@ public class AppConfig {
      */
     @Autowired ClusterConfigurationProperties clusterProperties;
 
-    public @Bean ValkeyConnectionFactory connectionFactory() {
+    public @Bean ValkeyConnectionFactory valkeyGlideConnectionFactory() {
+
+        return new ValkeyGlideConnectionFactory(
+            new ValkeyClusterConfiguration(clusterProperties.getNodes()));
+    }
+
+    public @Bean ValkeyConnectionFactory lettuceConnectionFactory() {
 
         return new LettuceConnectionFactory(
             new ValkeyClusterConfiguration(clusterProperties.getNodes()));

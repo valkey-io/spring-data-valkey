@@ -7,6 +7,10 @@ Getting insights from an application component about its operations, timing and 
 Spring Data Valkey ships with a Micrometer integration through the Lettuce driver to collect observations during Valkey interaction.
 Once the integration is set up, Micrometer will create meters and spans (for distributed tracing) for each Valkey command.
 
+:::note[Driver Support]
+Observability integration is currently only supported with the Lettuce driver. Valkey GLIDE and Jedis do not support Spring observability at this time.
+:::
+
 To enable the integration, apply the following configuration to `LettuceClientConfiguration`:
 
 ```java

@@ -140,5 +140,5 @@ clusterOps.shutdown(NODE_7379);                                              // 
 ```
 
 :::note
-Valkey Cluster pipelining is currently only supported through the Lettuce driver except for the following commands when using cross-slot keys: `rename`, `renameNX`, `sort`, `bLPop`, `bRPop`, `rPopLPush`, `bRPopLPush`, `info`, `sMove`, `sInter`, `sInterStore`, `sUnion`, `sUnionStore`, `sDiff`, `sDiffStore`.
+Valkey Cluster pipelining is currently only supported through the Lettuce driver. Valkey GLIDE and Jedis do not support pipelining in cluster mode. The Lettuce driver has exceptions for the following commands when using cross-slot keys: `rename`, `renameNX`, `sort`, `bLPop`, `bRPop`, `rPopLPush`, `bRPopLPush`, `info`, `sMove`, `sInter`, `sInterStore`, `sUnion`, `sUnionStore`, `sDiff`, `sDiffStore`.
 :::

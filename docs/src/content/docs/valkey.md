@@ -4,12 +4,9 @@ description: Spring Data Valkey support and connectivity
 ---
 
 One of the key-value stores supported by Spring Data is [Valkey](https://valkey.io).
-To quote the Valkey project home page:
+To quote the Valkey project documentation:
 
-> Valkey is an advanced key-value store.
-> It is similar to memcached but the dataset is not volatile, and values can be strings, exactly like in memcached, but also lists, sets, and ordered sets.
-> All this data types can be manipulated with atomic operations to push/pop elements, add/remove elements, perform server side union, intersection, difference between sets, and so forth.
-> Valkey supports different kind of sorting abilities.
+> "Valkey is an open source (BSD licensed), in-memory data structure store used as a database, cache, message broker, and streaming engine. Valkey provides data structures such as strings, hashes, lists, sets, sorted sets with range queries, bitmaps, hyperloglogs, geospatial indexes, and streams."
 
 Spring Data Valkey provides easy configuration and access to Valkey from Spring applications.
 It offers both low-level and high-level abstractions for interacting with the store, freeing the user from infrastructural concerns.

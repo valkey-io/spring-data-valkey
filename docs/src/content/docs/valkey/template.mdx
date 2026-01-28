@@ -17,6 +17,10 @@ The preferred way to reference operations on a `[Reactive]ValkeyTemplate` instan
 `[Reactive]ValkeyOperations` interface.
 :::
 
+:::note[Driver Support]
+Reactive programming is currently only supported by the Lettuce driver. Valkey GLIDE and Jedis do not support reactive operations. For imperative (blocking) operations, all drivers are supported.
+:::
+
 Moreover, the template provides operations views (following the grouping from the Valkey command [reference](https://valkey.io/commands)) that offer rich, generified interfaces for working against a certain type or certain key (through the `KeyBound` interfaces) as described in the following table:
 
 <details>
@@ -88,8 +92,8 @@ The container automatically performs the conversion, eliminating the `opsFor[X]`
 class MyConfig {
 
   @Bean
-  LettuceConnectionFactory connectionFactory() {
-    return new LettuceConnectionFactory();
+  ValkeyGlideConnectionFactory connectionFactory() {
+    return new ValkeyGlideConnectionFactory();
   }
 
   @Bean
@@ -131,7 +135,7 @@ class MyConfig {
   xmlns:p="http://www.springframework.org/schema/p"
   xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
 
-  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.connection.lettuce.LettuceConnectionFactory"/>
+  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideConnectionFactory"/>
   <!-- valkey template definition -->
   <bean id="valkeyTemplate" class="io.valkey.springframework.data.core.ValkeyTemplate" p:connection-factory-ref="valkeyConnectionFactory"/>
   ...
@@ -197,8 +201,8 @@ The following listings show an example:
 class ValkeyConfiguration {
 
   @Bean
-  LettuceConnectionFactory valkeyConnectionFactory() {
-    return new LettuceConnectionFactory();
+  ValkeyGlideConnectionFactory valkeyConnectionFactory() {
+    return new ValkeyGlideConnectionFactory();
   }
 
   @Bean
@@ -240,7 +244,7 @@ class ValkeyConfiguration {
   xmlns:p="http://www.springframework.org/schema/p"
   xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
 
-  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.connection.lettuce.LettuceConnectionFactory"/>
+  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideConnectionFactory"/>
 
   <bean id="stringValkeyTemplate" class="io.valkey.springframework.data.core.StringValkeyTemplate" p:connection-factory-ref="valkeyConnectionFactory"/>
 

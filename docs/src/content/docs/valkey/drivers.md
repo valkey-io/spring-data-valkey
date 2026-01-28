@@ -42,21 +42,86 @@ The following overview explains features that are supported by the individual Va
 
 *Table 1. Feature Availability across Valkey Connectors*
 
-| Supported Feature | Lettuce | Jedis |
-|-------------------|---------|-------|
-| Standalone Connections | X | X |
-| [Master/Replica Connections](/valkey/connection-modes#write-to-master-read-from-replica) | X | X |
-| [Valkey Sentinel](/valkey/connection-modes#valkey-sentinel) | Master Lookup, Sentinel Authentication, Replica Reads | Master Lookup |
-| [Valkey Cluster](/valkey/cluster) | Cluster Connections, Cluster Node Connections, Replica Reads | Cluster Connections, Cluster Node Connections |
-| Transport Channels | TCP, OS-native TCP (epoll, kqueue), Unix Domain Sockets | TCP |
-| Connection Pooling | X (using `commons-pool2`) | X (using `commons-pool2`) |
-| Other Connection Features | Singleton-connection sharing for non-blocking commands | Pipelining and Transactions mutually exclusive. Cannot use server/connection commands in pipeline/transactions. |
-| SSL Support | X | X |
-| [Pub/Sub](/valkey/pubsub) | X | X |
-| [Pipelining](/valkey/pipelining) | X | X (Pipelining and Transactions mutually exclusive) |
-| [Transactions](/valkey/transactions) | X | X (Pipelining and Transactions mutually exclusive) |
-| Datatype support | Key, String, List, Set, Sorted Set, Hash, Server, Stream, Scripting, Geo, HyperLogLog | Key, String, List, Set, Sorted Set, Hash, Server, Stream, Scripting, Geo, HyperLogLog |
-| Reactive (non-blocking) API | X | |
+| Supported Feature | Valkey GLIDE | Lettuce | Jedis |
+|-------------------|--------------|---------|-------|
+| Standalone Connections | X | X | X |
+| [Master/Replica Connections](/valkey/connection-modes#write-to-master-read-from-replica) | X | X | X |
+| [Valkey Sentinel](/valkey/connection-modes#valkey-sentinel) | | Master Lookup, Sentinel Authentication, Replica Reads | Master Lookup |
+| [Valkey Cluster](/valkey/cluster) | Cluster Connections, Cluster Node Connections, Replica Reads | Cluster Connections, Cluster Node Connections, Replica Reads | Cluster Connections, Cluster Node Connections |
+| Transport Channels | TCP | TCP, OS-native TCP (epoll, kqueue), Unix Domain Sockets | TCP |
+| Connection Pooling | X (using `LinkedBlockingQueue`) | X (using `commons-pool2`) | X (using `commons-pool2`) |
+| Other Connection Features | High-performance async operations | Singleton-connection sharing for non-blocking commands | Pipelining and Transactions mutually exclusive. Cannot use server/connection commands in pipeline/transactions. |
+| SSL Support | X | X | X |
+| [Pub/Sub](/valkey/pubsub) | X | X | X |
+| [Pipelining](/valkey/pipelining) | X | X | X (Pipelining and Transactions mutually exclusive) |
+| [Transactions](/valkey/transactions) | X | X | X (Pipelining and Transactions mutually exclusive) |
+| Datatype support | Key, String, List, Set, Sorted Set, Hash, Server, Stream, Scripting, Geo, HyperLogLog | Key, String, List, Set, Sorted Set, Hash, Server, Stream, Scripting, Geo, HyperLogLog | Key, String, List, Set, Sorted Set, Hash, Server, Stream, Scripting, Geo, HyperLogLog |
+| Reactive (non-blocking) API | | X | |
+
+## Configuring the Valkey GLIDE Connector
+
+[Valkey GLIDE](https://github.com/valkey-io/valkey-glide) is a high-performance, cross-language client library for Valkey, supported by Spring Data Valkey through the `io.valkey.springframework.data.connection.valkeyglide` package.
+
+*Add the following to the pom.xml files `dependencies` element:*
+
+```xml
+<dependencies>
+
+  <!-- other dependency elements omitted -->
+
+  <dependency>
+    <groupId>io.valkey</groupId>
+    <artifactId>valkey-glide</artifactId>
+    <version>2.3.0</version>
+    <classifier>linux-x86_64</classifier>
+  </dependency>
+
+</dependencies>
+```
+
+The following example shows how to create a new Valkey GLIDE connection factory:
+
+```java
+@Configuration
+class AppConfig {
+
+  @Bean
+  public ValkeyGlideConnectionFactory valkeyConnectionFactory() {
+
+    return new ValkeyGlideConnectionFactory(new ValkeyStandaloneConfiguration("server", 6379));
+  }
+}
+```
+
+Valkey GLIDE provides built-in connection pooling and high-performance async operations.
+You can configure various client options including SSL, timeouts, and OpenTelemetry observability.
+
+The following example shows a more sophisticated configuration with SSL, timeouts, and observability:
+
+```java
+@Bean
+public ValkeyGlideConnectionFactory valkeyGlideConnectionFactory() {
+
+  var otelConfig = new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
+      "http://localhost:4318/v1/traces",
+      "http://localhost:4318/v1/metrics",
+      10,
+      1000L
+  );
+
+  ValkeyGlideClientConfiguration clientConfig = ValkeyGlideClientConfiguration.builder()
+    .useSsl()
+    .commandTimeout(Duration.ofSeconds(2))
+    .connectionTimeout(Duration.ofSeconds(1))
+    .useOpenTelemetry(otelConfig)
+    .maxPoolSize(16)
+    .build();
+
+  return new ValkeyGlideConnectionFactory(new ValkeyStandaloneConfiguration("localhost", 6379), clientConfig);
+}
+```
+
+For more detailed client configuration options, see `io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideClientConfiguration`.
 
 ## Configuring the Lettuce Connector
 

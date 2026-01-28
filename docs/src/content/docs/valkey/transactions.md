@@ -79,7 +79,7 @@ public class ValkeyTxContextConfiguration {
 
   @Bean
   public ValkeyConnectionFactory valkeyConnectionFactory() {
-    // jedis || Lettuce
+    // jedis || Lettuce || GLIDE
   }
 
   @Bean

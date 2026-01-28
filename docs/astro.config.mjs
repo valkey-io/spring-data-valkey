@@ -1,10 +1,16 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import rehypeExternalLinks from 'rehype-external-links';
 
 // https://astro.build/config
 export default defineConfig({
 	site: 'https://spring.valkey.io',
+	markdown: {
+		rehypePlugins: [
+			[rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }]
+		]
+	},
 	integrations: [
 		starlight({
 			title: 'Spring Data Valkey',
@@ -73,7 +79,8 @@ export default defineConfig({
 				},
 				{ label: 'Observability', slug: 'observability' },
 				{ label: 'Appendix', slug: 'appendix' },
-				{ label: 'Javadoc ↗', link: '/api/java/index.html', attrs: { target: '_blank' } },
+				{ label: 'Valkey Project ↗', link: 'https://valkey.io/', attrs: { target: '_blank' } },
+				{ label: 'Javadoc ↗', link: 'https://spring.valkey.io/api/java/index.html', attrs: { target: '_blank' } },
 			],
 		}),
 	],
