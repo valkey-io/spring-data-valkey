@@ -5,7 +5,7 @@ description: Additional reference information
 
 ## Schema
 
-[Spring Data Valkey Schema (valkey-namespace)](https://www.springframework.org/schema/valkey/spring-valkey-1.0.xsd)
+[Spring Data Valkey Schema (valkey-namespace)](https://spring.valkey.io/schema/valkey/spring-valkey-1.0.xsd)
 
 ## Supported Commands
 

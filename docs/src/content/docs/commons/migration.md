@@ -3,7 +3,7 @@ title: Migrating Spring Data
 description: Instructions for migrating from Spring Data Redis to Spring Data Valkey
 ---
 
-Spring Data Valkey is a fork of Spring Data Redis 3.5.1, created to provide first-class support for Valkey. To migrate from Spring Data Redis to Spring Data Valkey, see the comprehensive [Migration Guide](https://github.com/valkey-io/spring-data-valkey/blob/main/MIGRATION.md) in the Spring Data Valkey repository.
+Spring Data Valkey is a fork of Spring Data Redis 3.5.1, created to provide first-class support for Valkey. To migrate from Spring Data Redis to Spring Data Valkey, see the comprehensive <a href="https://github.com/valkey-io/spring-data-valkey/blob/main/MIGRATION.md" target="_blank">Migration Guide</a> in the Spring Data Valkey repository.
 
 The migration guide covers:
 

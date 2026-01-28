@@ -73,13 +73,7 @@ export default defineConfig({
 				},
 				{ label: 'Observability', slug: 'observability' },
 				{ label: 'Appendix', slug: 'appendix' },
-				{
-					label: 'External Links',
-					items: [
-						{ label: 'Javadoc', link: '/api/java/index.html' },
-						{ label: 'Wiki', link: 'https://github.com/spring-projects/spring-data-commons/wiki' },
-					]
-				},
+				{ label: 'Javadoc ↗', link: '/api/java/index.html', attrs: { target: '_blank' } },
 			],
 		}),
 	],

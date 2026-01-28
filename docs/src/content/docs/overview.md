@@ -30,18 +30,24 @@ _Spring Data Valkey provides Valkey connectivity and repository support for the 
 <td>Observability Integration</td>
 </tr>
 <tr>
-<td><a href="https://github.com/spring-projects/spring-data-commons/wiki">Wiki</a></td>
-<td>What's New, Upgrade Notes, Supported Versions, additional cross-version information.</td>
+<td><a href="https://valkey.io/" target="_blank">Valkey Project ↗</a></td>
+<td>Official Valkey project site and community resources</td>
 </tr>
 </tbody>
 </table>
 
 ## Authors
 
+*Original Spring Data Redis Authors:*  
 Costin Leau, Jennifer Hickey, Christoph Strobl, Thomas Darimont, Mark Paluch, Jay Bryant
+
+*Spring Data Valkey Contributors:*  
+Jeremy Parr-Pearson
 
 ## Copyright
 
 (C) 2008-2024 VMware, Inc.
+
+(C) 2025-2026 Valkey Contributors
 
 Copies of this document may be made for your own use and for distribution to others, provided that you do not charge any fee for such copies and further provided that each copy contains this Copyright Notice, whether distributed in print or electronically.
