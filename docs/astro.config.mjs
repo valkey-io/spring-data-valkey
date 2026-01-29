@@ -52,7 +52,7 @@ export default defineConfig({
 					]
 				},
 				{
-					label: 'Repositories',
+					label: 'Valkey Repositories',
 					items: [
 						{ label: 'Valkey Repositories Overview', slug: 'repositories' },
 						{ label: 'Core concepts', slug: 'repositories/core-concepts' },
