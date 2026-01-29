@@ -201,7 +201,7 @@ Netty currently supports the epoll (Linux) and kqueue (BSD/macOS) interfaces for
 
 ## Configuring the Jedis Connector
 
-[Jedis](https://github.com/valkey/jedis) is a community-driven connector supported by the Spring Data Valkey module through the `io.valkey.springframework.data.connection.jedis` package.
+[Jedis](https://github.com/redis/jedis) is a community-driven connector supported by the Spring Data Valkey module through the `io.valkey.springframework.data.connection.jedis` package.
 
 *Add the following to the pom.xml files `dependencies` element:*
 

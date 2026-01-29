@@ -49,7 +49,7 @@ public class ApplicationConfig {
 
   @Bean
   public ValkeyConnectionFactory connectionFactory() {
-    return new LettuceConnectionFactory();
+    return new ValkeyGlideConnectionFactory();
   }
 
   @Bean

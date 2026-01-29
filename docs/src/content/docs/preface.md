@@ -41,7 +41,7 @@ It usually does not take more then five to ten minutes to go through them and, i
 
 ### Trying out the Samples
 
-One can find various samples for key-value stores in the dedicated Spring Data example repo, at [https://github.com/spring-projects/spring-data-examples/tree/main/valkey](https://github.com/spring-projects/spring-data-examples/tree/main/valkey).
+One can find various samples for key-value stores in the Spring Data Valkey repo, at [https://github.com/valkey-io/spring-data-valkey/tree/main/examples](https://github.com/valkey-io/spring-data-valkey/tree/main/examples).
 
 ## Requirements
 

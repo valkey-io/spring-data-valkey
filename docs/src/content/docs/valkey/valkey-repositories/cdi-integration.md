@@ -15,7 +15,7 @@ class ValkeyOperationsProducer {
   @Produces
   ValkeyConnectionFactory valkeyConnectionFactory() {
 
-    LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory(new ValkeyStandaloneConfiguration());
+    ValkeyGlideConnectionFactory connectionFactory = new ValkeyGlideConnectionFactory(new ValkeyStandaloneConfiguration());
     connectionFactory.afterPropertiesSet();
 	connectionFactory.start();
 

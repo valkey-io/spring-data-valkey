@@ -6,11 +6,11 @@ description: Getting Started documentation
 An easy way to bootstrap setting up a working environment is to create a Spring-based project via [start.spring.io](https://start.spring.io/#!type=maven-project&dependencies=data-valkey) or create a Spring project in [Spring Tools](https://spring.io/tools).
 ## Examples Repository
 
-The GitHub [spring-data-valkey examples](https://github.com/valkey-io/spring-data-valkey/tree/main/examples) repository hosts several examples that you can download and play around with to get a feel for how the library works.
+The GitHub [spring-data-valkey](https://github.com/valkey-io/spring-data-valkey/tree/main/examples) repository hosts several examples that you can download and play around with to get a feel for how the library works.
 ## Hello World
 
 First, you need to set up a running Valkey server.
-Spring Data Valkey requires Valkey 2.6 or above and Spring Data Valkey integrates with [Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core) and [Jedis](https://github.com/valkey/jedis), popular open-source Java libraries for Valkey.
+Spring Data Valkey requires Valkey 2.6 or above and Spring Data Valkey integrates with [Valkey GLIDE](https://github.com/valkey-io/valkey-glide), [Lettuce](https://github.com/lettuce-io/lettuce-core) and [Jedis](https://github.com/redis/jedis), popular open-source Java libraries for Valkey.
 
 Now you can create a simple Java application that stores and reads a value to and from Valkey.
 

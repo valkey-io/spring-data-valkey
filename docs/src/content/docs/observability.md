@@ -4,12 +4,75 @@ description: Observability Integration for monitoring and metrics
 ---
 
 Getting insights from an application component about its operations, timing and relation to application code is crucial to understand latency.
+
+Spring Data Valkey provides observability integration through two approaches:
+- *OpenTelemetry integration* through Valkey GLIDE for direct OTLP export
+- *Micrometer integration* through the Lettuce driver for Spring-based metrics and tracing
+
+
+## OpenTelemetry Integration (GLIDE)
+
+Valkey GLIDE provides built-in OpenTelemetry support for direct export of traces and metrics to OTLP endpoints.
+This integration operates independently of Spring's observability infrastructure and exports telemetry data directly to OpenTelemetry collectors.
+
+### Spring Boot Configuration
+
+When using Spring Boot, OpenTelemetry can be enabled via application properties:
+
+```properties
+# Enable OpenTelemetry instrumentation in GLIDE
+spring.data.valkey.valkey-glide.open-telemetry.enabled=true
+
+# Configure trace and metric endpoints (defaults shown)
+spring.data.valkey.valkey-glide.open-telemetry.traces-endpoint=http://localhost:4318/v1/traces
+spring.data.valkey.valkey-glide.open-telemetry.metrics-endpoint=http://localhost:4318/v1/metrics
+
+# Optionally configure sampling and flush behavior
+spring.data.valkey.valkey-glide.open-telemetry.sample-percentage=1
+spring.data.valkey.valkey-glide.open-telemetry.flush-interval-ms=5000
+```
+
+### Programmatic Configuration
+
+For non-Spring Boot applications, configure OpenTelemetry programmatically:
+
+```java
+@Configuration
+public class ValkeyGlideOpenTelemetryConfig {
+
+  @Bean
+  public ValkeyGlideConnectionFactory valkeyConnectionFactory() {
+
+    ValkeyGlideClientConfiguration clientConfig = ValkeyGlideClientConfiguration.builder()
+      .useOpenTelemetry(ValkeyGlideClientConfiguration.OpenTelemetryForGlide.defaults())
+      .build();
+
+    return new ValkeyGlideConnectionFactory(new ValkeyStandaloneConfiguration(), clientConfig);
+  }
+}
+```
+
+For custom OpenTelemetry configuration:
+
+```java
+ValkeyGlideClientConfiguration clientConfig = ValkeyGlideClientConfiguration.builder()
+  .useOpenTelemetry(new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
+    "http://jaeger:4318/v1/traces",      // traces endpoint
+    "http://prometheus:4318/v1/metrics", // metrics endpoint
+    10,                                  // sample percentage
+    1000L                                // flush interval (ms)
+  ))
+  .build();
+```
+
+:::note
+GLIDE's OpenTelemetry integration exports telemetry data directly to OTLP endpoints and does not integrate with Spring's Micrometer-based observability infrastructure. Automatically collected telemetry includes command duration, success/failure rates, connection pool metrics, and distributed traces.
+:::
+
+## Micrometer Integration (Lettuce)
+
 Spring Data Valkey ships with a Micrometer integration through the Lettuce driver to collect observations during Valkey interaction.
 Once the integration is set up, Micrometer will create meters and spans (for distributed tracing) for each Valkey command.
-
-:::note[Driver Support]
-Observability integration is currently only supported with the Lettuce driver. Valkey GLIDE and Jedis do not support Spring observability at this time.
-:::
 
 To enable the integration, apply the following configuration to `LettuceClientConfiguration`:
 
