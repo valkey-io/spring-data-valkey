@@ -234,6 +234,6 @@ $ git push origin v1.0.0
 ## Additional Resources
 
 * [Valkey Documentation](https://valkey.io/docs/)
-* [Spring Data Documentation](https://docs.spring.io/spring-data/redis/reference/)
-* [Valkey GLIDE Client](https://github.com/valkey-io/valkey-glide)
+* [Valkey GLIDE Java Client Reference](https://glide.valkey.io/languages/java/)
+* [Spring Data Reference](https://spring.io/projects/spring-data)
 * [Spring Boot Reference](https://docs.spring.io/spring-boot/reference/)

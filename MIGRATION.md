@@ -444,7 +444,7 @@ $ find path/to/project -type f \( -name "*.java" -o -name "*.properties" -o -nam
 
 ## Additional Resources
 
-- [Valkey Documentation](https://valkey.io/docs/)
-- [Valkey GLIDE](https://github.com/valkey-io/valkey-glide)
-- [Spring Data Redis Documentation](https://docs.spring.io/spring-data/redis/reference/)
-- [Spring Data Redis](https://github.com/spring-projects/spring-data-redis)
+- [Valkey GLIDE Java Client Reference](https://glide.valkey.io/languages/java/)
+- [Spring Data Valkey Reference](https://spring.valkey.io/)
+- [Spring Data Redis Reference](https://docs.spring.io/spring-data/redis/reference/)
+- [Spring Boot Reference](https://docs.spring.io/spring-boot/reference/)

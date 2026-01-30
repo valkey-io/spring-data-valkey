@@ -131,8 +131,7 @@ If you're migrating from Spring Data Redis, see the [Migration Guide](MIGRATION.
 
 ## Documentation
 
-For general usage patterns and API documentation, refer to:
-* [Spring Data Redis Reference Documentation](https://docs.spring.io/spring-data/redis/reference/) - Most concepts apply to Valkey
+* [Spring Data Valkey Reference](https://spring.valkey.io/) - For general usage patterns and API documentation
 * [Valkey Documentation](https://valkey.io/docs/) - For Valkey-specific features and commands
 
 ## License
