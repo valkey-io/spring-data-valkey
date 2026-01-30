@@ -29,15 +29,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: "20"
+          cache: "npm"
           cache-dependency-path: docs/package-lock.json
 
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          java-version: "17"
+          distribution: "temurin"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
@@ -46,7 +46,7 @@ jobs:
         run: npm ci
         working-directory: ./docs
 
-      - name: Generate Javadocs
+      - name: Generate JavaDocs
         run: |
           ./mvnw javadoc:javadoc -pl spring-data-valkey -DskipTests
           mkdir -p docs/dist/api/java
