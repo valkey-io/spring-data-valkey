@@ -1,0 +1,19 @@
+name: Metal Runner Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - add-benchmark-ci 
+
+jobs:
+  test:
+    runs-on: [self-hosted, Linux, x86, ephemeral, metal]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Verify metal instance
+        run: |
+          echo "Running on metal instance"
+          lscpu | grep "Model name"
+          nproc
