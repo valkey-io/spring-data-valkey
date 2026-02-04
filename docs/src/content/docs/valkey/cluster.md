@@ -14,7 +14,7 @@ When using [Valkey Repositories](/repositories) with Valkey Cluster, make yourse
 Do not rely on keyspace events when using Valkey Cluster as keyspace events are not replicated across shards.
 :::
 
-Pub/Sub [subscribes to a random cluster node](https://github.com/valkey-io/spring-data-valkey/issues/1111) which only receives keyspace events from a single shard.
+Pub/Sub [subscribes to a random cluster node](https://github.com/spring-projects/spring-data-redis/issues/1111) which only receives keyspace events from a single shard.
 Use single-node Valkey to avoid keyspace event loss.
 
 ## Working With Valkey Cluster Connection
@@ -140,5 +140,5 @@ clusterOps.shutdown(NODE_7379);                                              // 
 ```
 
 :::note
-Valkey Cluster pipelining is currently only supported through the Lettuce driver. Valkey GLIDE and Jedis do not support pipelining in cluster mode. The Lettuce driver has exceptions for the following commands when using cross-slot keys: `rename`, `renameNX`, `sort`, `bLPop`, `bRPop`, `rPopLPush`, `bRPopLPush`, `info`, `sMove`, `sInter`, `sInterStore`, `sUnion`, `sUnionStore`, `sDiff`, `sDiffStore`.
+Valkey Cluster pipelining is supported through the Valkey GLIDE and Lettuce drivers. Jedis does not support pipelining in cluster mode. The Lettuce driver has exceptions for the following commands when using cross-slot keys: `rename`, `renameNX`, `sort`, `bLPop`, `bRPop`, `rPopLPush`, `bRPopLPush`, `info`, `sMove`, `sInter`, `sInterStore`, `sUnion`, `sUnionStore`, `sDiff`, `sDiffStore`.
 :::

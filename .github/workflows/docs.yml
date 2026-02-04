@@ -6,8 +6,8 @@ on:
   # push:
   #   branches: [main]
   #   paths:
-  #     - 'docs/**'
-  #     - 'spring-data-valkey/src/main/resources/io/valkey/springframework/data/valkey/config/spring-valkey-1.0.xsd'
+  #     - "docs/**""
+  #     - "spring-data-valkey/src/main/resources/io/valkey/springframework/data/valkey/config/spring-valkey-1.0.xsd"
 
 permissions:
   contents: read
@@ -49,8 +49,11 @@ jobs:
       - name: Generate JavaDocs
         run: |
           ./mvnw javadoc:javadoc -pl spring-data-valkey -DskipTests
-          mkdir -p docs/dist/api/java
-          cp -r spring-data-valkey/target/site/apidocs/* docs/dist/api/java/
+          ./mvnw javadoc:javadoc -pl spring-boot-starter-data-valkey -DskipTests
+          mkdir -p docs/dist/spring-data-valkey/api/java
+          mkdir -p docs/dist/spring-boot-starter-data-valkey/api/java
+          cp -r spring-data-valkey/target/site/apidocs/* docs/dist/spring-data-valkey/api/java/
+          cp -r spring-boot-starter-data-valkey/target/site/apidocs/* docs/dist/spring-boot-starter-data-valkey/api/java/
 
       - name: Copy Schema
         run: |

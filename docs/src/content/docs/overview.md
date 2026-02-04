@@ -42,7 +42,7 @@ _Spring Data Valkey provides Valkey connectivity and repository support for the 
 Costin Leau, Jennifer Hickey, Christoph Strobl, Thomas Darimont, Mark Paluch, Jay Bryant
 
 *Spring Data Valkey Contributors:*  
-Jeremy Parr-Pearson
+Ilia Kolominsky, Jeremy Parr-Pearson, Lior Sventitzky
 
 ## Copyright
 

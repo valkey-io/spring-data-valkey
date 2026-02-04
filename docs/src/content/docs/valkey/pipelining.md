@@ -40,8 +40,8 @@ factory.setPipeliningFlushPolicy(PipeliningFlushPolicy.buffered(3)); // (1)
 ```
 
 :::note
-Pipelining is limited to Valkey Standalone.
+Pipelining is supported in Valkey Standalone and Cluster modes.
 :::
 
-Valkey Cluster is currently only supported through the Lettuce driver except for the following commands when using cross-slot keys: `rename`, `renameNX`, `sort`, `bLPop`, `bRPop`, `rPopLPush`, `bRPopLPush`, `info`, `sMove`, `sInter`, `sInterStore`, `sUnion`, `sUnionStore`, `sDiff`, `sDiffStore`.
+Valkey Cluster pipelining is supported through the Valkey GLIDE and Lettuce drivers. Jedis does not support pipelining in cluster mode. The Lettuce driver has exceptions for the following commands when using cross-slot keys: `rename`, `renameNX`, `sort`, `bLPop`, `bRPop`, `rPopLPush`, `bRPopLPush`, `info`, `sMove`, `sInter`, `sInterStore`, `sUnion`, `sUnionStore`, `sDiff`, `sDiffStore`.
 Same-slot keys are fully supported.

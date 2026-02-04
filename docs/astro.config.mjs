@@ -19,8 +19,8 @@ export default defineConfig({
 		starlight({
 			title: 'Spring Data Valkey',
 			logo: {
-				light: './src/assets/valkey-logo-with-name-light.svg',
-				dark: './src/assets/valkey-logo-with-name-dark.svg',
+				light: './src/assets/spring-data-valkey-logo-with-name-light.svg',
+				dark: './src/assets/spring-data-valkey-logo-with-name-dark.svg',
 				replacesTitle: true,
 			},
 			customCss: ['./src/styles/custom.css', './src/styles/code-wrap.css'],
@@ -33,6 +33,7 @@ export default defineConfig({
 					label: 'Overview',
 					items: [
 						{ label: 'Spring Data Valkey', slug: 'overview' },
+						{ label: 'Spring Boot', slug: 'commons/spring-boot' },
 						{ label: 'Migrating Spring Data', slug: 'commons/migration' },
 					]
 				},
@@ -84,7 +85,7 @@ export default defineConfig({
 				{ label: 'Observability', slug: 'observability' },
 				{ label: 'Appendix', slug: 'appendix' },
 				{ label: 'Valkey Project ↗', link: 'https://valkey.io/', attrs: { target: '_blank' } },
-				{ label: 'Javadoc ↗', link: 'https://spring.valkey.io/api/java/index.html', attrs: { target: '_blank' } },
+				{ label: 'Javadoc ↗', link: 'https://spring.valkey.io/spring-data-valkey/api/java/index.html', attrs: { target: '_blank' } },
 			],
 		}),
 	],
