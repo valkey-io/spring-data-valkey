@@ -5,11 +5,10 @@ import rehypeExternalLinks from 'rehype-external-links';
 
 // https://astro.build/config
 export default defineConfig({
-	// TODO: Once CNAME record is added, change site and remove base property,
-	// and rename docs/public/CNAME.example to docs/public/CNAME
+	// TODO: Once CNAME record is added, update site/base and rename docs/public/CNAME.example
 	//site: 'https://spring.valkey.io',
-	site: 'https://valkey-io.github.io',
-	base: process.env.NODE_ENV === 'production' ? '/spring-data-valkey' : '/',
+	site: 'https://valkey.io',
+	base: '/spring-data-valkey',
 	markdown: {
 		rehypePlugins: [
 			[rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }]
@@ -86,6 +85,7 @@ export default defineConfig({
 				{ label: 'Appendix', slug: 'appendix' },
 				{ label: 'Valkey Project ↗', link: 'https://valkey.io/', attrs: { target: '_blank' } },
 				{ label: 'Javadoc ↗', link: 'https://spring.valkey.io/spring-data-valkey/api/java/index.html', attrs: { target: '_blank' } },
+				{ label: 'Spring Boot Javadoc ↗', link: 'https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/index.html', attrs: { target: '_blank' } },
 			],
 		}),
 	],

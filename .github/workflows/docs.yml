@@ -46,23 +46,23 @@ jobs:
         run: npm ci
         working-directory: ./docs
 
+      - name: Build Astro docs
+        run: npm run build
+        working-directory: ./docs
+
       - name: Generate JavaDocs
         run: |
           ./mvnw javadoc:javadoc -pl spring-data-valkey -DskipTests
           ./mvnw javadoc:javadoc -pl spring-boot-starter-data-valkey -DskipTests
           mkdir -p docs/dist/spring-data-valkey/api/java
           mkdir -p docs/dist/spring-boot-starter-data-valkey/api/java
-          cp -r spring-data-valkey/target/site/apidocs/* docs/dist/spring-data-valkey/api/java/
-          cp -r spring-boot-starter-data-valkey/target/site/apidocs/* docs/dist/spring-boot-starter-data-valkey/api/java/
+          cp -r spring-data-valkey/target/reports/apidocs/* docs/dist/spring-data-valkey/api/java/
+          cp -r spring-boot-starter-data-valkey/target/reports/apidocs/* docs/dist/spring-boot-starter-data-valkey/api/java/
 
       - name: Copy Schema
         run: |
           mkdir -p docs/dist/schema/valkey
           cp spring-data-valkey/src/main/resources/io/valkey/springframework/data/valkey/config/spring-valkey-1.0.xsd docs/dist/schema/valkey/
-
-      - name: Build docs
-        run: npm run build
-        working-directory: ./docs
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
