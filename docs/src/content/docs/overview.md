@@ -33,6 +33,14 @@ _Spring Data Valkey provides Valkey connectivity and repository support for the 
 <td><a href="https://valkey.io/" target="_blank">Valkey Project ↗</a></td>
 <td>Official Valkey project site and community resources</td>
 </tr>
+<tr>
+<td><a href="https://spring.valkey.io/spring-data-valkey/api/java/index.html" target="_blank">Spring Data Valkey API ↗</a></td>
+<td>Core library Javadoc documentation</td>
+</tr>
+<tr>
+<td><a href="https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/index.html" target="_blank">Spring Boot Starter API ↗</a></td>
+<td>Spring Boot auto-configuration Javadoc documentation</td>
+</tr>
 </tbody>
 </table>
 

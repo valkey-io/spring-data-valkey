@@ -13,11 +13,11 @@ The following auto-configuration classes are from the *spring-boot-data-valkey* 
 
 | Configuration Class | Links |
 |---------------------|-------|
-| DataValkeyAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/DataValkeyAutoConfiguration.html) |
-| DataValkeyHealthContributorAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/DataValkeyHealthContributorAutoConfiguration.html) |
-| DataValkeyReactiveAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/DataValkeyReactiveAutoConfiguration.html) |
-| DataValkeyReactiveHealthContributorAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/DataValkeyReactiveHealthContributorAutoConfiguration.html) |
-| DataValkeyRepositoriesAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/DataValkeyRepositoriesAutoConfiguration.html) |
-| LettuceObservationAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/LettuceObservationAutoConfiguration.html) |
+| ValkeyAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/ValkeyAutoConfiguration.html) |
+| ValkeyHealthContributorAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/actuate/autoconfigure/data/valkey/ValkeyHealthContributorAutoConfiguration.html) |
+| ValkeyReactiveAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/ValkeyReactiveAutoConfiguration.html) |
+| ValkeyReactiveHealthContributorAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/actuate/autoconfigure/data/valkey/ValkeyReactiveHealthContributorAutoConfiguration.html) |
+| ValkeyRepositoriesAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/autoconfigure/data/valkey/ValkeyRepositoriesAutoConfiguration.html) |
+| ValkeyLettuceMetricsAutoConfiguration | [javadoc](https://spring.valkey.io/spring-boot-starter-data-valkey/api/java/io/valkey/springframework/boot/actuate/autoconfigure/metrics/valkey/ValkeyLettuceMetricsAutoConfiguration.html) |
 
 For more information on the Spring Data Valkey Spring Boot Starter, see the [GitHub repository](https://github.com/valkey-io/spring-data-valkey/tree/main/spring-boot-starter-data-valkey).
