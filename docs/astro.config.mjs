@@ -5,10 +5,7 @@ import rehypeExternalLinks from 'rehype-external-links';
 
 // https://astro.build/config
 export default defineConfig({
-	// TODO: Once CNAME record is added, update site/base and rename docs/public/CNAME.example
-	//site: 'https://spring.valkey.io',
-	site: 'https://valkey.io',
-	base: '/spring-data-valkey',
+	site: 'https://spring.valkey.io',
 	markdown: {
 		rehypePlugins: [
 			[rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }]
