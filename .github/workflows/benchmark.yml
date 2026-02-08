@@ -1,4 +1,4 @@
-name: Metal Runner Test
+name: Benchmark
 
 on:
   workflow_dispatch:
@@ -7,10 +7,10 @@ on:
       - add-benchmark-ci
 
 jobs:
-  test:
+  benchmark:
     runs-on: [self-hosted, Linux, x86, ephemeral, metal]
     timeout-minutes: 60
-    
+
     steps:
       - uses: actions/checkout@v4
 
@@ -19,28 +19,61 @@ jobs:
           echo "Running on metal instance"
           lscpu | grep "Model name"
           nproc
+          # Verify it's actually metal
+          if command -v systemd-detect-virt &> /dev/null; then
+            VIRT=$(systemd-detect-virt)
+            echo "Virtualization: $VIRT"
+            if [ "$VIRT" != "none" ]; then
+              echo "WARNING: Not running on bare metal!"
+            fi
+          fi
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Start Valkey infrastructure on dedicated cores (0-3)
+      - name: Install perf tools
         run: |
-          taskset -c 0-3 make start
-          sleep 2
+          sudo apt-get update
+          sudo apt-get install -y sysstat
           
-          # Verify servers are running
-          work/valkey/bin/valkey-cli -p 6379 ping
-          work/valkey/bin/valkey-cli -p 7379 cluster info | head -5
+          cd /tmp
+          
+          # Try to find the latest available HWE tools package
+          HWE_PKG=$(apt-cache search linux-hwe | grep -oP 'linux-hwe-[\d.]+-tools-[\d.]+-\d+' | sort -V | tail -1)
+          
+          if [ -z "$HWE_PKG" ]; then
+            # Fallback to known working version
+            HWE_PKG="linux-hwe-6.14-tools-6.14.0-37"
+          fi
+          
+          echo "Using HWE package: $HWE_PKG"
+          apt-get download "$HWE_PKG"
+          
+          sudo mkdir -p /opt/perf-tools
+          sudo dpkg -x ${HWE_PKG}*.deb /opt/perf-tools
+          
+          # Find and link the perf binary
+          PERF_BIN=$(find /opt/perf-tools -name "perf" -type f | head -1)
+          sudo ln -sf "$PERF_BIN" /usr/local/bin/perf
+          rm -f ${HWE_PKG}*.deb
+          
+          cd -
+          
+          # Configure kernel
+          sudo sysctl -w kernel.perf_event_paranoid=-1
+          sudo sysctl -w kernel.kptr_restrict=0
+          echo 0 | sudo tee /proc/sys/kernel/nmi_watchdog
+          
+          # Verify
+          perf --version
+          perf stat -e cycles,instructions -- sleep 0.5
 
-      - name: Run tests on remaining cores (4-47)
+      - name: Run benchmark
         run: |
-          taskset -c 4-47 ./mvnw clean test -U
+          python3 .github/scripts/benchmark_runner.py \
+            --output benchmark_results.json \
+            --duration 60 \
+            --project-dir ${{ github.workspace }}
 
-      - name: Stop Valkey infrastructure
-        if: always()
-        run: |
-          make stop
-          make clean
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark_results.json
