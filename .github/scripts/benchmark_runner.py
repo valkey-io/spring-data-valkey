@@ -4,7 +4,7 @@ Benchmark runner that orchestrates:
 1. Starting Valkey infrastructure
 2. Running benchmark application
 3. Collecting system metrics (perf, CPU, disk I/O, network)
-4. Outputting results to JSON
+4. Outputting results to JSON and PostgreSQL
 
 Reads configuration from external JSON files.
 Phase completion is determined by workload config (duration or requests).
@@ -42,6 +42,122 @@ def load_json_config(filepath: Path) -> dict:
     """Load JSON configuration file"""
     with open(filepath) as f:
         return json.load(f)
+
+
+class PostgreSQLPublisher:
+    """Publishes benchmark results to Aurora PostgreSQL"""
+
+    TABLE_NAME = "benchmark_results"
+
+    def __init__(
+        self,
+        host: str,
+        port: int = 5432,
+        database: str = "postgres",
+        secret_name: str = None,
+        region: str = "us-east-1"
+    ):
+        self.host = host
+        self.port = port
+        self.database = database
+        self.secret_name = secret_name
+        self.region = region
+        self.connection = None
+
+    def _get_credentials(self) -> dict:
+        """Retrieve database credentials from AWS Secrets Manager"""
+        import boto3
+        client = boto3.client('secretsmanager', region_name=self.region)
+        response = client.get_secret_value(SecretId=self.secret_name)
+        secret = json.loads(response['SecretString'])
+        return {
+            'username': secret.get('username'),
+            'password': secret.get('password')
+        }
+
+    def connect(self):
+        """Establish connection to PostgreSQL"""
+        import psycopg2
+        
+        creds = self._get_credentials()
+        self.connection = psycopg2.connect(
+            host=self.host,
+            port=self.port,
+            database=self.database,
+            user=creds['username'],
+            password=creds['password'],
+            sslmode='require',
+            connect_timeout=10
+        )
+        print(f"✓ Connected to PostgreSQL at {self.host}:{self.port}/{self.database}")
+
+    def _ensure_table_exists(self):
+        """Create the benchmark_results table if it doesn't exist"""
+        create_table_sql = f"""
+        CREATE TABLE IF NOT EXISTS {self.TABLE_NAME} (
+            id SERIAL PRIMARY KEY,
+            job_id VARCHAR(100) UNIQUE NOT NULL,
+            timestamp TIMESTAMPTZ NOT NULL,
+            config JSONB NOT NULL,
+            results JSONB NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        
+        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_job_id 
+            ON {self.TABLE_NAME} (job_id);
+        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_timestamp 
+            ON {self.TABLE_NAME} (timestamp);
+        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_config_client 
+            ON {self.TABLE_NAME} ((config->'client'->>'client_name'));
+        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_config_workload 
+            ON {self.TABLE_NAME} ((config->'workload'->'benchmark-profile'->>'name'));
+        """
+
+        with self.connection.cursor() as cursor:
+            cursor.execute(create_table_sql)
+        self.connection.commit()
+        print(f"✓ Ensured table '{self.TABLE_NAME}' exists")
+
+    def publish(self, job_id: str, timestamp: str, config: dict, results: dict):
+        """Publish benchmark results to PostgreSQL"""
+        from psycopg2.extras import Json
+
+        if not self.connection:
+            self.connect()
+
+        self._ensure_table_exists()
+
+        insert_sql = f"""
+        INSERT INTO {self.TABLE_NAME} (job_id, timestamp, config, results)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (job_id) DO UPDATE SET
+            timestamp = EXCLUDED.timestamp,
+            config = EXCLUDED.config,
+            results = EXCLUDED.results,
+            created_at = NOW()
+        RETURNING id
+        """
+
+        with self.connection.cursor() as cursor:
+            cursor.execute(insert_sql, (job_id, timestamp, Json(config), Json(results)))
+            row_id = cursor.fetchone()[0]
+        self.connection.commit()
+        print(f"✓ Published results for job '{job_id}' (row id: {row_id})")
+
+    def close(self):
+        """Close the database connection"""
+        if self.connection:
+            self.connection.close()
+            self.connection = None
+            print("✓ PostgreSQL connection closed")
+
+    def __enter__(self):
+        self.connect()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
 
 
 class VarianceControl:
@@ -167,7 +283,6 @@ class CSVWatcher:
 
     def start(self):
         """Start watching the CSV file using tail -f"""
-        # Wait for file to exist (no timeout - just wait)
         print(f"Waiting for CSV file: {self.csv_path}")
         while not self.csv_path.exists():
             time.sleep(0.1)
@@ -577,6 +692,13 @@ class BenchmarkRunner:
 
     INFRA_CORES = "0-3"
 
+    # Default PostgreSQL configuration
+    DEFAULT_PG_HOST = "database-1-instance-1.ceoc7e0aaxvr.us-east-1.rds.amazonaws.com"
+    DEFAULT_PG_PORT = 5432
+    DEFAULT_PG_DATABASE = "postgres"
+    DEFAULT_PG_SECRET_NAME = "rds!cluster-7be93190-f497-428f-85e5-c33b16781f63"
+    DEFAULT_PG_REGION = "us-east-1"
+
     def __init__(
         self,
         project_dir: Path,
@@ -584,7 +706,13 @@ class BenchmarkRunner:
         workload_config: dict,
         client_config: dict,
         skip_infra: bool = False,
-        network_delay_ms: int = 1
+        network_delay_ms: int = 1,
+        publish_to_db: bool = True,
+        pg_host: str = None,
+        pg_port: int = None,
+        pg_database: str = None,
+        pg_secret_name: str = None,
+        pg_region: str = None
     ):
         self.project_dir = project_dir
         self.output_file = output_file
@@ -592,9 +720,17 @@ class BenchmarkRunner:
         self.client_config = client_config
         self.skip_infra = skip_infra
         self.network_delay_ms = network_delay_ms
+        self.publish_to_db = publish_to_db
         self.job_id = generate_job_id()
         self.timestamp = get_timestamp()
         self.variance_control = VarianceControl()
+
+        # PostgreSQL configuration
+        self.pg_host = pg_host or self.DEFAULT_PG_HOST
+        self.pg_port = pg_port or self.DEFAULT_PG_PORT
+        self.pg_database = pg_database or self.DEFAULT_PG_DATABASE
+        self.pg_secret_name = pg_secret_name or self.DEFAULT_PG_SECRET_NAME
+        self.pg_region = pg_region or self.DEFAULT_PG_REGION
 
         cpu_count = os.cpu_count() or 8
         if cpu_count > 4:
@@ -659,6 +795,33 @@ class BenchmarkRunner:
 
         return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+    def _publish_to_postgresql(self, config: dict, results: dict):
+        """Publish results to PostgreSQL database"""
+        if not self.publish_to_db:
+            print("Skipping PostgreSQL publication (disabled)")
+            return
+
+        print("\nPublishing results to PostgreSQL...")
+        try:
+            publisher = PostgreSQLPublisher(
+                host=self.pg_host,
+                port=self.pg_port,
+                database=self.pg_database,
+                secret_name=self.pg_secret_name,
+                region=self.pg_region
+            )
+            with publisher:
+                publisher.publish(
+                    job_id=self.job_id,
+                    timestamp=self.timestamp,
+                    config=config,
+                    results=results
+                )
+        except Exception as e:
+            print(f"⚠ Failed to publish to PostgreSQL: {e}")
+            import traceback
+            traceback.print_exc()
+            
     def run(self, workload_config_path: Path):
         """Execute the full benchmark workflow"""
         self.variance_control.setup(network_delay_ms=self.network_delay_ms)
@@ -708,12 +871,13 @@ class BenchmarkRunner:
                     shutil.copy(benchmark_csv, output_csv_path)
                     print(f"Benchmark CSV saved to {output_csv_path}")
 
-                # Build result
-                result = {
-                    "job_id": self.job_id,
-                    "timestamp": self.timestamp,
-                    "benchmark_config": self.workload_config,
-                    "client_config": self.client_config,
+                # Build result in the new structure
+                config = {
+                    "workload": self.workload_config,
+                    "client": self.client_config
+                }
+
+                results = {
                     "elapsed_seconds": int(elapsed_seconds),
                     "operations": operations,
                     "perf": {
@@ -727,10 +891,22 @@ class BenchmarkRunner:
                     }
                 }
 
+                # Final output structure matching DB schema
+                output = {
+                    "job_id": self.job_id,
+                    "timestamp": self.timestamp,
+                    "config": config,
+                    "results": results
+                }
+
+                # Write JSON output
                 with open(self.output_file, "w") as f:
-                    json.dump(result, f, indent=2)
+                    json.dump(output, f, indent=2)
 
                 print(f"\nResults written to {self.output_file}")
+
+                # Publish to PostgreSQL
+                self._publish_to_postgresql(config, results)
 
             finally:
                 self.stop_infrastructure()
@@ -740,11 +916,20 @@ class BenchmarkRunner:
 def main():
     parser = argparse.ArgumentParser(description="Benchmark runner")
     parser.add_argument("--output", type=str, default="benchmark_results.json")
-    parser.add_argument("--workload-config", type=str, required=True, help="Path to workload JSON config")
-    parser.add_argument("--client-config", type=str, required=True, help="Path to client JSON config")
+    parser.add_argument("--workload-config", type=str, required=True)
+    parser.add_argument("--client-config", type=str, required=True)
     parser.add_argument("--project-dir", type=str, default=None)
     parser.add_argument("--skip-infra", action="store_true")
     parser.add_argument("--network-delay", type=int, default=1)
+    
+    # PostgreSQL options
+    parser.add_argument("--no-publish", action="store_true", help="Skip publishing to PostgreSQL")
+    parser.add_argument("--pg-host", type=str, default=None)
+    parser.add_argument("--pg-port", type=int, default=None)
+    parser.add_argument("--pg-database", type=str, default=None)
+    parser.add_argument("--pg-secret-name", type=str, default=None)
+    parser.add_argument("--pg-region", type=str, default=None)
+    
     args = parser.parse_args()
 
     project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
@@ -752,7 +937,6 @@ def main():
     workload_config_path = Path(args.workload_config)
     client_config_path = Path(args.client_config)
 
-    # Load configurations
     workload_config = load_json_config(workload_config_path)
     client_config = load_json_config(client_config_path)
 
@@ -765,7 +949,13 @@ def main():
         workload_config=workload_config,
         client_config=client_config,
         skip_infra=args.skip_infra,
-        network_delay_ms=args.network_delay
+        network_delay_ms=args.network_delay,
+        publish_to_db=not args.no_publish,
+        pg_host=args.pg_host,
+        pg_port=args.pg_port,
+        pg_database=args.pg_database,
+        pg_secret_name=args.pg_secret_name,
+        pg_region=args.pg_region
     )
     runner.run(workload_config_path)
 

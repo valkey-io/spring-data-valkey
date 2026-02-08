@@ -108,7 +108,10 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y sysstat iproute2
+          sudo apt-get install -y sysstat iproute2 python3-pip
+          
+          # Install Python dependencies system-wide
+          sudo python3 -m pip install psycopg2-binary boto3
           
           CODENAME=$(lsb_release -cs)
           KERNEL=$(uname -r)
@@ -154,6 +157,10 @@ jobs:
             cd -
           fi
           
+          # Set perf permissions before verification
+          sudo sysctl -w kernel.perf_event_paranoid=-1
+          sudo sysctl -w kernel.kptr_restrict=0
+          
           echo ""
           echo "=== Perf Verification ==="
           which perf
@@ -181,17 +188,17 @@ jobs:
               data = json.load(f)
           
           print(f\"Job ID: {data['job_id']}\")
-          print(f\"Client: {data['client_config']['client_name']}\")
-          print(f\"Workload: {data['benchmark_config']['benchmark-profile']['name']}\")
-          print(f\"Elapsed: {data['elapsed_seconds']}s\")
+          print(f\"Client: {data['config']['client']['client_name']}\")
+          print(f\"Workload: {data['config']['workload']['benchmark-profile']['name']}\")
+          print(f\"Elapsed: {data['results']['elapsed_seconds']}s\")
           print()
           print('Operations:')
-          for op, stats in data['operations'].items():
+          for op, stats in data['results']['operations'].items():
               success_rate = (stats['successful_requests'] / stats['total_requests'] * 100) if stats['total_requests'] > 0 else 0
               print(f\"  {op}: {stats['total_requests']:,} requests ({success_rate:.2f}% success)\")
           print()
           print('Perf:')
-          perf = data['perf']['counters']
+          perf = data['results']['perf']['counters']
           if perf.get('ipc'):
               print(f\"  IPC: {perf['ipc']}\")
           if perf.get('cache_miss_rate'):
@@ -234,9 +241,9 @@ jobs:
           import json
           with open('$f') as file:
               data = json.load(file)
-          client = data['client_config']['client_name']
-          workload = data['benchmark_config']['benchmark-profile']['name']
-          elapsed = data['elapsed_seconds']
+          client = data['config']['client']['client_name']
+          workload = data['config']['workload']['benchmark-profile']['name']
+          elapsed = data['results']['elapsed_seconds']
           print(f'| {client} | {workload} | ✅ | {elapsed}s |')
           " >> $GITHUB_STEP_SUMMARY
             fi
