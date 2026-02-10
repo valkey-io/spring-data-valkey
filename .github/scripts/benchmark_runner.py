@@ -715,6 +715,82 @@ def parse_sar_network(filepath: Path) -> dict:
 
     return result
 
+def convert_collapsed_to_nested_set(collapsed_file: Path, output_csv: Path) -> bool:
+    """Convert collapsed stacks to nested set model CSV (which grafana can use)"""
+    try:
+        # Build tree from collapsed stacks
+        root = {"name": "total", "children": {}, "self_value": 0}
+
+        with open(collapsed_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.rsplit(" ", 1)
+                if len(parts) != 2:
+                    continue
+                stack = parts[0]
+                try:
+                    count = int(parts[1])
+                except ValueError:
+                    continue
+
+                frames = stack.split(";")
+                node = root
+                for frame in frames:
+                    if frame not in node["children"]:
+                        node["children"][frame] = {
+                            "name": frame,
+                            "children": {},
+                            "self_value": 0
+                        }
+                    node = node["children"][frame]
+                node["self_value"] += count
+
+        # Calculate cumulative values (bottom-up)
+        def calc_total(node):
+            total = node["self_value"]
+            for child in node["children"].values():
+                total += calc_total(child)
+            node["total_value"] = total
+            return total
+
+        calc_total(root)
+
+        # Depth-first traversal to create nested set model
+        rows = []
+
+        def dfs(node, level):
+            rows.append({
+                "level": level,
+                "value": node["total_value"],
+                "self": node["self_value"],
+                "label": node["name"]
+            })
+            # Sort children by total_value descending for consistent output
+            sorted_children = sorted(
+                node["children"].values(),
+                key=lambda n: n["total_value"],
+                reverse=True
+            )
+            for child in sorted_children:
+                dfs(child, level + 1)
+
+        dfs(root, 0)
+
+        # Write CSV
+        with open(output_csv, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["level", "value", "self", "label"])
+            writer.writeheader()
+            writer.writerows(rows)
+
+        print(f"✓ Generated nestes set flame graph CSV: {len(rows)} rows")
+        return True
+
+    except Exception as e:
+        print(f"⚠ Failed to convert to nested set model: {e}")
+        return False
+
 
 def parse_perf_stat(filepath: Path, hardware_available: bool) -> dict:
     """Parse perf stat output"""
@@ -977,11 +1053,19 @@ class BenchmarkRunner:
 
                 # Generate collapsed stacks and upload to S3
                 collapsed_stacks_url = None
+                nested_set_flamegraph_url = None
                 print("\nGenerating flame graph data...")
                 collapsed_file = monitor.generate_collapsed_stacks()
                 if collapsed_file:
+                    # Upload raw collapsed stacks
                     s3_key = f"{self.job_id}/collapsed.txt"
                     collapsed_stacks_url = self._upload_to_s3(collapsed_file, s3_key)
+
+                    # Convert to nested set model and upload
+                    nested_set_csv = work_dir / "flamegraph_grafana.csv"
+                    if convert_collapsed_to_nested_set(collapsed_file, nested_set_csv):
+                        s3_key = f"{self.job_id}/flamegraph_grafana.csv"
+                        nested_set_flamegraph_url = self._upload_to_s3(nested_set_csv, s3_key)
 
                 # Parse results
                 operations, elapsed_seconds = parse_benchmark_csv(benchmark_csv)
@@ -1010,7 +1094,8 @@ class BenchmarkRunner:
                     "operations": operations,
                     "perf": {
                         "counters": perf_counters,
-                        "collapsed_stacks_url": collapsed_stacks_url
+                        "collapsed_stacks_url": collapsed_stacks_url,
+                        "nested_set_flamegraph_url": nested_set_flamegraph_url
                     },
                     "cpu": cpu_stats,
                     "io": {
