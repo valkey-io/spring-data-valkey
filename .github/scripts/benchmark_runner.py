@@ -360,6 +360,7 @@ class CSVWatcher:
 
 class MonitoringManager:
     """Manages background monitoring processes"""
+    FLAMEGRAPH_PATH = "/opt/FlameGraph"
 
     def __init__(self, work_dir: Path):
         self.work_dir = work_dir
@@ -367,6 +368,8 @@ class MonitoringManager:
         self.output_files = {}
         self._file_handles = {}
         self.hardware_perf_available = False
+        self.perf_record_process = None
+        self.perf_data_file = None
 
     def _check_hardware_perf_events(self) -> bool:
         try:
@@ -381,6 +384,17 @@ class MonitoringManager:
             return available
         except Exception as e:
             print(f"Hardware perf check failed: {e}")
+            return False
+
+    def _ensure_flamegraph_tools(self) -> bool:
+        """Check if FlameGraph tools are available"""
+        stackcollapse = Path(self.FLAMEGRAPH_PATH) / "stackcollapse-perf.pl"
+        
+        if stackcollapse.exists():
+            return True
+        else:
+            print(f"⚠ FlameGraph tools not found at {self.FLAMEGRAPH_PATH}")
+            print("  Install with: git clone https://github.com/brendangregg/FlameGraph.git /opt/FlameGraph")
             return False
 
     def start_mpstat(self):
@@ -443,14 +457,114 @@ class MonitoringManager:
         self.processes["perf_stat"] = proc
         print(f"Started perf stat on PID {pid}")
 
+    def start_perf_record(self, pid: int):
+        """Start perf record for flame graph generation"""
+        self.perf_data_file = self.work_dir / "perf_record.data"
+        
+        cmd = [
+            "perf", "record",
+            "-F", "99",
+            "-p", str(pid),
+            "-g",
+            "-o", str(self.perf_data_file)
+        ]
+        
+        self.perf_record_process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        print(f"Started perf record on PID {pid}")
+
+    def stop_perf_record(self):
+        """Stop perf record"""
+        if self.perf_record_process:
+            try:
+                if self.perf_record_process.poll() is None:
+                    self.perf_record_process.send_signal(signal.SIGINT)
+                    self.perf_record_process.wait(timeout=10)
+                print("✓ Perf record stopped")
+            except subprocess.TimeoutExpired:
+                self.perf_record_process.kill()
+                self.perf_record_process.wait()
+                print("⚠ Perf record killed (timeout)")
+            except Exception as e:
+                print(f"⚠ Error stopping perf record: {e}")
+            finally:
+                self.perf_record_process = None
+
+    def generate_collapsed_stacks(self) -> Optional[Path]:
+        """Generate collapsed stacks from perf data for flame graphs"""
+        if not self.perf_data_file or not self.perf_data_file.exists():
+            print("⚠ No perf data file found")
+            return None
+
+        if self.perf_data_file.stat().st_size == 0:
+            print("⚠ Perf data file is empty")
+            return None
+
+        if not self._ensure_flamegraph_tools():
+            return None
+
+        collapsed_file = self.work_dir / "collapsed.txt"
+        stackcollapse = Path(self.FLAMEGRAPH_PATH) / "stackcollapse-perf.pl"
+
+        try:
+            print("Generating collapsed stacks...")
+            
+            # Run: perf script -i perf.data | stackcollapse-perf.pl > collapsed.txt
+            perf_script = subprocess.Popen(
+                ["perf", "script", "-i", str(self.perf_data_file)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL
+            )
+            
+            with open(collapsed_file, "w") as f:
+                stackcollapse_proc = subprocess.Popen(
+                    ["perl", str(stackcollapse)],
+                    stdin=perf_script.stdout,
+                    stdout=f,
+                    stderr=subprocess.DEVNULL
+                )
+                perf_script.stdout.close()
+                stackcollapse_proc.wait(timeout=60)
+            
+            perf_script.wait(timeout=10)
+
+            if collapsed_file.exists() and collapsed_file.stat().st_size > 0:
+                line_count = sum(1 for _ in open(collapsed_file))
+                file_size = collapsed_file.stat().st_size
+                print(f"✓ Generated collapsed stacks: {line_count} lines, {file_size} bytes")
+                self.output_files["collapsed_stacks"] = collapsed_file
+                return collapsed_file
+            else:
+                print("⚠ Collapsed stacks file is empty")
+                return None
+
+        except subprocess.TimeoutExpired:
+            print("⚠ Timeout generating collapsed stacks")
+            return None
+        except Exception as e:
+            print(f"⚠ Failed to generate collapsed stacks: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
     def start_all(self, benchmark_pid: int):
+        """Start all monitoring processes"""
         self.start_mpstat()
         self.start_iostat()
         self.start_sar_network()
         self.start_perf_stat(benchmark_pid)
+        self.start_perf_record(benchmark_pid)
         print("All monitoring processes started")
 
     def stop_all(self):
+        """Stop all monitoring processes"""
+        # Stop perf record first (needs SIGINT)
+        self.stop_perf_record()
+
+        # Stop perf stat (needs SIGINT)
         if "perf_stat" in self.processes:
             perf_proc = self.processes.pop("perf_stat")
             try:
@@ -463,6 +577,7 @@ class MonitoringManager:
             except Exception as e:
                 print(f"Warning stopping perf: {e}")
 
+        # Stop other processes (use SIGTERM to process group)
         for name, proc in self.processes.items():
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
@@ -475,6 +590,7 @@ class MonitoringManager:
             except Exception as e:
                 print(f"Warning stopping {name}: {e}")
 
+        # Close file handles
         for fh in self._file_handles.values():
             try:
                 fh.close()
@@ -691,9 +807,13 @@ class BenchmarkRunner:
     """Main benchmark orchestration class"""
 
     INFRA_CORES = "0-3"
+    
+    # S3 configuration
+    S3_BUCKET = "java-benchmarks-artifacts"
+    S3_REGION = "us-east-1"
 
     # Default PostgreSQL configuration
-    DEFAULT_PG_HOST = "database-1-instance-1.ceoc7e0aaxvr.us-east-1.rds.amazonaws.com"
+    DEFAULT_PG_HOST = "database-1.cluster-ceoc7e0aaxvr.us-east-1.rds.amazonaws.com"
     DEFAULT_PG_PORT = 5432
     DEFAULT_PG_DATABASE = "postgres"
     DEFAULT_PG_SECRET_NAME = "rds!cluster-7be93190-f497-428f-85e5-c33b16781f63"
@@ -855,6 +975,14 @@ class BenchmarkRunner:
                 stdout, stderr = benchmark_proc.communicate(timeout=10)
                 print(f"Benchmark stderr:\n{stderr.decode()}")
 
+                # Generate collapsed stacks and upload to S3
+                collapsed_stacks_url = None
+                print("\nGenerating flame graph data...")
+                collapsed_file = monitor.generate_collapsed_stacks()
+                if collapsed_file:
+                    s3_key = f"{self.job_id}/collapsed.txt"
+                    collapsed_stacks_url = self._upload_to_s3(collapsed_file, s3_key)
+
                 # Parse results
                 operations, elapsed_seconds = parse_benchmark_csv(benchmark_csv)
                 perf_counters = parse_perf_stat(
@@ -871,7 +999,7 @@ class BenchmarkRunner:
                     shutil.copy(benchmark_csv, output_csv_path)
                     print(f"Benchmark CSV saved to {output_csv_path}")
 
-                # Build result in the new structure
+                # Build result structure
                 config = {
                     "workload": self.workload_config,
                     "client": self.client_config
@@ -882,7 +1010,7 @@ class BenchmarkRunner:
                     "operations": operations,
                     "perf": {
                         "counters": perf_counters,
-                        "flame_graph_url": f"s3://benchmark-artifacts/{self.job_id}/cpu-flamegraph.svg"
+                        "collapsed_stacks_url": collapsed_stacks_url
                     },
                     "cpu": cpu_stats,
                     "io": {
@@ -891,7 +1019,7 @@ class BenchmarkRunner:
                     }
                 }
 
-                # Final output structure matching DB schema
+                # Final output structure
                 output = {
                     "job_id": self.job_id,
                     "timestamp": self.timestamp,
@@ -911,6 +1039,28 @@ class BenchmarkRunner:
             finally:
                 self.stop_infrastructure()
                 self.variance_control.teardown()
+                
+    def _upload_to_s3(self, local_path: Path, s3_key: str) -> Optional[str]:
+        """Upload file to S3 and return the S3 URL"""
+        try:
+            import boto3
+            
+            s3_client = boto3.client('s3', region_name=self.S3_REGION)
+            s3_client.upload_file(
+                str(local_path),
+                self.S3_BUCKET,
+                s3_key
+            )
+            
+            s3_url = f"s3://{self.S3_BUCKET}/{s3_key}"
+            print(f"✓ Uploaded to {s3_url}")
+            return s3_url
+            
+        except Exception as e:
+            print(f"⚠ Failed to upload to S3: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
 
 
 def main():

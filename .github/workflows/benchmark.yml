@@ -112,6 +112,13 @@ jobs:
           
           # Install Python dependencies system-wide
           sudo python3 -m pip install psycopg2-binary boto3
+
+          # Install FlameGraph tools
+          if [ ! -d "/opt/FlameGraph" ]; then
+            git clone --depth 1 https://github.com/brendangregg/FlameGraph.git /tmp/FlameGraph
+            sudo mv /tmp/FlameGraph /opt/FlameGraph
+          fi
+          ls /opt/FlameGraph/stackcollapse-perf.pl && echo "✓ FlameGraph tools installed"
           
           CODENAME=$(lsb_release -cs)
           KERNEL=$(uname -r)
