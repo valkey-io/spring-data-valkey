@@ -17,17 +17,16 @@ package io.valkey.springframework.data.valkey.listener;
 
 import static io.valkey.springframework.data.valkey.connection.ClusterTestVariables.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * Parameters for testing implementations of {@link ReactiveValkeyMessageListenerContainer}
@@ -36,35 +35,36 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
  */
 class ReactiveOperationsTestParams {
 
-	public static Collection<Object[]> testParams() {
+    public static Collection<Object[]> testParams() {
 
-		LettuceConnectionFactory lettuceConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class, false);
-		LettuceConnectionFactory poolingConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class, true);
+        LettuceConnectionFactory lettuceConnectionFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class, false);
+        LettuceConnectionFactory poolingConnectionFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class, true);
 
-		List<Object[]> list = Arrays.asList(new Object[][] { //
-				{ lettuceConnectionFactory, "Standalone" }, //
-				{ poolingConnectionFactory, "Pooled" }, //
-		});
+        List<Object[]> list =
+                Arrays.asList(
+                        new Object[][] { //
+                            {lettuceConnectionFactory, "Standalone"}, //
+                            {poolingConnectionFactory, "Pooled"}, //
+                        });
 
-		if (clusterAvailable()) {
+        if (clusterAvailable()) {
 
-			ValkeyClusterConfiguration clusterConfiguration = new ValkeyClusterConfiguration();
-			clusterConfiguration.addClusterNode(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT));
+            ValkeyClusterConfiguration clusterConfiguration = new ValkeyClusterConfiguration();
+            clusterConfiguration.addClusterNode(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT));
 
-			LettuceConnectionFactory lettuceClusterConnectionFactory = LettuceConnectionFactoryExtension
-					.getConnectionFactory(ValkeyStanalone.class);
+            LettuceConnectionFactory lettuceClusterConnectionFactory =
+                    LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-			list = new ArrayList<>(list);
-			list.add(new Object[] { lettuceClusterConnectionFactory, "Cluster" });
-		}
+            list = new ArrayList<>(list);
+            list.add(new Object[] {lettuceClusterConnectionFactory, "Cluster"});
+        }
 
-		return list;
-	}
+        return list;
+    }
 
-	private static boolean clusterAvailable() {
-		return ValkeyDetector.isClusterAvailable();
-	}
-
+    private static boolean clusterAvailable() {
+        return ValkeyDetector.isClusterAvailable();
+    }
 }

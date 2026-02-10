@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.core.convert;
 
 import java.util.Map;
-
 import org.springframework.data.annotation.Reference;
 import org.springframework.lang.Nullable;
 
@@ -29,11 +28,11 @@ import org.springframework.lang.Nullable;
  */
 public interface ReferenceResolver {
 
-	/**
-	 * @param id must not be {@literal null}.
-	 * @param keyspace must not be {@literal null}.
-	 * @return {@literal null} if referenced object does not exist.
-	 */
-	@Nullable
-	Map<byte[], byte[]> resolveReference(Object id, String keyspace);
+    /**
+     * @param id must not be {@literal null}.
+     * @param keyspace must not be {@literal null}.
+     * @return {@literal null} if referenced object does not exist.
+     */
+    @Nullable
+    Map<byte[], byte[]> resolveReference(Object id, String keyspace);
 }

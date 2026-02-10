@@ -17,6 +17,16 @@ package io.valkey.springframework.data.valkey.cache;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDriver;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDriver.DriverQualifier;
+import io.valkey.springframework.data.valkey.test.condition.ValkeyDriver;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -33,28 +43,16 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
 import org.junit.jupiter.api.BeforeEach;
-
 import org.springframework.cache.Cache.ValueWrapper;
 import org.springframework.cache.interceptor.SimpleKey;
 import org.springframework.cache.interceptor.SimpleKeyGenerator;
 import org.springframework.cache.support.NullValue;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDriver;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDriver.DriverQualifier;
-import io.valkey.springframework.data.valkey.test.condition.ValkeyDriver;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.lang.Nullable;
 
 /**
- * Tests for {@link ValkeyCache} with {@link DefaultValkeyCacheWriter} using different {@link ValkeySerializer} and
- * {@link ValkeyConnectionFactory} pairs.
+ * Tests for {@link ValkeyCache} with {@link DefaultValkeyCacheWriter} using different {@link
+ * ValkeySerializer} and {@link ValkeyConnectionFactory} pairs.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -65,764 +63,871 @@ import org.springframework.lang.Nullable;
 @MethodSource("testParams")
 public class ValkeyCacheTests {
 
-	private String key = "key-1";
-	private String cacheKey = "cache::" + key;
-	private byte[] binaryCacheKey = cacheKey.getBytes(StandardCharsets.UTF_8);
+    private String key = "key-1";
+    private String cacheKey = "cache::" + key;
+    private byte[] binaryCacheKey = cacheKey.getBytes(StandardCharsets.UTF_8);
 
-	private Person sample = new Person("calmity", new Date());
-	private byte[] binarySample;
+    private Person sample = new Person("calmity", new Date());
+    private byte[] binarySample;
 
-	private byte[] binaryNullValue = ValkeySerializer.java().serialize(NullValue.INSTANCE);
+    private byte[] binaryNullValue = ValkeySerializer.java().serialize(NullValue.INSTANCE);
 
-	private final @DriverQualifier ValkeyConnectionFactory connectionFactory;
-	private ValkeySerializer serializer;
-	private ValkeyCache cache;
+    private final @DriverQualifier ValkeyConnectionFactory connectionFactory;
+    private ValkeySerializer serializer;
+    private ValkeyCache cache;
 
-	public ValkeyCacheTests(ValkeyConnectionFactory connectionFactory, ValkeySerializer serializer) {
+    public ValkeyCacheTests(ValkeyConnectionFactory connectionFactory, ValkeySerializer serializer) {
 
-		this.connectionFactory = connectionFactory;
-		this.serializer = serializer;
-		this.binarySample = serializer.serialize(sample);
-	}
+        this.connectionFactory = connectionFactory;
+        this.serializer = serializer;
+        this.binarySample = serializer.serialize(sample);
+    }
 
-	public static Collection<Object[]> testParams() {
-		return CacheTestParams.connectionFactoriesAndSerializers();
-	}
+    public static Collection<Object[]> testParams() {
+        return CacheTestParams.connectionFactoriesAndSerializers();
+    }
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		doWithConnection(ValkeyConnection::flushAll);
+        doWithConnection(ValkeyConnection::flushAll);
 
-		this.cache = new ValkeyCache("cache", usingValkeyCacheWriter(), usingValkeyCacheConfiguration());
-	}
+        this.cache =
+                new ValkeyCache("cache", usingValkeyCacheWriter(), usingValkeyCacheConfiguration());
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putShouldAddEntry() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putShouldAddEntry() {
 
-		cache.put("key-1", sample);
+        cache.put("key-1", sample);
 
-		doWithConnection(connection -> assertThat(connection.exists(binaryCacheKey)).isTrue());
-	}
+        doWithConnection(connection -> assertThat(connection.exists(binaryCacheKey)).isTrue());
+    }
 
-	@ParameterizedValkeyTest // GH-2379
-	void cacheShouldBeClearedByPattern() {
+    @ParameterizedValkeyTest // GH-2379
+    void cacheShouldBeClearedByPattern() {
 
-		cache.put(key, sample);
+        cache.put(key, sample);
 
-		String keyPattern = "*" + key.substring(1);
-		cache.clear(keyPattern);
+        String keyPattern = "*" + key.substring(1);
+        cache.clear(keyPattern);
 
-		doWithConnection(connection -> assertThat(connection.exists(binaryCacheKey)).isFalse());
-	}
+        doWithConnection(connection -> assertThat(connection.exists(binaryCacheKey)).isFalse());
+    }
 
-	@ParameterizedValkeyTest // GH-2379
-	void cacheShouldNotBeClearedIfNoPatternMatch() {
+    @ParameterizedValkeyTest // GH-2379
+    void cacheShouldNotBeClearedIfNoPatternMatch() {
 
-		cache.put(key, sample);
+        cache.put(key, sample);
 
-		String keyPattern = "*" + key.substring(1) + "tail";
-		cache.clear(keyPattern);
+        String keyPattern = "*" + key.substring(1) + "tail";
+        cache.clear(keyPattern);
 
-		doWithConnection(connection -> assertThat(connection.exists(binaryCacheKey)).isTrue());
-	}
+        doWithConnection(connection -> assertThat(connection.exists(binaryCacheKey)).isTrue());
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putNullShouldAddEntryForNullValue() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putNullShouldAddEntryForNullValue() {
 
-		cache.put("key-1", null);
+        cache.put("key-1", null);
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isTrue();
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryNullValue);
-		});
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isTrue();
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryNullValue);
+                });
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putIfAbsentShouldAddEntryIfNotExists() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putIfAbsentShouldAddEntryIfNotExists() {
 
-		cache.putIfAbsent("key-1", sample);
+        cache.putIfAbsent("key-1", sample);
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isTrue();
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binarySample);
-		});
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isTrue();
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binarySample);
+                });
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putIfAbsentWithNullShouldAddNullValueEntryIfNotExists() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putIfAbsentWithNullShouldAddNullValueEntryIfNotExists() {
 
-		assertThat(cache.putIfAbsent("key-1", null)).isNull();
+        assertThat(cache.putIfAbsent("key-1", null)).isNull();
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isTrue();
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryNullValue);
-		});
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isTrue();
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryNullValue);
+                });
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putIfAbsentShouldReturnExistingIfExists() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putIfAbsentShouldReturnExistingIfExists() {
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binarySample));
+        doWithConnection(connection -> connection.set(binaryCacheKey, binarySample));
 
-		ValueWrapper result = cache.putIfAbsent("key-1", "this-should-not-be-set");
+        ValueWrapper result = cache.putIfAbsent("key-1", "this-should-not-be-set");
 
-		assertThat(result).isNotNull();
-		assertThat(result.get()).isEqualTo(sample);
+        assertThat(result).isNotNull();
+        assertThat(result.get()).isEqualTo(sample);
 
-		doWithConnection(connection -> assertThat(connection.get(binaryCacheKey)).isEqualTo(binarySample));
-	}
+        doWithConnection(
+                connection -> assertThat(connection.get(binaryCacheKey)).isEqualTo(binarySample));
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void putIfAbsentShouldReturnExistingNullValueIfExists() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void putIfAbsentShouldReturnExistingNullValueIfExists() {
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
 
-		ValueWrapper result = cache.putIfAbsent("key-1", "this-should-not-be-set");
+        ValueWrapper result = cache.putIfAbsent("key-1", "this-should-not-be-set");
 
-		assertThat(result).isNotNull();
-		assertThat(result.get()).isNull();
+        assertThat(result).isNotNull();
+        assertThat(result.get()).isNull();
 
-		doWithConnection(connection -> assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryNullValue));
-	}
+        doWithConnection(
+                connection -> assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryNullValue));
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void getShouldRetrieveEntry() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void getShouldRetrieveEntry() {
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binarySample));
+        doWithConnection(connection -> connection.set(binaryCacheKey, binarySample));
 
-		ValueWrapper result = cache.get(key);
-		assertThat(result).isNotNull();
-		assertThat(result.get()).isEqualTo(sample);
-	}
+        ValueWrapper result = cache.get(key);
+        assertThat(result).isNotNull();
+        assertThat(result.get()).isEqualTo(sample);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void shouldReadAndWriteSimpleCacheKey() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void shouldReadAndWriteSimpleCacheKey() {
 
-		SimpleKey key = new SimpleKey("param-1", "param-2");
+        SimpleKey key = new SimpleKey("param-1", "param-2");
 
-		cache.put(key, sample);
+        cache.put(key, sample);
 
-		ValueWrapper result = cache.get(key);
-		assertThat(result).isNotNull();
-		assertThat(result.get()).isEqualTo(sample);
-	}
+        ValueWrapper result = cache.get(key);
+        assertThat(result).isNotNull();
+        assertThat(result.get()).isEqualTo(sample);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void shouldRejectNonInvalidKey() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void shouldRejectNonInvalidKey() {
 
-		InvalidKey key = new InvalidKey(sample.getFirstname(), sample.getBirthdate());
+        InvalidKey key = new InvalidKey(sample.getFirstname(), sample.getBirthdate());
 
-		assertThatIllegalStateException().isThrownBy(() -> cache.put(key, sample));
-	}
+        assertThatIllegalStateException().isThrownBy(() -> cache.put(key, sample));
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void shouldAllowComplexKeyWithToStringMethod() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void shouldAllowComplexKeyWithToStringMethod() {
 
-		ComplexKey key = new ComplexKey(sample.getFirstname(), sample.getBirthdate());
+        ComplexKey key = new ComplexKey(sample.getFirstname(), sample.getBirthdate());
 
-		cache.put(key, sample);
+        cache.put(key, sample);
 
-		ValueWrapper result = cache.get(key);
+        ValueWrapper result = cache.get(key);
 
-		assertThat(result).isNotNull();
-		assertThat(result.get()).isEqualTo(sample);
-	}
+        assertThat(result).isNotNull();
+        assertThat(result.get()).isEqualTo(sample);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void getShouldReturnNullWhenKeyDoesNotExist() {
-		assertThat(cache.get(key)).isNull();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void getShouldReturnNullWhenKeyDoesNotExist() {
+        assertThat(cache.get(key)).isNull();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void getShouldReturnValueWrapperHoldingNullIfNullValueStored() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void getShouldReturnValueWrapperHoldingNullIfNullValueStored() {
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
 
-		ValueWrapper result = cache.get(key);
+        ValueWrapper result = cache.get(key);
 
-		assertThat(result).isNotNull();
-		assertThat(result.get()).isEqualTo(null);
-	}
+        assertThat(result).isNotNull();
+        assertThat(result.get()).isEqualTo(null);
+    }
 
-	@ParameterizedValkeyTest // GH-2890
-	void getWithValueLoaderShouldStoreNull() {
+    @ParameterizedValkeyTest // GH-2890
+    void getWithValueLoaderShouldStoreNull() {
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
 
-		Object result = cache.get(key, () -> {
-			throw new IllegalStateException();
-		});
+        Object result =
+                cache.get(
+                        key,
+                        () -> {
+                            throw new IllegalStateException();
+                        });
 
-		assertThat(result).isNull();
-	}
+        assertThat(result).isNull();
+    }
 
-	@ParameterizedValkeyTest // GH-2890
-	void getWithValueLoaderShouldRetrieveValue() {
+    @ParameterizedValkeyTest // GH-2890
+    void getWithValueLoaderShouldRetrieveValue() {
 
-		AtomicLong counter = new AtomicLong();
-		Object result = cache.get(key, () -> {
-			counter.incrementAndGet();
-			return sample;
-		});
+        AtomicLong counter = new AtomicLong();
+        Object result =
+                cache.get(
+                        key,
+                        () -> {
+                            counter.incrementAndGet();
+                            return sample;
+                        });
 
-		assertThat(result).isEqualTo(sample);
-		result = cache.get(key, () -> {
-			counter.incrementAndGet();
-			return sample;
-		});
+        assertThat(result).isEqualTo(sample);
+        result =
+                cache.get(
+                        key,
+                        () -> {
+                            counter.incrementAndGet();
+                            return sample;
+                        });
 
-		assertThat(result).isEqualTo(sample);
-		assertThat(counter).hasValue(1);
-	}
+        assertThat(result).isEqualTo(sample);
+        assertThat(counter).hasValue(1);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void evictShouldRemoveKey() {
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void evictShouldRemoveKey() {
 
-		doWithConnection(connection -> {
-			connection.set(binaryCacheKey, binaryNullValue);
-			connection.set("other".getBytes(), "value".getBytes());
-		});
+        doWithConnection(
+                connection -> {
+                    connection.set(binaryCacheKey, binaryNullValue);
+                    connection.set("other".getBytes(), "value".getBytes());
+                });
 
-		cache.evict(key);
+        cache.evict(key);
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isFalse();
-			assertThat(connection.exists("other".getBytes())).isTrue();
-		});
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isFalse();
+                    assertThat(connection.exists("other".getBytes())).isTrue();
+                });
+    }
 
-	@ParameterizedValkeyTest // GH-2028
-	void clearShouldClearCache() {
+    @ParameterizedValkeyTest // GH-2028
+    void clearShouldClearCache() {
 
-		doWithConnection(connection -> {
-			connection.set(binaryCacheKey, binaryNullValue);
-			connection.set("other".getBytes(), "value".getBytes());
-		});
+        doWithConnection(
+                connection -> {
+                    connection.set(binaryCacheKey, binaryNullValue);
+                    connection.set("other".getBytes(), "value".getBytes());
+                });
 
-		cache.clear();
+        cache.clear();
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isFalse();
-			assertThat(connection.exists("other".getBytes())).isTrue();
-		});
-	}
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isFalse();
+                    assertThat(connection.exists("other".getBytes())).isTrue();
+                });
+    }
+
+    @ParameterizedValkeyTest // GH-1721
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE) // SCAN not supported via Jedis Cluster.
+    void clearWithScanShouldClearCache() {
+
+        ValkeyCache cache =
+                new ValkeyCache(
+                        "cache",
+                        ValkeyCacheWriter.nonLockingValkeyCacheWriter(
+                                connectionFactory, BatchStrategies.scan(25)),
+                        ValkeyCacheConfiguration.defaultCacheConfig()
+                                .serializeValuesWith(SerializationPair.fromSerializer(serializer)));
+
+        doWithConnection(
+                connection -> {
+                    connection.set(binaryCacheKey, binaryNullValue);
+                    connection.set("cache::foo".getBytes(), binaryNullValue);
+                    connection.set("other".getBytes(), "value".getBytes());
+                });
+
+        cache.clear();
+
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isFalse();
+                    assertThat(connection.exists("cache::foo".getBytes())).isFalse();
+                    assertThat(connection.exists("other".getBytes())).isTrue();
+                });
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void getWithCallableShouldResolveValueIfNotPresent() {
+
+        assertThat(cache.get(key, () -> sample)).isEqualTo(sample);
+
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isTrue();
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binarySample);
+                });
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-481
+    void getWithCallableShouldNotResolveValueIfPresent() {
+
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
 
-	@ParameterizedValkeyTest // GH-1721
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE) // SCAN not supported via Jedis Cluster.
-	void clearWithScanShouldClearCache() {
+        cache.get(
+                key,
+                () -> {
+                    throw new IllegalStateException("Why call the value loader when we've got a cache entry");
+                });
 
-		ValkeyCache cache = new ValkeyCache("cache",
-				ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory, BatchStrategies.scan(25)),
-				ValkeyCacheConfiguration.defaultCacheConfig().serializeValuesWith(SerializationPair.fromSerializer(serializer)));
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.exists(binaryCacheKey)).isTrue();
+                    assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryNullValue);
+                });
+    }
 
-		doWithConnection(connection -> {
-			connection.set(binaryCacheKey, binaryNullValue);
-			connection.set("cache::foo".getBytes(), binaryNullValue);
-			connection.set("other".getBytes(), "value".getBytes());
-		});
+    @ParameterizedValkeyTest // DATAREDIS-715
+    void computePrefixCreatesCacheKeyCorrectly() {
 
-		cache.clear();
+        ValkeyCache cacheWithCustomPrefix =
+                new ValkeyCache(
+                        "cache",
+                        ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory),
+                        ValkeyCacheConfiguration.defaultCacheConfig()
+                                .serializeValuesWith(SerializationPair.fromSerializer(serializer))
+                                .computePrefixWith(cacheName -> "_" + cacheName + "_"));
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isFalse();
-			assertThat(connection.exists("cache::foo".getBytes())).isFalse();
-			assertThat(connection.exists("other".getBytes())).isTrue();
-		});
-	}
+        cacheWithCustomPrefix.put("key-1", sample);
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void getWithCallableShouldResolveValueIfNotPresent() {
+        doWithConnection(
+                connection ->
+                        assertThat(
+                                        connection
+                                                .stringCommands()
+                                                .get("_cache_key-1".getBytes(StandardCharsets.UTF_8)))
+                                .isEqualTo(binarySample));
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-1041
+    void prefixCacheNameCreatesCacheKeyCorrectly() {
+
+        ValkeyCache cacheWithCustomPrefix =
+                new ValkeyCache(
+                        "cache",
+                        ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory),
+                        ValkeyCacheConfiguration.defaultCacheConfig()
+                                .serializeValuesWith(SerializationPair.fromSerializer(serializer))
+                                .prefixCacheNameWith("valkey::"));
+
+        cacheWithCustomPrefix.put("key-1", sample);
 
-		assertThat(cache.get(key, () -> sample)).isEqualTo(sample);
+        doWithConnection(
+                connection ->
+                        assertThat(
+                                        connection
+                                                .stringCommands()
+                                                .get("valkey::cache::key-1".getBytes(StandardCharsets.UTF_8)))
+                                .isEqualTo(binarySample));
+    }
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isTrue();
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binarySample);
-		});
-	}
+    @ParameterizedValkeyTest // DATAREDIS-715
+    void fetchKeyWithComputedPrefixReturnsExpectedResult() {
 
-	@ParameterizedValkeyTest // DATAREDIS-481
-	void getWithCallableShouldNotResolveValueIfPresent() {
+        doWithConnection(
+                connection ->
+                        connection.set("_cache_key-1".getBytes(StandardCharsets.UTF_8), binarySample));
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
+        ValkeyCache cacheWithCustomPrefix =
+                new ValkeyCache(
+                        "cache",
+                        ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory),
+                        ValkeyCacheConfiguration.defaultCacheConfig()
+                                .serializeValuesWith(SerializationPair.fromSerializer(serializer))
+                                .computePrefixWith(cacheName -> "_" + cacheName + "_"));
 
-		cache.get(key, () -> {
-			throw new IllegalStateException("Why call the value loader when we've got a cache entry");
-		});
+        ValueWrapper result = cacheWithCustomPrefix.get(key);
 
-		doWithConnection(connection -> {
-			assertThat(connection.exists(binaryCacheKey)).isTrue();
-			assertThat(connection.get(binaryCacheKey)).isEqualTo(binaryNullValue);
-		});
-	}
+        assertThat(result).isNotNull();
+        assertThat(result.get()).isEqualTo(sample);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-715
-	void computePrefixCreatesCacheKeyCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-1032
+    void cacheShouldAllowListKeyCacheKeysOfSimpleTypes() {
 
-		ValkeyCache cacheWithCustomPrefix = new ValkeyCache("cache",
-				ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory),
-				ValkeyCacheConfiguration.defaultCacheConfig().serializeValuesWith(SerializationPair.fromSerializer(serializer))
-						.computePrefixWith(cacheName -> "_" + cacheName + "_"));
+        Object key =
+                SimpleKeyGenerator.generateKey(Collections.singletonList("my-cache-key-in-a-list"));
+        cache.put(key, sample);
 
-		cacheWithCustomPrefix.put("key-1", sample);
+        ValueWrapper target =
+                cache.get(
+                        SimpleKeyGenerator.generateKey(Collections.singletonList("my-cache-key-in-a-list")));
 
-		doWithConnection(
-				connection -> assertThat(connection.stringCommands().get("_cache_key-1".getBytes(StandardCharsets.UTF_8)))
-						.isEqualTo(binarySample));
-	}
+        assertThat(target.get()).isEqualTo(sample);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-1041
-	void prefixCacheNameCreatesCacheKeyCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-1032
+    void cacheShouldAllowArrayKeyCacheKeysOfSimpleTypes() {
 
-		ValkeyCache cacheWithCustomPrefix = new ValkeyCache("cache",
-				ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory), ValkeyCacheConfiguration.defaultCacheConfig()
-						.serializeValuesWith(SerializationPair.fromSerializer(serializer)).prefixCacheNameWith("valkey::"));
+        Object key = SimpleKeyGenerator.generateKey("my-cache-key-in-an-array");
+        cache.put(key, sample);
 
-		cacheWithCustomPrefix.put("key-1", sample);
+        ValueWrapper target = cache.get(SimpleKeyGenerator.generateKey("my-cache-key-in-an-array"));
 
-		doWithConnection(connection -> assertThat(
-				connection.stringCommands().get("valkey::cache::key-1".getBytes(StandardCharsets.UTF_8)))
-				.isEqualTo(binarySample));
-	}
+        assertThat(target.get()).isEqualTo(sample);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-715
-	void fetchKeyWithComputedPrefixReturnsExpectedResult() {
+    @ParameterizedValkeyTest // DATAREDIS-1032
+    void cacheShouldAllowListCacheKeysOfComplexTypes() {
+
+        Object key =
+                SimpleKeyGenerator.generateKey(
+                        Collections.singletonList(
+                                new ComplexKey(sample.getFirstname(), sample.getBirthdate())));
+        cache.put(key, sample);
 
-		doWithConnection(connection -> connection.set("_cache_key-1".getBytes(StandardCharsets.UTF_8), binarySample));
+        ValueWrapper target =
+                cache.get(
+                        SimpleKeyGenerator.generateKey(
+                                Collections.singletonList(
+                                        new ComplexKey(sample.getFirstname(), sample.getBirthdate()))));
+
+        assertThat(target.get()).isEqualTo(sample);
+    }
 
-		ValkeyCache cacheWithCustomPrefix = new ValkeyCache("cache",
-				ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory),
-				ValkeyCacheConfiguration.defaultCacheConfig().serializeValuesWith(SerializationPair.fromSerializer(serializer))
-						.computePrefixWith(cacheName -> "_" + cacheName + "_"));
+    @ParameterizedValkeyTest // DATAREDIS-1032
+    void cacheShouldAllowMapCacheKeys() {
 
-		ValueWrapper result = cacheWithCustomPrefix.get(key);
+        Object key =
+                SimpleKeyGenerator.generateKey(
+                        Collections.singletonMap(
+                                "map-key", new ComplexKey(sample.getFirstname(), sample.getBirthdate())));
+        cache.put(key, sample);
+
+        ValueWrapper target =
+                cache.get(
+                        SimpleKeyGenerator.generateKey(
+                                Collections.singletonMap(
+                                        "map-key", new ComplexKey(sample.getFirstname(), sample.getBirthdate()))));
+
+        assertThat(target.get()).isEqualTo(sample);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-1032
+    void cacheShouldFailOnNonConvertibleCacheKey() {
+
+        Object key =
+                SimpleKeyGenerator.generateKey(
+                        Collections.singletonList(
+                                new InvalidKey(sample.getFirstname(), sample.getBirthdate())));
 
-		assertThat(result).isNotNull();
-		assertThat(result.get()).isEqualTo(sample);
-	}
+        assertThatIllegalStateException().isThrownBy(() -> cache.put(key, sample));
+    }
+
+    @EnabledOnCommand("GETEX")
+    @ParameterizedValkeyTest // GH-2351
+    void cacheGetWithTimeToIdleExpirationWhenEntryNotExpiredShouldReturnValue() {
+
+        doWithConnection(
+                connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
 
-	@ParameterizedValkeyTest // DATAREDIS-1032
-	void cacheShouldAllowListKeyCacheKeysOfSimpleTypes() {
+        ValkeyCache cache =
+                new ValkeyCache(
+                        "cache", usingValkeyCacheWriter(), usingValkeyCacheConfiguration(withTtiExpiration()));
 
-		Object key = SimpleKeyGenerator.generateKey(Collections.singletonList("my-cache-key-in-a-list"));
-		cache.put(key, sample);
+        assertThat(unwrap(cache.get(this.key))).isEqualTo(this.sample);
+
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.keyCommands().ttl(this.binaryCacheKey)).isGreaterThan(1);
+                });
+    }
 
-		ValueWrapper target = cache
-				.get(SimpleKeyGenerator.generateKey(Collections.singletonList("my-cache-key-in-a-list")));
+    @EnabledOnCommand("GETEX")
+    @ParameterizedValkeyTest // GH-2351
+    void cacheGetWithTimeToIdleExpirationAfterEntryExpiresShouldReturnNull() {
 
-		assertThat(target.get()).isEqualTo(sample);
-	}
+        doWithConnection(
+                connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
 
-	@ParameterizedValkeyTest // DATAREDIS-1032
-	void cacheShouldAllowArrayKeyCacheKeysOfSimpleTypes() {
+        ValkeyCache cache =
+                new ValkeyCache(
+                        "cache", usingValkeyCacheWriter(), usingValkeyCacheConfiguration(withTtiExpiration()));
 
-		Object key = SimpleKeyGenerator.generateKey("my-cache-key-in-an-array");
-		cache.put(key, sample);
+        assertThat(unwrap(cache.get(this.key))).isEqualTo(this.sample);
 
-		ValueWrapper target = cache.get(SimpleKeyGenerator.generateKey("my-cache-key-in-an-array"));
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.keyCommands().ttl(this.binaryCacheKey)).isGreaterThan(1);
+                });
+    }
 
-		assertThat(target.get()).isEqualTo(sample);
-	}
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.JEDIS)
+    void retrieveCacheValueUsingJedis() {
 
-	@ParameterizedValkeyTest // DATAREDIS-1032
-	void cacheShouldAllowListCacheKeysOfComplexTypes() {
+        assertThatExceptionOfType(UnsupportedOperationException.class)
+                .isThrownBy(() -> this.cache.retrieve(this.binaryCacheKey))
+                .withMessageContaining("ValkeyCache");
+    }
 
-		Object key = SimpleKeyGenerator
-				.generateKey(Collections.singletonList(new ComplexKey(sample.getFirstname(), sample.getBirthdate())));
-		cache.put(key, sample);
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.JEDIS)
+    void retrieveLoadedValueUsingJedis() {
 
-		ValueWrapper target = cache.get(SimpleKeyGenerator
-				.generateKey(Collections.singletonList(new ComplexKey(sample.getFirstname(), sample.getBirthdate()))));
+        assertThatExceptionOfType(UnsupportedOperationException.class)
+                .isThrownBy(
+                        () -> this.cache.retrieve(this.binaryCacheKey, () -> usingCompletedFuture("TEST")))
+                .withMessageContaining("ValkeyCache");
+    }
 
-		assertThat(target.get()).isEqualTo(sample);
-	}
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void retrieveReturnsCachedValue() throws Exception {
 
-	@ParameterizedValkeyTest // DATAREDIS-1032
-	void cacheShouldAllowMapCacheKeys() {
+        doWithConnection(
+                connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
 
-		Object key = SimpleKeyGenerator
-				.generateKey(Collections.singletonMap("map-key", new ComplexKey(sample.getFirstname(), sample.getBirthdate())));
-		cache.put(key, sample);
+        ValkeyCache cache =
+                new ValkeyCache(
+                        "cache",
+                        usingLockingValkeyCacheWriter(),
+                        usingValkeyCacheConfiguration().disableCachingNullValues());
 
-		ValueWrapper target = cache.get(SimpleKeyGenerator.generateKey(
-				Collections.singletonMap("map-key", new ComplexKey(sample.getFirstname(), sample.getBirthdate()))));
+        CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
 
-		assertThat(target.get()).isEqualTo(sample);
-	}
+        assertThat(value).isNotNull();
+        assertThat(value.get(5, TimeUnit.SECONDS)).isNotNull();
+        assertThat(value.get().get()).isEqualTo(this.sample);
+        assertThat(value).isDone();
 
-	@ParameterizedValkeyTest // DATAREDIS-1032
-	void cacheShouldFailOnNonConvertibleCacheKey() {
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.keyCommands().ttl(this.binaryCacheKey)).isEqualTo(-1);
+                });
+    }
 
-		Object key = SimpleKeyGenerator
-				.generateKey(Collections.singletonList(new InvalidKey(sample.getFirstname(), sample.getBirthdate())));
+    @ParameterizedValkeyTest // GH-2890
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void retrieveAppliesTimeToIdle() throws ExecutionException, InterruptedException {
 
-		assertThatIllegalStateException().isThrownBy(() -> cache.put(key, sample));
-	}
+        doWithConnection(
+                connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
 
-	@EnabledOnCommand("GETEX")
-	@ParameterizedValkeyTest // GH-2351
-	void cacheGetWithTimeToIdleExpirationWhenEntryNotExpiredShouldReturnValue() {
+        ValkeyCache cache =
+                new ValkeyCache(
+                        "cache", usingValkeyCacheWriter(), usingValkeyCacheConfiguration(withTtiExpiration()));
 
-		doWithConnection(connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
+        CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
 
-		ValkeyCache cache = new ValkeyCache("cache", usingValkeyCacheWriter(),
-				usingValkeyCacheConfiguration(withTtiExpiration()));
+        assertThat(value).isNotNull();
+        assertThat(value.get().get()).isEqualTo(this.sample);
+        assertThat(value).isDone();
 
-		assertThat(unwrap(cache.get(this.key))).isEqualTo(this.sample);
+        doWithConnection(
+                connection -> {
+                    assertThat(connection.keyCommands().ttl(this.binaryCacheKey)).isGreaterThan(1);
+                });
+    }
 
-		doWithConnection(connection -> {
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void retrieveReturnsCachedNullableValue() throws Exception {
 
-			assertThat(connection.keyCommands().ttl(this.binaryCacheKey)).isGreaterThan(1);
-		});
-	}
+        doWithConnection(
+                connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
 
-	@EnabledOnCommand("GETEX")
-	@ParameterizedValkeyTest // GH-2351
-	void cacheGetWithTimeToIdleExpirationAfterEntryExpiresShouldReturnNull() {
+        ValkeyCache cache =
+                new ValkeyCache("cache", usingLockingValkeyCacheWriter(), usingValkeyCacheConfiguration());
 
-		doWithConnection(connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
+        CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
 
-		ValkeyCache cache = new ValkeyCache("cache", usingValkeyCacheWriter(),
-				usingValkeyCacheConfiguration(withTtiExpiration()));
+        assertThat(value).isNotNull();
+        assertThat(value.get().get()).isEqualTo(this.sample);
+        assertThat(value).isDone();
+    }
 
-		assertThat(unwrap(cache.get(this.key))).isEqualTo(this.sample);
+    @ParameterizedValkeyTest // GH-2783
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void retrieveReturnsCachedNullValue() throws Exception {
 
-		doWithConnection(connection -> {
-			assertThat(connection.keyCommands().ttl(this.binaryCacheKey)).isGreaterThan(1);
-		});
-	}
+        doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.JEDIS)
-	void retrieveCacheValueUsingJedis() {
+        CompletableFuture<ValueWrapper> value =
+                (CompletableFuture<ValueWrapper>) cache.retrieve(this.key);
+        ValueWrapper wrapper = value.get(5, TimeUnit.SECONDS);
 
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> this.cache.retrieve(this.binaryCacheKey)).withMessageContaining("ValkeyCache");
-	}
+        assertThat(wrapper).isNotNull();
+        assertThat(wrapper.get()).isNull();
+    }
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.JEDIS)
-	void retrieveLoadedValueUsingJedis() {
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void retrieveReturnsCachedValueWhenLockIsReleased() throws Exception {
 
-		assertThatExceptionOfType(UnsupportedOperationException.class)
-				.isThrownBy(() -> this.cache.retrieve(this.binaryCacheKey, () -> usingCompletedFuture("TEST")))
-				.withMessageContaining("ValkeyCache");
-	}
+        String testValue = "TestValue";
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void retrieveReturnsCachedValue() throws Exception {
+        byte[] binaryCacheValue = this.serializer.serialize(testValue);
 
-		doWithConnection(connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
+        doWithConnection(
+                connection -> connection.stringCommands().set(this.binaryCacheKey, binaryCacheValue));
 
-		ValkeyCache cache = new ValkeyCache("cache", usingLockingValkeyCacheWriter(),
-				usingValkeyCacheConfiguration().disableCachingNullValues());
+        ValkeyCache cache =
+                new ValkeyCache(
+                        "cache",
+                        usingLockingValkeyCacheWriter(Duration.ofMillis(5L)),
+                        usingValkeyCacheConfiguration());
 
-		CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
+        DefaultValkeyCacheWriter cacheWriter = (DefaultValkeyCacheWriter) cache.getCacheWriter();
 
-		assertThat(value).isNotNull();
-		assertThat(value.get(5, TimeUnit.SECONDS)).isNotNull();
-		assertThat(value.get().get()).isEqualTo(this.sample);
-		assertThat(value).isDone();
+        cacheWriter.lock("cache");
 
-		doWithConnection(connection -> {
-			assertThat(connection.keyCommands().ttl(this.binaryCacheKey)).isEqualTo(-1);
-		});
-	}
+        CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
+        assertThat(value).isNotDone();
 
-	@ParameterizedValkeyTest // GH-2890
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void retrieveAppliesTimeToIdle() throws ExecutionException, InterruptedException {
+        cacheWriter.unlock("cache");
 
-		doWithConnection(connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
+        assertThat(value.get(500L, TimeUnit.MILLISECONDS).get()).isEqualTo(testValue);
+        assertThat(value).isDone();
+    }
 
-		ValkeyCache cache = new ValkeyCache("cache", usingValkeyCacheWriter(),
-				usingValkeyCacheConfiguration(withTtiExpiration()));
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void retrieveReturnsLoadedValue() throws Exception {
 
-		CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
+        AtomicBoolean loaded = new AtomicBoolean(false);
+        Person jon = new Person("Jon", Date.from(Instant.now()));
+        CompletableFuture<Person> valueLoader = CompletableFuture.completedFuture(jon);
 
-		assertThat(value).isNotNull();
-		assertThat(value.get().get()).isEqualTo(this.sample);
-		assertThat(value).isDone();
+        ValkeyCache cache =
+                new ValkeyCache("cache", usingLockingValkeyCacheWriter(), usingValkeyCacheConfiguration());
 
-		doWithConnection(connection -> {
-			assertThat(connection.keyCommands().ttl(this.binaryCacheKey)).isGreaterThan(1);
-		});
-	}
+        Supplier<CompletableFuture<Person>> valueLoaderSupplier =
+                () -> {
+                    loaded.set(true);
+                    return valueLoader;
+                };
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void retrieveReturnsCachedNullableValue() throws Exception {
+        CompletableFuture<Person> value = cache.retrieve(this.key, valueLoaderSupplier);
 
-		doWithConnection(connection -> connection.stringCommands().set(this.binaryCacheKey, this.binarySample));
+        assertThat(value.get()).isEqualTo(jon);
+        assertThat(loaded.get()).isTrue();
+        assertThat(value).isDone();
+    }
 
-		ValkeyCache cache = new ValkeyCache("cache", usingLockingValkeyCacheWriter(), usingValkeyCacheConfiguration());
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void retrieveStoresLoadedValue() throws Exception {
 
-		CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
+        Person jon = new Person("Jon", Date.from(Instant.now()));
+        Supplier<CompletableFuture<Person>> valueLoaderSupplier =
+                () -> CompletableFuture.completedFuture(jon);
 
-		assertThat(value).isNotNull();
-		assertThat(value.get().get()).isEqualTo(this.sample);
-		assertThat(value).isDone();
-	}
+        ValkeyCache cache =
+                new ValkeyCache("cache", usingLockingValkeyCacheWriter(), usingValkeyCacheConfiguration());
 
-	@ParameterizedValkeyTest // GH-2783
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void retrieveReturnsCachedNullValue() throws Exception {
+        cache.retrieve(this.key, valueLoaderSupplier).get();
 
-		doWithConnection(connection -> connection.set(binaryCacheKey, binaryNullValue));
+        doWithConnection(
+                connection ->
+                        assertThat(
+                                        connection
+                                                .keyCommands()
+                                                .exists("cache::key-1".getBytes(StandardCharsets.UTF_8)))
+                                .isTrue());
+    }
 
-		CompletableFuture<ValueWrapper> value = (CompletableFuture<ValueWrapper>) cache.retrieve(this.key);
-		ValueWrapper wrapper = value.get(5, TimeUnit.SECONDS);
+    @ParameterizedValkeyTest // GH-2650
+    @EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
+    void retrieveReturnsNull() throws Exception {
 
-		assertThat(wrapper).isNotNull();
-		assertThat(wrapper.get()).isNull();
-	}
+        doWithConnection(
+                connection -> connection.stringCommands().set(this.binaryCacheKey, this.binaryNullValue));
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void retrieveReturnsCachedValueWhenLockIsReleased() throws Exception {
+        ValkeyCache cache =
+                new ValkeyCache("cache", usingLockingValkeyCacheWriter(), usingValkeyCacheConfiguration());
 
-		String testValue = "TestValue";
+        CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
 
-		byte[] binaryCacheValue = this.serializer.serialize(testValue);
+        assertThat(value).isNotNull();
+        assertThat(value.get(5, TimeUnit.SECONDS).get()).isNull();
+        assertThat(value).isDone();
 
-		doWithConnection(connection -> connection.stringCommands().set(this.binaryCacheKey, binaryCacheValue));
+        doWithConnection(connection -> connection.keyCommands().del(this.binaryCacheKey));
 
-		ValkeyCache cache = new ValkeyCache("cache", usingLockingValkeyCacheWriter(Duration.ofMillis(5L)),
-				usingValkeyCacheConfiguration());
+        value = cache.retrieve(this.key);
 
-		DefaultValkeyCacheWriter cacheWriter = (DefaultValkeyCacheWriter) cache.getCacheWriter();
+        assertThat(value).isNotNull();
+        assertThat(value.get(5, TimeUnit.SECONDS)).isNull();
+    }
 
-		cacheWriter.lock("cache");
+    private <T> CompletableFuture<T> usingCompletedFuture(T value) {
+        return CompletableFuture.completedFuture(value);
+    }
 
-		CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
-		assertThat(value).isNotDone();
+    private ValkeyCacheConfiguration usingValkeyCacheConfiguration() {
+        return usingValkeyCacheConfiguration(Function.identity());
+    }
 
-		cacheWriter.unlock("cache");
+    private ValkeyCacheConfiguration usingValkeyCacheConfiguration(
+            Function<ValkeyCacheConfiguration, ValkeyCacheConfiguration> customizer) {
 
-		assertThat(value.get(500L, TimeUnit.MILLISECONDS).get()).isEqualTo(testValue);
-		assertThat(value).isDone();
-	}
+        return customizer.apply(
+                ValkeyCacheConfiguration.defaultCacheConfig()
+                        .serializeValuesWith(SerializationPair.fromSerializer(this.serializer)));
+    }
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void retrieveReturnsLoadedValue() throws Exception {
+    private ValkeyCacheWriter usingValkeyCacheWriter() {
+        return usingNonLockingValkeyCacheWriter();
+    }
 
-		AtomicBoolean loaded = new AtomicBoolean(false);
-		Person jon = new Person("Jon", Date.from(Instant.now()));
-		CompletableFuture<Person> valueLoader = CompletableFuture.completedFuture(jon);
+    private ValkeyCacheWriter usingLockingValkeyCacheWriter() {
+        return ValkeyCacheWriter.lockingValkeyCacheWriter(this.connectionFactory);
+    }
 
-		ValkeyCache cache = new ValkeyCache("cache", usingLockingValkeyCacheWriter(), usingValkeyCacheConfiguration());
+    private ValkeyCacheWriter usingLockingValkeyCacheWriter(Duration sleepTime) {
+        return ValkeyCacheWriter.lockingValkeyCacheWriter(
+                this.connectionFactory,
+                sleepTime,
+                ValkeyCacheWriter.TtlFunction.persistent(),
+                BatchStrategies.keys());
+    }
 
-		Supplier<CompletableFuture<Person>> valueLoaderSupplier = () -> {
-			loaded.set(true);
-			return valueLoader;
-		};
+    private ValkeyCacheWriter usingNonLockingValkeyCacheWriter() {
+        return ValkeyCacheWriter.nonLockingValkeyCacheWriter(this.connectionFactory);
+    }
 
-		CompletableFuture<Person> value = cache.retrieve(this.key, valueLoaderSupplier);
+    @Nullable
+    private Object unwrap(@Nullable Object value) {
+        return value instanceof ValueWrapper wrapper ? wrapper.get() : value;
+    }
 
-		assertThat(value.get()).isEqualTo(jon);
-		assertThat(loaded.get()).isTrue();
-		assertThat(value).isDone();
-	}
+    private Function<ValkeyCacheConfiguration, ValkeyCacheConfiguration> withTtiExpiration() {
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void retrieveStoresLoadedValue() throws Exception {
+        Function<ValkeyCacheConfiguration, ValkeyCacheConfiguration> entryTtlFunction =
+                cacheConfiguration -> cacheConfiguration.entryTtl(Duration.ofSeconds(10));
 
-		Person jon = new Person("Jon", Date.from(Instant.now()));
-		Supplier<CompletableFuture<Person>> valueLoaderSupplier = () -> CompletableFuture.completedFuture(jon);
+        return entryTtlFunction.andThen(ValkeyCacheConfiguration::enableTimeToIdle);
+    }
 
-		ValkeyCache cache = new ValkeyCache("cache", usingLockingValkeyCacheWriter(), usingValkeyCacheConfiguration());
+    void doWithConnection(Consumer<ValkeyConnection> callback) {
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            callback.accept(connection);
+        }
+    }
 
-		cache.retrieve(this.key, valueLoaderSupplier).get();
+    static class Person implements Serializable {
 
-		doWithConnection(
-				connection -> assertThat(connection.keyCommands().exists("cache::key-1".getBytes(StandardCharsets.UTF_8)))
-						.isTrue());
-	}
+        private String firstname;
+        private Date birthdate;
 
-	@ParameterizedValkeyTest // GH-2650
-	@EnabledOnValkeyDriver(ValkeyDriver.LETTUCE)
-	void retrieveReturnsNull() throws Exception {
+        public Person() {}
 
-		doWithConnection(connection -> connection.stringCommands().set(this.binaryCacheKey, this.binaryNullValue));
+        public Person(String firstname, Date birthdate) {
+            this.firstname = firstname;
+            this.birthdate = birthdate;
+        }
 
-		ValkeyCache cache = new ValkeyCache("cache", usingLockingValkeyCacheWriter(), usingValkeyCacheConfiguration());
+        public String getFirstname() {
+            return this.firstname;
+        }
 
-		CompletableFuture<ValueWrapper> value = cache.retrieve(this.key);
+        public void setFirstname(String firstname) {
+            this.firstname = firstname;
+        }
 
-		assertThat(value).isNotNull();
-		assertThat(value.get(5, TimeUnit.SECONDS).get()).isNull();
-		assertThat(value).isDone();
+        public Date getBirthdate() {
+            return this.birthdate;
+        }
 
-		doWithConnection(connection -> connection.keyCommands().del(this.binaryCacheKey));
+        public void setBirthdate(Date birthdate) {
+            this.birthdate = birthdate;
+        }
 
-		value = cache.retrieve(this.key);
+        @Override
+        public boolean equals(Object obj) {
 
-		assertThat(value).isNotNull();
-		assertThat(value.get(5, TimeUnit.SECONDS)).isNull();
-	}
+            if (this == obj) {
+                return true;
+            }
 
-	private <T> CompletableFuture<T> usingCompletedFuture(T value) {
-		return CompletableFuture.completedFuture(value);
-	}
+            if (!(obj instanceof Person that)) {
+                return false;
+            }
 
-	private ValkeyCacheConfiguration usingValkeyCacheConfiguration() {
-		return usingValkeyCacheConfiguration(Function.identity());
-	}
+            return Objects.equals(this.getFirstname(), that.getFirstname())
+                    && Objects.equals(this.getBirthdate(), that.getBirthdate());
+        }
 
-	private ValkeyCacheConfiguration usingValkeyCacheConfiguration(
-			Function<ValkeyCacheConfiguration, ValkeyCacheConfiguration> customizer) {
+        @Override
+        public int hashCode() {
+            return Objects.hash(getFirstname(), getBirthdate());
+        }
 
-		return customizer.apply(ValkeyCacheConfiguration.defaultCacheConfig()
-				.serializeValuesWith(SerializationPair.fromSerializer(this.serializer)));
-	}
+        @Override
+        public String toString() {
+            return "ValkeyCacheTests.Person(firstname="
+                    + this.getFirstname()
+                    + ", birthdate="
+                    + this.getBirthdate()
+                    + ")";
+        }
+    }
 
-	private ValkeyCacheWriter usingValkeyCacheWriter() {
-		return usingNonLockingValkeyCacheWriter();
-	}
+    // toString not overridden
+    static class InvalidKey implements Serializable {
 
-	private ValkeyCacheWriter usingLockingValkeyCacheWriter() {
-		return ValkeyCacheWriter.lockingValkeyCacheWriter(this.connectionFactory);
-	}
+        final String firstname;
+        final Date birthdate;
 
-	private ValkeyCacheWriter usingLockingValkeyCacheWriter(Duration sleepTime) {
-		return ValkeyCacheWriter.lockingValkeyCacheWriter(this.connectionFactory, sleepTime,
-				ValkeyCacheWriter.TtlFunction.persistent(), BatchStrategies.keys());
-	}
+        public InvalidKey(String firstname, Date birthdate) {
+            this.firstname = firstname;
+            this.birthdate = birthdate;
+        }
+    }
 
-	private ValkeyCacheWriter usingNonLockingValkeyCacheWriter() {
-		return ValkeyCacheWriter.nonLockingValkeyCacheWriter(this.connectionFactory);
-	}
+    static class ComplexKey implements Serializable {
 
-	@Nullable
-	private Object unwrap(@Nullable Object value) {
-		return value instanceof ValueWrapper wrapper ? wrapper.get() : value;
-	}
+        final String firstname;
+        final Date birthdate;
 
-	private Function<ValkeyCacheConfiguration, ValkeyCacheConfiguration> withTtiExpiration() {
+        public ComplexKey(String firstname, Date birthdate) {
+            this.firstname = firstname;
+            this.birthdate = birthdate;
+        }
 
-		Function<ValkeyCacheConfiguration, ValkeyCacheConfiguration> entryTtlFunction = cacheConfiguration -> cacheConfiguration
-				.entryTtl(Duration.ofSeconds(10));
+        public String getFirstname() {
+            return this.firstname;
+        }
 
-		return entryTtlFunction.andThen(ValkeyCacheConfiguration::enableTimeToIdle);
-	}
+        public Date getBirthdate() {
+            return this.birthdate;
+        }
 
-	void doWithConnection(Consumer<ValkeyConnection> callback) {
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
-			callback.accept(connection);
-		}
-	}
+        @Override
+        public boolean equals(final Object obj) {
 
-	static class Person implements Serializable {
+            if (this == obj) {
+                return true;
+            }
 
-		private String firstname;
-		private Date birthdate;
+            if (!(obj instanceof ComplexKey that)) {
+                return false;
+            }
 
-		public Person() {}
+            return Objects.equals(this.getFirstname(), that.getFirstname())
+                    && Objects.equals(this.getBirthdate(), that.getBirthdate());
+        }
 
-		public Person(String firstname, Date birthdate) {
-			this.firstname = firstname;
-			this.birthdate = birthdate;
-		}
+        @Override
+        public int hashCode() {
+            return Objects.hash(getFirstname(), getBirthdate());
+        }
 
-		public String getFirstname() {
-			return this.firstname;
-		}
-
-		public void setFirstname(String firstname) {
-			this.firstname = firstname;
-		}
-
-		public Date getBirthdate() {
-			return this.birthdate;
-		}
-
-		public void setBirthdate(Date birthdate) {
-			this.birthdate = birthdate;
-		}
-
-		@Override
-		public boolean equals(Object obj) {
-
-			if (this == obj) {
-				return true;
-			}
-
-			if (!(obj instanceof Person that)) {
-				return false;
-			}
-
-			return Objects.equals(this.getFirstname(), that.getFirstname())
-					&& Objects.equals(this.getBirthdate(), that.getBirthdate());
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(getFirstname(), getBirthdate());
-		}
-
-		@Override
-		public String toString() {
-			return "ValkeyCacheTests.Person(firstname=" + this.getFirstname() + ", birthdate=" + this.getBirthdate() + ")";
-		}
-	}
-
-	// toString not overridden
-	static class InvalidKey implements Serializable {
-
-		final String firstname;
-		final Date birthdate;
-
-		public InvalidKey(String firstname, Date birthdate) {
-			this.firstname = firstname;
-			this.birthdate = birthdate;
-		}
-	}
-
-	static class ComplexKey implements Serializable {
-
-		final String firstname;
-		final Date birthdate;
-
-		public ComplexKey(String firstname, Date birthdate) {
-			this.firstname = firstname;
-			this.birthdate = birthdate;
-		}
-
-		public String getFirstname() {
-			return this.firstname;
-		}
-
-		public Date getBirthdate() {
-			return this.birthdate;
-		}
-
-		@Override
-		public boolean equals(final Object obj) {
-
-			if (this == obj) {
-				return true;
-			}
-
-			if (!(obj instanceof ComplexKey that)) {
-				return false;
-			}
-
-			return Objects.equals(this.getFirstname(), that.getFirstname())
-					&& Objects.equals(this.getBirthdate(), that.getBirthdate());
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(getFirstname(), getBirthdate());
-		}
-
-		@Override
-		public String toString() {
-			return "ValkeyCacheTests.ComplexKey(firstame=" + this.getFirstname() + ", birthdate=" + this.getBirthdate() + ")";
-		}
-	}
+        @Override
+        public String toString() {
+            return "ValkeyCacheTests.ComplexKey(firstame="
+                    + this.getFirstname()
+                    + ", birthdate="
+                    + this.getBirthdate()
+                    + ")";
+        }
+    }
 }

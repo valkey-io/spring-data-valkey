@@ -18,28 +18,26 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import static org.assertj.core.api.Assertions.*;
 
 import io.lettuce.core.ReadFrom;
-import reactor.test.StepVerifier;
-
-import java.nio.ByteBuffer;
-import java.util.Collection;
-import java.util.List;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import io.valkey.springframework.data.valkey.ConnectionFactoryTracker;
 import io.valkey.springframework.data.valkey.connection.AbstractConnectionIntegrationTests;
 import io.valkey.springframework.data.valkey.connection.DefaultStringValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyServer;
-import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeySentinelAvailable;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
 import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
+import java.nio.ByteBuffer;
+import java.util.Collection;
+import java.util.List;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import reactor.test.StepVerifier;
 
 /**
  * Integration tests for Lettuce and Valkey Sentinel interaction.
@@ -51,223 +49,233 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
 @EnabledOnValkeySentinelAvailable
 public class LettuceSentinelIntegrationTests extends AbstractConnectionIntegrationTests {
 
-	private static final String MASTER_NAME = "mymaster";
-	private static final ValkeyServer SENTINEL_0 = new ValkeyServer("127.0.0.1", 26379);
-	private static final ValkeyServer SENTINEL_1 = new ValkeyServer("127.0.0.1", 26380);
+    private static final String MASTER_NAME = "mymaster";
+    private static final ValkeyServer SENTINEL_0 = new ValkeyServer("127.0.0.1", 26379);
+    private static final ValkeyServer SENTINEL_1 = new ValkeyServer("127.0.0.1", 26380);
 
-	private static final ValkeyServer REPLICA_0 = new ValkeyServer("127.0.0.1", 6380);
-	private static final ValkeyServer REPLICA_1 = new ValkeyServer("127.0.0.1", 6381);
+    private static final ValkeyServer REPLICA_0 = new ValkeyServer("127.0.0.1", 6380);
+    private static final ValkeyServer REPLICA_1 = new ValkeyServer("127.0.0.1", 6381);
 
-	private static final ValkeySentinelConfiguration SENTINEL_CONFIG;
-	static {
+    private static final ValkeySentinelConfiguration SENTINEL_CONFIG;
 
-		SENTINEL_CONFIG = new ValkeySentinelConfiguration() //
-				.master(MASTER_NAME).sentinel(SENTINEL_0).sentinel(SENTINEL_1);
+    static {
+        SENTINEL_CONFIG =
+                new ValkeySentinelConfiguration() //
+                        .master(MASTER_NAME)
+                        .sentinel(SENTINEL_0)
+                        .sentinel(SENTINEL_1);
 
-		SENTINEL_CONFIG.setDatabase(5);
-	}
+        SENTINEL_CONFIG.setDatabase(5);
+    }
 
-	public LettuceSentinelIntegrationTests(@ValkeySentinel LettuceConnectionFactory connectionFactory) {
-		this.connectionFactory = connectionFactory;
-	}
+    public LettuceSentinelIntegrationTests(
+            @ValkeySentinel LettuceConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
 
-	@AfterEach
-	public void tearDown() {
+    @AfterEach
+    public void tearDown() {
 
-		try {
+        try {
 
-			// since we use more than one db we're required to flush them all
-			connection.flushAll();
-		} catch (Exception ignore) {
-			// Connection may be closed in certain cases, like after pub/sub tests
-		}
-		connection.close();
-	}
+            // since we use more than one db we're required to flush them all
+            connection.flushAll();
+        } catch (Exception ignore) {
+            // Connection may be closed in certain cases, like after pub/sub tests
+        }
+        connection.close();
+    }
 
-	@Test
-	@Disabled("SELECT not allowed on shared connections")
-	@Override
-	public void testMove() {}
+    @Test
+    @Disabled("SELECT not allowed on shared connections")
+    @Override
+    public void testMove() {}
 
-	@Test
-	@Disabled("SELECT not allowed on shared connections")
-	@Override
-	public void testSelect() {
-		super.testSelect();
-	}
+    @Test
+    @Disabled("SELECT not allowed on shared connections")
+    @Override
+    public void testSelect() {
+        super.testSelect();
+    }
 
-	@Test // DATAREDIS-348
-	void shouldReadMastersCorrectly() {
+    @Test // DATAREDIS-348
+    void shouldReadMastersCorrectly() {
 
-		List<ValkeyServer> servers = (List<ValkeyServer>) connectionFactory.getSentinelConnection().masters();
-		assertThat(servers.size()).isEqualTo(1);
-		assertThat(servers.get(0).getName()).isEqualTo(MASTER_NAME);
-	}
+        List<ValkeyServer> servers =
+                (List<ValkeyServer>) connectionFactory.getSentinelConnection().masters();
+        assertThat(servers.size()).isEqualTo(1);
+        assertThat(servers.get(0).getName()).isEqualTo(MASTER_NAME);
+    }
 
-	@Test // DATAREDIS-842, DATAREDIS-973
-	void shouldUseSpecifiedDatabase() {
+    @Test // DATAREDIS-842, DATAREDIS-973
+    void shouldUseSpecifiedDatabase() {
 
-		ValkeyConnection connection = connectionFactory.getConnection();
+        ValkeyConnection connection = connectionFactory.getConnection();
 
-		connection.flushAll();
-		connection.set("foo".getBytes(), "bar".getBytes());
-		connection.close();
+        connection.flushAll();
+        connection.set("foo".getBytes(), "bar".getBytes());
+        connection.close();
 
-		LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory();
-		connectionFactory.setClientResources(LettuceTestClientResources.getSharedClientResources());
-		connectionFactory.setShutdownTimeout(0);
-		connectionFactory.setShareNativeConnection(false);
-		connectionFactory.setDatabase(5);
-		connectionFactory.afterPropertiesSet();
-		connectionFactory.start();
+        LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory();
+        connectionFactory.setClientResources(LettuceTestClientResources.getSharedClientResources());
+        connectionFactory.setShutdownTimeout(0);
+        connectionFactory.setShareNativeConnection(false);
+        connectionFactory.setDatabase(5);
+        connectionFactory.afterPropertiesSet();
+        connectionFactory.start();
 
-		try(ValkeyConnection directConnection = connectionFactory.getConnection()) {
+        try (ValkeyConnection directConnection = connectionFactory.getConnection()) {
 
-			assertThat(directConnection.exists("foo".getBytes())).isFalse();
-			directConnection.select(0);
+            assertThat(directConnection.exists("foo".getBytes())).isFalse();
+            directConnection.select(0);
 
-			assertThat(directConnection.exists("foo".getBytes())).isTrue();
-		} finally {
-			connectionFactory.destroy();
-		}
+            assertThat(directConnection.exists("foo".getBytes())).isTrue();
+        } finally {
+            connectionFactory.destroy();
+        }
+    }
 
+    @Test // DATAREDIS-973
+    void reactiveShouldUseSpecifiedDatabase() {
 
-	}
+        ValkeyConnection connection = connectionFactory.getConnection();
 
-	@Test // DATAREDIS-973
-	void reactiveShouldUseSpecifiedDatabase() {
+        connection.flushAll();
+        connection.set("foo".getBytes(), "bar".getBytes());
 
-		ValkeyConnection connection = connectionFactory.getConnection();
+        LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory();
+        connectionFactory.setClientResources(LettuceTestClientResources.getSharedClientResources());
+        connectionFactory.setShutdownTimeout(0);
+        connectionFactory.setShareNativeConnection(false);
+        connectionFactory.setDatabase(5);
+        connectionFactory.afterPropertiesSet();
+        connectionFactory.start();
 
-		connection.flushAll();
-		connection.set("foo".getBytes(), "bar".getBytes());
+        try (LettuceReactiveValkeyConnection reactiveConnection =
+                connectionFactory.getReactiveConnection()) {
 
-		LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory();
-		connectionFactory.setClientResources(LettuceTestClientResources.getSharedClientResources());
-		connectionFactory.setShutdownTimeout(0);
-		connectionFactory.setShareNativeConnection(false);
-		connectionFactory.setDatabase(5);
-		connectionFactory.afterPropertiesSet();
-		connectionFactory.start();
+            reactiveConnection
+                    .keyCommands()
+                    .exists(ByteBuffer.wrap("foo".getBytes())) //
+                    .as(StepVerifier::create) //
+                    .expectNext(false) //
+                    .verifyComplete();
 
-		try(LettuceReactiveValkeyConnection reactiveConnection = connectionFactory.getReactiveConnection()) {
+        } finally {
+            connectionFactory.destroy();
+        }
+    }
 
-			reactiveConnection.keyCommands().exists(ByteBuffer.wrap("foo".getBytes())) //
-					.as(StepVerifier::create) //
-					.expectNext(false) //
-					.verifyComplete();
+    @Test
+    // DATAREDIS-348
+    void shouldReadReplicasOfMastersCorrectly() {
 
-		} finally {
-			connectionFactory.destroy();
-		}
+        ValkeySentinelConnection sentinelConnection = connectionFactory.getSentinelConnection();
 
-	}
+        List<ValkeyServer> servers = (List<ValkeyServer>) sentinelConnection.masters();
+        assertThat(servers.size()).isEqualTo(1);
 
-	@Test
-	// DATAREDIS-348
-	void shouldReadReplicasOfMastersCorrectly() {
+        Collection<ValkeyServer> replicas = sentinelConnection.replicas(servers.get(0));
+        assertThat(replicas).containsAnyOf(REPLICA_0, REPLICA_1);
+    }
 
-		ValkeySentinelConnection sentinelConnection = connectionFactory.getSentinelConnection();
+    @Test // DATAREDIS-462
+    @Disabled("Until Lettuce has moved to Sinks API")
+    void factoryWorksWithoutClientResources() {
 
-		List<ValkeyServer> servers = (List<ValkeyServer>) sentinelConnection.masters();
-		assertThat(servers.size()).isEqualTo(1);
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(SENTINEL_CONFIG);
+        factory.setShutdownTimeout(0);
+        factory.afterPropertiesSet();
 
-		Collection<ValkeyServer> replicas = sentinelConnection.replicas(servers.get(0));
-		assertThat(replicas).containsAnyOf(REPLICA_0, REPLICA_1);
-	}
+        ConnectionFactoryTracker.add(factory);
 
-	@Test // DATAREDIS-462
-	@Disabled("Until Lettuce has moved to Sinks API")
-	void factoryWorksWithoutClientResources() {
+        StringValkeyConnection connection = new DefaultStringValkeyConnection(factory.getConnection());
 
-		LettuceConnectionFactory factory = new LettuceConnectionFactory(SENTINEL_CONFIG);
-		factory.setShutdownTimeout(0);
-		factory.afterPropertiesSet();
+        try {
+            assertThat(connection.ping()).isEqualTo("PONG");
+        } finally {
+            connection.close();
+        }
+    }
 
-		ConnectionFactoryTracker.add(factory);
+    @Test // DATAREDIS-576
+    void connectionAppliesClientName() {
 
-		StringValkeyConnection connection = new DefaultStringValkeyConnection(factory.getConnection());
+        LettuceClientConfiguration clientName =
+                LettuceTestClientConfiguration.builder().clientName("clientName").build();
 
-		try {
-			assertThat(connection.ping()).isEqualTo("PONG");
-		} finally {
-			connection.close();
-		}
-	}
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(SENTINEL_CONFIG, clientName);
+        factory.afterPropertiesSet();
 
-	@Test // DATAREDIS-576
-	void connectionAppliesClientName() {
+        ConnectionFactoryTracker.add(factory);
 
-		LettuceClientConfiguration clientName = LettuceTestClientConfiguration.builder().clientName("clientName").build();
+        StringValkeyConnection connection = new DefaultStringValkeyConnection(factory.getConnection());
 
-		LettuceConnectionFactory factory = new LettuceConnectionFactory(SENTINEL_CONFIG, clientName);
-		factory.afterPropertiesSet();
+        try {
+            assertThat(connection.getClientName()).isEqualTo("clientName");
+        } finally {
+            connection.close();
+        }
+    }
 
-		ConnectionFactoryTracker.add(factory);
+    @Test // DATAREDIS-580
+    void factoryWithReadFromMasterSettings() {
 
-		StringValkeyConnection connection = new DefaultStringValkeyConnection(factory.getConnection());
+        LettuceConnectionFactory factory =
+                new LettuceConnectionFactory(
+                        SENTINEL_CONFIG,
+                        LettuceTestClientConfiguration.builder().readFrom(ReadFrom.MASTER).build());
+        factory.afterPropertiesSet();
 
-		try {
-			assertThat(connection.getClientName()).isEqualTo("clientName");
-		} finally {
-			connection.close();
-		}
-	}
+        ConnectionFactoryTracker.add(factory);
 
-	@Test // DATAREDIS-580
-	void factoryWithReadFromMasterSettings() {
+        StringValkeyConnection connection = new DefaultStringValkeyConnection(factory.getConnection());
 
-		LettuceConnectionFactory factory = new LettuceConnectionFactory(SENTINEL_CONFIG,
-				LettuceTestClientConfiguration.builder().readFrom(ReadFrom.MASTER).build());
-		factory.afterPropertiesSet();
+        try {
+            assertThat(connection.ping()).isEqualTo("PONG");
+            assertThat(connection.info().getProperty("role")).isEqualTo("master");
+        } finally {
+            connection.close();
+        }
+    }
 
-		ConnectionFactoryTracker.add(factory);
+    @Test // DATAREDIS-580
+    void factoryWithReadFromReplicaSettings() {
 
-		StringValkeyConnection connection = new DefaultStringValkeyConnection(factory.getConnection());
+        LettuceConnectionFactory factory =
+                new LettuceConnectionFactory(
+                        SENTINEL_CONFIG,
+                        LettuceTestClientConfiguration.builder().readFrom(ReadFrom.REPLICA).build());
+        factory.afterPropertiesSet();
 
-		try {
-			assertThat(connection.ping()).isEqualTo("PONG");
-			assertThat(connection.info().getProperty("role")).isEqualTo("master");
-		} finally {
-			connection.close();
-		}
-	}
+        ConnectionFactoryTracker.add(factory);
 
-	@Test // DATAREDIS-580
-	void factoryWithReadFromReplicaSettings() {
+        StringValkeyConnection connection = new DefaultStringValkeyConnection(factory.getConnection());
 
-		LettuceConnectionFactory factory = new LettuceConnectionFactory(SENTINEL_CONFIG,
-				LettuceTestClientConfiguration.builder().readFrom(ReadFrom.REPLICA).build());
-		factory.afterPropertiesSet();
+        try {
+            assertThat(connection.ping()).isEqualTo("PONG");
+            assertThat(connection.info().getProperty("role")).isEqualTo("slave");
+        } finally {
+            connection.close();
+        }
+    }
 
-		ConnectionFactoryTracker.add(factory);
+    @Test // DATAREDIS-580
+    void factoryUsesMasterReplicaConnections() {
 
-		StringValkeyConnection connection = new DefaultStringValkeyConnection(factory.getConnection());
+        LettuceClientConfiguration configuration =
+                LettuceTestClientConfiguration.builder().readFrom(ReadFrom.SLAVE).build();
 
-		try {
-			assertThat(connection.ping()).isEqualTo("PONG");
-			assertThat(connection.info().getProperty("role")).isEqualTo("slave");
-		} finally {
-			connection.close();
-		}
-	}
+        LettuceConnectionFactory factory = new LettuceConnectionFactory(SENTINEL_CONFIG, configuration);
+        factory.afterPropertiesSet();
+        factory.start();
 
-	@Test // DATAREDIS-580
-	void factoryUsesMasterReplicaConnections() {
+        try (ValkeyConnection connection = factory.getConnection()) {
 
-		LettuceClientConfiguration configuration = LettuceTestClientConfiguration.builder().readFrom(ReadFrom.SLAVE)
-				.build();
-
-		LettuceConnectionFactory factory = new LettuceConnectionFactory(SENTINEL_CONFIG, configuration);
-		factory.afterPropertiesSet();
-		factory.start();
-
-		try(ValkeyConnection connection = factory.getConnection()) {
-
-			assertThat(connection.ping()).isEqualTo("PONG");
-			assertThat(connection.info().getProperty("role")).isEqualTo("slave");
-		} finally {
-			factory.destroy();
-		}
-	}
+            assertThat(connection.ping()).isEqualTo("PONG");
+            assertThat(connection.info().getProperty("role")).isEqualTo("slave");
+        } finally {
+            factory.destroy();
+        }
+    }
 }

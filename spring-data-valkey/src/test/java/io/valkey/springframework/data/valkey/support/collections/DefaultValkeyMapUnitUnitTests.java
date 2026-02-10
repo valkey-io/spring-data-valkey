@@ -18,17 +18,15 @@ package io.valkey.springframework.data.valkey.support.collections;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.core.BoundHashOperations;
 import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.Set;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import io.valkey.springframework.data.valkey.core.BoundHashOperations;
 
 /**
  * Unit tests for {@link DefaultValkeyMap}.
@@ -38,22 +36,22 @@ import io.valkey.springframework.data.valkey.core.BoundHashOperations;
 @ExtendWith(MockitoExtension.class)
 class DefaultValkeyMapUnitUnitTests {
 
-	@Mock BoundHashOperations<String, String, String> operationsMock;
+    @Mock BoundHashOperations<String, String, String> operationsMock;
 
-	private DefaultValkeyMap<String, String> map;
+    private DefaultValkeyMap<String, String> map;
 
-	@BeforeEach
-	void before() {
-		map = new DefaultValkeyMap<>(operationsMock);
-	}
+    @BeforeEach
+    void before() {
+        map = new DefaultValkeyMap<>(operationsMock);
+    }
 
-	@Test // DATAREDIS-803
-	void shouldGetEntrySet() {
+    @Test // DATAREDIS-803
+    void shouldGetEntrySet() {
 
-		when(operationsMock.entries()).thenReturn(Collections.singletonMap("foo", "bar"));
+        when(operationsMock.entries()).thenReturn(Collections.singletonMap("foo", "bar"));
 
-		Set<Entry<String, String>> result = map.entrySet();
+        Set<Entry<String, String>> result = map.entrySet();
 
-		assertThat(result).hasSize(1);
-	}
+        assertThat(result).hasSize(1);
+    }
 }

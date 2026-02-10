@@ -25,15 +25,15 @@ import io.valkey.springframework.data.valkey.connection.SortParameters.Range;
  */
 public interface SortCriterion<K> {
 
-	SortCriterion<K> limit(long offset, long count);
+    SortCriterion<K> limit(long offset, long count);
 
-	SortCriterion<K> limit(Range range);
+    SortCriterion<K> limit(Range range);
 
-	SortCriterion<K> order(Order order);
+    SortCriterion<K> order(Order order);
 
-	SortCriterion<K> alphabetical(boolean alpha);
+    SortCriterion<K> alphabetical(boolean alpha);
 
-	SortCriterion<K> get(String pattern);
+    SortCriterion<K> get(String pattern);
 
-	SortQuery<K> build();
+    SortQuery<K> build();
 }

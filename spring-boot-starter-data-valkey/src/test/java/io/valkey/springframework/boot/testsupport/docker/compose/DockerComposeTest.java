@@ -21,12 +21,10 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
- * Annotation that can be used on a test method to run Docker Compose and inject
- * connection details.
+ * Annotation that can be used on a test method to run Docker Compose and inject connection details.
  *
  * @author Andy Wilkinson
  * @author Moritz Halbritter
@@ -37,16 +35,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 @ExtendWith(DockerComposeTestExtension.class)
 public @interface DockerComposeTest {
 
-	/**
-	 * The Docker Compose file to use.
-	 * @return the compose file
-	 */
-	String composeFile();
+    /**
+     * The Docker Compose file to use.
+     *
+     * @return the compose file
+     */
+    String composeFile();
 
-	/**
-	 * The Docker image to use.
-	 * @return the image name
-	 */
-	String image();
-
+    /**
+     * The Docker image to use.
+     *
+     * @return the image name
+     */
+    String image();
 }

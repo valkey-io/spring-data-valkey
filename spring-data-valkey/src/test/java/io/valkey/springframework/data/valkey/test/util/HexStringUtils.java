@@ -25,21 +25,24 @@ import org.springframework.util.Assert;
  */
 public class HexStringUtils {
 
-	/**
-	 * Convert a given HEX {@link String} to its byte representation.
-	 *
-	 * @param source must not be {@literal null}.
-	 * @return
-	 */
-	public static byte[] hexToBytes(String source) {
+    /**
+     * Convert a given HEX {@link String} to its byte representation.
+     *
+     * @param source must not be {@literal null}.
+     * @return
+     */
+    public static byte[] hexToBytes(String source) {
 
-		Assert.notNull(source, "Source must not be null");
-		int len = source.length();
+        Assert.notNull(source, "Source must not be null");
+        int len = source.length();
 
-		byte[] data = new byte[len / 2];
-		for (int i = 0; i < len; i += 2) {
-			data[i / 2] = (byte) ((Character.digit(source.charAt(i), 16) << 4) + Character.digit(source.charAt(i + 1), 16));
-		}
-		return data;
-	}
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2) {
+            data[i / 2] =
+                    (byte)
+                            ((Character.digit(source.charAt(i), 16) << 4)
+                                    + Character.digit(source.charAt(i + 1), 16));
+        }
+        return data;
+    }
 }

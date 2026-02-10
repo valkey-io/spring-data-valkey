@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.repository.cdi;
 
 import java.util.List;
-
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.cdi.Eager;
 
@@ -26,7 +25,7 @@ import org.springframework.data.repository.cdi.Eager;
 @Eager
 public interface PersonRepository extends CrudRepository<Person, String>, PersonFragment {
 
-	List<Person> findAll();
+    List<Person> findAll();
 
-	List<Person> findByName(String name);
+    List<Person> findByName(String name);
 }

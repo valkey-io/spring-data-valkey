@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterFactory;
 import org.springframework.data.convert.ReadingConverter;
@@ -34,7 +33,8 @@ import org.springframework.util.NumberUtils;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Set of {@link ReadingConverter} and {@link WritingConverter} used to convert Objects into binary format.
+ * Set of {@link ReadingConverter} and {@link WritingConverter} used to convert Objects into binary
+ * format.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -42,285 +42,295 @@ import org.springframework.util.ObjectUtils;
  */
 final class BinaryConverters {
 
-	/**
-	 * Use {@literal UTF-8} as default charset.
-	 */
-	public static final Charset CHARSET = StandardCharsets.UTF_8;
+    /** Use {@literal UTF-8} as default charset. */
+    public static final Charset CHARSET = StandardCharsets.UTF_8;
 
-	private BinaryConverters() {}
+    private BinaryConverters() {}
 
-	static Collection<?> getConvertersToRegister() {
+    static Collection<?> getConvertersToRegister() {
 
-		List<Object> converters = new ArrayList<>(12);
+        List<Object> converters = new ArrayList<>(12);
 
-		converters.add(new StringToBytesConverter());
-		converters.add(new BytesToStringConverter());
-		converters.add(new NumberToBytesConverter());
-		converters.add(new BytesToNumberConverterFactory());
-		converters.add(new EnumToBytesConverter());
-		converters.add(new BytesToEnumConverterFactory());
-		converters.add(new BooleanToBytesConverter());
-		converters.add(new BytesToBooleanConverter());
-		converters.add(new DateToBytesConverter());
-		converters.add(new BytesToDateConverter());
-		converters.add(new UuidToBytesConverter());
-		converters.add(new BytesToUuidConverter());
+        converters.add(new StringToBytesConverter());
+        converters.add(new BytesToStringConverter());
+        converters.add(new NumberToBytesConverter());
+        converters.add(new BytesToNumberConverterFactory());
+        converters.add(new EnumToBytesConverter());
+        converters.add(new BytesToEnumConverterFactory());
+        converters.add(new BooleanToBytesConverter());
+        converters.add(new BytesToBooleanConverter());
+        converters.add(new DateToBytesConverter());
+        converters.add(new BytesToDateConverter());
+        converters.add(new UuidToBytesConverter());
+        converters.add(new BytesToUuidConverter());
 
-		return converters;
-	}
+        return converters;
+    }
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	static class StringBasedConverter {
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    static class StringBasedConverter {
 
-		byte[] fromString(String source) {
-			return source.getBytes(CHARSET);
-		}
+        byte[] fromString(String source) {
+            return source.getBytes(CHARSET);
+        }
 
-		String toString(byte[] source) {
-			return new String(source, CHARSET);
-		}
-	}
+        String toString(byte[] source) {
+            return new String(source, CHARSET);
+        }
+    }
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@WritingConverter
-	static class StringToBytesConverter extends StringBasedConverter implements Converter<String, byte[]> {
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @WritingConverter
+    static class StringToBytesConverter extends StringBasedConverter
+            implements Converter<String, byte[]> {
 
-		@Override
-		public byte[] convert(String source) {
-			return fromString(source);
-		}
-	}
+        @Override
+        public byte[] convert(String source) {
+            return fromString(source);
+        }
+    }
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@ReadingConverter
-	static class BytesToStringConverter extends StringBasedConverter implements Converter<byte[], String> {
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @ReadingConverter
+    static class BytesToStringConverter extends StringBasedConverter
+            implements Converter<byte[], String> {
 
-		@Override
-		public String convert(byte[] source) {
-			return toString(source);
-		}
+        @Override
+        public String convert(byte[] source) {
+            return toString(source);
+        }
+    }
 
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @WritingConverter
+    static class NumberToBytesConverter extends StringBasedConverter
+            implements Converter<Number, byte[]> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@WritingConverter
-	static class NumberToBytesConverter extends StringBasedConverter implements Converter<Number, byte[]> {
+        @Override
+        public byte[] convert(Number source) {
+            return fromString(source.toString());
+        }
+    }
 
-		@Override
-		public byte[] convert(Number source) {
-			return fromString(source.toString());
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @author Mark Paluch
+     * @since 1.7
+     */
+    @WritingConverter
+    static class EnumToBytesConverter extends StringBasedConverter
+            implements Converter<Enum<?>, byte[]> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @author Mark Paluch
-	 * @since 1.7
-	 */
-	@WritingConverter
-	static class EnumToBytesConverter extends StringBasedConverter implements Converter<Enum<?>, byte[]> {
+        @Override
+        public byte[] convert(Enum<?> source) {
+            return fromString(source.name());
+        }
+    }
 
-		@Override
-		public byte[] convert(Enum<?> source) {
-			return fromString(source.name());
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @ReadingConverter
+    static final class BytesToEnumConverterFactory implements ConverterFactory<byte[], Enum<?>> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@ReadingConverter
-	static final class BytesToEnumConverterFactory implements ConverterFactory<byte[], Enum<?>> {
+        @Override
+        @SuppressWarnings({"unchecked", "rawtypes"})
+        public <T extends Enum<?>> Converter<byte[], T> getConverter(Class<T> targetType) {
 
-		@Override
-		@SuppressWarnings({ "unchecked", "rawtypes" })
-		public <T extends Enum<?>> Converter<byte[], T> getConverter(Class<T> targetType) {
+            Class<?> enumType = targetType;
+            while (enumType != null && !enumType.isEnum()) {
+                enumType = enumType.getSuperclass();
+            }
+            if (enumType == null) {
+                throw new IllegalArgumentException(
+                        "The target type " + targetType.getName() + " does not refer to an enum");
+            }
+            return new BytesToEnum(enumType);
+        }
 
-			Class<?> enumType = targetType;
-			while (enumType != null && !enumType.isEnum()) {
-				enumType = enumType.getSuperclass();
-			}
-			if (enumType == null) {
-				throw new IllegalArgumentException("The target type " + targetType.getName() + " does not refer to an enum");
-			}
-			return new BytesToEnum(enumType);
-		}
+        /**
+         * @author Christoph Strobl
+         * @since 1.7
+         */
+        private class BytesToEnum<T extends Enum<T>> extends StringBasedConverter
+                implements Converter<byte[], T> {
 
-		/**
-		 * @author Christoph Strobl
-		 * @since 1.7
-		 */
-		private class BytesToEnum<T extends Enum<T>> extends StringBasedConverter implements Converter<byte[], T> {
+            private final Class<T> enumType;
 
-			private final Class<T> enumType;
+            public BytesToEnum(Class<T> enumType) {
+                this.enumType = enumType;
+            }
 
-			public BytesToEnum(Class<T> enumType) {
-				this.enumType = enumType;
-			}
+            @Override
+            public T convert(byte[] source) {
 
-			@Override
-			public T convert(byte[] source) {
+                if (ObjectUtils.isEmpty(source)) {
+                    return null;
+                }
 
-				if (ObjectUtils.isEmpty(source)) {
-					return null;
-				}
+                return Enum.valueOf(this.enumType, toString(source).trim());
+            }
+        }
+    }
 
-				return Enum.valueOf(this.enumType, toString(source).trim());
-			}
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @ReadingConverter
+    static class BytesToNumberConverterFactory implements ConverterFactory<byte[], Number> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@ReadingConverter
-	static class BytesToNumberConverterFactory implements ConverterFactory<byte[], Number> {
+        @Override
+        public <T extends Number> Converter<byte[], T> getConverter(Class<T> targetType) {
+            return new BytesToNumberConverter<>(targetType);
+        }
 
-		@Override
-		public <T extends Number> Converter<byte[], T> getConverter(Class<T> targetType) {
-			return new BytesToNumberConverter<>(targetType);
-		}
+        private static final class BytesToNumberConverter<T extends Number> extends StringBasedConverter
+                implements Converter<byte[], T> {
 
-		private static final class BytesToNumberConverter<T extends Number> extends StringBasedConverter
-				implements Converter<byte[], T> {
+            private final Class<T> targetType;
 
-			private final Class<T> targetType;
+            public BytesToNumberConverter(Class<T> targetType) {
+                this.targetType = targetType;
+            }
 
-			public BytesToNumberConverter(Class<T> targetType) {
-				this.targetType = targetType;
-			}
+            @Override
+            public T convert(byte[] source) {
 
-			@Override
-			public T convert(byte[] source) {
+                if (ObjectUtils.isEmpty(source)) {
+                    return null;
+                }
 
-				if (ObjectUtils.isEmpty(source)) {
-					return null;
-				}
+                return NumberUtils.parseNumber(toString(source), targetType);
+            }
+        }
+    }
 
-				return NumberUtils.parseNumber(toString(source), targetType);
-			}
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @WritingConverter
+    static class BooleanToBytesConverter extends StringBasedConverter
+            implements Converter<Boolean, byte[]> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@WritingConverter
-	static class BooleanToBytesConverter extends StringBasedConverter implements Converter<Boolean, byte[]> {
+        byte[] _true = fromString("1");
+        byte[] _false = fromString("0");
 
-		byte[] _true = fromString("1");
-		byte[] _false = fromString("0");
+        @Override
+        public byte[] convert(Boolean source) {
+            return source.booleanValue() ? _true : _false;
+        }
+    }
 
-		@Override
-		public byte[] convert(Boolean source) {
-			return source.booleanValue() ? _true : _false;
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @ReadingConverter
+    static class BytesToBooleanConverter extends StringBasedConverter
+            implements Converter<byte[], Boolean> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@ReadingConverter
-	static class BytesToBooleanConverter extends StringBasedConverter implements Converter<byte[], Boolean> {
+        @Override
+        public Boolean convert(byte[] source) {
 
-		@Override
-		public Boolean convert(byte[] source) {
+            if (ObjectUtils.isEmpty(source)) {
+                return null;
+            }
 
-			if (ObjectUtils.isEmpty(source)) {
-				return null;
-			}
+            String value = toString(source);
+            return ("1".equals(value) || "true".equalsIgnoreCase(value)) ? Boolean.TRUE : Boolean.FALSE;
+        }
+    }
 
-			String value = toString(source);
-			return ("1".equals(value) || "true".equalsIgnoreCase(value)) ? Boolean.TRUE : Boolean.FALSE;
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @WritingConverter
+    static class DateToBytesConverter extends StringBasedConverter
+            implements Converter<Date, byte[]> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@WritingConverter
-	static class DateToBytesConverter extends StringBasedConverter implements Converter<Date, byte[]> {
+        @Override
+        public byte[] convert(Date source) {
+            return fromString(Long.toString(source.getTime()));
+        }
+    }
 
-		@Override
-		public byte[] convert(Date source) {
-			return fromString(Long.toString(source.getTime()));
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    @ReadingConverter
+    static class BytesToDateConverter extends StringBasedConverter
+            implements Converter<byte[], Date> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	@ReadingConverter
-	static class BytesToDateConverter extends StringBasedConverter implements Converter<byte[], Date> {
+        @Override
+        public Date convert(byte[] source) {
 
-		@Override
-		public Date convert(byte[] source) {
+            if (ObjectUtils.isEmpty(source)) {
+                return null;
+            }
 
-			if (ObjectUtils.isEmpty(source)) {
-				return null;
-			}
+            String value = toString(source);
+            try {
+                return new Date(NumberUtils.parseNumber(value, Long.class));
+            } catch (NumberFormatException ignore) {
+            }
 
-			String value = toString(source);
-			try {
-				return new Date(NumberUtils.parseNumber(value, Long.class));
-			} catch (NumberFormatException ignore) {
-			}
+            try {
+                return DateFormat.getInstance().parse(value);
+            } catch (ParseException ignore) {
+            }
 
-			try {
-				return DateFormat.getInstance().parse(value);
-			} catch (ParseException ignore) {
-			}
+            throw new IllegalArgumentException(
+                    "Cannot parse date out of %s".formatted(Arrays.toString(source)));
+        }
+    }
 
-			throw new IllegalArgumentException("Cannot parse date out of %s".formatted(Arrays.toString(source)));
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 2.2
+     */
+    @WritingConverter
+    static class UuidToBytesConverter extends StringBasedConverter
+            implements Converter<UUID, byte[]> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 2.2
-	 */
-	@WritingConverter
-	static class UuidToBytesConverter extends StringBasedConverter implements Converter<UUID, byte[]> {
+        @Override
+        public byte[] convert(UUID source) {
+            return fromString(source.toString());
+        }
+    }
 
-		@Override
-		public byte[] convert(UUID source) {
-			return fromString(source.toString());
-		}
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 2.2
+     */
+    @ReadingConverter
+    static class BytesToUuidConverter extends StringBasedConverter
+            implements Converter<byte[], UUID> {
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 2.2
-	 */
-	@ReadingConverter
-	static class BytesToUuidConverter extends StringBasedConverter implements Converter<byte[], UUID> {
+        @Override
+        public UUID convert(byte[] source) {
 
-		@Override
-		public UUID convert(byte[] source) {
+            if (ObjectUtils.isEmpty(source)) {
+                return null;
+            }
 
-			if (ObjectUtils.isEmpty(source)) {
-				return null;
-			}
-
-			return UUID.fromString(toString(source));
-		}
-	}
+            return UUID.fromString(toString(source));
+        }
+    }
 }

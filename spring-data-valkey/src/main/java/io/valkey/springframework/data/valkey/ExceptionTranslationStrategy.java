@@ -27,13 +27,12 @@ import org.springframework.lang.Nullable;
  */
 public interface ExceptionTranslationStrategy {
 
-	/**
-	 * Potentially translate the given {@link Exception} into {@link DataAccessException}.
-	 *
-	 * @param e must not be {@literal null}.
-	 * @return can be {@literal null} if given {@link Exception} cannot be translated.
-	 */
-	@Nullable
-	DataAccessException translate(Exception e);
-
+    /**
+     * Potentially translate the given {@link Exception} into {@link DataAccessException}.
+     *
+     * @param e must not be {@literal null}.
+     * @return can be {@literal null} if given {@link Exception} cannot be translated.
+     */
+    @Nullable
+    DataAccessException translate(Exception e);
 }

@@ -15,16 +15,15 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
+import io.valkey.springframework.data.valkey.connection.ReactiveSubscription.ChannelMessage;
+import java.nio.ByteBuffer;
+import org.reactivestreams.Publisher;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.nio.ByteBuffer;
-
-import org.reactivestreams.Publisher;
-import io.valkey.springframework.data.valkey.connection.ReactiveSubscription.ChannelMessage;
-
 /**
- * Valkey <a href="https://valkey.io/commands/#pubsub">Pub/Sub</a> commands executed using reactive infrastructure.
+ * Valkey <a href="https://valkey.io/commands/#pubsub">Pub/Sub</a> commands executed using reactive
+ * infrastructure.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -32,69 +31,71 @@ import io.valkey.springframework.data.valkey.connection.ReactiveSubscription.Cha
  */
 public interface ReactivePubSubCommands {
 
-	/**
-	 * Creates a subscription for this connection. Connections can have multiple {@link ReactiveSubscription}s.
-	 * <p>
-	 * Use {@link #createSubscription(SubscriptionListener)} to get notified when the subscription completes.
-	 *
-	 * @return the subscription.
-	 */
-	default Mono<ReactiveSubscription> createSubscription() {
-		return createSubscription(SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER);
-	}
+    /**
+     * Creates a subscription for this connection. Connections can have multiple {@link
+     * ReactiveSubscription}s.
+     *
+     * <p>Use {@link #createSubscription(SubscriptionListener)} to get notified when the subscription
+     * completes.
+     *
+     * @return the subscription.
+     */
+    default Mono<ReactiveSubscription> createSubscription() {
+        return createSubscription(SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER);
+    }
 
-	/**
-	 * Creates a subscription for this connection. Connections can have multiple {@link ReactiveSubscription}s.
-	 *
-	 * @param subscriptionListener the subscription listener to listen for subscription confirmations.
-	 * @return the subscription.
-	 * @since 2.6
-	 */
-	Mono<ReactiveSubscription> createSubscription(SubscriptionListener subscriptionListener);
+    /**
+     * Creates a subscription for this connection. Connections can have multiple {@link
+     * ReactiveSubscription}s.
+     *
+     * @param subscriptionListener the subscription listener to listen for subscription confirmations.
+     * @return the subscription.
+     * @since 2.6
+     */
+    Mono<ReactiveSubscription> createSubscription(SubscriptionListener subscriptionListener);
 
-	/**
-	 * Publishes the given {@code message} to the given {@code channel}.
-	 *
-	 * @param channel the channel to publish to. Must not be {@literal null}.
-	 * @param message message to publish. Must not be {@literal null}.
-	 * @return the number of clients that received the message.
-	 * @see <a href="https://valkey.io/commands/publish">Valkey Documentation: PUBLISH</a>
-	 */
-	default Mono<Long> publish(ByteBuffer channel, ByteBuffer message) {
-		return publish(Mono.just(new ChannelMessage<>(channel, message))).next();
-	}
+    /**
+     * Publishes the given {@code message} to the given {@code channel}.
+     *
+     * @param channel the channel to publish to. Must not be {@literal null}.
+     * @param message message to publish. Must not be {@literal null}.
+     * @return the number of clients that received the message.
+     * @see <a href="https://valkey.io/commands/publish">Valkey Documentation: PUBLISH</a>
+     */
+    default Mono<Long> publish(ByteBuffer channel, ByteBuffer message) {
+        return publish(Mono.just(new ChannelMessage<>(channel, message))).next();
+    }
 
-	/**
-	 * Publishes the given messages to the {@link ChannelMessage#getChannel() appropriate channels}.
-	 *
-	 * @param messageStream the messages to publish to. Must not be {@literal null}.
-	 * @return the number of clients that received the message.
-	 * @see <a href="https://valkey.io/commands/publish">Valkey Documentation: PUBLISH</a>
-	 */
-	Flux<Long> publish(Publisher<ChannelMessage<ByteBuffer, ByteBuffer>> messageStream);
+    /**
+     * Publishes the given messages to the {@link ChannelMessage#getChannel() appropriate channels}.
+     *
+     * @param messageStream the messages to publish to. Must not be {@literal null}.
+     * @return the number of clients that received the message.
+     * @see <a href="https://valkey.io/commands/publish">Valkey Documentation: PUBLISH</a>
+     */
+    Flux<Long> publish(Publisher<ChannelMessage<ByteBuffer, ByteBuffer>> messageStream);
 
-	/**
-	 * Subscribes the connection to the given {@code channels}. Once subscribed, a connection enters listening mode and
-	 * can only subscribe to other channels or unsubscribe. No other commands are accepted until the connection is
-	 * unsubscribed.
-	 * <p>
-	 * Note that cancellation of the {@link Flux} will unsubscribe from {@code channels}.
-	 *
-	 * @param channels channel names, must not be {@literal null}.
-	 * @see <a href="https://valkey.io/commands/subscribe">Valkey Documentation: SUBSCRIBE</a>
-	 */
-	Mono<Void> subscribe(ByteBuffer... channels);
+    /**
+     * Subscribes the connection to the given {@code channels}. Once subscribed, a connection enters
+     * listening mode and can only subscribe to other channels or unsubscribe. No other commands are
+     * accepted until the connection is unsubscribed.
+     *
+     * <p>Note that cancellation of the {@link Flux} will unsubscribe from {@code channels}.
+     *
+     * @param channels channel names, must not be {@literal null}.
+     * @see <a href="https://valkey.io/commands/subscribe">Valkey Documentation: SUBSCRIBE</a>
+     */
+    Mono<Void> subscribe(ByteBuffer... channels);
 
-	/**
-	 * Subscribes the connection to all channels matching the given {@code patterns}. Once subscribed, a connection enters
-	 * listening mode and can only subscribe to other channels or unsubscribe. No other commands are accepted until the
-	 * connection is unsubscribed.
-	 * <p>
-	 * Note that cancellation of the {@link Flux} will unsubscribe from {@code patterns}.
-	 *
-	 * @param patterns channel name patterns, must not be {@literal null}.
-	 * @see <a href="https://valkey.io/commands/psubscribe">Valkey Documentation: PSUBSCRIBE</a>
-	 */
-	Mono<Void> pSubscribe(ByteBuffer... patterns);
-
+    /**
+     * Subscribes the connection to all channels matching the given {@code patterns}. Once subscribed,
+     * a connection enters listening mode and can only subscribe to other channels or unsubscribe. No
+     * other commands are accepted until the connection is unsubscribed.
+     *
+     * <p>Note that cancellation of the {@link Flux} will unsubscribe from {@code patterns}.
+     *
+     * @param patterns channel name patterns, must not be {@literal null}.
+     * @see <a href="https://valkey.io/commands/psubscribe">Valkey Documentation: PSUBSCRIBE</a>
+     */
+    Mono<Void> pSubscribe(ByteBuffer... patterns);
 }

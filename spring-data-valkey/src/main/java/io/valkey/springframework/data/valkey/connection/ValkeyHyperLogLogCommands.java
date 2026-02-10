@@ -26,34 +26,35 @@ import org.springframework.lang.Nullable;
  */
 public interface ValkeyHyperLogLogCommands {
 
-	/**
-	 * Adds given {@literal values} to the HyperLogLog stored at given {@literal key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param values must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
-	 */
-	@Nullable
-	Long pfAdd(byte[] key, byte[]... values);
+    /**
+     * Adds given {@literal values} to the HyperLogLog stored at given {@literal key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param values must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
+     */
+    @Nullable
+    Long pfAdd(byte[] key, byte[]... values);
 
-	/**
-	 * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal key(s)}.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
-	 */
-	@Nullable
-	Long pfCount(byte[]... keys);
+    /**
+     * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal
+     * key(s)}.
+     *
+     * @param keys must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
+     */
+    @Nullable
+    Long pfCount(byte[]... keys);
 
-	/**
-	 * Merge N different HyperLogLogs at {@literal sourceKeys} into a single {@literal destinationKey}.
-	 *
-	 * @param destinationKey must not be {@literal null}.
-	 * @param sourceKeys must not be {@literal null}.
-	 * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
-	 */
-	void pfMerge(byte[] destinationKey, byte[]... sourceKeys);
-
+    /**
+     * Merge N different HyperLogLogs at {@literal sourceKeys} into a single {@literal
+     * destinationKey}.
+     *
+     * @param destinationKey must not be {@literal null}.
+     * @param sourceKeys must not be {@literal null}.
+     * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
+     */
+    void pfMerge(byte[] destinationKey, byte[]... sourceKeys);
 }

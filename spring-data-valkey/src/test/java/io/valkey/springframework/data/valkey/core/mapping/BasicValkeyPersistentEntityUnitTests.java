@@ -18,16 +18,15 @@ package io.valkey.springframework.data.valkey.core.mapping;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
+import io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.data.keyvalue.core.mapping.KeySpaceResolver;
 import org.springframework.data.mapping.MappingException;
-import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
-import io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities;
 import org.springframework.data.util.TypeInformation;
 
 /**
@@ -38,69 +37,70 @@ import org.springframework.data.util.TypeInformation;
 @ExtendWith(MockitoExtension.class)
 class BasicValkeyPersistentEntityUnitTests<T> {
 
-	@Mock TypeInformation<T> entityInformation;
-	@Mock KeySpaceResolver keySpaceResolver;
-	@Mock TimeToLiveAccessor ttlAccessor;
+    @Mock TypeInformation<T> entityInformation;
+    @Mock KeySpaceResolver keySpaceResolver;
+    @Mock TimeToLiveAccessor ttlAccessor;
 
-	private BasicValkeyPersistentEntity<T> entity;
+    private BasicValkeyPersistentEntity<T> entity;
 
-	@BeforeEach
-	@SuppressWarnings("unchecked")
-	void setUp() {
+    @BeforeEach
+    @SuppressWarnings("unchecked")
+    void setUp() {
 
-		when(entityInformation.getType()).thenReturn((Class<T>) ConversionTestEntities.Person.class);
-		entity = new BasicValkeyPersistentEntity<>(entityInformation, keySpaceResolver, ttlAccessor);
-	}
+        when(entityInformation.getType()).thenReturn((Class<T>) ConversionTestEntities.Person.class);
+        entity = new BasicValkeyPersistentEntity<>(entityInformation, keySpaceResolver, ttlAccessor);
+    }
 
-	@Test // DATAREDIS-425
-	void addingMultipleIdPropertiesWithoutAnExplicitOneThrowsException() {
+    @Test // DATAREDIS-425
+    void addingMultipleIdPropertiesWithoutAnExplicitOneThrowsException() {
 
+        ValkeyPersistentProperty property1 = mock(ValkeyPersistentProperty.class);
+        when(property1.isIdProperty()).thenReturn(true);
 
-		ValkeyPersistentProperty property1 = mock(ValkeyPersistentProperty.class);
-		when(property1.isIdProperty()).thenReturn(true);
+        ValkeyPersistentProperty property2 = mock(ValkeyPersistentProperty.class);
+        when(property2.isIdProperty()).thenReturn(true);
 
-		ValkeyPersistentProperty property2 = mock(ValkeyPersistentProperty.class);
-		when(property2.isIdProperty()).thenReturn(true);
+        entity.addPersistentProperty(property1);
 
-		entity.addPersistentProperty(property1);
+        assertThatExceptionOfType(MappingException.class)
+                .isThrownBy(() -> entity.addPersistentProperty(property2))
+                .withMessageContaining("Attempt to add id property")
+                .withMessageContaining("but already have a property");
+    }
 
-		assertThatExceptionOfType(MappingException.class).isThrownBy(() -> entity.addPersistentProperty(property2))
-				.withMessageContaining("Attempt to add id property")
-				.withMessageContaining("but already have a property");
-	}
+    @Test // DATAREDIS-425
+    @SuppressWarnings("unchecked")
+    void addingMultipleExplicitIdPropertiesThrowsException() {
 
-	@Test // DATAREDIS-425
-	@SuppressWarnings("unchecked")
-	void addingMultipleExplicitIdPropertiesThrowsException() {
+        ValkeyPersistentProperty property1 = mock(ValkeyPersistentProperty.class);
+        when(property1.isIdProperty()).thenReturn(true);
+        when(property1.isAnnotationPresent(any(Class.class))).thenReturn(true);
 
-		ValkeyPersistentProperty property1 = mock(ValkeyPersistentProperty.class);
-		when(property1.isIdProperty()).thenReturn(true);
-		when(property1.isAnnotationPresent(any(Class.class))).thenReturn(true);
+        ValkeyPersistentProperty property2 = mock(ValkeyPersistentProperty.class);
+        when(property2.isIdProperty()).thenReturn(true);
+        when(property2.isAnnotationPresent(any(Class.class))).thenReturn(true);
 
-		ValkeyPersistentProperty property2 = mock(ValkeyPersistentProperty.class);
-		when(property2.isIdProperty()).thenReturn(true);
-		when(property2.isAnnotationPresent(any(Class.class))).thenReturn(true);
+        entity.addPersistentProperty(property1);
+        assertThatExceptionOfType(MappingException.class)
+                .isThrownBy(() -> entity.addPersistentProperty(property2))
+                .withMessageContaining("Attempt to add explicit id property")
+                .withMessageContaining("but already have a property");
+    }
 
-		entity.addPersistentProperty(property1);
-		assertThatExceptionOfType(MappingException.class).isThrownBy(() -> entity.addPersistentProperty(property2))
-				.withMessageContaining("Attempt to add explicit id property")
-				.withMessageContaining("but already have a property");
-	}
+    @Test // DATAREDIS-425
+    @SuppressWarnings("unchecked")
+    void explicitIdPropertiyShouldBeFavoredOverNonExplicit() {
 
-	@Test // DATAREDIS-425
-	@SuppressWarnings("unchecked")
-	void explicitIdPropertiyShouldBeFavoredOverNonExplicit() {
+        ValkeyPersistentProperty property1 = mock(ValkeyPersistentProperty.class);
+        when(property1.isIdProperty()).thenReturn(true);
 
-		ValkeyPersistentProperty property1 = mock(ValkeyPersistentProperty.class);
-		when(property1.isIdProperty()).thenReturn(true);
+        ValkeyPersistentProperty property2 = mock(ValkeyPersistentProperty.class);
+        when(property2.isIdProperty()).thenReturn(true);
+        when(property2.isAnnotationPresent(any(Class.class))).thenReturn(true);
 
-		ValkeyPersistentProperty property2 = mock(ValkeyPersistentProperty.class);
-		when(property2.isIdProperty()).thenReturn(true);
-		when(property2.isAnnotationPresent(any(Class.class))).thenReturn(true);
+        entity.addPersistentProperty(property1);
+        entity.addPersistentProperty(property2);
 
-		entity.addPersistentProperty(property1);
-		entity.addPersistentProperty(property2);
-
-		assertThat(entity.getIdProperty()).isEqualTo(property2);
-	}
+        assertThat(entity.getIdProperty()).isEqualTo(property2);
+    }
 }

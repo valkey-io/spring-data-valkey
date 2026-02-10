@@ -16,9 +16,7 @@
 package io.valkey.springframework.data.valkey.support.collections;
 
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.support.GenericXmlApplicationContext;
 
 /**
@@ -26,15 +24,16 @@ import org.springframework.context.support.GenericXmlApplicationContext;
  */
 class SupportXmlIntegrationTests {
 
-	@Test
-	void testContainerSetup() throws Exception {
-		GenericXmlApplicationContext ctx = new GenericXmlApplicationContext(
-				"/io/valkey/springframework/data/valkey/support/collections/container.xml");
+    @Test
+    void testContainerSetup() throws Exception {
+        GenericXmlApplicationContext ctx =
+                new GenericXmlApplicationContext(
+                        "/io/valkey/springframework/data/valkey/support/collections/container.xml");
 
-		ValkeyList list = ctx.getBean("non-existing", ValkeyList.class);
-		ValkeyProperties props = ctx.getBean("props", ValkeyProperties.class);
-		Map map = ctx.getBean("map", Map.class);
+        ValkeyList list = ctx.getBean("non-existing", ValkeyList.class);
+        ValkeyProperties props = ctx.getBean("props", ValkeyProperties.class);
+        Map map = ctx.getBean("map", Map.class);
 
-		ctx.close();
-	}
+        ctx.close();
+    }
 }

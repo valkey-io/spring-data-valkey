@@ -15,6 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
+import io.valkey.springframework.data.valkey.connection.convert.Converters;
+import io.valkey.springframework.data.valkey.connection.zset.DefaultTuple;
+import io.valkey.springframework.data.valkey.connection.zset.Tuple;
+import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
+import io.valkey.springframework.data.valkey.serializer.SerializationUtils;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,16 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
-
 import org.springframework.data.geo.GeoResults;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
-import io.valkey.springframework.data.valkey.connection.convert.Converters;
-import io.valkey.springframework.data.valkey.connection.zset.DefaultTuple;
-import io.valkey.springframework.data.valkey.connection.zset.Tuple;
-import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import io.valkey.springframework.data.valkey.serializer.SerializationUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
@@ -50,374 +49,379 @@ import org.springframework.util.CollectionUtils;
  */
 abstract class AbstractOperations<K, V> {
 
-	// utility methods for the template internal methods
-	abstract class ValueDeserializingValkeyCallback implements ValkeyCallback<V> {
-		private final Object key;
+    // utility methods for the template internal methods
+    abstract class ValueDeserializingValkeyCallback implements ValkeyCallback<V> {
+        private final Object key;
 
-		public ValueDeserializingValkeyCallback(Object key) {
-			this.key = key;
-		}
+        public ValueDeserializingValkeyCallback(Object key) {
+            this.key = key;
+        }
 
-		public final V doInValkey(ValkeyConnection connection) {
-			byte[] result = inValkey(rawKey(key), connection);
-			return deserializeValue(result);
-		}
+        public final V doInValkey(ValkeyConnection connection) {
+            byte[] result = inValkey(rawKey(key), connection);
+            return deserializeValue(result);
+        }
 
-		@Nullable
-		protected abstract byte[] inValkey(byte[] rawKey, ValkeyConnection connection);
-	}
+        @Nullable
+        protected abstract byte[] inValkey(byte[] rawKey, ValkeyConnection connection);
+    }
 
-	private class FunctionalValueDeserializingValkeyCallback extends ValueDeserializingValkeyCallback {
+    private class FunctionalValueDeserializingValkeyCallback
+            extends ValueDeserializingValkeyCallback {
 
-		private final BiFunction<ValkeyConnection, byte[], byte[]> function;
+        private final BiFunction<ValkeyConnection, byte[], byte[]> function;
+
+        public FunctionalValueDeserializingValkeyCallback(
+                Object key, BiFunction<ValkeyConnection, byte[], byte[]> function) {
+            super(key);
+            this.function = function;
+        }
+
+        @Nullable
+        protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+            return function.apply(connection, rawKey);
+        }
+    }
+
+    final ValkeyTemplate<K, V> template;
+
+    AbstractOperations(ValkeyTemplate<K, V> template) {
+        this.template = template;
+    }
+
+    ValueDeserializingValkeyCallback valueCallbackFor(
+            Object key, BiFunction<ValkeyConnection, byte[], byte[]> function) {
+        return new FunctionalValueDeserializingValkeyCallback(key, function);
+    }
+
+    ValkeySerializer keySerializer() {
+        return template.getKeySerializer();
+    }
+
+    ValkeySerializer valueSerializer() {
+        return template.getValueSerializer();
+    }
+
+    ValkeySerializer hashKeySerializer() {
+        return template.getHashKeySerializer();
+    }
+
+    ValkeySerializer hashValueSerializer() {
+        return template.getHashValueSerializer();
+    }
+
+    ValkeySerializer stringSerializer() {
+        return template.getStringSerializer();
+    }
+
+    @Nullable
+    <T> T execute(ValkeyCallback<T> callback) {
+        return template.execute(callback, true);
+    }
+
+    public ValkeyOperations<K, V> getOperations() {
+        return template;
+    }
+
+    @SuppressWarnings("unchecked")
+    byte[] rawKey(Object key) {
 
-		public FunctionalValueDeserializingValkeyCallback(Object key, BiFunction<ValkeyConnection, byte[], byte[]> function) {
-			super(key);
-			this.function = function;
-		}
+        Assert.notNull(key, "non null key required");
 
-		@Nullable
-		protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-			return function.apply(connection, rawKey);
-		}
-	}
+        if (keySerializer() == null && key instanceof byte[] bytes) {
+            return bytes;
+        }
 
-	final ValkeyTemplate<K, V> template;
-
-	AbstractOperations(ValkeyTemplate<K, V> template) {
-		this.template = template;
-	}
-
-	ValueDeserializingValkeyCallback valueCallbackFor(Object key, BiFunction<ValkeyConnection, byte[], byte[]> function) {
-		return new FunctionalValueDeserializingValkeyCallback(key, function);
-	}
-
-	ValkeySerializer keySerializer() {
-		return template.getKeySerializer();
-	}
-
-	ValkeySerializer valueSerializer() {
-		return template.getValueSerializer();
-	}
-
-	ValkeySerializer hashKeySerializer() {
-		return template.getHashKeySerializer();
-	}
-
-	ValkeySerializer hashValueSerializer() {
-		return template.getHashValueSerializer();
-	}
-
-	ValkeySerializer stringSerializer() {
-		return template.getStringSerializer();
-	}
-
-	@Nullable
-	<T> T execute(ValkeyCallback<T> callback) {
-		return template.execute(callback, true);
-	}
-
-	public ValkeyOperations<K, V> getOperations() {
-		return template;
-	}
-
-	@SuppressWarnings("unchecked")
-	byte[] rawKey(Object key) {
+        return keySerializer().serialize(key);
+    }
+
+    @SuppressWarnings("unchecked")
+    byte[] rawString(String key) {
+        return stringSerializer().serialize(key);
+    }
 
-		Assert.notNull(key, "non null key required");
-
-		if (keySerializer() == null && key instanceof byte[] bytes) {
-			return bytes;
-		}
-
-		return keySerializer().serialize(key);
-	}
-
-	@SuppressWarnings("unchecked")
-	byte[] rawString(String key) {
-		return stringSerializer().serialize(key);
-	}
-
-	@SuppressWarnings("unchecked")
-	byte[] rawValue(Object value) {
-
-		if (valueSerializer() == null && value instanceof byte[] bytes) {
-			return bytes;
-		}
-
-		return valueSerializer().serialize(value);
-	}
-
-	byte[][] rawValues(Object... values) {
-
-		byte[][] rawValues = new byte[values.length][];
-		int i = 0;
-		for (Object value : values) {
-			rawValues[i++] = rawValue(value);
-		}
-
-		return rawValues;
-	}
-
-	/**
-	 * @param values must not be {@literal empty} nor contain {@literal null} values.
-	 * @return
-	 * @since 1.5
-	 */
-	byte[][] rawValues(Collection<V> values) {
-
-		Assert.notEmpty(values, "Values must not be 'null' or empty");
-		Assert.noNullElements(values.toArray(), "Values must not contain 'null' value");
-
-		byte[][] rawValues = new byte[values.size()][];
-		int i = 0;
-		for (V value : values) {
-			rawValues[i++] = rawValue(value);
-		}
-
-		return rawValues;
-	}
-
-	@SuppressWarnings("unchecked")
-	<HK> byte[] rawHashKey(HK hashKey) {
-		Assert.notNull(hashKey, "non null hash key required");
-		if (hashKeySerializer() == null && hashKey instanceof byte[] bytes) {
-			return bytes;
-		}
-		return hashKeySerializer().serialize(hashKey);
-	}
-
-	<HK> byte[][] rawHashKeys(HK... hashKeys) {
-
-		byte[][] rawHashKeys = new byte[hashKeys.length][];
-		int i = 0;
-		for (HK hashKey : hashKeys) {
-			rawHashKeys[i++] = rawHashKey(hashKey);
-		}
-		return rawHashKeys;
-	}
-
-	@SuppressWarnings("unchecked")
-	<HV> byte[] rawHashValue(HV value) {
-
-		if (hashValueSerializer() == null && value instanceof byte[] bytes) {
-			return bytes;
-		}
-		return hashValueSerializer().serialize(value);
-	}
-
-	byte[][] rawKeys(K key, K otherKey) {
-
-		byte[][] rawKeys = new byte[2][];
-
-		rawKeys[0] = rawKey(key);
-		rawKeys[1] = rawKey(otherKey);
-		return rawKeys;
-	}
-
-	byte[][] rawKeys(Collection<K> keys) {
-		return rawKeys(null, keys);
-	}
-
-	byte[][] rawKeys(K key, Collection<K> keys) {
-
-		byte[][] rawKeys = new byte[keys.size() + (key != null ? 1 : 0)][];
-
-		int i = 0;
-
-		if (key != null) {
-			rawKeys[i++] = rawKey(key);
-		}
-
-		for (K k : keys) {
-			rawKeys[i++] = rawKey(k);
-		}
-
-		return rawKeys;
-	}
-
-	@SuppressWarnings("unchecked")
-	Set<V> deserializeValues(Set<byte[]> rawValues) {
-		if (valueSerializer() == null) {
-			return (Set<V>) rawValues;
-		}
-		return SerializationUtils.deserialize(rawValues, valueSerializer());
-	}
-
-	@Nullable
-	Set<TypedTuple<V>> deserializeTupleValues(@Nullable Set<Tuple> rawValues) {
-		if (rawValues == null) {
-			return null;
-		}
-		Set<TypedTuple<V>> set = new LinkedHashSet<>(rawValues.size());
-		for (Tuple rawValue : rawValues) {
-			set.add(deserializeTuple(rawValue));
-		}
-		return set;
-	}
-
-	List<TypedTuple<V>> deserializeTupleValues(List<Tuple> rawValues) {
-		if (rawValues == null) {
-			return null;
-		}
-		List<TypedTuple<V>> set = new ArrayList<>(rawValues.size());
-		for (Tuple rawValue : rawValues) {
-			set.add(deserializeTuple(rawValue));
-		}
-		return set;
-	}
-
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Nullable
-	TypedTuple<V> deserializeTuple(@Nullable Tuple tuple) {
-		if (tuple == null) {
-			return null;
-		}
-		Object value = tuple.getValue();
-		if (valueSerializer() != null) {
-			value = valueSerializer().deserialize(tuple.getValue());
-		}
-		return new DefaultTypedTuple(value, tuple.getScore());
-	}
-
-	@SuppressWarnings("unchecked")
-	Set<Tuple> rawTupleValues(Set<TypedTuple<V>> values) {
-		if (values == null) {
-			return null;
-		}
-		Set<Tuple> rawTuples = new LinkedHashSet<>(values.size());
-		for (TypedTuple<V> value : values) {
-			byte[] rawValue;
-			if (valueSerializer() == null && value.getValue() instanceof byte[] bytes) {
-				rawValue = bytes;
-			} else {
-				rawValue = valueSerializer().serialize(value.getValue());
-			}
-			rawTuples.add(new DefaultTuple(rawValue, value.getScore()));
-		}
-		return rawTuples;
-	}
-
-	@SuppressWarnings("unchecked")
-	List<V> deserializeValues(List<byte[]> rawValues) {
-		if (valueSerializer() == null) {
-			return (List<V>) rawValues;
-		}
-		return SerializationUtils.deserialize(rawValues, valueSerializer());
-	}
-
-	@SuppressWarnings("unchecked")
-	<T> Set<T> deserializeHashKeys(Set<byte[]> rawKeys) {
-		if (hashKeySerializer() == null) {
-			return (Set<T>) rawKeys;
-		}
-		return SerializationUtils.deserialize(rawKeys, hashKeySerializer());
-	}
-
-	@SuppressWarnings("unchecked")
-	<T> List<T> deserializeHashKeys(List<byte[]> rawKeys) {
-		if (hashKeySerializer() == null) {
-			return (List<T>) rawKeys;
-		}
-		return SerializationUtils.deserialize(rawKeys, hashKeySerializer());
-	}
-
-	@SuppressWarnings("unchecked")
-	<T> List<T> deserializeHashValues(List<byte[]> rawValues) {
-		if (hashValueSerializer() == null) {
-			return (List<T>) rawValues;
-		}
-		return SerializationUtils.deserialize(rawValues, hashValueSerializer());
-	}
-
-	@SuppressWarnings("unchecked")
-	<HK, HV> Map<HK, HV> deserializeHashMap(@Nullable Map<byte[], byte[]> entries) {
-		// connection in pipeline/multi mode
-
-		if (entries == null) {
-			return null;
-		}
-
-		Map<HK, HV> map = new LinkedHashMap<>(entries.size());
-
-		for (Map.Entry<byte[], byte[]> entry : entries.entrySet()) {
-			map.put((HK) deserializeHashKey(entry.getKey()), (HV) deserializeHashValue(entry.getValue()));
-		}
-
-		return map;
-	}
-
-	@SuppressWarnings("unchecked")
-	K deserializeKey(byte[] value) {
-		if (keySerializer() == null) {
-			return (K) value;
-		}
-		return (K) keySerializer().deserialize(value);
-	}
-
-	/**
-	 * @param keys
-	 * @return
-	 * @since 1.7
-	 */
-	Set<K> deserializeKeys(Set<byte[]> keys) {
-
-		if (CollectionUtils.isEmpty(keys)) {
-			return Collections.emptySet();
-		}
-		Set<K> result = new LinkedHashSet<>(keys.size());
-		for (byte[] key : keys) {
-			result.add(deserializeKey(key));
-		}
-		return result;
-	}
-
-	@SuppressWarnings("unchecked")
-	V deserializeValue(byte[] value) {
-		if (valueSerializer() == null) {
-			return (V) value;
-		}
-		return (V) valueSerializer().deserialize(value);
-	}
-
-	String deserializeString(byte[] value) {
-		return (String) stringSerializer().deserialize(value);
-	}
-
-	@SuppressWarnings({ "unchecked" })
-	<HK> HK deserializeHashKey(byte[] value) {
-		if (hashKeySerializer() == null) {
-			return (HK) value;
-		}
-		return (HK) hashKeySerializer().deserialize(value);
-	}
-
-	@SuppressWarnings("unchecked")
-	<HV> HV deserializeHashValue(byte[] value) {
-		if (hashValueSerializer() == null) {
-			return (HV) value;
-		}
-		return (HV) hashValueSerializer().deserialize(value);
-	}
-
-	/**
-	 * Deserialize {@link GeoLocation} of {@link GeoResults}.
-	 *
-	 * @param source can be {@literal null}.
-	 * @return converted or {@literal null}.
-	 * @since 1.8
-	 */
-	@Nullable
-	GeoResults<GeoLocation<V>> deserializeGeoResults(@Nullable GeoResults<GeoLocation<byte[]>> source) {
-
-		if (source == null) {
-			return null;
-		}
-
-		if (valueSerializer() == null) {
-			return (GeoResults<GeoLocation<V>>) (Object) source;
-		}
-
-		return Converters.deserializingGeoResultsConverter((ValkeySerializer<V>) valueSerializer()).convert(source);
-	}
+    @SuppressWarnings("unchecked")
+    byte[] rawValue(Object value) {
+
+        if (valueSerializer() == null && value instanceof byte[] bytes) {
+            return bytes;
+        }
+
+        return valueSerializer().serialize(value);
+    }
+
+    byte[][] rawValues(Object... values) {
+
+        byte[][] rawValues = new byte[values.length][];
+        int i = 0;
+        for (Object value : values) {
+            rawValues[i++] = rawValue(value);
+        }
+
+        return rawValues;
+    }
+
+    /**
+     * @param values must not be {@literal empty} nor contain {@literal null} values.
+     * @return
+     * @since 1.5
+     */
+    byte[][] rawValues(Collection<V> values) {
+
+        Assert.notEmpty(values, "Values must not be 'null' or empty");
+        Assert.noNullElements(values.toArray(), "Values must not contain 'null' value");
+
+        byte[][] rawValues = new byte[values.size()][];
+        int i = 0;
+        for (V value : values) {
+            rawValues[i++] = rawValue(value);
+        }
+
+        return rawValues;
+    }
+
+    @SuppressWarnings("unchecked")
+    <HK> byte[] rawHashKey(HK hashKey) {
+        Assert.notNull(hashKey, "non null hash key required");
+        if (hashKeySerializer() == null && hashKey instanceof byte[] bytes) {
+            return bytes;
+        }
+        return hashKeySerializer().serialize(hashKey);
+    }
+
+    <HK> byte[][] rawHashKeys(HK... hashKeys) {
+
+        byte[][] rawHashKeys = new byte[hashKeys.length][];
+        int i = 0;
+        for (HK hashKey : hashKeys) {
+            rawHashKeys[i++] = rawHashKey(hashKey);
+        }
+        return rawHashKeys;
+    }
+
+    @SuppressWarnings("unchecked")
+    <HV> byte[] rawHashValue(HV value) {
+
+        if (hashValueSerializer() == null && value instanceof byte[] bytes) {
+            return bytes;
+        }
+        return hashValueSerializer().serialize(value);
+    }
+
+    byte[][] rawKeys(K key, K otherKey) {
+
+        byte[][] rawKeys = new byte[2][];
+
+        rawKeys[0] = rawKey(key);
+        rawKeys[1] = rawKey(otherKey);
+        return rawKeys;
+    }
+
+    byte[][] rawKeys(Collection<K> keys) {
+        return rawKeys(null, keys);
+    }
+
+    byte[][] rawKeys(K key, Collection<K> keys) {
+
+        byte[][] rawKeys = new byte[keys.size() + (key != null ? 1 : 0)][];
+
+        int i = 0;
+
+        if (key != null) {
+            rawKeys[i++] = rawKey(key);
+        }
+
+        for (K k : keys) {
+            rawKeys[i++] = rawKey(k);
+        }
+
+        return rawKeys;
+    }
+
+    @SuppressWarnings("unchecked")
+    Set<V> deserializeValues(Set<byte[]> rawValues) {
+        if (valueSerializer() == null) {
+            return (Set<V>) rawValues;
+        }
+        return SerializationUtils.deserialize(rawValues, valueSerializer());
+    }
+
+    @Nullable
+    Set<TypedTuple<V>> deserializeTupleValues(@Nullable Set<Tuple> rawValues) {
+        if (rawValues == null) {
+            return null;
+        }
+        Set<TypedTuple<V>> set = new LinkedHashSet<>(rawValues.size());
+        for (Tuple rawValue : rawValues) {
+            set.add(deserializeTuple(rawValue));
+        }
+        return set;
+    }
+
+    List<TypedTuple<V>> deserializeTupleValues(List<Tuple> rawValues) {
+        if (rawValues == null) {
+            return null;
+        }
+        List<TypedTuple<V>> set = new ArrayList<>(rawValues.size());
+        for (Tuple rawValue : rawValues) {
+            set.add(deserializeTuple(rawValue));
+        }
+        return set;
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @Nullable
+    TypedTuple<V> deserializeTuple(@Nullable Tuple tuple) {
+        if (tuple == null) {
+            return null;
+        }
+        Object value = tuple.getValue();
+        if (valueSerializer() != null) {
+            value = valueSerializer().deserialize(tuple.getValue());
+        }
+        return new DefaultTypedTuple(value, tuple.getScore());
+    }
+
+    @SuppressWarnings("unchecked")
+    Set<Tuple> rawTupleValues(Set<TypedTuple<V>> values) {
+        if (values == null) {
+            return null;
+        }
+        Set<Tuple> rawTuples = new LinkedHashSet<>(values.size());
+        for (TypedTuple<V> value : values) {
+            byte[] rawValue;
+            if (valueSerializer() == null && value.getValue() instanceof byte[] bytes) {
+                rawValue = bytes;
+            } else {
+                rawValue = valueSerializer().serialize(value.getValue());
+            }
+            rawTuples.add(new DefaultTuple(rawValue, value.getScore()));
+        }
+        return rawTuples;
+    }
+
+    @SuppressWarnings("unchecked")
+    List<V> deserializeValues(List<byte[]> rawValues) {
+        if (valueSerializer() == null) {
+            return (List<V>) rawValues;
+        }
+        return SerializationUtils.deserialize(rawValues, valueSerializer());
+    }
+
+    @SuppressWarnings("unchecked")
+    <T> Set<T> deserializeHashKeys(Set<byte[]> rawKeys) {
+        if (hashKeySerializer() == null) {
+            return (Set<T>) rawKeys;
+        }
+        return SerializationUtils.deserialize(rawKeys, hashKeySerializer());
+    }
+
+    @SuppressWarnings("unchecked")
+    <T> List<T> deserializeHashKeys(List<byte[]> rawKeys) {
+        if (hashKeySerializer() == null) {
+            return (List<T>) rawKeys;
+        }
+        return SerializationUtils.deserialize(rawKeys, hashKeySerializer());
+    }
+
+    @SuppressWarnings("unchecked")
+    <T> List<T> deserializeHashValues(List<byte[]> rawValues) {
+        if (hashValueSerializer() == null) {
+            return (List<T>) rawValues;
+        }
+        return SerializationUtils.deserialize(rawValues, hashValueSerializer());
+    }
+
+    @SuppressWarnings("unchecked")
+    <HK, HV> Map<HK, HV> deserializeHashMap(@Nullable Map<byte[], byte[]> entries) {
+        // connection in pipeline/multi mode
+
+        if (entries == null) {
+            return null;
+        }
+
+        Map<HK, HV> map = new LinkedHashMap<>(entries.size());
+
+        for (Map.Entry<byte[], byte[]> entry : entries.entrySet()) {
+            map.put((HK) deserializeHashKey(entry.getKey()), (HV) deserializeHashValue(entry.getValue()));
+        }
+
+        return map;
+    }
+
+    @SuppressWarnings("unchecked")
+    K deserializeKey(byte[] value) {
+        if (keySerializer() == null) {
+            return (K) value;
+        }
+        return (K) keySerializer().deserialize(value);
+    }
+
+    /**
+     * @param keys
+     * @return
+     * @since 1.7
+     */
+    Set<K> deserializeKeys(Set<byte[]> keys) {
+
+        if (CollectionUtils.isEmpty(keys)) {
+            return Collections.emptySet();
+        }
+        Set<K> result = new LinkedHashSet<>(keys.size());
+        for (byte[] key : keys) {
+            result.add(deserializeKey(key));
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    V deserializeValue(byte[] value) {
+        if (valueSerializer() == null) {
+            return (V) value;
+        }
+        return (V) valueSerializer().deserialize(value);
+    }
+
+    String deserializeString(byte[] value) {
+        return (String) stringSerializer().deserialize(value);
+    }
+
+    @SuppressWarnings({"unchecked"})
+    <HK> HK deserializeHashKey(byte[] value) {
+        if (hashKeySerializer() == null) {
+            return (HK) value;
+        }
+        return (HK) hashKeySerializer().deserialize(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    <HV> HV deserializeHashValue(byte[] value) {
+        if (hashValueSerializer() == null) {
+            return (HV) value;
+        }
+        return (HV) hashValueSerializer().deserialize(value);
+    }
+
+    /**
+     * Deserialize {@link GeoLocation} of {@link GeoResults}.
+     *
+     * @param source can be {@literal null}.
+     * @return converted or {@literal null}.
+     * @since 1.8
+     */
+    @Nullable
+    GeoResults<GeoLocation<V>> deserializeGeoResults(
+            @Nullable GeoResults<GeoLocation<byte[]>> source) {
+
+        if (source == null) {
+            return null;
+        }
+
+        if (valueSerializer() == null) {
+            return (GeoResults<GeoLocation<V>>) (Object) source;
+        }
+
+        return Converters.deserializingGeoResultsConverter((ValkeySerializer<V>) valueSerializer())
+                .convert(source);
+    }
 }

@@ -15,133 +15,138 @@
  */
 package performance;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.IntStream;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 
-/**
- * Multi-threaded performance test for ValkeyTemplate operations across different clients.
- */
+/** Multi-threaded performance test for ValkeyTemplate operations across different clients. */
 public class MultiThreadedPerformanceTest {
 
-	private static final int THREADS = 100;
-	private static final int OPERATIONS_PER_THREAD = 100;
-	private static final int TOTAL_OPERATIONS = THREADS * OPERATIONS_PER_THREAD;
+    private static final int THREADS = 100;
+    private static final int OPERATIONS_PER_THREAD = 100;
+    private static final int TOTAL_OPERATIONS = THREADS * OPERATIONS_PER_THREAD;
 
-	public static void main(String[] args) throws Exception {
-		String clientType = System.getProperty("client", "valkeyglide");
-		
-		System.out.println("Running Multi-Threaded Performance Test");
-		System.out.println("Client: " + clientType);
-		System.out.println("Threads: " + THREADS);
-		System.out.println("Operations per thread: " + OPERATIONS_PER_THREAD);
-		System.out.println("Total operations: " + TOTAL_OPERATIONS);
-		System.out.println("----------------------------------------");
+    public static void main(String[] args) throws Exception {
+        String clientType = System.getProperty("client", "valkeyglide");
 
-		ValkeyConnectionFactory factory = createConnectionFactory(clientType);
-		if (factory instanceof InitializingBean) {
-			((InitializingBean) factory).afterPropertiesSet();
-		}
+        System.out.println("Running Multi-Threaded Performance Test");
+        System.out.println("Client: " + clientType);
+        System.out.println("Threads: " + THREADS);
+        System.out.println("Operations per thread: " + OPERATIONS_PER_THREAD);
+        System.out.println("Total operations: " + TOTAL_OPERATIONS);
+        System.out.println("----------------------------------------");
 
-		try {
-			runMultiThreadedTest(factory);
-		} finally {
-			if (factory instanceof DisposableBean) {
-				((DisposableBean) factory).destroy();
-			}
-		}
-	}
+        ValkeyConnectionFactory factory = createConnectionFactory(clientType);
+        if (factory instanceof InitializingBean) {
+            ((InitializingBean) factory).afterPropertiesSet();
+        }
 
-	private static ValkeyConnectionFactory createConnectionFactory(String clientType) {
-		return switch (clientType.toLowerCase()) {
-			case "lettuce" -> new LettuceConnectionFactory();
-			case "jedis" -> new JedisConnectionFactory();
-			case "valkeyglide" -> new ValkeyGlideConnectionFactory();
-			default -> throw new IllegalArgumentException("Unknown client: " + clientType);
-		};
-	}
+        try {
+            runMultiThreadedTest(factory);
+        } finally {
+            if (factory instanceof DisposableBean) {
+                ((DisposableBean) factory).destroy();
+            }
+        }
+    }
 
-	private static void runMultiThreadedTest(ValkeyConnectionFactory factory) throws InterruptedException {
-		long startTime = System.currentTimeMillis();
+    private static ValkeyConnectionFactory createConnectionFactory(String clientType) {
+        return switch (clientType.toLowerCase()) {
+            case "lettuce" -> new LettuceConnectionFactory();
+            case "jedis" -> new JedisConnectionFactory();
+            case "valkeyglide" -> new ValkeyGlideConnectionFactory();
+            default -> throw new IllegalArgumentException("Unknown client: " + clientType);
+        };
+    }
 
-		ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
+    private static void runMultiThreadedTest(ValkeyConnectionFactory factory)
+            throws InterruptedException {
+        long startTime = System.currentTimeMillis();
 
-		StringValkeyTemplate template = new StringValkeyTemplate(factory);
+        ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
 
-		AtomicInteger setOperations = new AtomicInteger(0);
-		AtomicInteger getOperations = new AtomicInteger(0);
-		AtomicInteger deleteOperations = new AtomicInteger(0);
-		AtomicInteger setFailures = new AtomicInteger(0);
-		AtomicInteger getFailures = new AtomicInteger(0);
-		AtomicInteger deleteFailures = new AtomicInteger(0);
+        StringValkeyTemplate template = new StringValkeyTemplate(factory);
 
-		try {
-			Runnable task = () -> {
-				try {
-					IntStream.range(0, OPERATIONS_PER_THREAD).forEach(i -> {
-						String key = Thread.currentThread().getName() + ":" + i;
-						String value = "value" + i;
-						
-						// SET operation
-						try {
-							template.opsForValue().set(key, value);
-							setOperations.incrementAndGet();
-						} catch (Exception e) {
-							setFailures.incrementAndGet();
-						}
-						
-						// GET operation
-						try {
-							String result = template.opsForValue().get(key);
-							if (result != null) {
-								getOperations.incrementAndGet();
-							}
-						} catch (Exception e) {
-							getFailures.incrementAndGet();
-						}
-						
-						// DELETE operation
-						try {
-							template.delete(key);
-							deleteOperations.incrementAndGet();
-						} catch (Exception e) {
-							deleteFailures.incrementAndGet();
-						}
-					});
-				} catch (Exception e) {
-					System.err.println("Thread failed: " + e.getMessage());
-					setFailures.addAndGet(OPERATIONS_PER_THREAD);
-					getFailures.addAndGet(OPERATIONS_PER_THREAD);
-					deleteFailures.addAndGet(OPERATIONS_PER_THREAD);
-				}
-			};
+        AtomicInteger setOperations = new AtomicInteger(0);
+        AtomicInteger getOperations = new AtomicInteger(0);
+        AtomicInteger deleteOperations = new AtomicInteger(0);
+        AtomicInteger setFailures = new AtomicInteger(0);
+        AtomicInteger getFailures = new AtomicInteger(0);
+        AtomicInteger deleteFailures = new AtomicInteger(0);
 
-			IntStream.range(0, THREADS).forEach(i -> executorService.submit(task));
+        try {
+            Runnable task =
+                    () -> {
+                        try {
+                            IntStream.range(0, OPERATIONS_PER_THREAD)
+                                    .forEach(
+                                            i -> {
+                                                String key = Thread.currentThread().getName() + ":" + i;
+                                                String value = "value" + i;
 
-			executorService.shutdown();
-			executorService.awaitTermination(10, TimeUnit.SECONDS);
-			long duration = System.currentTimeMillis() - startTime;
+                                                // SET operation
+                                                try {
+                                                    template.opsForValue().set(key, value);
+                                                    setOperations.incrementAndGet();
+                                                } catch (Exception e) {
+                                                    setFailures.incrementAndGet();
+                                                }
 
-			printResult("SET", duration, setOperations.get(), setFailures.get());
-			printResult("GET", duration, getOperations.get(), getFailures.get());
-			printResult("DELETE", duration, deleteOperations.get(), deleteFailures.get());
-		} finally {
-			executorService.shutdown();
-		}
-	}
+                                                // GET operation
+                                                try {
+                                                    String result = template.opsForValue().get(key);
+                                                    if (result != null) {
+                                                        getOperations.incrementAndGet();
+                                                    }
+                                                } catch (Exception e) {
+                                                    getFailures.incrementAndGet();
+                                                }
 
-	private static void printResult(String operation, long duration, int successful, int failed) {
-		System.out.printf("%s:    %,d ops/sec (%.2f ms total), %.1f%% successful%n", 
-			operation, (long) (successful * 1000.0 / duration), duration / 1.0, (successful * 100.0 / TOTAL_OPERATIONS));
-	}
+                                                // DELETE operation
+                                                try {
+                                                    template.delete(key);
+                                                    deleteOperations.incrementAndGet();
+                                                } catch (Exception e) {
+                                                    deleteFailures.incrementAndGet();
+                                                }
+                                            });
+                        } catch (Exception e) {
+                            System.err.println("Thread failed: " + e.getMessage());
+                            setFailures.addAndGet(OPERATIONS_PER_THREAD);
+                            getFailures.addAndGet(OPERATIONS_PER_THREAD);
+                            deleteFailures.addAndGet(OPERATIONS_PER_THREAD);
+                        }
+                    };
+
+            IntStream.range(0, THREADS).forEach(i -> executorService.submit(task));
+
+            executorService.shutdown();
+            executorService.awaitTermination(10, TimeUnit.SECONDS);
+            long duration = System.currentTimeMillis() - startTime;
+
+            printResult("SET", duration, setOperations.get(), setFailures.get());
+            printResult("GET", duration, getOperations.get(), getFailures.get());
+            printResult("DELETE", duration, deleteOperations.get(), deleteFailures.get());
+        } finally {
+            executorService.shutdown();
+        }
+    }
+
+    private static void printResult(String operation, long duration, int successful, int failed) {
+        System.out.printf(
+                "%s:    %,d ops/sec (%.2f ms total), %.1f%% successful%n",
+                operation,
+                (long) (successful * 1000.0 / duration),
+                duration / 1.0,
+                (successful * 100.0 / TOTAL_OPERATIONS));
+    }
 }

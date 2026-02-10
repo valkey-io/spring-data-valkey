@@ -19,7 +19,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -31,68 +30,69 @@ import org.springframework.util.Assert;
  */
 class LettuceFutureUtils {
 
-	/**
-	 * Creates a {@link CompletableFuture} that is completed {@link CompletableFuture#exceptionally(Function)
-	 * exceptionally} given {@link Throwable}. This utility method allows exceptionally future creation with a single
-	 * invocation.
-	 *
-	 * @param throwable must not be {@literal null}.
-	 * @return the completed {@link CompletableFuture future}.
-	 */
-	static <T> CompletableFuture<T> failed(Throwable throwable) {
+    /**
+     * Creates a {@link CompletableFuture} that is completed {@link
+     * CompletableFuture#exceptionally(Function) exceptionally} given {@link Throwable}. This utility
+     * method allows exceptionally future creation with a single invocation.
+     *
+     * @param throwable must not be {@literal null}.
+     * @return the completed {@link CompletableFuture future}.
+     */
+    static <T> CompletableFuture<T> failed(Throwable throwable) {
 
-		Assert.notNull(throwable, "Throwable must not be null");
+        Assert.notNull(throwable, "Throwable must not be null");
 
-		CompletableFuture<T> future = new CompletableFuture<>();
-		future.completeExceptionally(throwable);
+        CompletableFuture<T> future = new CompletableFuture<>();
+        future.completeExceptionally(throwable);
 
-		return future;
-	}
+        return future;
+    }
 
-	/**
-	 * Synchronizes a {@link CompletableFuture} result by {@link CompletableFuture#join() waiting until the future is
-	 * complete}. This method preserves {@link RuntimeException}s that may get thrown as result of future completion.
-	 * Checked exceptions are thrown encapsulated within {@link java.util.concurrent.CompletionException}.
-	 *
-	 * @param future must not be {@literal null}.
-	 * @throws RuntimeException thrown if the future is completed with a {@link RuntimeException}.
-	 * @throws CompletionException thrown if the future is completed with a checked exception.
-	 * @return the future result if completed normally.
-	 */
-	@Nullable
-	static <T> T join(CompletionStage<T> future) throws RuntimeException, CompletionException {
+    /**
+     * Synchronizes a {@link CompletableFuture} result by {@link CompletableFuture#join() waiting
+     * until the future is complete}. This method preserves {@link RuntimeException}s that may get
+     * thrown as result of future completion. Checked exceptions are thrown encapsulated within {@link
+     * java.util.concurrent.CompletionException}.
+     *
+     * @param future must not be {@literal null}.
+     * @throws RuntimeException thrown if the future is completed with a {@link RuntimeException}.
+     * @throws CompletionException thrown if the future is completed with a checked exception.
+     * @return the future result if completed normally.
+     */
+    @Nullable
+    static <T> T join(CompletionStage<T> future) throws RuntimeException, CompletionException {
 
-		Assert.notNull(future, "CompletableFuture must not be null");
+        Assert.notNull(future, "CompletableFuture must not be null");
 
-		try {
-			return future.toCompletableFuture().join();
-		} catch (Exception ex) {
+        try {
+            return future.toCompletableFuture().join();
+        } catch (Exception ex) {
 
-			Throwable exceptionToUse = ex;
+            Throwable exceptionToUse = ex;
 
-			if (ex instanceof CompletionException) {
-				exceptionToUse = LettuceExceptionConverter.INSTANCE.convert((Exception) ex.getCause());
-				if (exceptionToUse == null) {
-					exceptionToUse = ex.getCause();
-				}
-			}
+            if (ex instanceof CompletionException) {
+                exceptionToUse = LettuceExceptionConverter.INSTANCE.convert((Exception) ex.getCause());
+                if (exceptionToUse == null) {
+                    exceptionToUse = ex.getCause();
+                }
+            }
 
-			if (exceptionToUse instanceof RuntimeException) {
-				throw (RuntimeException) exceptionToUse;
-			}
+            if (exceptionToUse instanceof RuntimeException) {
+                throw (RuntimeException) exceptionToUse;
+            }
 
-			throw new CompletionException(exceptionToUse);
-		}
-	}
+            throw new CompletionException(exceptionToUse);
+        }
+    }
 
-	/**
-	 * Returns a {@link Function} that ignores {@link CompletionStage#exceptionally(Function) exceptional completion} by
-	 * recovering to {@literal null}. This allows to progress with a previously failed {@link CompletionStage} without
-	 * regard to the actual success/exception state.
-	 *
-	 * @return
-	 */
-	static <T> Function<Throwable, T> ignoreErrors() {
-		return ignored -> null;
-	}
+    /**
+     * Returns a {@link Function} that ignores {@link CompletionStage#exceptionally(Function)
+     * exceptional completion} by recovering to {@literal null}. This allows to progress with a
+     * previously failed {@link CompletionStage} without regard to the actual success/exception state.
+     *
+     * @return
+     */
+    static <T> Function<Throwable, T> ignoreErrors() {
+        return ignored -> null;
+    }
 }

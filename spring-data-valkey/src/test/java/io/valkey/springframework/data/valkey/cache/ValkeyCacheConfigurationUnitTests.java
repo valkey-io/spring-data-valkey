@@ -25,9 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.time.Duration;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.DirectFieldAccessor;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.instrument.classloading.ShadowingClassLoader;
@@ -41,91 +39,92 @@ import org.springframework.lang.Nullable;
  */
 class ValkeyCacheConfigurationUnitTests {
 
-	@Test // DATAREDIS-763
-	void shouldSetClassLoader() {
+    @Test // DATAREDIS-763
+    void shouldSetClassLoader() {
 
-		ShadowingClassLoader classLoader = new ShadowingClassLoader(getClass().getClassLoader());
+        ShadowingClassLoader classLoader = new ShadowingClassLoader(getClass().getClassLoader());
 
-		ValkeyCacheConfiguration config = ValkeyCacheConfiguration.defaultCacheConfig(classLoader);
+        ValkeyCacheConfiguration config = ValkeyCacheConfiguration.defaultCacheConfig(classLoader);
 
-		Object adapter = new DirectFieldAccessor(config.getValueSerializationPair().getReader())
-				.getPropertyValue("serializer");
-		Object deserializerConverter = new DirectFieldAccessor(adapter).getPropertyValue("deserializer");
-		Object deserializer = new DirectFieldAccessor(deserializerConverter).getPropertyValue("deserializer");
-		Object usedClassLoader = new DirectFieldAccessor(deserializer).getPropertyValue("classLoader");
+        Object adapter =
+                new DirectFieldAccessor(config.getValueSerializationPair().getReader())
+                        .getPropertyValue("serializer");
+        Object deserializerConverter =
+                new DirectFieldAccessor(adapter).getPropertyValue("deserializer");
+        Object deserializer =
+                new DirectFieldAccessor(deserializerConverter).getPropertyValue("deserializer");
+        Object usedClassLoader = new DirectFieldAccessor(deserializer).getPropertyValue("classLoader");
 
-		assertThat(usedClassLoader).isSameAs(classLoader);
-	}
+        assertThat(usedClassLoader).isSameAs(classLoader);
+    }
 
-	@Test // DATAREDIS-1032
-	void shouldAllowConverterRegistration() {
+    @Test // DATAREDIS-1032
+    void shouldAllowConverterRegistration() {
 
-		ValkeyCacheConfiguration config = ValkeyCacheConfiguration.defaultCacheConfig();
-		config.configureKeyConverters(registry -> registry.addConverter(new DomainTypeConverter()));
+        ValkeyCacheConfiguration config = ValkeyCacheConfiguration.defaultCacheConfig();
+        config.configureKeyConverters(registry -> registry.addConverter(new DomainTypeConverter()));
 
-		assertThat(config.getConversionService().canConvert(DomainType.class, String.class)).isTrue();
-	}
+        assertThat(config.getConversionService().canConvert(DomainType.class, String.class)).isTrue();
+    }
 
-	@Test // GH-2628
-	@SuppressWarnings("deprecation")
-	void getTtlReturnsFixedDuration() {
+    @Test // GH-2628
+    @SuppressWarnings("deprecation")
+    void getTtlReturnsFixedDuration() {
 
-		Duration sixtySeconds = Duration.ofSeconds(60);
+        Duration sixtySeconds = Duration.ofSeconds(60);
 
-		ValkeyCacheConfiguration cacheConfiguration = ValkeyCacheConfiguration.defaultCacheConfig()
-			.entryTtl(sixtySeconds);
+        ValkeyCacheConfiguration cacheConfiguration =
+                ValkeyCacheConfiguration.defaultCacheConfig().entryTtl(sixtySeconds);
 
-		assertThat(cacheConfiguration).isNotNull();
-		assertThat(cacheConfiguration.getTtl()).isEqualByComparingTo(sixtySeconds);
-		assertThat(cacheConfiguration.getTtl()).isEqualByComparingTo(sixtySeconds); // does not change!
-	}
+        assertThat(cacheConfiguration).isNotNull();
+        assertThat(cacheConfiguration.getTtl()).isEqualByComparingTo(sixtySeconds);
+        assertThat(cacheConfiguration.getTtl()).isEqualByComparingTo(sixtySeconds); // does not change!
+    }
 
-	@Test // GH-2628
-	@SuppressWarnings("deprecation")
-	public void getTtlReturnsDynamicDuration() {
+    @Test // GH-2628
+    @SuppressWarnings("deprecation")
+    public void getTtlReturnsDynamicDuration() {
 
-		Duration thirtyMinutes = Duration.ofMinutes(30);
-		Duration twoHours = Duration.ofHours(2);
+        Duration thirtyMinutes = Duration.ofMinutes(30);
+        Duration twoHours = Duration.ofHours(2);
 
-		ValkeyCacheWriter.TtlFunction mockTtlFunction = mock(ValkeyCacheWriter.TtlFunction.class);
+        ValkeyCacheWriter.TtlFunction mockTtlFunction = mock(ValkeyCacheWriter.TtlFunction.class);
 
-		doReturn(thirtyMinutes).doReturn(twoHours).when(mockTtlFunction).getTimeToLive(any(), any());
+        doReturn(thirtyMinutes).doReturn(twoHours).when(mockTtlFunction).getTimeToLive(any(), any());
 
-		ValkeyCacheConfiguration cacheConfiguration = ValkeyCacheConfiguration.defaultCacheConfig()
-				.entryTtl(mockTtlFunction);
+        ValkeyCacheConfiguration cacheConfiguration =
+                ValkeyCacheConfiguration.defaultCacheConfig().entryTtl(mockTtlFunction);
 
-		assertThat(cacheConfiguration.getTtl()).isEqualTo(thirtyMinutes);
-		assertThat(cacheConfiguration.getTtl()).isEqualTo(twoHours);
+        assertThat(cacheConfiguration.getTtl()).isEqualTo(thirtyMinutes);
+        assertThat(cacheConfiguration.getTtl()).isEqualTo(twoHours);
 
-		verify(mockTtlFunction, times(2)).getTimeToLive(any(), isNull());
-		verifyNoMoreInteractions(mockTtlFunction);
-	}
+        verify(mockTtlFunction, times(2)).getTimeToLive(any(), isNull());
+        verifyNoMoreInteractions(mockTtlFunction);
+    }
 
-	@Test // GH-2351
-	public void enableTtiExpirationShouldConfigureTti() {
+    @Test // GH-2351
+    public void enableTtiExpirationShouldConfigureTti() {
 
-		ValkeyCacheConfiguration cacheConfiguration = ValkeyCacheConfiguration.defaultCacheConfig();
+        ValkeyCacheConfiguration cacheConfiguration = ValkeyCacheConfiguration.defaultCacheConfig();
 
-		assertThat(cacheConfiguration).isNotNull();
-		assertThat(cacheConfiguration.isTimeToIdleEnabled()).isFalse();
+        assertThat(cacheConfiguration).isNotNull();
+        assertThat(cacheConfiguration.isTimeToIdleEnabled()).isFalse();
 
-		ValkeyCacheConfiguration ttiEnabledCacheConfiguration = cacheConfiguration.enableTimeToIdle();
+        ValkeyCacheConfiguration ttiEnabledCacheConfiguration = cacheConfiguration.enableTimeToIdle();
 
-		assertThat(ttiEnabledCacheConfiguration).isNotNull();
-		assertThat(ttiEnabledCacheConfiguration).isNotSameAs(cacheConfiguration);
-		assertThat(ttiEnabledCacheConfiguration.isTimeToIdleEnabled()).isTrue();
-	}
+        assertThat(ttiEnabledCacheConfiguration).isNotNull();
+        assertThat(ttiEnabledCacheConfiguration).isNotSameAs(cacheConfiguration);
+        assertThat(ttiEnabledCacheConfiguration.isTimeToIdleEnabled()).isTrue();
+    }
 
-	private static class DomainType {
+    private static class DomainType {}
 
-	}
+    static class DomainTypeConverter implements Converter<DomainType, String> {
 
-	static class DomainTypeConverter implements Converter<DomainType, String> {
-
-		@Nullable
-		@Override
-		public String convert(DomainType source) {
-			return null;
-		}
-	}
+        @Nullable
+        @Override
+        public String convert(DomainType source) {
+            return null;
+        }
+    }
 }

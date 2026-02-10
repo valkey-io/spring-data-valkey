@@ -22,11 +22,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation that indicates that the content of a resource should be injected. Supported
- * on parameters of type:
+ * Annotation that indicates that the content of a resource should be injected. Supported on
+ * parameters of type:
  *
  * <ul>
- * <li>{@link String}</li>
+ *   <li>{@link String}
  * </ul>
  *
  * @author Andy Wilkinson
@@ -35,10 +35,10 @@ import java.lang.annotation.Target;
 @Target(ElementType.PARAMETER)
 public @interface ResourceContent {
 
-	/**
-	 * The name of the resource whose content should be injected.
-	 * @return the resource name
-	 */
-	String value();
-
+    /**
+     * The name of the resource whose content should be injected.
+     *
+     * @return the resource name
+     */
+    String value();
 }

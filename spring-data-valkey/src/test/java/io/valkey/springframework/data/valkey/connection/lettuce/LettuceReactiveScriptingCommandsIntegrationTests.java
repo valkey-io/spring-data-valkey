@@ -17,139 +17,175 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import static org.assertj.core.api.Assumptions.*;
 
-import reactor.test.StepVerifier;
-
-import java.nio.ByteBuffer;
-import java.util.Arrays;
-
 import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.connection.ReturnType;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.nio.ByteBuffer;
+import java.util.Arrays;
+import reactor.test.StepVerifier;
 
 /**
  * @author Mark Paluch
  * @author Christoph Strobl
  */
-public class LettuceReactiveScriptingCommandsIntegrationTests extends LettuceReactiveCommandsTestSupport {
+public class LettuceReactiveScriptingCommandsIntegrationTests
+        extends LettuceReactiveCommandsTestSupport {
 
-	public LettuceReactiveScriptingCommandsIntegrationTests(Fixture fixture) {
-		super(fixture);
-	}
+    public LettuceReactiveScriptingCommandsIntegrationTests(Fixture fixture) {
+        super(fixture);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683
-	void scriptExistsShouldReturnState() {
+    @ParameterizedValkeyTest // DATAREDIS-683
+    void scriptExistsShouldReturnState() {
 
-		assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
+        assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
 
-		String sha1 = nativeCommands.scriptLoad("return KEYS[1]");
+        String sha1 = nativeCommands.scriptLoad("return KEYS[1]");
 
-		connection.scriptingCommands().scriptExists(Arrays.asList("foo", sha1)).as(StepVerifier::create) //
-				.expectNext(false) //
-				.expectNext(true) //
-				.verifyComplete();
-	}
+        connection
+                .scriptingCommands()
+                .scriptExists(Arrays.asList("foo", sha1))
+                .as(StepVerifier::create) //
+                .expectNext(false) //
+                .expectNext(true) //
+                .verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683
-	void scriptFlushShouldRemoveScripts() {
+    @ParameterizedValkeyTest // DATAREDIS-683
+    void scriptFlushShouldRemoveScripts() {
 
-		assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
+        assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
 
-		String sha1 = nativeCommands.scriptLoad("return KEYS[1]");
+        String sha1 = nativeCommands.scriptLoad("return KEYS[1]");
 
-		connection.scriptingCommands().scriptExists(sha1).as(StepVerifier::create) //
-				.expectNext(true) //
-				.verifyComplete();
+        connection
+                .scriptingCommands()
+                .scriptExists(sha1)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .verifyComplete();
 
-		connection.scriptingCommands().scriptFlush().as(StepVerifier::create) //
-				.expectNext("OK") //
-				.verifyComplete();
+        connection
+                .scriptingCommands()
+                .scriptFlush()
+                .as(StepVerifier::create) //
+                .expectNext("OK") //
+                .verifyComplete();
 
-		connection.scriptingCommands().scriptExists(sha1).as(StepVerifier::create) //
-				.expectNext(false) //
-				.verifyComplete();
-	}
+        connection
+                .scriptingCommands()
+                .scriptExists(sha1)
+                .as(StepVerifier::create) //
+                .expectNext(false) //
+                .verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683
-	void evalShaShouldReturnKey() {
+    @ParameterizedValkeyTest // DATAREDIS-683
+    void evalShaShouldReturnKey() {
 
-		assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
+        assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
 
-		String sha1 = nativeCommands.scriptLoad("return KEYS[1]");
+        String sha1 = nativeCommands.scriptLoad("return KEYS[1]");
 
-		connection.scriptingCommands()
-				.evalSha(sha1, ReturnType.VALUE, 2, SAME_SLOT_KEY_1_BBUFFER.duplicate(), SAME_SLOT_KEY_2_BBUFFER.duplicate())
-				.as(StepVerifier::create) //
-				.expectNext(SAME_SLOT_KEY_1_BBUFFER) //
-				.verifyComplete();
-	}
+        connection
+                .scriptingCommands()
+                .evalSha(
+                        sha1,
+                        ReturnType.VALUE,
+                        2,
+                        SAME_SLOT_KEY_1_BBUFFER.duplicate(),
+                        SAME_SLOT_KEY_2_BBUFFER.duplicate())
+                .as(StepVerifier::create) //
+                .expectNext(SAME_SLOT_KEY_1_BBUFFER) //
+                .verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683, DATAREDIS-711
-	void evalShaShouldReturnMulti() {
+    @ParameterizedValkeyTest // DATAREDIS-683, DATAREDIS-711
+    void evalShaShouldReturnMulti() {
 
-		assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
+        assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
 
-		String sha1 = nativeCommands.scriptLoad("return {KEYS[1],ARGV[1]}");
+        String sha1 = nativeCommands.scriptLoad("return {KEYS[1],ARGV[1]}");
 
-		connection.scriptingCommands()
-				.evalSha(sha1, ReturnType.MULTI, 1, SAME_SLOT_KEY_1_BBUFFER.duplicate(), SAME_SLOT_KEY_2_BBUFFER.duplicate())
-				.as(StepVerifier::create) //
-				.expectNext(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER)) //
-				.verifyComplete();
-	}
+        connection
+                .scriptingCommands()
+                .evalSha(
+                        sha1,
+                        ReturnType.MULTI,
+                        1,
+                        SAME_SLOT_KEY_1_BBUFFER.duplicate(),
+                        SAME_SLOT_KEY_2_BBUFFER.duplicate())
+                .as(StepVerifier::create) //
+                .expectNext(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER)) //
+                .verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683
-	void evalShaShouldFail() {
+    @ParameterizedValkeyTest // DATAREDIS-683
+    void evalShaShouldFail() {
 
-		assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
+        assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
 
-		connection.scriptingCommands().evalSha("foo", ReturnType.VALUE, 1, SAME_SLOT_KEY_1_BBUFFER.duplicate())
-				.as(StepVerifier::create) //
-				.expectError(ValkeySystemException.class) //
-				.verify();
-	}
+        connection
+                .scriptingCommands()
+                .evalSha("foo", ReturnType.VALUE, 1, SAME_SLOT_KEY_1_BBUFFER.duplicate())
+                .as(StepVerifier::create) //
+                .expectError(ValkeySystemException.class) //
+                .verify();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683
-	void evalShouldReturnStatus() {
+    @ParameterizedValkeyTest // DATAREDIS-683
+    void evalShouldReturnStatus() {
 
-		ByteBuffer script = wrap("return redis.call('set','%s','ghk')".formatted(SAME_SLOT_KEY_1));
+        ByteBuffer script = wrap("return redis.call('set','%s','ghk')".formatted(SAME_SLOT_KEY_1));
 
-		connection.scriptingCommands().eval(script, ReturnType.STATUS, 1, SAME_SLOT_KEY_1_BBUFFER.duplicate())
-				.as(StepVerifier::create) //
-				.expectNext("OK") //
-				.verifyComplete();
-	}
+        connection
+                .scriptingCommands()
+                .eval(script, ReturnType.STATUS, 1, SAME_SLOT_KEY_1_BBUFFER.duplicate())
+                .as(StepVerifier::create) //
+                .expectNext("OK") //
+                .verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683
-	void evalShouldReturnBooleanFalse() {
+    @ParameterizedValkeyTest // DATAREDIS-683
+    void evalShouldReturnBooleanFalse() {
 
-		ByteBuffer script = wrap("return false");
+        ByteBuffer script = wrap("return false");
 
-		connection.scriptingCommands().eval(script, ReturnType.BOOLEAN, 0).as(StepVerifier::create) //
-				.expectNext(false) //
-				.verifyComplete();
-	}
+        connection
+                .scriptingCommands()
+                .eval(script, ReturnType.BOOLEAN, 0)
+                .as(StepVerifier::create) //
+                .expectNext(false) //
+                .verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683, DATAREDIS-711
-	void evalShouldReturnMultiNumbers() {
+    @ParameterizedValkeyTest // DATAREDIS-683, DATAREDIS-711
+    void evalShouldReturnMultiNumbers() {
 
-		ByteBuffer script = wrap("return {1,2}");
+        ByteBuffer script = wrap("return {1,2}");
 
-		connection.scriptingCommands().eval(script, ReturnType.MULTI, 0).as(StepVerifier::create) //
-				.expectNext(Arrays.asList(1L, 2L)) //
-				.verifyComplete();
-	}
+        connection
+                .scriptingCommands()
+                .eval(script, ReturnType.MULTI, 0)
+                .as(StepVerifier::create) //
+                .expectNext(Arrays.asList(1L, 2L)) //
+                .verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-683
-	void evalShouldFailWithScriptError() {
+    @ParameterizedValkeyTest // DATAREDIS-683
+    void evalShouldFailWithScriptError() {
 
-		ByteBuffer script = wrap("return {1,2");
+        ByteBuffer script = wrap("return {1,2");
 
-		connection.scriptingCommands().eval(script, ReturnType.MULTI, 0).as(StepVerifier::create) //
-				.expectError(ValkeySystemException.class) //
-				.verify();
-	}
+        connection
+                .scriptingCommands()
+                .eval(script, ReturnType.MULTI, 0)
+                .as(StepVerifier::create) //
+                .expectError(ValkeySystemException.class) //
+                .verify();
+    }
 
-	private static ByteBuffer wrap(String content) {
-		return ByteBuffer.wrap(content.getBytes());
-	}
+    private static ByteBuffer wrap(String content) {
+        return ByteBuffer.wrap(content.getBytes());
+    }
 }

@@ -16,18 +16,18 @@
 package io.valkey.springframework.data.valkey.connection;
 
 /**
- * {@link ClusterTopologyProvider} manages the current cluster topology and makes sure to refresh cluster information.
+ * {@link ClusterTopologyProvider} manages the current cluster topology and makes sure to refresh
+ * cluster information.
  *
  * @author Christoph Strobl
  * @since 1.7
  */
 public interface ClusterTopologyProvider {
 
-	/**
-	 * Get the current known {@link ClusterTopology}.
-	 *
-	 * @return never {@literal null}.
-	 */
-	ClusterTopology getTopology();
-
+    /**
+     * Get the current known {@link ClusterTopology}.
+     *
+     * @return never {@literal null}.
+     */
+    ClusterTopology getTopology();
 }

@@ -16,21 +16,19 @@
 
 package io.valkey.springframework.boot.actuate.autoconfigure.metrics.valkey;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.lettuce.core.metrics.MicrometerCommandLatencyRecorder;
 import io.lettuce.core.metrics.MicrometerOptions;
 import io.lettuce.core.resource.ClientResources;
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.boot.actuate.autoconfigure.metrics.test.MetricsRun;
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
+import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
-import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link ValkeyLettuceMetricsAutoConfiguration}.
@@ -39,70 +37,83 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ValkeyLettuceMetricsAutoConfigurationTests {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyLettuceMetricsAutoConfiguration.class));
+    private final ApplicationContextRunner contextRunner =
+            new ApplicationContextRunner()
+                    .withConfiguration(AutoConfigurations.of(ValkeyLettuceMetricsAutoConfiguration.class));
 
-	@Test
-	void whenThereIsAMeterRegistryThenCommandLatencyRecorderIsAdded() {
-		this.contextRunner.with(MetricsRun.simple())
-			.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
-			.withPropertyValues("spring.data.valkey.client-type=lettuce")
-			.run((context) -> {
-				ClientResources clientResources = context.getBean(LettuceConnectionFactory.class).getClientResources();
-				assertThat(clientResources.commandLatencyRecorder())
-					.isInstanceOf(MicrometerCommandLatencyRecorder.class);
-			});
-	}
+    @Test
+    void whenThereIsAMeterRegistryThenCommandLatencyRecorderIsAdded() {
+        this.contextRunner
+                .with(MetricsRun.simple())
+                .withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
+                .withPropertyValues("spring.data.valkey.client-type=lettuce")
+                .run(
+                        (context) -> {
+                            ClientResources clientResources =
+                                    context.getBean(LettuceConnectionFactory.class).getClientResources();
+                            assertThat(clientResources.commandLatencyRecorder())
+                                    .isInstanceOf(MicrometerCommandLatencyRecorder.class);
+                        });
+    }
 
-	@Test
-	void autoConfiguredMicrometerOptionsUsesLettucesDefaults() {
-		this.contextRunner.with(MetricsRun.simple())
-			.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
-			.withPropertyValues("spring.data.valkey.client-type=lettuce")
-			.run((context) -> {
-				MicrometerOptions micrometerOptions = context.getBean(MicrometerOptions.class);
-				assertThat(micrometerOptions.isEnabled()).isTrue();
-				assertThat(micrometerOptions.isHistogram()).isFalse();
-				assertThat(micrometerOptions.localDistinction()).isFalse();
-				assertThat(micrometerOptions.maxLatency()).isEqualTo(MicrometerOptions.DEFAULT_MAX_LATENCY);
-				assertThat(micrometerOptions.minLatency()).isEqualTo(MicrometerOptions.DEFAULT_MIN_LATENCY);
-			});
-	}
+    @Test
+    void autoConfiguredMicrometerOptionsUsesLettucesDefaults() {
+        this.contextRunner
+                .with(MetricsRun.simple())
+                .withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
+                .withPropertyValues("spring.data.valkey.client-type=lettuce")
+                .run(
+                        (context) -> {
+                            MicrometerOptions micrometerOptions = context.getBean(MicrometerOptions.class);
+                            assertThat(micrometerOptions.isEnabled()).isTrue();
+                            assertThat(micrometerOptions.isHistogram()).isFalse();
+                            assertThat(micrometerOptions.localDistinction()).isFalse();
+                            assertThat(micrometerOptions.maxLatency())
+                                    .isEqualTo(MicrometerOptions.DEFAULT_MAX_LATENCY);
+                            assertThat(micrometerOptions.minLatency())
+                                    .isEqualTo(MicrometerOptions.DEFAULT_MIN_LATENCY);
+                        });
+    }
 
-	@Test
-	void whenUserDefinesAMicrometerOptionsBeanThenCommandLatencyRecorderUsesIt() {
-		this.contextRunner.with(MetricsRun.simple())
-			.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
-			.withUserConfiguration(CustomMicrometerOptionsConfiguration.class)
-			.withPropertyValues("spring.data.valkey.client-type=lettuce")
-			.run((context) -> {
-				ClientResources clientResources = context.getBean(LettuceConnectionFactory.class).getClientResources();
-				assertThat(clientResources.commandLatencyRecorder())
-					.isInstanceOf(MicrometerCommandLatencyRecorder.class);
-				assertThat(clientResources.commandLatencyRecorder()).hasFieldOrPropertyWithValue("options",
-						context.getBean("customMicrometerOptions"));
-			});
-	}
+    @Test
+    void whenUserDefinesAMicrometerOptionsBeanThenCommandLatencyRecorderUsesIt() {
+        this.contextRunner
+                .with(MetricsRun.simple())
+                .withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
+                .withUserConfiguration(CustomMicrometerOptionsConfiguration.class)
+                .withPropertyValues("spring.data.valkey.client-type=lettuce")
+                .run(
+                        (context) -> {
+                            ClientResources clientResources =
+                                    context.getBean(LettuceConnectionFactory.class).getClientResources();
+                            assertThat(clientResources.commandLatencyRecorder())
+                                    .isInstanceOf(MicrometerCommandLatencyRecorder.class);
+                            assertThat(clientResources.commandLatencyRecorder())
+                                    .hasFieldOrPropertyWithValue(
+                                            "options", context.getBean("customMicrometerOptions"));
+                        });
+    }
 
-	@Test
-	void whenThereIsNoMeterRegistryThenClientResourcesCustomizationBacksOff() {
-		this.contextRunner.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
-			.withPropertyValues("spring.data.valkey.client-type=lettuce")
-			.run((context) -> {
-			ClientResources clientResources = context.getBean(LettuceConnectionFactory.class).getClientResources();
-			assertThat(clientResources.commandLatencyRecorder())
-				.isNotInstanceOf(MicrometerCommandLatencyRecorder.class);
-		});
-	}
+    @Test
+    void whenThereIsNoMeterRegistryThenClientResourcesCustomizationBacksOff() {
+        this.contextRunner
+                .withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
+                .withPropertyValues("spring.data.valkey.client-type=lettuce")
+                .run(
+                        (context) -> {
+                            ClientResources clientResources =
+                                    context.getBean(LettuceConnectionFactory.class).getClientResources();
+                            assertThat(clientResources.commandLatencyRecorder())
+                                    .isNotInstanceOf(MicrometerCommandLatencyRecorder.class);
+                        });
+    }
 
-	@Configuration(proxyBeanMethods = false)
-	static class CustomMicrometerOptionsConfiguration {
+    @Configuration(proxyBeanMethods = false)
+    static class CustomMicrometerOptionsConfiguration {
 
-		@Bean
-		MicrometerOptions customMicrometerOptions() {
-			return MicrometerOptions.create();
-		}
-
-	}
-
+        @Bean
+        MicrometerOptions customMicrometerOptions() {
+            return MicrometerOptions.create();
+        }
+    }
 }

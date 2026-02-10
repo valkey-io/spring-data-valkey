@@ -17,21 +17,19 @@ package io.valkey.springframework.data.valkey.repository;
 
 import static io.valkey.springframework.data.valkey.connection.ClusterTestVariables.*;
 
-import java.util.Arrays;
-import java.util.List;
-
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.FilterType;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.repository.configuration.EnableValkeyRepositories;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
+import java.util.Arrays;
+import java.util.List;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -44,31 +42,42 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @EnabledOnValkeyClusterAvailable
 class ValkeyRepositoryClusterIntegrationTests extends ValkeyRepositoryIntegrationTestBase {
 
-	static final List<String> CLUSTER_NODES = Arrays.asList(CLUSTER_NODE_1.asString(), CLUSTER_NODE_2.asString(),
-			CLUSTER_NODE_3.asString());
+    static final List<String> CLUSTER_NODES =
+            Arrays.asList(
+                    CLUSTER_NODE_1.asString(), CLUSTER_NODE_2.asString(), CLUSTER_NODE_3.asString());
 
-	@Configuration
-	@EnableValkeyRepositories(considerNestedRepositories = true, indexConfiguration = MyIndexConfiguration.class,
-			keyspaceConfiguration = MyKeyspaceConfiguration.class,
-			includeFilters = { @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
-					classes = { PersonRepository.class, CityRepository.class, ImmutableObjectRepository.class, UserRepository.class }) })
-	static class Config {
+    @Configuration
+    @EnableValkeyRepositories(
+            considerNestedRepositories = true,
+            indexConfiguration = MyIndexConfiguration.class,
+            keyspaceConfiguration = MyKeyspaceConfiguration.class,
+            includeFilters = {
+                @ComponentScan.Filter(
+                        type = FilterType.ASSIGNABLE_TYPE,
+                        classes = {
+                            PersonRepository.class,
+                            CityRepository.class,
+                            ImmutableObjectRepository.class,
+                            UserRepository.class
+                        })
+            })
+    static class Config {
 
-		@Bean
-		ValkeyTemplate<?, ?> valkeyTemplate(ValkeyConnectionFactory connectionFactory) {
+        @Bean
+        ValkeyTemplate<?, ?> valkeyTemplate(ValkeyConnectionFactory connectionFactory) {
 
-			ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
+            ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
 
-			template.setConnectionFactory(connectionFactory);
+            template.setConnectionFactory(connectionFactory);
 
-			return template;
-		}
+            return template;
+        }
 
-		@Bean
-		ValkeyConnectionFactory connectionFactory() {
-			ValkeyClusterConfiguration clusterConfig = new ValkeyClusterConfiguration(CLUSTER_NODES);
-			JedisConnectionFactory connectionFactory = new JedisConnectionFactory(clusterConfig);
-			return connectionFactory;
-		}
-	}
+        @Bean
+        ValkeyConnectionFactory connectionFactory() {
+            ValkeyClusterConfiguration clusterConfig = new ValkeyClusterConfiguration(CLUSTER_NODES);
+            JedisConnectionFactory connectionFactory = new JedisConnectionFactory(clusterConfig);
+            return connectionFactory;
+        }
+    }
 }

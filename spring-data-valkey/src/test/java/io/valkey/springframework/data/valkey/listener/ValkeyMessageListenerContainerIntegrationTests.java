@@ -18,23 +18,11 @@ package io.valkey.springframework.data.valkey.listener;
 import static org.assertj.core.api.Assertions.*;
 import static org.awaitility.Awaitility.*;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.hamcrest.Matchers;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-
 import io.valkey.springframework.data.valkey.connection.Message;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
+import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
@@ -44,6 +32,16 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.Va
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import org.hamcrest.Matchers;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.lang.Nullable;
 
 /**
@@ -54,312 +52,315 @@ import org.springframework.lang.Nullable;
 @MethodSource("testParams")
 class ValkeyMessageListenerContainerIntegrationTests {
 
-	private ValkeyConnectionFactory connectionFactory;
-	private ValkeyMessageListenerContainer container;
+    private ValkeyConnectionFactory connectionFactory;
+    private ValkeyMessageListenerContainer container;
+
+    public ValkeyMessageListenerContainerIntegrationTests(ValkeyConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
+
+    @BeforeEach
+    void setUp() {
+
+        container = new ValkeyMessageListenerContainer();
+        container.setRecoveryInterval(100);
+        container.setConnectionFactory(connectionFactory);
+        container.setBeanName("container");
+        container.afterPropertiesSet();
+    }
 
-	public ValkeyMessageListenerContainerIntegrationTests(ValkeyConnectionFactory connectionFactory) {
-		this.connectionFactory = connectionFactory;
-	}
+    public static Collection<Object[]> testParams() {
 
-	@BeforeEach
-	void setUp() {
+        // Jedis
+        JedisConnectionFactory jedisConnFactory =
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		container = new ValkeyMessageListenerContainer();
-		container.setRecoveryInterval(100);
-		container.setConnectionFactory(connectionFactory);
-		container.setBeanName("container");
-		container.afterPropertiesSet();
-	}
+        // Lettuce
+        LettuceConnectionFactory lettuceConnFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-	public static Collection<Object[]> testParams() {
+        // Valkey-GLIDE
+        ValkeyGlideConnectionFactory glideConnFactory =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+
+        return Arrays.asList(
+                new Object[][] {{jedisConnFactory}, {lettuceConnFactory}, {glideConnFactory}});
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        container.destroy();
+    }
+
+    @ParameterizedValkeyTest
+    void notifiesChannelSubscriptionState() throws Exception {
+
+        AtomicReference<String> onSubscribe = new AtomicReference<>();
+        AtomicReference<String> onUnsubscribe = new AtomicReference<>();
+        CompletableFuture<Void> subscribe = new CompletableFuture<>();
+        CompletableFuture<Void> unsubscribe = new CompletableFuture<>();
+
+        CompositeListener listener =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {}
+
+                    @Override
+                    public void onChannelSubscribed(byte[] channel, long count) {
+                        onSubscribe.set(new String(channel));
+                        subscribe.complete(null);
+                    }
+
+                    @Override
+                    public void onChannelUnsubscribed(byte[] channel, long count) {
+                        onUnsubscribe.set(new String(channel));
+                        unsubscribe.complete(null);
+                    }
+                };
+
+        container.addMessageListener(listener, new ChannelTopic("a"));
+        container.start();
 
-		// Jedis
-		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        subscribe.get(10, TimeUnit.SECONDS);
+
+        container.destroy();
 
-		// Lettuce
-		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        unsubscribe.get(10, TimeUnit.SECONDS);
+
+        assertThat(onSubscribe).hasValue("a");
+        assertThat(onUnsubscribe).hasValue("a");
+    }
+
+    @ParameterizedValkeyTest
+    void notifiesPatternSubscriptionState() throws Exception {
+
+        AtomicReference<String> onPsubscribe = new AtomicReference<>();
+        AtomicReference<String> onPunsubscribe = new AtomicReference<>();
+        CompletableFuture<Void> psubscribe = new CompletableFuture<>();
+        CompletableFuture<Void> punsubscribe = new CompletableFuture<>();
+
+        CompositeListener listener =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {}
+
+                    @Override
+                    public void onPatternSubscribed(byte[] pattern, long count) {
+                        onPsubscribe.set(new String(pattern));
+                        psubscribe.complete(null);
+                    }
+
+                    @Override
+                    public void onPatternUnsubscribed(byte[] pattern, long count) {
+                        onPunsubscribe.set(new String(pattern));
+                        punsubscribe.complete(null);
+                    }
+                };
+
+        container.addMessageListener(listener, new PatternTopic("a"));
+        container.start();
+
+        psubscribe.get(10, TimeUnit.SECONDS);
+
+        container.destroy();
+
+        punsubscribe.get(10, TimeUnit.SECONDS);
+
+        assertThat(onPsubscribe).hasValue("a");
+        assertThat(onPunsubscribe).hasValue("a");
+    }
+
+    @ParameterizedValkeyTest
+    void repeatedSubscribeShouldNotifyOnlyOnce() throws Exception {
 
+        AtomicInteger subscriptions1 = new AtomicInteger();
+        AtomicInteger subscriptions2 = new AtomicInteger();
+        CountDownLatch received = new CountDownLatch(2);
 
-		// Valkey-GLIDE
-		ValkeyGlideConnectionFactory glideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        CompositeListener listener1 =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {
+                        received.countDown();
+                    }
 
-		return Arrays.asList(new Object[][] { { jedisConnFactory }, { lettuceConnFactory } , { glideConnFactory} });
-	}
-
-	@AfterEach
-	void tearDown() throws Exception {
-		container.destroy();
-	}
-
-	@ParameterizedValkeyTest
-	void notifiesChannelSubscriptionState() throws Exception {
-
-		AtomicReference<String> onSubscribe = new AtomicReference<>();
-		AtomicReference<String> onUnsubscribe = new AtomicReference<>();
-		CompletableFuture<Void> subscribe = new CompletableFuture<>();
-		CompletableFuture<Void> unsubscribe = new CompletableFuture<>();
-
-		CompositeListener listener = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-
-			}
-
-			@Override
-			public void onChannelSubscribed(byte[] channel, long count) {
-				onSubscribe.set(new String(channel));
-				subscribe.complete(null);
-			}
-
-			@Override
-			public void onChannelUnsubscribed(byte[] channel, long count) {
-				onUnsubscribe.set(new String(channel));
-				unsubscribe.complete(null);
-			}
-		};
-
-		container.addMessageListener(listener, new ChannelTopic("a"));
-		container.start();
-
-		subscribe.get(10, TimeUnit.SECONDS);
-
-		container.destroy();
-
-		unsubscribe.get(10, TimeUnit.SECONDS);
-
-		assertThat(onSubscribe).hasValue("a");
-		assertThat(onUnsubscribe).hasValue("a");
-	}
-
-	@ParameterizedValkeyTest
-	void notifiesPatternSubscriptionState() throws Exception {
-
-		AtomicReference<String> onPsubscribe = new AtomicReference<>();
-		AtomicReference<String> onPunsubscribe = new AtomicReference<>();
-		CompletableFuture<Void> psubscribe = new CompletableFuture<>();
-		CompletableFuture<Void> punsubscribe = new CompletableFuture<>();
-
-		CompositeListener listener = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-
-			}
-
-			@Override
-			public void onPatternSubscribed(byte[] pattern, long count) {
-				onPsubscribe.set(new String(pattern));
-				psubscribe.complete(null);
-			}
-
-			@Override
-			public void onPatternUnsubscribed(byte[] pattern, long count) {
-				onPunsubscribe.set(new String(pattern));
-				punsubscribe.complete(null);
-			}
-		};
-
-		container.addMessageListener(listener, new PatternTopic("a"));
-		container.start();
-
-		psubscribe.get(10, TimeUnit.SECONDS);
-
-		container.destroy();
-
-		punsubscribe.get(10, TimeUnit.SECONDS);
-
-		assertThat(onPsubscribe).hasValue("a");
-		assertThat(onPunsubscribe).hasValue("a");
-	}
-
-	@ParameterizedValkeyTest
-	void repeatedSubscribeShouldNotifyOnlyOnce() throws Exception {
-
-		AtomicInteger subscriptions1 = new AtomicInteger();
-		AtomicInteger subscriptions2 = new AtomicInteger();
-		CountDownLatch received = new CountDownLatch(2);
-
-		CompositeListener listener1 = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-				received.countDown();
-			}
-
-			@Override
-			public void onPatternSubscribed(byte[] pattern, long count) {
-				subscriptions1.incrementAndGet();
-			}
-		};
-
-		CompositeListener listener2 = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-				received.countDown();
-			}
-
-			@Override
-			public void onPatternSubscribed(byte[] pattern, long count) {
-				subscriptions2.incrementAndGet();
-			}
-		};
-
-		container.addMessageListener(listener1, new PatternTopic("a"));
-		container.addMessageListener(listener2, new PatternTopic("a"));
-
-		container.start();
-
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
-			connection.publish("a".getBytes(), "hello".getBytes());
-		}
-
-		received.await(2, TimeUnit.SECONDS);
-		container.destroy();
-
-		await().until(() -> subscriptions1.get() > 0 || subscriptions2.get() > 0);
-
-		assertThat(subscriptions1.get() + subscriptions2.get()).isGreaterThan(0);
-	}
-
-	@ParameterizedValkeyTest // GH-964
-	void subscribeAfterStart() throws Exception {
-
-		AtomicInteger subscriptions1 = new AtomicInteger();
-		AtomicInteger subscriptions2 = new AtomicInteger();
-		CountDownLatch received = new CountDownLatch(2);
-
-		CompositeListener listener1 = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-				received.countDown();
-			}
-
-			@Override
-			public void onPatternSubscribed(byte[] pattern, long count) {
-				subscriptions1.incrementAndGet();
-			}
-		};
-
-		CompositeListener listener2 = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-				received.countDown();
-			}
-
-			@Override
-			public void onPatternSubscribed(byte[] pattern, long count) {
-				subscriptions2.incrementAndGet();
-			}
-		};
-
-		container.start();
-
-		container.addMessageListener(listener1, new PatternTopic("a"));
-		container.addMessageListener(listener2, new PatternTopic("a"));
-
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
-			connection.publish("a".getBytes(), "hello".getBytes());
-		}
-
-		assertThat(received.await(2, TimeUnit.SECONDS)).isTrue();
-		container.destroy();
-
-		await().until(() -> subscriptions1.get() > 0 || subscriptions2.get() > 0);
-
-		assertThat(subscriptions1.get() + subscriptions2.get()).isGreaterThan(0);
-	}
-
-	@ParameterizedValkeyTest // GH-964
-	void multipleStarts() throws Exception {
-
-		AtomicInteger subscriptions = new AtomicInteger();
-		CountDownLatch received = new CountDownLatch(1);
-
-		CompositeListener listener1 = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-				received.countDown();
-			}
-
-			@Override
-			public void onPatternSubscribed(byte[] pattern, long count) {
-				subscriptions.incrementAndGet();
-			}
-		};
-
-		container.start();
-		container.addMessageListener(listener1, new PatternTopic("a"));
-		container.stop();
-		container.start();
-
-		// Listeners run on a listener executor and they can be notified later
-		await().untilAtomic(subscriptions, Matchers.is(2));
-		assertThat(subscriptions.get()).isEqualTo(2);
-
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
-			connection.publish("a".getBytes(), "hello".getBytes());
-		}
-
-		assertThat(received.await(2, TimeUnit.SECONDS)).isTrue();
-		container.destroy();
-	}
-
-	@ParameterizedValkeyTest // GH-964
-	void shouldRegisterChannelsAndTopics() throws Exception {
-
-		AtomicInteger subscriptions = new AtomicInteger();
-		CountDownLatch received = new CountDownLatch(2);
-
-		CompositeListener patternListener = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-				if (message.toString().contains("pattern")) {
-					received.countDown();
-				}
-			}
-
-			@Override
-			public void onPatternSubscribed(byte[] pattern, long count) {
-				subscriptions.incrementAndGet();
-			}
-		};
-
-		CompositeListener channelListener = new CompositeListener() {
-			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
-				if (message.toString().contains("channel")) {
-					received.countDown();
-				}
-			}
-
-			@Override
-			public void onChannelSubscribed(byte[] channel, long count) {
-				subscriptions.incrementAndGet();
-			}
-		};
-
-		container.start();
-
-		container.addMessageListener(patternListener, new PatternTopic("a-pattern-0"));
-		container.addMessageListener(patternListener, new PatternTopic("a-pattern-1"));
-		container.addMessageListener(channelListener, new ChannelTopic("a-channel-0"));
-		container.addMessageListener(channelListener, new ChannelTopic("a-channel-1"));
-
-		// Listeners run on a listener executor and they can be notified later
-		await().untilAtomic(subscriptions, Matchers.is(4));
-		assertThat(subscriptions.get()).isEqualTo(4);
-
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
-			connection.publish("a-pattern-1".getBytes(), "pattern".getBytes());
-			connection.publish("a-channel-0".getBytes(), "channel".getBytes());
-		}
-
-		assertThat(received.await(2, TimeUnit.SECONDS)).isTrue();
-		container.destroy();
-	}
-
-	interface CompositeListener extends MessageListener, SubscriptionListener {
-
-	}
+                    @Override
+                    public void onPatternSubscribed(byte[] pattern, long count) {
+                        subscriptions1.incrementAndGet();
+                    }
+                };
+
+        CompositeListener listener2 =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {
+                        received.countDown();
+                    }
+
+                    @Override
+                    public void onPatternSubscribed(byte[] pattern, long count) {
+                        subscriptions2.incrementAndGet();
+                    }
+                };
+
+        container.addMessageListener(listener1, new PatternTopic("a"));
+        container.addMessageListener(listener2, new PatternTopic("a"));
+
+        container.start();
+
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            connection.publish("a".getBytes(), "hello".getBytes());
+        }
+
+        received.await(2, TimeUnit.SECONDS);
+        container.destroy();
+
+        await().until(() -> subscriptions1.get() > 0 || subscriptions2.get() > 0);
+
+        assertThat(subscriptions1.get() + subscriptions2.get()).isGreaterThan(0);
+    }
+
+    @ParameterizedValkeyTest // GH-964
+    void subscribeAfterStart() throws Exception {
+
+        AtomicInteger subscriptions1 = new AtomicInteger();
+        AtomicInteger subscriptions2 = new AtomicInteger();
+        CountDownLatch received = new CountDownLatch(2);
+
+        CompositeListener listener1 =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {
+                        received.countDown();
+                    }
+
+                    @Override
+                    public void onPatternSubscribed(byte[] pattern, long count) {
+                        subscriptions1.incrementAndGet();
+                    }
+                };
+
+        CompositeListener listener2 =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {
+                        received.countDown();
+                    }
+
+                    @Override
+                    public void onPatternSubscribed(byte[] pattern, long count) {
+                        subscriptions2.incrementAndGet();
+                    }
+                };
+
+        container.start();
+
+        container.addMessageListener(listener1, new PatternTopic("a"));
+        container.addMessageListener(listener2, new PatternTopic("a"));
+
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            connection.publish("a".getBytes(), "hello".getBytes());
+        }
+
+        assertThat(received.await(2, TimeUnit.SECONDS)).isTrue();
+        container.destroy();
+
+        await().until(() -> subscriptions1.get() > 0 || subscriptions2.get() > 0);
+
+        assertThat(subscriptions1.get() + subscriptions2.get()).isGreaterThan(0);
+    }
+
+    @ParameterizedValkeyTest // GH-964
+    void multipleStarts() throws Exception {
+
+        AtomicInteger subscriptions = new AtomicInteger();
+        CountDownLatch received = new CountDownLatch(1);
+
+        CompositeListener listener1 =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {
+                        received.countDown();
+                    }
+
+                    @Override
+                    public void onPatternSubscribed(byte[] pattern, long count) {
+                        subscriptions.incrementAndGet();
+                    }
+                };
+
+        container.start();
+        container.addMessageListener(listener1, new PatternTopic("a"));
+        container.stop();
+        container.start();
+
+        // Listeners run on a listener executor and they can be notified later
+        await().untilAtomic(subscriptions, Matchers.is(2));
+        assertThat(subscriptions.get()).isEqualTo(2);
+
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            connection.publish("a".getBytes(), "hello".getBytes());
+        }
+
+        assertThat(received.await(2, TimeUnit.SECONDS)).isTrue();
+        container.destroy();
+    }
+
+    @ParameterizedValkeyTest // GH-964
+    void shouldRegisterChannelsAndTopics() throws Exception {
+
+        AtomicInteger subscriptions = new AtomicInteger();
+        CountDownLatch received = new CountDownLatch(2);
+
+        CompositeListener patternListener =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {
+                        if (message.toString().contains("pattern")) {
+                            received.countDown();
+                        }
+                    }
+
+                    @Override
+                    public void onPatternSubscribed(byte[] pattern, long count) {
+                        subscriptions.incrementAndGet();
+                    }
+                };
+
+        CompositeListener channelListener =
+                new CompositeListener() {
+                    @Override
+                    public void onMessage(Message message, @Nullable byte[] pattern) {
+                        if (message.toString().contains("channel")) {
+                            received.countDown();
+                        }
+                    }
+
+                    @Override
+                    public void onChannelSubscribed(byte[] channel, long count) {
+                        subscriptions.incrementAndGet();
+                    }
+                };
+
+        container.start();
+
+        container.addMessageListener(patternListener, new PatternTopic("a-pattern-0"));
+        container.addMessageListener(patternListener, new PatternTopic("a-pattern-1"));
+        container.addMessageListener(channelListener, new ChannelTopic("a-channel-0"));
+        container.addMessageListener(channelListener, new ChannelTopic("a-channel-1"));
+
+        // Listeners run on a listener executor and they can be notified later
+        await().untilAtomic(subscriptions, Matchers.is(4));
+        assertThat(subscriptions.get()).isEqualTo(4);
+
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            connection.publish("a-pattern-1".getBytes(), "pattern".getBytes());
+            connection.publish("a-channel-0".getBytes(), "channel".getBytes());
+        }
+
+        assertThat(received.await(2, TimeUnit.SECONDS)).isTrue();
+        container.destroy();
+    }
+
+    interface CompositeListener extends MessageListener, SubscriptionListener {}
 }

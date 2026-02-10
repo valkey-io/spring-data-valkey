@@ -24,13 +24,13 @@ import java.lang.annotation.Target;
 import java.nio.file.Path;
 
 /**
- * Annotation that indicates that the path of a resource should be injected. Supported on
- * parameters of type:
+ * Annotation that indicates that the path of a resource should be injected. Supported on parameters
+ * of type:
  *
  * <ul>
- * <li>{@link File}</li>
- * <li>{@link Path}</li>
- * <li>{@link String}</li>
+ *   <li>{@link File}
+ *   <li>{@link Path}
+ *   <li>{@link String}
  * </ul>
  *
  * @author Andy Wilkinson
@@ -39,10 +39,10 @@ import java.nio.file.Path;
 @Target(ElementType.PARAMETER)
 public @interface ResourcePath {
 
-	/**
-	 * The name of the resource whose path should be injected.
-	 * @return the resource name
-	 */
-	String value();
-
+    /**
+     * The name of the resource whose path should be injected.
+     *
+     * @return the resource name
+     */
+    String value();
 }

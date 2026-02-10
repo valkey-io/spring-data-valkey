@@ -18,25 +18,24 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 /**
- * Integration test of {@link LettuceConnection} pipeline functionality with
- * {@link LettuceConnection.PipeliningFlushPolicy}.
+ * Integration test of {@link LettuceConnection} pipeline functionality with {@link
+ * LettuceConnection.PipeliningFlushPolicy}.
  *
  * @author Mark Paluch
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration("LettuceConnectionPipelineFlushOnEndIntegrationTests-context.xml")
-public class LettuceConnectionPipelineFlushOnEndIntegrationTests extends LettuceConnectionPipelineIntegrationTests {
+public class LettuceConnectionPipelineFlushOnEndIntegrationTests
+        extends LettuceConnectionPipelineIntegrationTests {
 
-	@Test
-	@Disabled("WATCH command is flushed during EXEC therefore we're not run commands between WATCH and EXEC")
-	@Override
-	public void testWatch() throws Exception {
-
-	}
-
+    @Test
+    @Disabled(
+            "WATCH command is flushed during EXEC therefore we're not run commands between WATCH and"
+                    + " EXEC")
+    @Override
+    public void testWatch() throws Exception {}
 }

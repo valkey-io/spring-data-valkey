@@ -15,25 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.function.Function;
-
-import org.reactivestreams.Publisher;
-
-import org.springframework.core.convert.ConversionService;
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ReactiveStreamCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.connection.stream.ByteBufferRecord;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
@@ -50,9 +35,21 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamOffset;
 import io.valkey.springframework.data.valkey.connection.stream.StreamReadOptions;
 import io.valkey.springframework.data.valkey.hash.HashMapper;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import org.reactivestreams.Publisher;
+import org.springframework.core.convert.ConversionService;
+import org.springframework.data.domain.Range;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Default implementation of {@link ReactiveStreamOperations}.
@@ -66,346 +63,369 @@ import org.springframework.util.ClassUtils;
  */
 class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperations<K, HK, HV> {
 
-	private final ReactiveValkeyTemplate<?, ?> template;
-	private final ValkeySerializationContext<K, ?> serializationContext;
-	private final StreamObjectMapper objectMapper;
+    private final ReactiveValkeyTemplate<?, ?> template;
+    private final ValkeySerializationContext<K, ?> serializationContext;
+    private final StreamObjectMapper objectMapper;
 
-	DefaultReactiveStreamOperations(ReactiveValkeyTemplate<?, ?> template,
-			ValkeySerializationContext<K, ?> serializationContext,
-			@Nullable HashMapper<? super K, ? super HK, ? super HV> hashMapper) {
+    DefaultReactiveStreamOperations(
+            ReactiveValkeyTemplate<?, ?> template,
+            ValkeySerializationContext<K, ?> serializationContext,
+            @Nullable HashMapper<? super K, ? super HK, ? super HV> hashMapper) {
 
-		this.template = template;
-		this.serializationContext = serializationContext;
-		this.objectMapper = new StreamObjectMapper(hashMapper) {
+        this.template = template;
+        this.serializationContext = serializationContext;
+        this.objectMapper =
+                new StreamObjectMapper(hashMapper) {
 
-			@Override
-			protected HashMapper<?, ?, ?> doGetHashMapper(ConversionService conversionService, Class<?> targetType) {
+                    @Override
+                    protected HashMapper<?, ?, ?> doGetHashMapper(
+                            ConversionService conversionService, Class<?> targetType) {
 
-				if (objectMapper.isSimpleType(targetType) || ClassUtils.isAssignable(ByteBuffer.class, targetType)) {
+                        if (objectMapper.isSimpleType(targetType)
+                                || ClassUtils.isAssignable(ByteBuffer.class, targetType)) {
 
-					return new HashMapper<>() {
+                            return new HashMapper<>() {
 
-						@Override
-						public Map<Object, Object> toHash(Object object) {
+                                @Override
+                                public Map<Object, Object> toHash(Object object) {
 
-							Object key = "payload";
-							Object value = object;
+                                    Object key = "payload";
+                                    Object value = object;
 
-							if (serializationContext.getHashKeySerializationPair() == null) {
-								key = key.toString().getBytes(StandardCharsets.UTF_8);
-							}
-							if (serializationContext.getHashValueSerializationPair() == null) {
-								value = conversionService.convert(value, byte[].class);
-							}
+                                    if (serializationContext.getHashKeySerializationPair() == null) {
+                                        key = key.toString().getBytes(StandardCharsets.UTF_8);
+                                    }
+                                    if (serializationContext.getHashValueSerializationPair() == null) {
+                                        value = conversionService.convert(value, byte[].class);
+                                    }
 
-							return Collections.singletonMap(key, value);
-						}
+                                    return Collections.singletonMap(key, value);
+                                }
 
-						@Override
-						public Object fromHash(Map<Object, Object> hash) {
+                                @Override
+                                public Object fromHash(Map<Object, Object> hash) {
 
-							Object value = hash.values().iterator().next();
+                                    Object value = hash.values().iterator().next();
 
-							if (ClassUtils.isAssignableValue(targetType, value)) {
-								return value;
-							}
+                                    if (ClassUtils.isAssignableValue(targetType, value)) {
+                                        return value;
+                                    }
 
-							HV deserialized = deserializeHashValue((ByteBuffer) value);
+                                    HV deserialized = deserializeHashValue((ByteBuffer) value);
 
-							if (ClassUtils.isAssignableValue(targetType, deserialized)) {
-								return value;
-							}
+                                    if (ClassUtils.isAssignableValue(targetType, deserialized)) {
+                                        return value;
+                                    }
 
-							return conversionService.convert(deserialized, targetType);
-						}
-					};
-				}
+                                    return conversionService.convert(deserialized, targetType);
+                                }
+                            };
+                        }
 
-				return super.doGetHashMapper(conversionService, targetType);
-			}
-		};
-	}
+                        return super.doGetHashMapper(conversionService, targetType);
+                    }
+                };
+    }
 
-	@Override
-	public Mono<Long> acknowledge(K key, String group, RecordId... recordIds) {
+    @Override
+    public Mono<Long> acknowledge(K key, String group, RecordId... recordIds) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.hasText(group, "Group must not be null or empty");
-		Assert.notNull(recordIds, "MessageIds must not be null");
-		Assert.notEmpty(recordIds, "MessageIds must not be empty");
+        Assert.notNull(key, "Key must not be null");
+        Assert.hasText(group, "Group must not be null or empty");
+        Assert.notNull(recordIds, "MessageIds must not be null");
+        Assert.notEmpty(recordIds, "MessageIds must not be empty");
 
-		return createMono(streamCommands -> streamCommands.xAck(rawKey(key), group, recordIds));
-	}
+        return createMono(streamCommands -> streamCommands.xAck(rawKey(key), group, recordIds));
+    }
 
-	@Override
-	public Mono<RecordId> add(Record<K, ?> record) {
+    @Override
+    public Mono<RecordId> add(Record<K, ?> record) {
 
-		Assert.notNull(record.getStream(), "Key must not be null");
-		Assert.notNull(record.getValue(), "Body must not be null");
+        Assert.notNull(record.getStream(), "Key must not be null");
+        Assert.notNull(record.getValue(), "Body must not be null");
 
-		MapRecord<K, HK, HV> input = StreamObjectMapper.toMapRecord(this, record);
+        MapRecord<K, HK, HV> input = StreamObjectMapper.toMapRecord(this, record);
 
-		return createMono(streamCommands -> streamCommands.xAdd(serializeRecord(input)));
-	}
+        return createMono(streamCommands -> streamCommands.xAdd(serializeRecord(input)));
+    }
 
-	@Override
-	public Mono<RecordId> add(Record<K, ?> record, XAddOptions xAddOptions) {
+    @Override
+    public Mono<RecordId> add(Record<K, ?> record, XAddOptions xAddOptions) {
 
-		Assert.notNull(record.getStream(), "Key must not be null");
-		Assert.notNull(record.getValue(), "Body must not be null");
-		Assert.notNull(xAddOptions, "XAddOptions must not be null");
+        Assert.notNull(record.getStream(), "Key must not be null");
+        Assert.notNull(record.getValue(), "Body must not be null");
+        Assert.notNull(xAddOptions, "XAddOptions must not be null");
 
-		MapRecord<K, HK, HV> input = StreamObjectMapper.toMapRecord(this, record);
+        MapRecord<K, HK, HV> input = StreamObjectMapper.toMapRecord(this, record);
 
-		return createMono(streamCommands -> streamCommands.xAdd(serializeRecord(input), xAddOptions));
-	}
+        return createMono(streamCommands -> streamCommands.xAdd(serializeRecord(input), xAddOptions));
+    }
 
-	@Override
-	public Flux<MapRecord<K, HK, HV>> claim(K key, String consumerGroup, String newOwner, XClaimOptions xClaimOptions) {
+    @Override
+    public Flux<MapRecord<K, HK, HV>> claim(
+            K key, String consumerGroup, String newOwner, XClaimOptions xClaimOptions) {
 
-		return createFlux(streamCommands -> streamCommands.xClaim(rawKey(key), consumerGroup, newOwner, xClaimOptions)
-				.map(this::deserializeRecord));
-	}
+        return createFlux(
+                streamCommands ->
+                        streamCommands
+                                .xClaim(rawKey(key), consumerGroup, newOwner, xClaimOptions)
+                                .map(this::deserializeRecord));
+    }
 
-	@Override
-	public Mono<Long> delete(K key, RecordId... recordIds) {
+    @Override
+    public Mono<Long> delete(K key, RecordId... recordIds) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(recordIds, "MessageIds must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(recordIds, "MessageIds must not be null");
 
-		return createMono(streamCommands -> streamCommands.xDel(rawKey(key), recordIds));
-	}
+        return createMono(streamCommands -> streamCommands.xDel(rawKey(key), recordIds));
+    }
 
-	@Override
-	public Mono<String> createGroup(K key, ReadOffset readOffset, String group) {
+    @Override
+    public Mono<String> createGroup(K key, ReadOffset readOffset, String group) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(readOffset, "ReadOffset must not be null");
-		Assert.notNull(group, "Group must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(readOffset, "ReadOffset must not be null");
+        Assert.notNull(group, "Group must not be null");
 
-		return createMono(streamCommands -> streamCommands.xGroupCreate(rawKey(key), group, readOffset, true));
-	}
+        return createMono(
+                streamCommands -> streamCommands.xGroupCreate(rawKey(key), group, readOffset, true));
+    }
 
-	@Override
-	public Mono<String> deleteConsumer(K key, Consumer consumer) {
+    @Override
+    public Mono<String> deleteConsumer(K key, Consumer consumer) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(consumer, "Consumer must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(consumer, "Consumer must not be null");
 
-		return createMono(streamCommands -> streamCommands.xGroupDelConsumer(rawKey(key), consumer));
-	}
+        return createMono(streamCommands -> streamCommands.xGroupDelConsumer(rawKey(key), consumer));
+    }
 
-	@Override
-	public Mono<String> destroyGroup(K key, String group) {
+    @Override
+    public Mono<String> destroyGroup(K key, String group) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(group, "Group must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(group, "Group must not be null");
 
-		return createMono(streamCommands -> streamCommands.xGroupDestroy(rawKey(key), group));
-	}
+        return createMono(streamCommands -> streamCommands.xGroupDestroy(rawKey(key), group));
+    }
 
-	@Override
-	public Flux<XInfoConsumer> consumers(K key, String group) {
+    @Override
+    public Flux<XInfoConsumer> consumers(K key, String group) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(group, "Group must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(group, "Group must not be null");
 
-		return createFlux(streamCommands -> streamCommands.xInfoConsumers(rawKey(key), group));
-	}
+        return createFlux(streamCommands -> streamCommands.xInfoConsumers(rawKey(key), group));
+    }
 
-	@Override
-	public Mono<XInfoStream> info(K key) {
+    @Override
+    public Mono<XInfoStream> info(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(streamCommands -> streamCommands.xInfo(rawKey(key)));
-	}
+        return createMono(streamCommands -> streamCommands.xInfo(rawKey(key)));
+    }
 
-	@Override
-	public Flux<XInfoGroup> groups(K key) {
+    @Override
+    public Flux<XInfoGroup> groups(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createFlux(streamCommands -> streamCommands.xInfoGroups(rawKey(key)));
-	}
+        return createFlux(streamCommands -> streamCommands.xInfoGroups(rawKey(key)));
+    }
 
-	@Override
-	public Mono<PendingMessages> pending(K key, String group, Range<?> range, long count) {
+    @Override
+    public Mono<PendingMessages> pending(K key, String group, Range<?> range, long count) {
 
-		ByteBuffer rawKey = rawKey(key);
+        ByteBuffer rawKey = rawKey(key);
 
-		return createMono(streamCommands -> streamCommands.xPending(rawKey, group, range, count));
-	}
+        return createMono(streamCommands -> streamCommands.xPending(rawKey, group, range, count));
+    }
 
-	@Override
-	public Mono<PendingMessages> pending(K key, Consumer consumer, Range<?> range, long count) {
+    @Override
+    public Mono<PendingMessages> pending(K key, Consumer consumer, Range<?> range, long count) {
 
-		ByteBuffer rawKey = rawKey(key);
+        ByteBuffer rawKey = rawKey(key);
 
-		return createMono(streamCommands -> streamCommands.xPending(rawKey, consumer, range, count));
-	}
+        return createMono(streamCommands -> streamCommands.xPending(rawKey, consumer, range, count));
+    }
 
-	@Override
-	public Mono<PendingMessagesSummary> pending(K key, String group) {
+    @Override
+    public Mono<PendingMessagesSummary> pending(K key, String group) {
 
-		ByteBuffer rawKey = rawKey(key);
+        ByteBuffer rawKey = rawKey(key);
 
-		return createMono(streamCommands -> streamCommands.xPending(rawKey, group));
-	}
+        return createMono(streamCommands -> streamCommands.xPending(rawKey, group));
+    }
 
-	@Override
-	public Mono<Long> size(K key) {
+    @Override
+    public Mono<Long> size(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(streamCommands -> streamCommands.xLen(rawKey(key)));
-	}
+        return createMono(streamCommands -> streamCommands.xLen(rawKey(key)));
+    }
 
-	@Override
-	public Flux<MapRecord<K, HK, HV>> range(K key, Range<String> range, Limit limit) {
+    @Override
+    public Flux<MapRecord<K, HK, HV>> range(K key, Range<String> range, Limit limit) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-		return createFlux(streamCommands ->
-				streamCommands.xRange(rawKey(key), range, limit).map(this::deserializeRecord));
-	}
+        return createFlux(
+                streamCommands ->
+                        streamCommands.xRange(rawKey(key), range, limit).map(this::deserializeRecord));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Flux<MapRecord<K, HK, HV>> read(StreamReadOptions readOptions, StreamOffset<K>... streams) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Flux<MapRecord<K, HK, HV>> read(
+            StreamReadOptions readOptions, StreamOffset<K>... streams) {
 
-		Assert.notNull(readOptions, "StreamReadOptions must not be null");
-		Assert.notNull(streams, "Streams must not be null");
+        Assert.notNull(readOptions, "StreamReadOptions must not be null");
+        Assert.notNull(streams, "Streams must not be null");
 
-		return createFlux(streamCommands -> {
+        return createFlux(
+                streamCommands -> {
+                    StreamOffset<ByteBuffer>[] streamOffsets = rawStreamOffsets(streams);
 
-			StreamOffset<ByteBuffer>[] streamOffsets = rawStreamOffsets(streams);
+                    return streamCommands.xRead(readOptions, streamOffsets).map(this::deserializeRecord);
+                });
+    }
 
-			return streamCommands.xRead(readOptions, streamOffsets).map(this::deserializeRecord);
-		});
-	}
+    @Override
+    @SuppressWarnings("unchecked")
+    public Flux<MapRecord<K, HK, HV>> read(
+            Consumer consumer, StreamReadOptions readOptions, StreamOffset<K>... streams) {
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Flux<MapRecord<K, HK, HV>> read(Consumer consumer, StreamReadOptions readOptions,
-			StreamOffset<K>... streams) {
+        Assert.notNull(consumer, "Consumer must not be null");
+        Assert.notNull(readOptions, "StreamReadOptions must not be null");
+        Assert.notNull(streams, "Streams must not be null");
 
-		Assert.notNull(consumer, "Consumer must not be null");
-		Assert.notNull(readOptions, "StreamReadOptions must not be null");
-		Assert.notNull(streams, "Streams must not be null");
+        return createFlux(
+                streamCommands -> {
+                    StreamOffset<ByteBuffer>[] streamOffsets = rawStreamOffsets(streams);
 
-		return createFlux(streamCommands -> {
+                    return streamCommands
+                            .xReadGroup(consumer, readOptions, streamOffsets)
+                            .map(this::deserializeRecord);
+                });
+    }
 
-			StreamOffset<ByteBuffer>[] streamOffsets = rawStreamOffsets(streams);
+    @Override
+    public Flux<MapRecord<K, HK, HV>> reverseRange(K key, Range<String> range, Limit limit) {
 
-			return streamCommands.xReadGroup(consumer, readOptions, streamOffsets).map(this::deserializeRecord);
-		});
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(limit, "Limit must not be null");
 
-	@Override
-	public Flux<MapRecord<K, HK, HV>> reverseRange(K key, Range<String> range, Limit limit) {
+        return createFlux(
+                streamCommands ->
+                        streamCommands.xRevRange(rawKey(key), range, limit).map(this::deserializeRecord));
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(limit, "Limit must not be null");
+    @Override
+    public Mono<Long> trim(K key, long count) {
+        return trim(key, count, false);
+    }
 
-		return createFlux(streamCommands ->
-				streamCommands.xRevRange(rawKey(key), range, limit).map(this::deserializeRecord));
-	}
+    @Override
+    public Mono<Long> trim(K key, long count, boolean approximateTrimming) {
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Mono<Long> trim(K key, long count) {
-		return trim(key, count, false);
-	}
+        return createMono(
+                streamCommands -> streamCommands.xTrim(rawKey(key), count, approximateTrimming));
+    }
 
-	@Override
-	public Mono<Long> trim(K key, long count, boolean approximateTrimming) {
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public <V> HashMapper<V, HK, HV> getHashMapper(Class<V> targetType) {
+        return objectMapper.getHashMapper(targetType);
+    }
 
-		return createMono(streamCommands -> streamCommands.xTrim(rawKey(key), count, approximateTrimming));
-	}
+    @SuppressWarnings("unchecked")
+    private StreamOffset<ByteBuffer>[] rawStreamOffsets(StreamOffset<K>[] streams) {
 
-	@Override
-	public <V> HashMapper<V, HK, HV> getHashMapper(Class<V> targetType) {
-		return objectMapper.getHashMapper(targetType);
-	}
+        return Arrays.stream(streams)
+                .map(it -> StreamOffset.create(rawKey(it.getKey()), it.getOffset()))
+                .toArray(StreamOffset[]::new);
+    }
 
-	@SuppressWarnings("unchecked")
-	private StreamOffset<ByteBuffer>[] rawStreamOffsets(StreamOffset<K>[] streams) {
+    private <T> Mono<T> createMono(Function<ReactiveStreamCommands, Publisher<T>> function) {
 
-		return Arrays.stream(streams).map(it -> StreamOffset.create(rawKey(it.getKey()), it.getOffset()))
-				.toArray(StreamOffset[]::new);
-	}
+        Assert.notNull(function, "Function must not be null");
 
-	private <T> Mono<T> createMono(Function<ReactiveStreamCommands, Publisher<T>> function) {
+        return template.doCreateMono(connection -> function.apply(connection.streamCommands()));
+    }
 
-		Assert.notNull(function, "Function must not be null");
+    private <T> Flux<T> createFlux(Function<ReactiveStreamCommands, Publisher<T>> function) {
 
-		return template.doCreateMono(connection -> function.apply(connection.streamCommands()));
-	}
+        Assert.notNull(function, "Function must not be null");
 
-	private <T> Flux<T> createFlux(Function<ReactiveStreamCommands, Publisher<T>> function) {
+        return template.doCreateFlux(connection -> function.apply(connection.streamCommands()));
+    }
 
-		Assert.notNull(function, "Function must not be null");
+    private ByteBuffer rawKey(K key) {
+        return serializationContext.getKeySerializationPair().write(key);
+    }
 
-		return template.doCreateFlux(connection -> function.apply(connection.streamCommands()));
-	}
+    private ByteBuffer rawHashKey(HK key) {
 
-	private ByteBuffer rawKey(K key) {
-		return serializationContext.getKeySerializationPair().write(key);
-	}
+        try {
+            return serializationContext.getHashKeySerializationPair().write(key);
+        } catch (IllegalStateException ignore) {
+        }
 
-	private ByteBuffer rawHashKey(HK key) {
+        return ByteBuffer.wrap(objectMapper.getConversionService().convert(key, byte[].class));
+    }
 
-		try {
-			return serializationContext.getHashKeySerializationPair().write(key);
-		} catch (IllegalStateException ignore) {
-		}
+    private ByteBuffer rawValue(HV value) {
 
-		return ByteBuffer.wrap(objectMapper.getConversionService().convert(key, byte[].class));
-	}
+        try {
+            return serializationContext.getHashValueSerializationPair().write(value);
+        } catch (IllegalStateException ignore) {
+        }
 
-	private ByteBuffer rawValue(HV value) {
+        return ByteBuffer.wrap(objectMapper.getConversionService().convert(value, byte[].class));
+    }
 
-		try {
-			return serializationContext.getHashValueSerializationPair().write(value);
-		} catch (IllegalStateException ignore) {
-		}
+    @SuppressWarnings("unchecked")
+    private HK readHashKey(ByteBuffer buffer) {
+        return (HK) serializationContext.getHashKeySerializationPair().getReader().read(buffer);
+    }
 
-		return ByteBuffer.wrap(objectMapper.getConversionService().convert(value, byte[].class));
-	}
+    private K readKey(ByteBuffer buffer) {
+        return serializationContext.getKeySerializationPair().read(buffer);
+    }
 
-	@SuppressWarnings("unchecked")
-	private HK readHashKey(ByteBuffer buffer) {
-		return (HK) serializationContext.getHashKeySerializationPair().getReader().read(buffer);
-	}
+    @SuppressWarnings("unchecked")
+    private HV deserializeHashValue(ByteBuffer buffer) {
+        return (HV) serializationContext.getHashValueSerializationPair().read(buffer);
+    }
 
-	private K readKey(ByteBuffer buffer) {
-		return serializationContext.getKeySerializationPair().read(buffer);
-	}
+    @Override
+    public MapRecord<K, HK, HV> deserializeRecord(ByteBufferRecord record) {
+        return record.map(
+                it ->
+                        it.mapEntries(this::deserializeRecordFields)
+                                .withStreamKey(readKey(record.getStream())));
+    }
 
-	@SuppressWarnings("unchecked")
-	private HV deserializeHashValue(ByteBuffer buffer) {
-		return (HV) serializationContext.getHashValueSerializationPair().read(buffer);
-	}
+    private Entry<HK, HV> deserializeRecordFields(Entry<ByteBuffer, ByteBuffer> it) {
+        return Converters.entryOf(readHashKey(it.getKey()), deserializeHashValue(it.getValue()));
+    }
 
-	@Override
-	public MapRecord<K, HK, HV> deserializeRecord(ByteBufferRecord record) {
-		return record.map(it -> it.mapEntries(this::deserializeRecordFields).withStreamKey(readKey(record.getStream())));
-	}
+    private ByteBufferRecord serializeRecord(MapRecord<K, ? extends HK, ? extends HV> record) {
+        return ByteBufferRecord.of(
+                record.map(
+                        it ->
+                                it.mapEntries(this::serializeRecordFields)
+                                        .withStreamKey(rawKey(record.getStream()))));
+    }
 
-	private Entry<HK, HV> deserializeRecordFields(Entry<ByteBuffer, ByteBuffer> it) {
-		return Converters.entryOf(readHashKey(it.getKey()), deserializeHashValue(it.getValue()));
-	}
-
-	private ByteBufferRecord serializeRecord(MapRecord<K, ? extends HK, ? extends HV> record) {
-		return ByteBufferRecord
-				.of(record.map(it -> it.mapEntries(this::serializeRecordFields).withStreamKey(rawKey(record.getStream()))));
-	}
-
-	private Entry<ByteBuffer, ByteBuffer> serializeRecordFields(Entry<? extends HK, ? extends HV> it) {
-		return Converters.entryOf(rawHashKey(it.getKey()), rawValue(it.getValue()));
-	}
+    private Entry<ByteBuffer, ByteBuffer> serializeRecordFields(
+            Entry<? extends HK, ? extends HV> it) {
+        return Converters.entryOf(rawHashKey(it.getKey()), rawValue(it.getValue()));
+    }
 }

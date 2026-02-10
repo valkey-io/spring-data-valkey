@@ -16,17 +16,16 @@
 
 package io.valkey.springframework.boot.test.autoconfigure.data.valkey;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan.Filter;
 import org.springframework.stereotype.Service;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for {@link DataValkeyTest @DataValkeyTest} with include filters.
@@ -36,31 +35,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataValkeyTest(includeFilters = @Filter(Service.class))
 class DataValkeyTestWithIncludeFilterIntegrationTests {
 
-	@Autowired
-	private ExampleRepository exampleRepository;
+    @Autowired private ExampleRepository exampleRepository;
 
-	@Autowired
-	private ExampleService service;
+    @Autowired private ExampleService service;
 
-	@Test
-	void contextLoads() {
-		PersonHash personHash = new PersonHash();
-		personHash.setDescription("Look, new @DataValkeyTest with include filters!");
-		PersonHash savedEntity = this.exampleRepository.save(personHash);
-		assertThat(savedEntity.getId()).isNotNull();
-		assertThat(savedEntity.getDescription()).isEqualTo("Look, new @DataValkeyTest with include filters!");
-		assertThat(this.service.hasRecord(savedEntity)).isTrue();
-		this.exampleRepository.deleteAll();
-	}
+    @Test
+    void contextLoads() {
+        PersonHash personHash = new PersonHash();
+        personHash.setDescription("Look, new @DataValkeyTest with include filters!");
+        PersonHash savedEntity = this.exampleRepository.save(personHash);
+        assertThat(savedEntity.getId()).isNotNull();
+        assertThat(savedEntity.getDescription())
+                .isEqualTo("Look, new @DataValkeyTest with include filters!");
+        assertThat(this.service.hasRecord(savedEntity)).isTrue();
+        this.exampleRepository.deleteAll();
+    }
 
-	@TestConfiguration(proxyBeanMethods = false)
-	static class TestConfig {
+    @TestConfiguration(proxyBeanMethods = false)
+    static class TestConfig {
 
-		@Bean
-		StringValkeyTemplate stringValkeyTemplate(ValkeyConnectionFactory connectionFactory) {
-			return new StringValkeyTemplate(connectionFactory);
-		}
-
-	}
-
+        @Bean
+        StringValkeyTemplate stringValkeyTemplate(ValkeyConnectionFactory connectionFactory) {
+            return new StringValkeyTemplate(connectionFactory);
+        }
+    }
 }

@@ -25,10 +25,10 @@ import org.springframework.dao.DataAccessResourceFailureException;
  */
 public interface Cancelable {
 
-	/**
-	 * Abort and free resources.
-	 *
-	 * @throws DataAccessResourceFailureException
-	 */
-	void cancel() throws DataAccessResourceFailureException;
+    /**
+     * Abort and free resources.
+     *
+     * @throws DataAccessResourceFailureException
+     */
+    void cancel() throws DataAccessResourceFailureException;
 }

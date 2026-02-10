@@ -17,7 +17,6 @@
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
 import java.util.List;
-
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundles;
 import org.springframework.util.Assert;
@@ -35,142 +34,145 @@ import org.springframework.util.StringUtils;
  */
 class PropertiesValkeyConnectionDetails implements ValkeyConnectionDetails {
 
-	private final ValkeyProperties properties;
+    private final ValkeyProperties properties;
 
-	private final SslBundles sslBundles;
+    private final SslBundles sslBundles;
 
-	PropertiesValkeyConnectionDetails(ValkeyProperties properties, SslBundles sslBundles) {
-		this.properties = properties;
-		this.sslBundles = sslBundles;
-	}
+    PropertiesValkeyConnectionDetails(ValkeyProperties properties, SslBundles sslBundles) {
+        this.properties = properties;
+        this.sslBundles = sslBundles;
+    }
 
-	@Override
-	public String getUsername() {
-		ValkeyUrl valkeyUrl = getValkeyUrl();
-		return (valkeyUrl != null) ? valkeyUrl.credentials().username() : this.properties.getUsername();
-	}
+    @Override
+    public String getUsername() {
+        ValkeyUrl valkeyUrl = getValkeyUrl();
+        return (valkeyUrl != null) ? valkeyUrl.credentials().username() : this.properties.getUsername();
+    }
 
-	@Override
-	public String getPassword() {
-		ValkeyUrl valkeyUrl = getValkeyUrl();
-		return (valkeyUrl != null) ? valkeyUrl.credentials().password() : this.properties.getPassword();
-	}
+    @Override
+    public String getPassword() {
+        ValkeyUrl valkeyUrl = getValkeyUrl();
+        return (valkeyUrl != null) ? valkeyUrl.credentials().password() : this.properties.getPassword();
+    }
 
-	@Override
-	public Standalone getStandalone() {
-		ValkeyUrl valkeyUrl = getValkeyUrl();
-		return (valkeyUrl != null)
-				? Standalone.of(valkeyUrl.uri().getHost(), valkeyUrl.uri().getPort(), valkeyUrl.database(), getSslBundle())
-				: Standalone.of(this.properties.getHost(), this.properties.getPort(), this.properties.getDatabase(),
-						getSslBundle());
-	}
+    @Override
+    public Standalone getStandalone() {
+        ValkeyUrl valkeyUrl = getValkeyUrl();
+        return (valkeyUrl != null)
+                ? Standalone.of(
+                        valkeyUrl.uri().getHost(),
+                        valkeyUrl.uri().getPort(),
+                        valkeyUrl.database(),
+                        getSslBundle())
+                : Standalone.of(
+                        this.properties.getHost(),
+                        this.properties.getPort(),
+                        this.properties.getDatabase(),
+                        getSslBundle());
+    }
 
-	private SslBundle getSslBundle() {
-		if (!this.properties.getSsl().isEnabled()) {
-			return null;
-		}
-		String bundleName = this.properties.getSsl().getBundle();
-		if (StringUtils.hasLength(bundleName)) {
-			Assert.notNull(this.sslBundles, "SSL bundle name has been set but no SSL bundles found in context");
-			return this.sslBundles.getBundle(bundleName);
-		}
-		return SslBundle.systemDefault();
-	}
+    private SslBundle getSslBundle() {
+        if (!this.properties.getSsl().isEnabled()) {
+            return null;
+        }
+        String bundleName = this.properties.getSsl().getBundle();
+        if (StringUtils.hasLength(bundleName)) {
+            Assert.notNull(
+                    this.sslBundles, "SSL bundle name has been set but no SSL bundles found in context");
+            return this.sslBundles.getBundle(bundleName);
+        }
+        return SslBundle.systemDefault();
+    }
 
-	@Override
-	public Sentinel getSentinel() {
-		ValkeyProperties.Sentinel sentinel = this.properties.getSentinel();
-		return (sentinel != null) ? new PropertiesSentinel(getStandalone().getDatabase(), sentinel) : null;
-	}
+    @Override
+    public Sentinel getSentinel() {
+        ValkeyProperties.Sentinel sentinel = this.properties.getSentinel();
+        return (sentinel != null)
+                ? new PropertiesSentinel(getStandalone().getDatabase(), sentinel)
+                : null;
+    }
 
-	@Override
-	public Cluster getCluster() {
-		ValkeyProperties.Cluster cluster = this.properties.getCluster();
-		return (cluster != null) ? new PropertiesCluster(cluster) : null;
-	}
+    @Override
+    public Cluster getCluster() {
+        ValkeyProperties.Cluster cluster = this.properties.getCluster();
+        return (cluster != null) ? new PropertiesCluster(cluster) : null;
+    }
 
-	private ValkeyUrl getValkeyUrl() {
-		return ValkeyUrl.of(this.properties.getUrl());
-	}
+    private ValkeyUrl getValkeyUrl() {
+        return ValkeyUrl.of(this.properties.getUrl());
+    }
 
-	private List<Node> asNodes(List<String> nodes) {
-		return nodes.stream().map(this::asNode).toList();
-	}
+    private List<Node> asNodes(List<String> nodes) {
+        return nodes.stream().map(this::asNode).toList();
+    }
 
-	private Node asNode(String node) {
-		int portSeparatorIndex = node.lastIndexOf(':');
-		String host = node.substring(0, portSeparatorIndex);
-		int port = Integer.parseInt(node.substring(portSeparatorIndex + 1));
-		return new Node(host, port);
-	}
+    private Node asNode(String node) {
+        int portSeparatorIndex = node.lastIndexOf(':');
+        String host = node.substring(0, portSeparatorIndex);
+        int port = Integer.parseInt(node.substring(portSeparatorIndex + 1));
+        return new Node(host, port);
+    }
 
-	/**
-	 * {@link Cluster} implementation backed by properties.
-	 */
-	private class PropertiesCluster implements Cluster {
+    /** {@link Cluster} implementation backed by properties. */
+    private class PropertiesCluster implements Cluster {
 
-		private final List<Node> nodes;
+        private final List<Node> nodes;
 
-		PropertiesCluster(ValkeyProperties.Cluster properties) {
-			this.nodes = asNodes(properties.getNodes());
-		}
+        PropertiesCluster(ValkeyProperties.Cluster properties) {
+            this.nodes = asNodes(properties.getNodes());
+        }
 
-		@Override
-		public List<Node> getNodes() {
-			return this.nodes;
-		}
+        @Override
+        public List<Node> getNodes() {
+            return this.nodes;
+        }
 
-		@Override
-		public SslBundle getSslBundle() {
-			return PropertiesValkeyConnectionDetails.this.getSslBundle();
-		}
+        @Override
+        public SslBundle getSslBundle() {
+            return PropertiesValkeyConnectionDetails.this.getSslBundle();
+        }
+    }
 
-	}
+    /** {@link Sentinel} implementation backed by properties. */
+    private class PropertiesSentinel implements Sentinel {
 
-	/**
-	 * {@link Sentinel} implementation backed by properties.
-	 */
-	private class PropertiesSentinel implements Sentinel {
+        private final int database;
 
-		private final int database;
+        private final ValkeyProperties.Sentinel properties;
 
-		private final ValkeyProperties.Sentinel properties;
+        PropertiesSentinel(int database, ValkeyProperties.Sentinel properties) {
+            this.database = database;
+            this.properties = properties;
+        }
 
-		PropertiesSentinel(int database, ValkeyProperties.Sentinel properties) {
-			this.database = database;
-			this.properties = properties;
-		}
+        @Override
+        public int getDatabase() {
+            return this.database;
+        }
 
-		@Override
-		public int getDatabase() {
-			return this.database;
-		}
+        @Override
+        public String getMaster() {
+            return this.properties.getMaster();
+        }
 
-		@Override
-		public String getMaster() {
-			return this.properties.getMaster();
-		}
+        @Override
+        public List<Node> getNodes() {
+            return asNodes(this.properties.getNodes());
+        }
 
-		@Override
-		public List<Node> getNodes() {
-			return asNodes(this.properties.getNodes());
-		}
+        @Override
+        public String getUsername() {
+            return this.properties.getUsername();
+        }
 
-		@Override
-		public String getUsername() {
-			return this.properties.getUsername();
-		}
+        @Override
+        public String getPassword() {
+            return this.properties.getPassword();
+        }
 
-		@Override
-		public String getPassword() {
-			return this.properties.getPassword();
-		}
-
-		@Override
-		public SslBundle getSslBundle() {
-			return PropertiesValkeyConnectionDetails.this.getSslBundle();
-		}
-
-	}
-
+        @Override
+        public SslBundle getSslBundle() {
+            return PropertiesValkeyConnectionDetails.this.getSslBundle();
+        }
+    }
 }

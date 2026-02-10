@@ -23,6 +23,4 @@ import java.util.Collection;
  * @param <E> the type of elements in this collection.
  * @author Costin Leau
  */
-public interface ValkeyCollection<E> extends ValkeyStore {
-
-}
+public interface ValkeyCollection<E> extends ValkeyStore {}

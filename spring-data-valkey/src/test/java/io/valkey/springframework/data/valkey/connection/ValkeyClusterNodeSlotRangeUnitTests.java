@@ -21,7 +21,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.IntStream;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,59 +33,57 @@ import org.junit.jupiter.api.Test;
  */
 public class ValkeyClusterNodeSlotRangeUnitTests {
 
-	@Test // GH-2525
-	public void containsFromLowerToUpperBoundSlotsOnly() {
+    @Test // GH-2525
+    public void containsFromLowerToUpperBoundSlotsOnly() {
 
-		ValkeyClusterNode.SlotRange slotRange = new ValkeyClusterNode.SlotRange(25, 75);
+        ValkeyClusterNode.SlotRange slotRange = new ValkeyClusterNode.SlotRange(25, 75);
 
-		IntStream.range(0, 100).forEach(slot ->
-			assertThat(slotRange.contains(slot)).isEqualTo(slot >= 25 && slot <= 75));
-	}
+        IntStream.range(0, 100)
+                .forEach(slot -> assertThat(slotRange.contains(slot)).isEqualTo(slot >= 25 && slot <= 75));
+    }
 
-	@Test // GH-2525
-	public void containsSpecificSlots() {
+    @Test // GH-2525
+    public void containsSpecificSlots() {
 
-		Set<Integer> slots = Set.of(1, 2, 4, 8, 16, 32, 64);
+        Set<Integer> slots = Set.of(1, 2, 4, 8, 16, 32, 64);
 
-		ValkeyClusterNode.SlotRange slotRange = new ValkeyClusterNode.SlotRange(slots);
+        ValkeyClusterNode.SlotRange slotRange = new ValkeyClusterNode.SlotRange(slots);
 
-		IntStream.range(0, 100).forEach(slot ->
-			assertThat(slotRange.contains(slot)).isEqualTo(slots.contains(slot)));
-	}
+        IntStream.range(0, 100)
+                .forEach(slot -> assertThat(slotRange.contains(slot)).isEqualTo(slots.contains(slot)));
+    }
 
-	@Test // GH-2525
-	public void emptySlotRange() {
+    @Test // GH-2525
+    public void emptySlotRange() {
 
-		ValkeyClusterNode.SlotRange slotRange = ValkeyClusterNode.SlotRange.empty();
+        ValkeyClusterNode.SlotRange slotRange = ValkeyClusterNode.SlotRange.empty();
 
-		assertThat(slotRange).isNotNull();
-		assertThat(slotRange.getSlots()).isEmpty();
-		assertThat(slotRange).hasToString("[]");
-	}
+        assertThat(slotRange).isNotNull();
+        assertThat(slotRange.getSlots()).isEmpty();
+        assertThat(slotRange).hasToString("[]");
+    }
 
-	@Test // GH-2525
-	public void slotRangeSlotsAreCorrect() {
+    @Test // GH-2525
+    public void slotRangeSlotsAreCorrect() {
 
-		assertThat(new ValkeyClusterNode.SlotRange(4, 6).getSlots())
-			.containsExactlyInAnyOrder(4, 5, 6);
+        assertThat(new ValkeyClusterNode.SlotRange(4, 6).getSlots()).containsExactlyInAnyOrder(4, 5, 6);
 
-		assertThat(new ValkeyClusterNode.SlotRange(Arrays.asList(1, 2, 3, 5, 7)).getSlots())
-			.containsExactlyInAnyOrder(1, 2, 3, 5, 7);
-	}
+        assertThat(new ValkeyClusterNode.SlotRange(Arrays.asList(1, 2, 3, 5, 7)).getSlots())
+                .containsExactlyInAnyOrder(1, 2, 3, 5, 7);
+    }
 
-	@Test // GH-2525
-	public void slotRangeSlotsArrayIsCorrectIsCorrect() {
+    @Test // GH-2525
+    public void slotRangeSlotsArrayIsCorrectIsCorrect() {
 
-		assertThat(new ValkeyClusterNode.SlotRange(4, 6).getSlotsArray())
-			.containsExactly(4, 5, 6);
+        assertThat(new ValkeyClusterNode.SlotRange(4, 6).getSlotsArray()).containsExactly(4, 5, 6);
 
-		assertThat(new ValkeyClusterNode.SlotRange(Arrays.asList(1, 2, 3, 5, 7)).getSlotsArray())
-			.containsExactly(1, 2, 3, 5, 7);
-	}
+        assertThat(new ValkeyClusterNode.SlotRange(Arrays.asList(1, 2, 3, 5, 7)).getSlotsArray())
+                .containsExactly(1, 2, 3, 5, 7);
+    }
 
-	@Test // GH-2525
-	public void toStringListsSlots() {
-		assertThat(new ValkeyClusterNode.SlotRange(List.of(1, 2, 4, 8, 16, 32, 64)))
-			.hasToString("[1, 2, 4, 8, 16, 32, 64]");
-	}
+    @Test // GH-2525
+    public void toStringListsSlots() {
+        assertThat(new ValkeyClusterNode.SlotRange(List.of(1, 2, 4, 8, 16, 32, 64)))
+                .hasToString("[1, 2, 4, 8, 16, 32, 64]");
+    }
 }

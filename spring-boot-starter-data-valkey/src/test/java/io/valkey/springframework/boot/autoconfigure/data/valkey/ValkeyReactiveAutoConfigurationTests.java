@@ -16,15 +16,13 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import io.valkey.springframework.data.valkey.core.ReactiveValkeyTemplate;
 import java.util.Map;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-import io.valkey.springframework.data.valkey.core.ReactiveValkeyTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Tests for {@link ValkeyReactiveAutoConfiguration}.
@@ -33,17 +31,21 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ValkeyReactiveAutoConfigurationTests {
 
-	// Valkey GLIDE does not support reactive, so test with Lettuce
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class, ValkeyReactiveAutoConfiguration.class))
-		.withPropertyValues("spring.data.valkey.client-type:lettuce");
+    // Valkey GLIDE does not support reactive, so test with Lettuce
+    private final ApplicationContextRunner contextRunner =
+            new ApplicationContextRunner()
+                    .withConfiguration(
+                            AutoConfigurations.of(
+                                    ValkeyAutoConfiguration.class, ValkeyReactiveAutoConfiguration.class))
+                    .withPropertyValues("spring.data.valkey.client-type:lettuce");
 
-	@Test
-	void testDefaultValkeyConfiguration() {
-		this.contextRunner.run((context) -> {
-			Map<String, ?> beans = context.getBeansOfType(ReactiveValkeyTemplate.class);
-			assertThat(beans).containsOnlyKeys("reactiveValkeyTemplate", "reactiveStringValkeyTemplate");
-		});
-	}
-
+    @Test
+    void testDefaultValkeyConfiguration() {
+        this.contextRunner.run(
+                (context) -> {
+                    Map<String, ?> beans = context.getBeansOfType(ReactiveValkeyTemplate.class);
+                    assertThat(beans)
+                            .containsOnlyKeys("reactiveValkeyTemplate", "reactiveStringValkeyTemplate");
+                });
+    }
 }

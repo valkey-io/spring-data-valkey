@@ -15,9 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.serializer;
 
-import java.nio.ByteBuffer;
-
 import io.valkey.springframework.data.valkey.util.ByteUtils;
+import java.nio.ByteBuffer;
 import org.springframework.lang.Nullable;
 
 /**
@@ -29,21 +28,20 @@ import org.springframework.lang.Nullable;
  */
 class DefaultValkeyElementReader<T> implements ValkeyElementReader<T> {
 
-	private final @Nullable ValkeySerializer<T> serializer;
+    private final @Nullable ValkeySerializer<T> serializer;
 
-	DefaultValkeyElementReader(@Nullable ValkeySerializer<T> serializer) {
-		this.serializer = serializer;
-	}
+    DefaultValkeyElementReader(@Nullable ValkeySerializer<T> serializer) {
+        this.serializer = serializer;
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public T read(ByteBuffer buffer) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public T read(ByteBuffer buffer) {
 
-		if (serializer == null) {
-			return (T) buffer;
-		}
+        if (serializer == null) {
+            return (T) buffer;
+        }
 
-		return serializer.deserialize(ByteUtils.getBytes(buffer));
-	}
-
+        return serializer.deserialize(ByteUtils.getBytes(buffer));
+    }
 }

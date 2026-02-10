@@ -18,9 +18,9 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 import redis.clients.jedis.DefaultJedisClientConfig;
 
 /**
- * Strategy interface for customizing {@link DefaultJedisClientConfig.Builder JedisClientConfig}. Any ClientConfig will
- * be used to call this interface implementation so you can set the protocol, client name, etc. after Spring has applies
- * its defaults.
+ * Strategy interface for customizing {@link DefaultJedisClientConfig.Builder JedisClientConfig}.
+ * Any ClientConfig will be used to call this interface implementation so you can set the protocol,
+ * client name, etc. after Spring has applies its defaults.
  *
  * @author Mark Paluch
  * @since 3.4
@@ -29,11 +29,10 @@ import redis.clients.jedis.DefaultJedisClientConfig;
 @FunctionalInterface
 public interface JedisClientConfigBuilderCustomizer {
 
-	/**
-	 * Customize the {@link DefaultJedisClientConfig.Builder}.
-	 *
-	 * @param builder the builder to customize.
-	 */
-	void customize(DefaultJedisClientConfig.Builder builder);
-
+    /**
+     * Customize the {@link DefaultJedisClientConfig.Builder}.
+     *
+     * @param builder the builder to customize.
+     */
+    void customize(DefaultJedisClientConfig.Builder builder);
 }

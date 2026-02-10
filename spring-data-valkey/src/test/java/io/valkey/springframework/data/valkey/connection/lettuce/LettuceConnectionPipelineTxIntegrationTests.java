@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
-
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -28,52 +27,46 @@ import org.junit.jupiter.api.Test;
  * @author Jennifer Hickey
  * @author Christoph Strobl
  */
-class LettuceConnectionPipelineTxIntegrationTests extends LettuceConnectionTransactionIntegrationTests {
+class LettuceConnectionPipelineTxIntegrationTests
+        extends LettuceConnectionTransactionIntegrationTests {
 
-	@Test
-	@Disabled("Different exception")
-	public void testEvalShaNotFound() {
-	}
+    @Test
+    @Disabled("Different exception")
+    public void testEvalShaNotFound() {}
 
-	@Test
-	@Disabled("Different exception")
-	public void testEvalReturnSingleError() {
-	}
+    @Test
+    @Disabled("Different exception")
+    public void testEvalReturnSingleError() {}
 
-	@Test
-	@Disabled("Different exception")
-	public void testRestoreBadData() {
-	}
+    @Test
+    @Disabled("Different exception")
+    public void testRestoreBadData() {}
 
-	@Test
-	@Disabled("Different exception")
-	public void testRestoreExistingKey() {
-	}
+    @Test
+    @Disabled("Different exception")
+    public void testRestoreExistingKey() {}
 
-	@Test
-	@Disabled("Different exception")
-	public void testEvalArrayScriptError() {
-	}
+    @Test
+    @Disabled("Different exception")
+    public void testEvalArrayScriptError() {}
 
-	@Test
-	@Disabled("Different exception")
-	public void testEvalShaArrayError() {
-	}
+    @Test
+    @Disabled("Different exception")
+    public void testEvalShaArrayError() {}
 
-	protected void initConnection() {
-		connection.openPipeline();
-		connection.multi();
-	}
+    protected void initConnection() {
+        connection.openPipeline();
+        connection.multi();
+    }
 
-	@SuppressWarnings("unchecked")
-	protected List<Object> getResults() {
-		assertThat(connection.exec()).isNull();
-		List<Object> pipelined = connection.closePipeline();
-		// We expect only the results of exec to be in the closed pipeline
-		assertThat(pipelined.size()).isEqualTo(1);
-		List<Object> txResults = (List<Object>) pipelined.get(0);
-		// Return exec results and this test should behave exactly like its superclass
-		return txResults;
-	}
-
+    @SuppressWarnings("unchecked")
+    protected List<Object> getResults() {
+        assertThat(connection.exec()).isNull();
+        List<Object> pipelined = connection.closePipeline();
+        // We expect only the results of exec to be in the closed pipeline
+        assertThat(pipelined.size()).isEqualTo(1);
+        List<Object> txResults = (List<Object>) pipelined.get(0);
+        // Return exec results and this test should behave exactly like its superclass
+        return txResults;
+    }
 }

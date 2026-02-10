@@ -19,70 +19,71 @@ import io.lettuce.core.event.Event;
 import io.lettuce.core.event.EventBus;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
-import reactor.core.publisher.Flux;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-
 import org.springframework.core.Ordered;
+import reactor.core.publisher.Flux;
 
 /**
- * Client-Resources suitable for testing. Every time a new {@link LettuceTestClientResources} instance is created, a
- * {@link Runtime#addShutdownHook(Thread) shutdown hook} is added to close the client resources.
+ * Client-Resources suitable for testing. Every time a new {@link LettuceTestClientResources}
+ * instance is created, a {@link Runtime#addShutdownHook(Thread) shutdown hook} is added to close
+ * the client resources.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
  */
 public class LettuceTestClientResources {
 
-	private static final ClientResources SHARED_CLIENT_RESOURCES;
+    private static final ClientResources SHARED_CLIENT_RESOURCES;
 
-	static {
+    static {
+        SHARED_CLIENT_RESOURCES = newClientResources();
+        ShutdownQueue.register(new SharedClientResources(SHARED_CLIENT_RESOURCES));
+    }
 
-		SHARED_CLIENT_RESOURCES = newClientResources();
-		ShutdownQueue.register(new SharedClientResources(SHARED_CLIENT_RESOURCES));
-	}
+    private static ClientResources newClientResources() {
 
-	private static ClientResources newClientResources() {
+        return DefaultClientResources.builder()
+                .ioThreadPoolSize(4)
+                .computationThreadPoolSize(4)
+                .eventBus(
+                        new EventBus() {
+                            @Override
+                            public Flux<Event> get() {
+                                return Flux.empty();
+                            }
 
-		return DefaultClientResources.builder().ioThreadPoolSize(4).computationThreadPoolSize(4).eventBus(new EventBus() {
-			@Override
-			public Flux<Event> get() {
-				return Flux.empty();
-			}
+                            @Override
+                            public void publish(Event event) {}
+                        })
+                .build();
+    }
 
-			@Override
-			public void publish(Event event) {
+    private LettuceTestClientResources() {}
 
-			}
-		}).build();
-	}
+    /**
+     * @return the client resources.
+     */
+    public static ClientResources getSharedClientResources() {
+        return SHARED_CLIENT_RESOURCES;
+    }
 
-	private LettuceTestClientResources() {}
+    static class SharedClientResources implements Ordered, Closeable {
+        private final ClientResources clientResources;
 
-	/**
-	 * @return the client resources.
-	 */
-	public static ClientResources getSharedClientResources() {
-		return SHARED_CLIENT_RESOURCES;
-	}
+        public SharedClientResources(ClientResources clientResources) {
+            this.clientResources = clientResources;
+        }
 
-	static class SharedClientResources implements Ordered, Closeable {
-		private final ClientResources clientResources;
+        @Override
+        public void close() throws IOException {
+            clientResources.shutdown(0, 0, TimeUnit.MILLISECONDS);
+        }
 
-		public SharedClientResources(ClientResources clientResources) {
-			this.clientResources = clientResources;
-		}
-
-		@Override
-		public void close() throws IOException {
-			clientResources.shutdown(0, 0, TimeUnit.MILLISECONDS);
-		}
-
-		@Override
-		public int getOrder() {
-			return HIGHEST_PRECEDENCE;
-		}
-	}
+        @Override
+        public int getOrder() {
+            return HIGHEST_PRECEDENCE;
+        }
+    }
 }

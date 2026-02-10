@@ -27,22 +27,22 @@ import org.springframework.lang.Nullable;
  */
 public class ValkeySubscribedConnectionException extends InvalidDataAccessApiUsageException {
 
-	/**
-	 * Constructs a new <code>ValkeySubscribedConnectionException</code> instance.
-	 *
-	 * @param msg
-	 * @param cause
-	 */
-	public ValkeySubscribedConnectionException(@Nullable String msg, @Nullable Throwable cause) {
-		super(msg, cause);
-	}
+    /**
+     * Constructs a new <code>ValkeySubscribedConnectionException</code> instance.
+     *
+     * @param msg
+     * @param cause
+     */
+    public ValkeySubscribedConnectionException(@Nullable String msg, @Nullable Throwable cause) {
+        super(msg, cause);
+    }
 
-	/**
-	 * Constructs a new <code>ValkeySubscribedConnectionException</code> instance.
-	 *
-	 * @param msg
-	 */
-	public ValkeySubscribedConnectionException(String msg) {
-		super(msg);
-	}
+    /**
+     * Constructs a new <code>ValkeySubscribedConnectionException</code> instance.
+     *
+     * @param msg
+     */
+    public ValkeySubscribedConnectionException(String msg) {
+        super(msg);
+    }
 }

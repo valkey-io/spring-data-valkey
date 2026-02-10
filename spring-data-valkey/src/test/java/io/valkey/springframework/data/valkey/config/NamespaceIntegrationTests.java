@@ -17,16 +17,10 @@ package io.valkey.springframework.data.valkey.config;
 
 import static org.assertj.core.api.Assertions.*;
 
-import jakarta.annotation.Resource;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import io.valkey.springframework.data.valkey.core.HashOperations;
-import io.valkey.springframework.data.valkey.core.StreamOperations;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
-import io.valkey.springframework.data.valkey.core.ValueOperations;
 import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 /**
@@ -37,20 +31,20 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 @SpringJUnitConfig(locations = "namespace.xml")
 class NamespaceIntegrationTests {
 
-	@Autowired private ValkeyMessageListenerContainer container;
+    @Autowired private ValkeyMessageListenerContainer container;
 
-	@Autowired private StringValkeyTemplate template;
+    @Autowired private StringValkeyTemplate template;
 
-	@Autowired private StubErrorHandler handler;
+    @Autowired private StubErrorHandler handler;
 
-	@Test
-	void testSanityTest() throws Exception {
-		assertThat(container.isRunning()).isTrue();
-	}
+    @Test
+    void testSanityTest() throws Exception {
+        assertThat(container.isRunning()).isTrue();
+    }
 
-	@Test
-	void testWithMessages() {
-		assertThat(template.convertAndSend("x1", "[X]test")).isGreaterThanOrEqualTo(1L);
-		assertThat(template.convertAndSend("z1", "[Z]test")).isGreaterThanOrEqualTo(1L);
-	}
+    @Test
+    void testWithMessages() {
+        assertThat(template.convertAndSend("x1", "[X]test")).isGreaterThanOrEqualTo(1L);
+        assertThat(template.convertAndSend("z1", "[Z]test")).isGreaterThanOrEqualTo(1L);
+    }
 }

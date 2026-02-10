@@ -15,9 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
+import io.valkey.springframework.data.valkey.connection.ReactiveSetCommands;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -26,13 +25,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
-
 import org.reactivestreams.Publisher;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.connection.ReactiveSetCommands;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Default implementation of {@link ReactiveSetOperations}.
@@ -45,392 +43,423 @@ import org.springframework.util.Assert;
  */
 class DefaultReactiveSetOperations<K, V> implements ReactiveSetOperations<K, V> {
 
-	private final ReactiveValkeyTemplate<?, ?> template;
-	private final ValkeySerializationContext<K, V> serializationContext;
+    private final ReactiveValkeyTemplate<?, ?> template;
+    private final ValkeySerializationContext<K, V> serializationContext;
 
-	DefaultReactiveSetOperations(ReactiveValkeyTemplate<?, ?> template,
-			ValkeySerializationContext<K, V> serializationContext) {
+    DefaultReactiveSetOperations(
+            ReactiveValkeyTemplate<?, ?> template,
+            ValkeySerializationContext<K, V> serializationContext) {
 
-		this.template = template;
-		this.serializationContext = serializationContext;
-	}
+        this.template = template;
+        this.serializationContext = serializationContext;
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Long> add(K key, V... values) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<Long> add(K key, V... values) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		if (values.length == 1) {
-			return createMono(setCommands -> setCommands.sAdd(rawKey(key), rawValue(values[0])));
-		}
+        if (values.length == 1) {
+            return createMono(setCommands -> setCommands.sAdd(rawKey(key), rawValue(values[0])));
+        }
 
-		return createMono(setCommands -> Flux.fromArray(values) //
-				.map(this::rawValue) //
-				.collectList() //
-				.flatMap(serialized -> setCommands.sAdd(rawKey(key), serialized)));
-	}
+        return createMono(
+                setCommands ->
+                        Flux.fromArray(values) //
+                                .map(this::rawValue) //
+                                .collectList() //
+                                .flatMap(serialized -> setCommands.sAdd(rawKey(key), serialized)));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Long> remove(K key, Object... values) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<Long> remove(K key, Object... values) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		if (values.length == 1) {
-			return createMono(setCommands -> setCommands.sRem(rawKey(key), rawValue((V) values[0])));
-		}
+        if (values.length == 1) {
+            return createMono(setCommands -> setCommands.sRem(rawKey(key), rawValue((V) values[0])));
+        }
 
-		return createMono(setCommands -> Flux.fromArray((V[]) values) //
-				.map(this::rawValue) //
-				.collectList() //
-				.flatMap(serialized -> setCommands.sRem(rawKey(key), serialized)));
-	}
+        return createMono(
+                setCommands ->
+                        Flux.fromArray((V[]) values) //
+                                .map(this::rawValue) //
+                                .collectList() //
+                                .flatMap(serialized -> setCommands.sRem(rawKey(key), serialized)));
+    }
 
-	@Override
-	public Mono<V> pop(K key) {
+    @Override
+    public Mono<V> pop(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(setCommands -> setCommands.sPop(rawKey(key)).map(this::readRequiredValue));
-	}
+        return createMono(setCommands -> setCommands.sPop(rawKey(key)).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Flux<V> pop(K key, long count) {
+    @Override
+    public Flux<V> pop(K key, long count) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createFlux(setCommands -> setCommands.sPop(rawKey(key), count).map(this::readRequiredValue));
-	}
+        return createFlux(
+                setCommands -> setCommands.sPop(rawKey(key), count).map(this::readRequiredValue));
+    }
 
-	@Override
-	public Mono<Boolean> move(K sourceKey, V value, K destKey) {
+    @Override
+    public Mono<Boolean> move(K sourceKey, V value, K destKey) {
 
-		Assert.notNull(sourceKey, "Source key must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        Assert.notNull(sourceKey, "Source key must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		return createMono(setCommands -> setCommands.sMove(rawKey(sourceKey), rawKey(destKey), rawValue(value)));
-	}
+        return createMono(
+                setCommands -> setCommands.sMove(rawKey(sourceKey), rawKey(destKey), rawValue(value)));
+    }
 
-	@Override
-	public Mono<Long> size(K key) {
+    @Override
+    public Mono<Long> size(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(setCommands -> setCommands.sCard(rawKey(key)));
-	}
+        return createMono(setCommands -> setCommands.sCard(rawKey(key)));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Boolean> isMember(K key, Object o) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<Boolean> isMember(K key, Object o) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(setCommands -> setCommands.sIsMember(rawKey(key), rawValue((V) o)));
-	}
+        return createMono(setCommands -> setCommands.sIsMember(rawKey(key), rawValue((V) o)));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public Mono<Map<Object, Boolean>> isMember(K key, Object... objects) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public Mono<Map<Object, Boolean>> isMember(K key, Object... objects) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return createMono(setCommands -> Flux.fromArray((V[]) objects) //
-				.map(this::rawValue) //
-				.collectList() //
-				.flatMap(rawValues -> setCommands.sMIsMember(rawKey(key), rawValues)) //
-				.map(result -> {
+        return createMono(
+                setCommands ->
+                        Flux.fromArray((V[]) objects) //
+                                .map(this::rawValue) //
+                                .collectList() //
+                                .flatMap(rawValues -> setCommands.sMIsMember(rawKey(key), rawValues)) //
+                                .map(
+                                        result -> {
+                                            Map<Object, Boolean> isMember = new LinkedHashMap<>(result.size());
 
-					Map<Object, Boolean> isMember = new LinkedHashMap<>(result.size());
+                                            for (int i = 0; i < objects.length; i++) {
+                                                isMember.put(objects[i], result.get(i));
+                                            }
 
-					for (int i = 0; i < objects.length; i++) {
-						isMember.put(objects[i], result.get(i));
-					}
+                                            return isMember;
+                                        }));
+    }
 
-					return isMember;
-				}));
-	}
+    @Override
+    public Flux<V> intersect(K key, K otherKey) {
 
-	@Override
-	public Flux<V> intersect(K key, K otherKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKey, "Other key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKey, "Other key must not be null");
+        return intersect(key, Collections.singleton(otherKey));
+    }
 
-		return intersect(key, Collections.singleton(otherKey));
-	}
+    @Override
+    public Flux<V> intersect(K key, Collection<K> otherKeys) {
 
-	@Override
-	public Flux<V> intersect(K key, Collection<K> otherKeys) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        return intersect(getKeys(key, otherKeys));
+    }
 
-		return intersect(getKeys(key, otherKeys));
-	}
+    @Override
+    public Flux<V> intersect(Collection<K> keys) {
 
-	@Override
-	public Flux<V> intersect(Collection<K> keys) {
+        Assert.notNull(keys, "Keys must not be null");
 
-		Assert.notNull(keys, "Keys must not be null");
+        return createFlux(
+                setCommands ->
+                        Flux.fromIterable(keys) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(setCommands::sInter) //
+                                .map(this::readRequiredValue));
+    }
 
-		return createFlux(setCommands -> Flux.fromIterable(keys) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(setCommands::sInter) //
-				.map(this::readRequiredValue));
-	}
+    @Override
+    public Mono<Long> intersectAndStore(K key, K otherKey, K destKey) {
 
-	@Override
-	public Mono<Long> intersectAndStore(K key, K otherKey, K destKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKey, "Other key must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKey, "Other key must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return intersectAndStore(key, Collections.singleton(otherKey), destKey);
+    }
 
-		return intersectAndStore(key, Collections.singleton(otherKey), destKey);
-	}
+    @Override
+    public Mono<Long> intersectAndStore(K key, Collection<K> otherKeys, K destKey) {
 
-	@Override
-	public Mono<Long> intersectAndStore(K key, Collection<K> otherKeys, K destKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return intersectAndStore(getKeys(key, otherKeys), destKey);
+    }
 
-		return intersectAndStore(getKeys(key, otherKeys), destKey);
-	}
+    @Override
+    public Mono<Long> intersectAndStore(Collection<K> keys, K destKey) {
 
-	@Override
-	public Mono<Long> intersectAndStore(Collection<K> keys, K destKey) {
+        Assert.notNull(keys, "Keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(keys, "Keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return createMono(
+                setCommands ->
+                        Flux.fromIterable(keys) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(rawKeys -> setCommands.sInterStore(rawKey(destKey), rawKeys)));
+    }
 
-		return createMono(setCommands -> Flux.fromIterable(keys) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(rawKeys -> setCommands.sInterStore(rawKey(destKey), rawKeys)));
-	}
+    @Override
+    public Flux<V> union(K key, K otherKey) {
 
-	@Override
-	public Flux<V> union(K key, K otherKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKey, "Other key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKey, "Other key must not be null");
+        return union(key, Collections.singleton(otherKey));
+    }
 
-		return union(key, Collections.singleton(otherKey));
-	}
+    @Override
+    public Flux<V> union(K key, Collection<K> otherKeys) {
 
-	@Override
-	public Flux<V> union(K key, Collection<K> otherKeys) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        return union(getKeys(key, otherKeys));
+    }
 
-		return union(getKeys(key, otherKeys));
-	}
+    @Override
+    public Flux<V> union(Collection<K> keys) {
 
-	@Override
-	public Flux<V> union(Collection<K> keys) {
+        Assert.notNull(keys, "Keys must not be null");
 
-		Assert.notNull(keys, "Keys must not be null");
+        return createFlux(
+                setCommands ->
+                        Flux.fromIterable(keys) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(setCommands::sUnion) //
+                                .map(this::readRequiredValue));
+    }
 
-		return createFlux(setCommands -> Flux.fromIterable(keys) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(setCommands::sUnion) //
-				.map(this::readRequiredValue));
-	}
+    @Override
+    public Mono<Long> unionAndStore(K key, K otherKey, K destKey) {
 
-	@Override
-	public Mono<Long> unionAndStore(K key, K otherKey, K destKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKey, "Other key must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKey, "Other key must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return unionAndStore(key, Collections.singleton(otherKey), destKey);
+    }
 
-		return unionAndStore(key, Collections.singleton(otherKey), destKey);
-	}
+    @Override
+    public Mono<Long> unionAndStore(K key, Collection<K> otherKeys, K destKey) {
 
-	@Override
-	public Mono<Long> unionAndStore(K key, Collection<K> otherKeys, K destKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return unionAndStore(getKeys(key, otherKeys), destKey);
+    }
 
-		return unionAndStore(getKeys(key, otherKeys), destKey);
-	}
+    @Override
+    public Mono<Long> unionAndStore(Collection<K> keys, K destKey) {
 
-	@Override
-	public Mono<Long> unionAndStore(Collection<K> keys, K destKey) {
+        Assert.notNull(keys, "Keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(keys, "Keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return createMono(
+                setCommands ->
+                        Flux.fromIterable(keys) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(rawKeys -> setCommands.sUnionStore(rawKey(destKey), rawKeys)));
+    }
 
-		return createMono(setCommands -> Flux.fromIterable(keys) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(rawKeys -> setCommands.sUnionStore(rawKey(destKey), rawKeys)));
-	}
+    @Override
+    public Flux<V> difference(K key, K otherKey) {
 
-	@Override
-	public Flux<V> difference(K key, K otherKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKey, "Other key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKey, "Other key must not be null");
+        return difference(key, Collections.singleton(otherKey));
+    }
 
-		return difference(key, Collections.singleton(otherKey));
-	}
+    @Override
+    public Flux<V> difference(K key, Collection<K> otherKeys) {
 
-	@Override
-	public Flux<V> difference(K key, Collection<K> otherKeys) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
+        return difference(getKeys(key, otherKeys));
+    }
 
-		return difference(getKeys(key, otherKeys));
-	}
+    @Override
+    public Flux<V> difference(Collection<K> keys) {
 
-	@Override
-	public Flux<V> difference(Collection<K> keys) {
+        Assert.notNull(keys, "Keys must not be null");
 
-		Assert.notNull(keys, "Keys must not be null");
+        return createFlux(
+                setCommands ->
+                        Flux.fromIterable(keys) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMapMany(setCommands::sDiff) //
+                                .map(this::readRequiredValue));
+    }
 
-		return createFlux(setCommands -> Flux.fromIterable(keys) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMapMany(setCommands::sDiff) //
-				.map(this::readRequiredValue));
-	}
+    @Override
+    public Mono<Long> differenceAndStore(K key, K otherKey, K destKey) {
 
-	@Override
-	public Mono<Long> differenceAndStore(K key, K otherKey, K destKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKey, "Other key must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKey, "Other key must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return differenceAndStore(key, Collections.singleton(otherKey), destKey);
+    }
 
-		return differenceAndStore(key, Collections.singleton(otherKey), destKey);
-	}
+    @Override
+    public Mono<Long> differenceAndStore(K key, Collection<K> otherKeys, K destKey) {
 
-	@Override
-	public Mono<Long> differenceAndStore(K key, Collection<K> otherKeys, K destKey) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(otherKeys, "Other keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(otherKeys, "Other keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return differenceAndStore(getKeys(key, otherKeys), destKey);
+    }
 
-		return differenceAndStore(getKeys(key, otherKeys), destKey);
-	}
+    @Override
+    public Mono<Long> differenceAndStore(Collection<K> keys, K destKey) {
 
-	@Override
-	public Mono<Long> differenceAndStore(Collection<K> keys, K destKey) {
+        Assert.notNull(keys, "Keys must not be null");
+        Assert.notNull(destKey, "Destination key must not be null");
 
-		Assert.notNull(keys, "Keys must not be null");
-		Assert.notNull(destKey, "Destination key must not be null");
+        return createMono(
+                setCommands ->
+                        Flux.fromIterable(keys) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(rawKeys -> setCommands.sDiffStore(rawKey(destKey), rawKeys)));
+    }
 
-		return createMono(setCommands -> Flux.fromIterable(keys) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(rawKeys -> setCommands.sDiffStore(rawKey(destKey), rawKeys)));
-	}
+    @Override
+    public Flux<V> members(K key) {
 
-	@Override
-	public Flux<V> members(K key) {
+        Assert.notNull(key, "Key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
+        return createFlux(
+                setCommands -> setCommands.sMembers(rawKey(key)).map(this::readRequiredValue));
+    }
 
-		return createFlux(setCommands -> setCommands.sMembers(rawKey(key)).map(this::readRequiredValue));
-	}
+    @Override
+    public Flux<V> scan(K key, ScanOptions options) {
 
-	@Override
-	public Flux<V> scan(K key, ScanOptions options) {
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(options, "ScanOptions must not be null");
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(options, "ScanOptions must not be null");
+        return createFlux(
+                setCommands -> setCommands.sScan(rawKey(key), options).map(this::readRequiredValue));
+    }
 
-		return createFlux(setCommands -> setCommands.sScan(rawKey(key), options).map(this::readRequiredValue));
-	}
+    @Override
+    public Mono<V> randomMember(K key) {
 
-	@Override
-	public Mono<V> randomMember(K key) {
+        Assert.notNull(key, "Key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
+        return createMono(
+                setCommands -> setCommands.sRandMember(rawKey(key)).map(this::readRequiredValue));
+    }
 
-		return createMono(setCommands -> setCommands.sRandMember(rawKey(key)).map(this::readRequiredValue));
-	}
+    @Override
+    public Flux<V> distinctRandomMembers(K key, long count) {
 
-	@Override
-	public Flux<V> distinctRandomMembers(K key, long count) {
+        Assert.isTrue(
+                count > 0, "Negative count not supported; Use randomMembers to allow duplicate elements");
 
-		Assert.isTrue(count > 0, "Negative count not supported; Use randomMembers to allow duplicate elements");
+        return createFlux(
+                setCommands -> setCommands.sRandMember(rawKey(key), count).map(this::readRequiredValue));
+    }
 
-		return createFlux(setCommands -> setCommands.sRandMember(rawKey(key), count).map(this::readRequiredValue));
-	}
+    @Override
+    public Flux<V> randomMembers(K key, long count) {
 
-	@Override
-	public Flux<V> randomMembers(K key, long count) {
+        Assert.isTrue(
+                count > 0,
+                "Use a positive number for count; This method is already allowing duplicate elements");
 
-		Assert.isTrue(count > 0, "Use a positive number for count; This method is already allowing duplicate elements");
+        return createFlux(
+                setCommands -> setCommands.sRandMember(rawKey(key), -count).map(this::readRequiredValue));
+    }
 
-		return createFlux(setCommands -> setCommands.sRandMember(rawKey(key), -count).map(this::readRequiredValue));
-	}
+    @Override
+    public Mono<Boolean> delete(K key) {
 
-	@Override
-	public Mono<Boolean> delete(K key) {
+        Assert.notNull(key, "Key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
+        return template
+                .doCreateMono(connection -> connection.keyCommands().del(rawKey(key)))
+                .map(l -> l != 0);
+    }
 
-		return template.doCreateMono(connection -> connection.keyCommands().del(rawKey(key))).map(l -> l != 0);
-	}
+    private <T> Mono<T> createMono(Function<ReactiveSetCommands, Publisher<T>> function) {
 
-	private <T> Mono<T> createMono(Function<ReactiveSetCommands, Publisher<T>> function) {
+        Assert.notNull(function, "Function must not be null");
 
-		Assert.notNull(function, "Function must not be null");
+        return template.doCreateMono(connection -> function.apply(connection.setCommands()));
+    }
 
-		return template.doCreateMono(connection -> function.apply(connection.setCommands()));
-	}
+    private <T> Flux<T> createFlux(Function<ReactiveSetCommands, Publisher<T>> function) {
 
-	private <T> Flux<T> createFlux(Function<ReactiveSetCommands, Publisher<T>> function) {
+        Assert.notNull(function, "Function must not be null");
 
-		Assert.notNull(function, "Function must not be null");
+        return template.doCreateFlux(connection -> function.apply(connection.setCommands()));
+    }
 
-		return template.doCreateFlux(connection -> function.apply(connection.setCommands()));
-	}
+    private ByteBuffer rawKey(K key) {
+        return serializationContext.getKeySerializationPair().write(key);
+    }
 
-	private ByteBuffer rawKey(K key) {
-		return serializationContext.getKeySerializationPair().write(key);
-	}
+    private List<K> getKeys(K key, Collection<K> otherKeys) {
 
-	private List<K> getKeys(K key, Collection<K> otherKeys) {
+        List<K> keys = new ArrayList<>(1 + otherKeys.size());
 
-		List<K> keys = new ArrayList<>(1 + otherKeys.size());
+        keys.add(key);
+        keys.addAll(otherKeys);
 
-		keys.add(key);
-		keys.addAll(otherKeys);
+        return keys;
+    }
 
-		return keys;
-	}
+    private ByteBuffer rawValue(V value) {
+        return serializationContext.getValueSerializationPair().write(value);
+    }
 
-	private ByteBuffer rawValue(V value) {
-		return serializationContext.getValueSerializationPair().write(value);
-	}
+    @Nullable
+    private V readValue(ByteBuffer buffer) {
+        return serializationContext.getValueSerializationPair().read(buffer);
+    }
 
-	@Nullable
-	private V readValue(ByteBuffer buffer) {
-		return serializationContext.getValueSerializationPair().read(buffer);
-	}
+    private V readRequiredValue(ByteBuffer buffer) {
 
-	private V readRequiredValue(ByteBuffer buffer) {
+        V value = readValue(buffer);
 
-		V value = readValue(buffer);
+        if (value != null) {
+            return value;
+        }
 
-		if (value != null) {
-			return value;
-		}
-
-		throw new InvalidDataAccessApiUsageException("Deserialized set value is null");
-	}
+        throw new InvalidDataAccessApiUsageException("Deserialized set value is null");
+    }
 }

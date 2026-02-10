@@ -22,120 +22,119 @@ import java.util.Set;
 
 public class ByteArraySet implements Set<ByteArrayWrapper> {
 
-	LinkedHashSet<ByteArrayWrapper> delegate;
+    LinkedHashSet<ByteArrayWrapper> delegate;
 
-	public ByteArraySet() {
-		this.delegate = new LinkedHashSet<>();
-	}
+    public ByteArraySet() {
+        this.delegate = new LinkedHashSet<>();
+    }
 
-	public ByteArraySet(Collection<byte[]> values) {
-		this();
-		addAll(values);
-	}
+    public ByteArraySet(Collection<byte[]> values) {
+        this();
+        addAll(values);
+    }
 
-	public int size() {
-		return delegate.size();
-	}
+    public int size() {
+        return delegate.size();
+    }
 
-	public boolean contains(Object o) {
+    public boolean contains(Object o) {
 
-		if (o instanceof byte[]) {
-			return delegate.contains(new ByteArrayWrapper((byte[]) o));
-		}
-		return delegate.contains(o);
-	}
+        if (o instanceof byte[]) {
+            return delegate.contains(new ByteArrayWrapper((byte[]) o));
+        }
+        return delegate.contains(o);
+    }
 
-	public boolean add(ByteArrayWrapper e) {
-		return delegate.add(e);
-	}
+    public boolean add(ByteArrayWrapper e) {
+        return delegate.add(e);
+    }
 
-	public boolean add(byte[] e) {
-		return delegate.add(new ByteArrayWrapper(e));
-	}
+    public boolean add(byte[] e) {
+        return delegate.add(new ByteArrayWrapper(e));
+    }
 
-	public boolean containsAll(Collection<?> c) {
+    public boolean containsAll(Collection<?> c) {
 
-		for (Object o : c) {
-			if (o instanceof byte[]) {
-				if (!contains(new ByteArrayWrapper((byte[]) o))) {
-					return false;
-				}
-			} else {
-				if (!contains(o)) {
-					return false;
-				}
-			}
-		}
-		return true;
-	}
+        for (Object o : c) {
+            if (o instanceof byte[]) {
+                if (!contains(new ByteArrayWrapper((byte[]) o))) {
+                    return false;
+                }
+            } else {
+                if (!contains(o)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
 
-	public boolean addAll(Collection<? extends ByteArrayWrapper> c) {
-		return delegate.addAll(c);
-	}
+    public boolean addAll(Collection<? extends ByteArrayWrapper> c) {
+        return delegate.addAll(c);
+    }
 
-	public boolean addAll(Iterable<byte[]> c) {
+    public boolean addAll(Iterable<byte[]> c) {
 
-		for (byte[] o : c) {
-			add(o);
-		}
-		return true;
-	}
+        for (byte[] o : c) {
+            add(o);
+        }
+        return true;
+    }
 
-	@Override
-	public boolean isEmpty() {
-		return delegate.isEmpty();
-	}
+    @Override
+    public boolean isEmpty() {
+        return delegate.isEmpty();
+    }
 
-	@Override
-	public Iterator<ByteArrayWrapper> iterator() {
-		return delegate.iterator();
-	}
+    @Override
+    public Iterator<ByteArrayWrapper> iterator() {
+        return delegate.iterator();
+    }
 
-	@Override
-	public Object[] toArray() {
-		return delegate.toArray();
-	}
+    @Override
+    public Object[] toArray() {
+        return delegate.toArray();
+    }
 
-	@Override
-	public <T> T[] toArray(T[] a) {
-		return delegate.toArray(a);
-	}
+    @Override
+    public <T> T[] toArray(T[] a) {
+        return delegate.toArray(a);
+    }
 
-	@Override
-	public boolean remove(Object o) {
+    @Override
+    public boolean remove(Object o) {
 
-		if (o instanceof byte[]) {
-			delegate.remove(new ByteArrayWrapper((byte[]) o));
-		}
-		return delegate.remove(o);
-	}
+        if (o instanceof byte[]) {
+            delegate.remove(new ByteArrayWrapper((byte[]) o));
+        }
+        return delegate.remove(o);
+    }
 
-	@Override
-	public boolean retainAll(Collection<?> c) {
-		return delegate.retainAll(c);
-	}
+    @Override
+    public boolean retainAll(Collection<?> c) {
+        return delegate.retainAll(c);
+    }
 
-	@Override
-	public boolean removeAll(Collection<?> c) {
+    @Override
+    public boolean removeAll(Collection<?> c) {
 
-		for (Object o : c) {
-			remove(o);
-		}
-		return true;
-	}
+        for (Object o : c) {
+            remove(o);
+        }
+        return true;
+    }
 
-	@Override
-	public void clear() {
-		delegate.clear();
-	}
+    @Override
+    public void clear() {
+        delegate.clear();
+    }
 
-	public Set<byte[]> asRawSet() {
+    public Set<byte[]> asRawSet() {
 
-		Set<byte[]> result = new LinkedHashSet<>();
-		for (ByteArrayWrapper wrapper : delegate) {
-			result.add(wrapper.getArray());
-		}
-		return result;
-	}
-
+        Set<byte[]> result = new LinkedHashSet<>();
+        for (ByteArrayWrapper wrapper : delegate) {
+            result.add(wrapper.getArray());
+        }
+        return result;
+    }
 }

@@ -16,40 +16,35 @@
 
 package io.valkey.springframework.boot.actuate.data.valkey;
 
+import io.valkey.springframework.data.valkey.connection.ClusterInfo;
 import java.util.Properties;
-
 import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.actuate.health.Health.Builder;
 
-import io.valkey.springframework.data.valkey.connection.ClusterInfo;
-
 /**
- * Shared class used by {@link ValkeyHealthIndicator} and
- * {@link ValkeyReactiveHealthIndicator} to provide health details.
+ * Shared class used by {@link ValkeyHealthIndicator} and {@link ValkeyReactiveHealthIndicator} to
+ * provide health details.
  *
  * @author Phillip Webb
  */
 final class ValkeyHealth {
 
-	private ValkeyHealth() {
-	}
+    private ValkeyHealth() {}
 
-	static Builder up(Health.Builder builder, Properties info) {
-		builder.withDetail("version", info.getProperty("redis_version"));
-		return builder.up();
-	}
+    static Builder up(Health.Builder builder, Properties info) {
+        builder.withDetail("version", info.getProperty("redis_version"));
+        return builder.up();
+    }
 
-	static Builder fromClusterInfo(Health.Builder builder, ClusterInfo clusterInfo) {
-		builder.withDetail("cluster_size", clusterInfo.getClusterSize());
-		builder.withDetail("slots_up", clusterInfo.getSlotsOk());
-		builder.withDetail("slots_fail", clusterInfo.getSlotsFail());
+    static Builder fromClusterInfo(Health.Builder builder, ClusterInfo clusterInfo) {
+        builder.withDetail("cluster_size", clusterInfo.getClusterSize());
+        builder.withDetail("slots_up", clusterInfo.getSlotsOk());
+        builder.withDetail("slots_fail", clusterInfo.getSlotsFail());
 
-		if ("fail".equalsIgnoreCase(clusterInfo.getState())) {
-			return builder.down();
-		}
-		else {
-			return builder.up();
-		}
-	}
-
+        if ("fail".equalsIgnoreCase(clusterInfo.getState())) {
+            return builder.down();
+        } else {
+            return builder.up();
+        }
+    }
 }

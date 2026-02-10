@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.connection;
 import java.io.Serial;
 import java.util.Collections;
 import java.util.List;
-
 import org.springframework.dao.UncategorizedDataAccessException;
 
 /**
@@ -30,27 +29,26 @@ import org.springframework.dao.UncategorizedDataAccessException;
  */
 public class ClusterCommandExecutionFailureException extends UncategorizedDataAccessException {
 
-	@Serial private static final long serialVersionUID = 5727044227040368955L;
+    @Serial private static final long serialVersionUID = 5727044227040368955L;
 
-	/**
-	 * Creates new {@link ClusterCommandExecutionFailureException}.
-	 *
-	 * @param cause must not be {@literal null}.
-	 */
-	public ClusterCommandExecutionFailureException(Throwable cause) {
-		this(Collections.singletonList(cause));
-	}
+    /**
+     * Creates new {@link ClusterCommandExecutionFailureException}.
+     *
+     * @param cause must not be {@literal null}.
+     */
+    public ClusterCommandExecutionFailureException(Throwable cause) {
+        this(Collections.singletonList(cause));
+    }
 
-	/**
-	 * Creates new {@link ClusterCommandExecutionFailureException}.
-	 *
-	 * @param causes must not be {@literal empty}.
-	 */
-	public ClusterCommandExecutionFailureException(List<? extends Throwable> causes) {
+    /**
+     * Creates new {@link ClusterCommandExecutionFailureException}.
+     *
+     * @param causes must not be {@literal empty}.
+     */
+    public ClusterCommandExecutionFailureException(List<? extends Throwable> causes) {
 
-		super(causes.get(0).getMessage(), causes.get(0));
+        super(causes.get(0).getMessage(), causes.get(0));
 
-		causes.forEach(this::addSuppressed);
-	}
-
+        causes.forEach(this::addSuppressed);
+    }
 }

@@ -15,20 +15,20 @@
  */
 package io.valkey.springframework.data.valkey.cache;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.core.Cursor;
+import io.valkey.springframework.data.valkey.core.ScanOptions;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.core.Cursor;
-import io.valkey.springframework.data.valkey.core.ScanOptions;
 import org.springframework.util.Assert;
 
 /**
- * Collection of predefined {@link BatchStrategy} implementations using the Valkey {@code KEYS} or {@code SCAN} command.
+ * Collection of predefined {@link BatchStrategy} implementations using the Valkey {@code KEYS} or
+ * {@code SCAN} command.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -37,130 +37,131 @@ import org.springframework.util.Assert;
  */
 public abstract class BatchStrategies {
 
-	/**
-	 * A {@link BatchStrategy} using a single {@code KEYS} and {@code DEL} command to remove all matching keys.
-	 * {@code KEYS} scans the entire keyspace of the Valkey database and can block the Valkey worker thread for a long time
-	 * on large keyspaces.
-	 * <p>
-	 * {@code KEYS} is supported for standalone and clustered (sharded) Valkey operation modes.
-	 *
-	 * @return batching strategy using {@code KEYS}.
-	 */
-	public static BatchStrategy keys() {
-		return Keys.INSTANCE;
-	}
+    /**
+     * A {@link BatchStrategy} using a single {@code KEYS} and {@code DEL} command to remove all
+     * matching keys. {@code KEYS} scans the entire keyspace of the Valkey database and can block the
+     * Valkey worker thread for a long time on large keyspaces.
+     *
+     * <p>{@code KEYS} is supported for standalone and clustered (sharded) Valkey operation modes.
+     *
+     * @return batching strategy using {@code KEYS}.
+     */
+    public static BatchStrategy keys() {
+        return Keys.INSTANCE;
+    }
 
-	/**
-	 * A {@link BatchStrategy} using a {@code SCAN} cursors and potentially multiple {@code DEL} commands to remove all
-	 * matching keys. This strategy allows a configurable batch size to optimize for scan batching.
-	 * <p>
-	 * Note that using the {@code SCAN} strategy might be not supported on all drivers and Valkey operation modes.
-	 *
-	 * @return batching strategy using {@code SCAN}.
-	 */
-	public static BatchStrategy scan(int batchSize) {
+    /**
+     * A {@link BatchStrategy} using a {@code SCAN} cursors and potentially multiple {@code DEL}
+     * commands to remove all matching keys. This strategy allows a configurable batch size to
+     * optimize for scan batching.
+     *
+     * <p>Note that using the {@code SCAN} strategy might be not supported on all drivers and Valkey
+     * operation modes.
+     *
+     * @return batching strategy using {@code SCAN}.
+     */
+    public static BatchStrategy scan(int batchSize) {
 
-		Assert.isTrue(batchSize > 0, "Batch size must be greater than zero");
+        Assert.isTrue(batchSize > 0, "Batch size must be greater than zero");
 
-		return new Scan(batchSize);
-	}
+        return new Scan(batchSize);
+    }
 
-	private BatchStrategies() {
-		// can't touch this - oh-oh oh oh oh-oh-oh
-	}
+    private BatchStrategies() {
+        // can't touch this - oh-oh oh oh oh-oh-oh
+    }
 
-	/**
-	 * {@link BatchStrategy} using {@code KEYS}.
-	 */
-	static class Keys implements BatchStrategy {
+    /** {@link BatchStrategy} using {@code KEYS}. */
+    static class Keys implements BatchStrategy {
 
-		static Keys INSTANCE = new Keys();
+        static Keys INSTANCE = new Keys();
 
-		@Override
-		public long cleanCache(ValkeyConnection connection, String name, byte[] pattern) {
+        @Override
+        public long cleanCache(ValkeyConnection connection, String name, byte[] pattern) {
 
-			byte[][] keys = Optional.ofNullable(connection.keys(pattern)).orElse(Collections.emptySet())
-					.toArray(new byte[0][]);
+            byte[][] keys =
+                    Optional.ofNullable(connection.keys(pattern))
+                            .orElse(Collections.emptySet())
+                            .toArray(new byte[0][]);
 
-			if (keys.length > 0) {
-				connection.del(keys);
-			}
+            if (keys.length > 0) {
+                connection.del(keys);
+            }
 
-			return keys.length;
-		}
-	}
+            return keys.length;
+        }
+    }
 
-	/**
-	 * {@link BatchStrategy} using {@code SCAN}.
-	 */
-	static class Scan implements BatchStrategy {
+    /** {@link BatchStrategy} using {@code SCAN}. */
+    static class Scan implements BatchStrategy {
 
-		private final int batchSize;
+        private final int batchSize;
 
-		Scan(int batchSize) {
-			this.batchSize = batchSize;
-		}
+        Scan(int batchSize) {
+            this.batchSize = batchSize;
+        }
 
-		@Override
-		public long cleanCache(ValkeyConnection connection, String name, byte[] pattern) {
+        @Override
+        public long cleanCache(ValkeyConnection connection, String name, byte[] pattern) {
 
-			Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().count(batchSize).match(pattern).build());
+            Cursor<byte[]> cursor =
+                    connection.scan(ScanOptions.scanOptions().count(batchSize).match(pattern).build());
 
-			long count = 0;
+            long count = 0;
 
-			PartitionIterator<byte[]> partitions = new PartitionIterator<>(cursor, batchSize);
+            PartitionIterator<byte[]> partitions = new PartitionIterator<>(cursor, batchSize);
 
-			while (partitions.hasNext()) {
+            while (partitions.hasNext()) {
 
-				List<byte[]> keys = partitions.next();
+                List<byte[]> keys = partitions.next();
 
-				count += keys.size();
+                count += keys.size();
 
-				if (keys.size() > 0) {
-					connection.del(keys.toArray(new byte[0][]));
-				}
-			}
+                if (keys.size() > 0) {
+                    connection.del(keys.toArray(new byte[0][]));
+                }
+            }
 
-			return count;
-		}
-	}
+            return count;
+        }
+    }
 
-	/**
-	 * Utility to split and buffer outcome from a {@link Iterator} into {@link List lists} of {@code T} with a maximum
-	 * chunks {@code size}.
-	 *
-	 * @param <T>
-	 */
-	static class PartitionIterator<T> implements Iterator<List<T>> {
+    /**
+     * Utility to split and buffer outcome from a {@link Iterator} into {@link List lists} of {@code
+     * T} with a maximum chunks {@code size}.
+     *
+     * @param <T>
+     */
+    static class PartitionIterator<T> implements Iterator<List<T>> {
 
-		private final Iterator<T> iterator;
-		private final int size;
+        private final Iterator<T> iterator;
+        private final int size;
 
-		PartitionIterator(Iterator<T> iterator, int size) {
+        PartitionIterator(Iterator<T> iterator, int size) {
 
-			this.iterator = iterator;
-			this.size = size;
-		}
+            this.iterator = iterator;
+            this.size = size;
+        }
 
-		@Override
-		public boolean hasNext() {
-			return this.iterator.hasNext();
-		}
+        @Override
+        public boolean hasNext() {
+            return this.iterator.hasNext();
+        }
 
-		@Override
-		public List<T> next() {
+        @Override
+        public List<T> next() {
 
-			if (!hasNext()) {
-				throw new NoSuchElementException();
-			}
+            if (!hasNext()) {
+                throw new NoSuchElementException();
+            }
 
-			List<T> list = new ArrayList<>(this.size);
+            List<T> list = new ArrayList<>(this.size);
 
-			while (list.size() < this.size && this.iterator.hasNext()) {
-				list.add(this.iterator.next());
-			}
+            while (list.size() < this.size && this.iterator.hasNext()) {
+                list.add(this.iterator.next());
+            }
 
-			return list;
-		}
-	}
+            return list;
+        }
+    }
 }

@@ -16,40 +16,35 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
-import java.lang.annotation.Annotation;
-
-import org.springframework.boot.autoconfigure.data.AbstractRepositoryConfigurationSourceSupport;
-import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import io.valkey.springframework.data.valkey.repository.configuration.EnableValkeyRepositories;
 import io.valkey.springframework.data.valkey.repository.configuration.ValkeyRepositoryConfigurationExtension;
+import java.lang.annotation.Annotation;
+import org.springframework.boot.autoconfigure.data.AbstractRepositoryConfigurationSourceSupport;
+import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.data.repository.config.RepositoryConfigurationExtension;
 
 /**
- * {@link ImportBeanDefinitionRegistrar} used to auto-configure Spring Data Valkey
- * Repositories.
+ * {@link ImportBeanDefinitionRegistrar} used to auto-configure Spring Data Valkey Repositories.
  *
  * @author Eddú Meléndez
  */
 class ValkeyRepositoriesRegistrar extends AbstractRepositoryConfigurationSourceSupport {
 
-	@Override
-	protected Class<? extends Annotation> getAnnotation() {
-		return EnableValkeyRepositories.class;
-	}
+    @Override
+    protected Class<? extends Annotation> getAnnotation() {
+        return EnableValkeyRepositories.class;
+    }
 
-	@Override
-	protected Class<?> getConfiguration() {
-		return EnableValkeyRepositoriesConfiguration.class;
-	}
+    @Override
+    protected Class<?> getConfiguration() {
+        return EnableValkeyRepositoriesConfiguration.class;
+    }
 
-	@Override
-	protected RepositoryConfigurationExtension getRepositoryConfigurationExtension() {
-		return new ValkeyRepositoryConfigurationExtension();
-	}
+    @Override
+    protected RepositoryConfigurationExtension getRepositoryConfigurationExtension() {
+        return new ValkeyRepositoryConfigurationExtension();
+    }
 
-	@EnableValkeyRepositories
-	private static final class EnableValkeyRepositoriesConfiguration {
-
-	}
-
+    @EnableValkeyRepositories
+    private static final class EnableValkeyRepositoriesConfiguration {}
 }

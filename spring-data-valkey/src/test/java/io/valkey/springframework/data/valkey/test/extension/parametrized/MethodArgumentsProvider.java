@@ -18,11 +18,11 @@ package io.valkey.springframework.data.valkey.test.extension.parametrized;
 import static java.lang.String.*;
 import static org.junit.jupiter.params.provider.Arguments.*;
 
+import io.valkey.springframework.data.valkey.ConnectionFactoryTracker.Managed;
 import java.io.Closeable;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
@@ -35,145 +35,156 @@ import org.junit.platform.commons.util.CollectionUtils;
 import org.junit.platform.commons.util.Preconditions;
 import org.junit.platform.commons.util.ReflectionUtils;
 import org.junit.platform.commons.util.StringUtils;
-import io.valkey.springframework.data.valkey.ConnectionFactoryTracker.Managed;
 
-/**
- * Copy of {@code org.junit.jupiter.params.provider.MethodArgumentsProvider}.
- */
+/** Copy of {@code org.junit.jupiter.params.provider.MethodArgumentsProvider}. */
 class MethodArgumentsProvider implements ArgumentsProvider, AnnotationConsumer<MethodSource> {
 
-	private static final Namespace NAMESPACE = Namespace.create(MethodArgumentsProvider.class);
+    private static final Namespace NAMESPACE = Namespace.create(MethodArgumentsProvider.class);
 
-	private String[] methodNames = new String[0];
+    private String[] methodNames = new String[0];
 
-	@Override
-	public void accept(MethodSource annotation) {
-		this.methodNames = annotation.value();
-	}
+    @Override
+    public void accept(MethodSource annotation) {
+        this.methodNames = annotation.value();
+    }
 
-	@Override
-	public Stream<Arguments> provideArguments(ExtensionContext context) {
+    @Override
+    public Stream<Arguments> provideArguments(ExtensionContext context) {
 
-		Store store = context.getRoot().getStore(NAMESPACE);
-		Object testInstance = context.getTestInstance().orElse(null);
+        Store store = context.getRoot().getStore(NAMESPACE);
+        Object testInstance = context.getTestInstance().orElse(null);
 
-		return Arrays.stream(this.methodNames).map(factoryMethodName -> getMethod(context, factoryMethodName))
-				.map(method -> (CloseablePararmeters) store.getOrComputeIfAbsent(new SourceKey(method, testInstance),
-						key -> new CloseablePararmeters(ReflectionUtils.invokeMethod(method, testInstance), context)))
-				.map(CloseablePararmeters::parameters).flatMap(CollectionUtils::toStream)
-				.map(MethodArgumentsProvider::toArguments);
-	}
+        return Arrays.stream(this.methodNames)
+                .map(factoryMethodName -> getMethod(context, factoryMethodName))
+                .map(
+                        method ->
+                                (CloseablePararmeters)
+                                        store.getOrComputeIfAbsent(
+                                                new SourceKey(method, testInstance),
+                                                key ->
+                                                        new CloseablePararmeters(
+                                                                ReflectionUtils.invokeMethod(method, testInstance), context)))
+                .map(CloseablePararmeters::parameters)
+                .flatMap(CollectionUtils::toStream)
+                .map(MethodArgumentsProvider::toArguments);
+    }
 
-	private Method getMethod(ExtensionContext context, String factoryMethodName) {
+    private Method getMethod(ExtensionContext context, String factoryMethodName) {
 
-		if (StringUtils.isNotBlank(factoryMethodName)) {
-			if (factoryMethodName.contains("#")) {
-				return getMethodByFullyQualifiedName(factoryMethodName);
-			} else {
-				return ReflectionUtils.getRequiredMethod(context.getRequiredTestClass(), factoryMethodName);
-			}
-		}
-		return ReflectionUtils.getRequiredMethod(context.getRequiredTestClass(), context.getRequiredTestMethod().getName());
-	}
+        if (StringUtils.isNotBlank(factoryMethodName)) {
+            if (factoryMethodName.contains("#")) {
+                return getMethodByFullyQualifiedName(factoryMethodName);
+            } else {
+                return ReflectionUtils.getRequiredMethod(context.getRequiredTestClass(), factoryMethodName);
+            }
+        }
+        return ReflectionUtils.getRequiredMethod(
+                context.getRequiredTestClass(), context.getRequiredTestMethod().getName());
+    }
 
-	private Method getMethodByFullyQualifiedName(String fullyQualifiedMethodName) {
+    private Method getMethodByFullyQualifiedName(String fullyQualifiedMethodName) {
 
-		String[] methodParts = ReflectionUtils.parseFullyQualifiedMethodName(fullyQualifiedMethodName);
-		String className = methodParts[0];
-		String methodName = methodParts[1];
-		String methodParameters = methodParts[2];
+        String[] methodParts = ReflectionUtils.parseFullyQualifiedMethodName(fullyQualifiedMethodName);
+        String className = methodParts[0];
+        String methodName = methodParts[1];
+        String methodParameters = methodParts[2];
 
-		Preconditions.condition(StringUtils.isBlank(methodParameters),
-				() -> format("factory method [%s] must not declare formal parameters", fullyQualifiedMethodName));
+        Preconditions.condition(
+                StringUtils.isBlank(methodParameters),
+                () ->
+                        format(
+                                "factory method [%s] must not declare formal parameters",
+                                fullyQualifiedMethodName));
 
-		return ReflectionUtils.getRequiredMethod(loadRequiredClass(className), methodName);
-	}
+        return ReflectionUtils.getRequiredMethod(loadRequiredClass(className), methodName);
+    }
 
-	private Class<?> loadRequiredClass(String className) {
-		return ReflectionUtils.tryToLoadClass(className)
-				.getOrThrow(cause -> new JUnitException(format("Could not load class [%s]", className), cause));
-	}
+    private Class<?> loadRequiredClass(String className) {
+        return ReflectionUtils.tryToLoadClass(className)
+                .getOrThrow(
+                        cause -> new JUnitException(format("Could not load class [%s]", className), cause));
+    }
 
-	private static Arguments toArguments(Object item) {
+    private static Arguments toArguments(Object item) {
 
-		// Nothing to do except cast.
-		if (item instanceof Arguments arguments) {
-			return arguments;
-		}
+        // Nothing to do except cast.
+        if (item instanceof Arguments arguments) {
+            return arguments;
+        }
 
-		// Pass all multidimensional arrays "as is", in contrast to Object[].
-		// See https://github.com/junit-team/junit5/issues/1665
-		if (ReflectionUtils.isMultidimensionalArray(item)) {
-			return arguments(item);
-		}
+        // Pass all multidimensional arrays "as is", in contrast to Object[].
+        // See https://github.com/junit-team/junit5/issues/1665
+        if (ReflectionUtils.isMultidimensionalArray(item)) {
+            return arguments(item);
+        }
 
-		// Special treatment for one-dimensional reference arrays.
-		// See https://github.com/junit-team/junit5/issues/1665
-		if (item instanceof Object[] array) {
-			return arguments(array);
-		}
+        // Special treatment for one-dimensional reference arrays.
+        // See https://github.com/junit-team/junit5/issues/1665
+        if (item instanceof Object[] array) {
+            return arguments(array);
+        }
 
-		// Pass everything else "as is".
-		return arguments(item);
-	}
+        // Pass everything else "as is".
+        return arguments(item);
+    }
 
-	/**
-	 * Key type for a method associated with a test instance.
-	 *
-	 * @param method
-	 * @param instance
-	 */
-	record SourceKey(Method method, Object instance) {
-	}
+    /**
+     * Key type for a method associated with a test instance.
+     *
+     * @param method
+     * @param instance
+     */
+    record SourceKey(Method method, Object instance) {}
 
-	/**
-	 * Holder for parameters that can be closed using JUnit's built-in cleanup mechanism.
-	 *
-	 * @param parameters
-	 * @param context
-	 */
-	record CloseablePararmeters(Object parameters, Object context) implements Store.CloseableResource {
+    /**
+     * Holder for parameters that can be closed using JUnit's built-in cleanup mechanism.
+     *
+     * @param parameters
+     * @param context
+     */
+    record CloseablePararmeters(Object parameters, Object context)
+            implements Store.CloseableResource {
 
-		@Override
-		public void close() {
-			close0(parameters);
-		}
+        @Override
+        public void close() {
+            close0(parameters);
+        }
 
-		private void close0(Object object) {
+        private void close0(Object object) {
 
-			if (object instanceof Managed) {
-				return;
-			}
+            if (object instanceof Managed) {
+                return;
+            }
 
-			if (object instanceof CloseableResource closeableResource) {
-				try {
-					closeableResource.close();
-					return;
-				} catch (Throwable cause) {
-					throw new RuntimeException(cause);
-				}
-			}
+            if (object instanceof CloseableResource closeableResource) {
+                try {
+                    closeableResource.close();
+                    return;
+                } catch (Throwable cause) {
+                    throw new RuntimeException(cause);
+                }
+            }
 
-			if (object instanceof Closeable closeable) {
-				try {
-					closeable.close();
-					return;
-				} catch (Throwable cause) {
-					throw new RuntimeException(cause);
-				}
-			}
+            if (object instanceof Closeable closeable) {
+                try {
+                    closeable.close();
+                    return;
+                } catch (Throwable cause) {
+                    throw new RuntimeException(cause);
+                }
+            }
 
-			if (object instanceof Arguments arguments) {
-				close0(arguments.get());
-			}
+            if (object instanceof Arguments arguments) {
+                close0(arguments.get());
+            }
 
-			if (object instanceof Object[] array) {
-				Arrays.asList(array).forEach(this::close0);
-			}
+            if (object instanceof Object[] array) {
+                Arrays.asList(array).forEach(this::close0);
+            }
 
-			if (object instanceof Iterable<?> iterableObject) {
-				iterableObject.forEach(this::close0);
-			}
-		}
-	}
+            if (object instanceof Iterable<?> iterableObject) {
+                iterableObject.forEach(this::close0);
+            }
+        }
+    }
 }

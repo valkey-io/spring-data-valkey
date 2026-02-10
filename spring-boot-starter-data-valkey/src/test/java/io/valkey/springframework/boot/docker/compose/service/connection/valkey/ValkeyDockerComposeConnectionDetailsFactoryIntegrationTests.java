@@ -16,12 +16,12 @@
 
 package io.valkey.springframework.boot.docker.compose.service.connection.valkey;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.Standalone;
 import io.valkey.springframework.boot.testsupport.docker.compose.DockerComposeTest;
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test for {@link ValkeyDockerComposeConnectionDetailsFactory}.
@@ -35,21 +35,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisabledIfEnvironmentVariable(named = "CI", matches = "true", disabledReason = "Requires Docker")
 class ValkeyDockerComposeConnectionDetailsFactoryIntegrationTests {
 
-	@DockerComposeTest(composeFile = "io/valkey/springframework/boot/docker/compose/service/connection/valkey/valkey-compose.yml", image = "valkey/valkey:8.1.1")
-	void runCreatesConnectionDetails(ValkeyConnectionDetails connectionDetails) {
-		assertConnectionDetails(connectionDetails);
-	}
+    @DockerComposeTest(
+            composeFile =
+                    "io/valkey/springframework/boot/docker/compose/service/connection/valkey/valkey-compose.yml",
+            image = "valkey/valkey:8.1.1")
+    void runCreatesConnectionDetails(ValkeyConnectionDetails connectionDetails) {
+        assertConnectionDetails(connectionDetails);
+    }
 
-	private void assertConnectionDetails(ValkeyConnectionDetails connectionDetails) {
-		assertThat(connectionDetails.getUsername()).isNull();
-		assertThat(connectionDetails.getPassword()).isNull();
-		assertThat(connectionDetails.getCluster()).isNull();
-		assertThat(connectionDetails.getSentinel()).isNull();
-		Standalone standalone = connectionDetails.getStandalone();
-		assertThat(standalone).isNotNull();
-		assertThat(standalone.getDatabase()).isZero();
-		assertThat(standalone.getPort()).isGreaterThan(0);
-		assertThat(standalone.getHost()).isNotNull();
-	}
-
+    private void assertConnectionDetails(ValkeyConnectionDetails connectionDetails) {
+        assertThat(connectionDetails.getUsername()).isNull();
+        assertThat(connectionDetails.getPassword()).isNull();
+        assertThat(connectionDetails.getCluster()).isNull();
+        assertThat(connectionDetails.getSentinel()).isNull();
+        Standalone standalone = connectionDetails.getStandalone();
+        assertThat(standalone).isNotNull();
+        assertThat(standalone.getDatabase()).isZero();
+        assertThat(standalone.getPort()).isGreaterThan(0);
+        assertThat(standalone.getHost()).isNotNull();
+    }
 }

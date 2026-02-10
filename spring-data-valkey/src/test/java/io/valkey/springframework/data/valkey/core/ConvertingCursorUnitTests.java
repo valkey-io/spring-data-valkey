@@ -28,7 +28,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.convert.converter.Converter;
 
 /**
@@ -39,158 +38,160 @@ import org.springframework.core.convert.converter.Converter;
 @SuppressWarnings("unchecked")
 class ConvertingCursorUnitTests {
 
-	@Test // #2701
-	void constructConvertingCursor() {
+    @Test // #2701
+    void constructConvertingCursor() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		new ConvertingCursor<>(mockCursor, mockConverter);
+        new ConvertingCursor<>(mockCursor, mockConverter);
 
-		verifyNoInteractions(mockConverter, mockCursor);
-	}
+        verifyNoInteractions(mockConverter, mockCursor);
+    }
 
-	@Test // #2701
-	@SuppressWarnings("all")
-	void constructConvertingCursorWithNullConverter() {
+    @Test // #2701
+    @SuppressWarnings("all")
+    void constructConvertingCursorWithNullConverter() {
 
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new ConvertingCursor<>(mockCursor, null))
-			.withMessage("Converter must not be null")
-			.withNoCause();
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new ConvertingCursor<>(mockCursor, null))
+                .withMessage("Converter must not be null")
+                .withNoCause();
 
-		verifyNoInteractions(mockCursor);
-	}
+        verifyNoInteractions(mockCursor);
+    }
 
-	@Test // #2701
-	@SuppressWarnings("all")
-	void constructConvertingCursorWithNullCursor() {
+    @Test // #2701
+    @SuppressWarnings("all")
+    void constructConvertingCursorWithNullCursor() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
 
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new ConvertingCursor<>(null, mockConverter))
-			.withMessage("Cursor must not be null")
-			.withNoCause();
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new ConvertingCursor<>(null, mockConverter))
+                .withMessage("Cursor must not be null")
+                .withNoCause();
 
-		verifyNoInteractions(mockConverter);
-	}
+        verifyNoInteractions(mockConverter);
+    }
 
-	@Test
-	void hasNextDelegatesToCursor() {
+    @Test
+    void hasNextDelegatesToCursor() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		doReturn(true).when(mockCursor).hasNext();
+        doReturn(true).when(mockCursor).hasNext();
 
-		ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
+        ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
 
-		assertThat(convertingCursor.hasNext()).isTrue();
+        assertThat(convertingCursor.hasNext()).isTrue();
 
-		verify(mockCursor, times(1)).hasNext();
-		verifyNoMoreInteractions(mockCursor);
-		verifyNoInteractions(mockConverter);
-	}
+        verify(mockCursor, times(1)).hasNext();
+        verifyNoMoreInteractions(mockCursor);
+        verifyNoInteractions(mockConverter);
+    }
 
-	@Test
-	void nextDelegatesToCursorAndIsConverted() {
+    @Test
+    void nextDelegatesToCursorAndIsConverted() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		doReturn("test").when(mockCursor).next();
-		doAnswer(invocation -> invocation.getArgument(0).toString().toUpperCase()).when(mockConverter).convert(any());
+        doReturn("test").when(mockCursor).next();
+        doAnswer(invocation -> invocation.getArgument(0).toString().toUpperCase())
+                .when(mockConverter)
+                .convert(any());
 
-		ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
+        ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
 
-		assertThat(convertingCursor.next()).isEqualTo("TEST");
+        assertThat(convertingCursor.next()).isEqualTo("TEST");
 
-		verify(mockCursor, times(1)).next();
-		verify(mockConverter, times(1)).convert(eq("test"));
-		verifyNoMoreInteractions(mockCursor, mockConverter);
-	}
+        verify(mockCursor, times(1)).next();
+        verify(mockConverter, times(1)).convert(eq("test"));
+        verifyNoMoreInteractions(mockCursor, mockConverter);
+    }
 
-	@Test
-	void removeDelegatesToCursor() {
+    @Test
+    void removeDelegatesToCursor() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
+        ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
 
-		convertingCursor.remove();
+        convertingCursor.remove();
 
-		verify(mockCursor, times(1)).remove();
-		verifyNoMoreInteractions(mockCursor);
-		verifyNoInteractions(mockConverter);
-	}
+        verify(mockCursor, times(1)).remove();
+        verifyNoMoreInteractions(mockCursor);
+        verifyNoInteractions(mockConverter);
+    }
 
-	@Test
-	void closeDelegatesToCursor() {
+    @Test
+    void closeDelegatesToCursor() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
+        ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
 
-		convertingCursor.close();
+        convertingCursor.close();
 
-		verify(mockCursor, times(1)).close();
-		verifyNoMoreInteractions(mockCursor);
-		verifyNoInteractions(mockConverter);
-	}
+        verify(mockCursor, times(1)).close();
+        verifyNoMoreInteractions(mockCursor);
+        verifyNoInteractions(mockConverter);
+    }
 
-	@Test
-	void getCursorIdDelegatesToCursor() {
+    @Test
+    void getCursorIdDelegatesToCursor() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		doReturn(1L).when(mockCursor).getCursorId();
+        doReturn(1L).when(mockCursor).getCursorId();
 
-		ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
+        ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
 
-		assertThat(convertingCursor.getCursorId()).isOne();
+        assertThat(convertingCursor.getCursorId()).isOne();
 
-		verify(mockCursor, times(1)).getCursorId();
-		verifyNoMoreInteractions(mockCursor);
-		verifyNoInteractions(mockConverter);
-	}
+        verify(mockCursor, times(1)).getCursorId();
+        verifyNoMoreInteractions(mockCursor);
+        verifyNoInteractions(mockConverter);
+    }
 
-	@Test
-	void isClosedDelegatesToCursor() {
+    @Test
+    void isClosedDelegatesToCursor() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		doReturn(false).when(mockCursor).isClosed();
+        doReturn(false).when(mockCursor).isClosed();
 
-		ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
+        ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
 
-		assertThat(convertingCursor.isClosed()).isFalse();
+        assertThat(convertingCursor.isClosed()).isFalse();
 
-		verify(mockCursor, times(1)).isClosed();
-		verifyNoMoreInteractions(mockCursor);
-		verifyNoInteractions(mockConverter);
-	}
+        verify(mockCursor, times(1)).isClosed();
+        verifyNoMoreInteractions(mockCursor);
+        verifyNoInteractions(mockConverter);
+    }
 
-	@Test
-	void getPositionDelegatesToCursor() {
+    @Test
+    void getPositionDelegatesToCursor() {
 
-		Converter<Object, Object> mockConverter = mock(Converter.class);
-		Cursor<Object> mockCursor = mock(Cursor.class);
+        Converter<Object, Object> mockConverter = mock(Converter.class);
+        Cursor<Object> mockCursor = mock(Cursor.class);
 
-		doReturn(12L).when(mockCursor).getPosition();
+        doReturn(12L).when(mockCursor).getPosition();
 
-		ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
+        ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
 
-		assertThat(convertingCursor.getPosition()).isEqualTo(12L);
+        assertThat(convertingCursor.getPosition()).isEqualTo(12L);
 
-		verify(mockCursor, times(1)).getPosition();
-		verifyNoMoreInteractions(mockCursor);
-		verifyNoInteractions(mockConverter);
-	}
+        verify(mockCursor, times(1)).getPosition();
+        verifyNoMoreInteractions(mockCursor);
+        verifyNoInteractions(mockConverter);
+    }
 }

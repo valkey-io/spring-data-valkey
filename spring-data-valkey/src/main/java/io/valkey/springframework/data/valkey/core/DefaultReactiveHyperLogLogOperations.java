@@ -15,16 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.util.function.Function;
-
-import org.reactivestreams.Publisher;
 import io.valkey.springframework.data.valkey.connection.ReactiveHyperLogLogCommands;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
+import java.nio.ByteBuffer;
+import java.util.function.Function;
+import org.reactivestreams.Publisher;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Default implementation of {@link ReactiveHyperLogLogOperations}.
@@ -35,77 +33,88 @@ import org.springframework.util.Assert;
  */
 class DefaultReactiveHyperLogLogOperations<K, V> implements ReactiveHyperLogLogOperations<K, V> {
 
-	private final ReactiveValkeyTemplate<?, ?> template;
-	private final ValkeySerializationContext<K, V> serializationContext;
+    private final ReactiveValkeyTemplate<?, ?> template;
+    private final ValkeySerializationContext<K, V> serializationContext;
 
-	DefaultReactiveHyperLogLogOperations(ReactiveValkeyTemplate<?, ?> template,
-			ValkeySerializationContext<K, V> serializationContext) {
+    DefaultReactiveHyperLogLogOperations(
+            ReactiveValkeyTemplate<?, ?> template,
+            ValkeySerializationContext<K, V> serializationContext) {
 
-		this.template = template;
-		this.serializationContext = serializationContext;
-	}
+        this.template = template;
+        this.serializationContext = serializationContext;
+    }
 
-	@Override
-	@SafeVarargs
-	public final Mono<Long> add(K key, V... values) {
+    @Override
+    @SafeVarargs
+    public final Mono<Long> add(K key, V... values) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notEmpty(values, "Values must not be null or empty");
-		Assert.noNullElements(values, "Values must not contain null elements");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notEmpty(values, "Values must not be null or empty");
+        Assert.noNullElements(values, "Values must not contain null elements");
 
-		return createMono(hyperLogLogCommands -> Flux.fromArray(values) //
-				.map(this::rawValue) //
-				.collectList() //
-				.flatMap(serializedValues -> hyperLogLogCommands.pfAdd(rawKey(key), serializedValues)));
-	}
+        return createMono(
+                hyperLogLogCommands ->
+                        Flux.fromArray(values) //
+                                .map(this::rawValue) //
+                                .collectList() //
+                                .flatMap(
+                                        serializedValues -> hyperLogLogCommands.pfAdd(rawKey(key), serializedValues)));
+    }
 
-	@Override
-	@SafeVarargs
-	public final Mono<Long> size(K... keys) {
+    @Override
+    @SafeVarargs
+    public final Mono<Long> size(K... keys) {
 
-		Assert.notEmpty(keys, "Keys must not be null or empty");
-		Assert.noNullElements(keys, "Keys must not contain null elements");
+        Assert.notEmpty(keys, "Keys must not be null or empty");
+        Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		return createMono(hyperLogLogCommands -> Flux.fromArray(keys) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(hyperLogLogCommands::pfCount));
-	}
+        return createMono(
+                hyperLogLogCommands ->
+                        Flux.fromArray(keys) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(hyperLogLogCommands::pfCount));
+    }
 
-	@Override
-	@SafeVarargs
-	public final Mono<Boolean> union(K destination, K... sourceKeys) {
+    @Override
+    @SafeVarargs
+    public final Mono<Boolean> union(K destination, K... sourceKeys) {
 
-		Assert.notNull(destination, "Destination key must not be null");
-		Assert.notEmpty(sourceKeys, "Source keys must not be null or empty");
-		Assert.noNullElements(sourceKeys, "Source keys must not contain null elements");
+        Assert.notNull(destination, "Destination key must not be null");
+        Assert.notEmpty(sourceKeys, "Source keys must not be null or empty");
+        Assert.noNullElements(sourceKeys, "Source keys must not contain null elements");
 
-		return createMono(hyperLogLogCommands -> Flux.fromArray(sourceKeys) //
-				.map(this::rawKey) //
-				.collectList() //
-				.flatMap(serialized -> hyperLogLogCommands.pfMerge(rawKey(destination), serialized)));
-	}
+        return createMono(
+                hyperLogLogCommands ->
+                        Flux.fromArray(sourceKeys) //
+                                .map(this::rawKey) //
+                                .collectList() //
+                                .flatMap(
+                                        serialized -> hyperLogLogCommands.pfMerge(rawKey(destination), serialized)));
+    }
 
-	@Override
-	public Mono<Boolean> delete(K key) {
+    @Override
+    public Mono<Boolean> delete(K key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return template.doCreateMono(connection -> connection.keyCommands().del(rawKey(key))).map(l -> l != 0);
-	}
+        return template
+                .doCreateMono(connection -> connection.keyCommands().del(rawKey(key)))
+                .map(l -> l != 0);
+    }
 
-	private <T> Mono<T> createMono(Function<ReactiveHyperLogLogCommands, Publisher<T>> function) {
+    private <T> Mono<T> createMono(Function<ReactiveHyperLogLogCommands, Publisher<T>> function) {
 
-		Assert.notNull(function, "Function must not be null");
+        Assert.notNull(function, "Function must not be null");
 
-		return template.doCreateMono(connection -> function.apply(connection.hyperLogLogCommands()));
-	}
+        return template.doCreateMono(connection -> function.apply(connection.hyperLogLogCommands()));
+    }
 
-	private ByteBuffer rawKey(K key) {
-		return serializationContext.getKeySerializationPair().write(key);
-	}
+    private ByteBuffer rawKey(K key) {
+        return serializationContext.getKeySerializationPair().write(key);
+    }
 
-	private ByteBuffer rawValue(V value) {
-		return serializationContext.getValueSerializationPair().write(value);
-	}
+    private ByteBuffer rawValue(V value) {
+        return serializationContext.getValueSerializationPair().write(value);
+    }
 }

@@ -20,8 +20,8 @@ package io.valkey.springframework.data.valkey.repository.cdi;
  */
 public class PersonFragmentImpl implements PersonFragment {
 
-	@Override
-	public int returnOne() {
-		return 1;
-	}
+    @Override
+    public int returnOne() {
+        return 1;
+    }
 }

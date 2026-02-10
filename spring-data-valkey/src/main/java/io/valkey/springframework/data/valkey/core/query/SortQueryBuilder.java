@@ -22,21 +22,21 @@ package io.valkey.springframework.data.valkey.core.query;
  */
 public class SortQueryBuilder<K> extends DefaultSortCriterion<K> {
 
-	private static final String NO_SORT_KEY = "~";
+    private static final String NO_SORT_KEY = "~";
 
-	private SortQueryBuilder(K key) {
-		super(key);
-	}
+    private SortQueryBuilder(K key) {
+        super(key);
+    }
 
-	public static <K> SortQueryBuilder<K> sort(K key) {
-		return new SortQueryBuilder<>(key);
-	}
+    public static <K> SortQueryBuilder<K> sort(K key) {
+        return new SortQueryBuilder<>(key);
+    }
 
-	public SortCriterion<K> by(String keyPattern) {
-		return addBy(keyPattern);
-	}
+    public SortCriterion<K> by(String keyPattern) {
+        return addBy(keyPattern);
+    }
 
-	public SortCriterion<K> noSort() {
-		return by(NO_SORT_KEY);
-	}
+    public SortCriterion<K> noSort() {
+        return by(NO_SORT_KEY);
+    }
 }

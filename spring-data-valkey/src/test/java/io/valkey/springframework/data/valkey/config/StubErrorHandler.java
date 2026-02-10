@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.config;
 
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
-
 import org.springframework.util.ErrorHandler;
 
 /**
@@ -25,10 +24,9 @@ import org.springframework.util.ErrorHandler;
  */
 public class StubErrorHandler implements ErrorHandler {
 
-	public BlockingDeque<Throwable> throwables = new LinkedBlockingDeque<>();
+    public BlockingDeque<Throwable> throwables = new LinkedBlockingDeque<>();
 
-	public void handleError(Throwable t) {
-		throwables.add(t);
-	}
-
+    public void handleError(Throwable t) {
+        throwables.add(t);
+    }
 }

@@ -22,14 +22,15 @@ import io.valkey.springframework.data.valkey.connection.ReactiveClusterHashComma
  * @author Mark Paluch
  * @since 2.0
  */
-class LettuceReactiveClusterHashCommands extends LettuceReactiveHashCommands implements ReactiveClusterHashCommands {
+class LettuceReactiveClusterHashCommands extends LettuceReactiveHashCommands
+        implements ReactiveClusterHashCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveClusterHashCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterHashCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveClusterHashCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterHashCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 }

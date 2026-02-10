@@ -17,37 +17,37 @@ package io.valkey.springframework.data.valkey.test.extension.parametrized;
 
 import java.util.Collections;
 import java.util.List;
-
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.TestTemplateInvocationContext;
 
-/**
- * Copy of {@code org.junit.jupiter.params.ParameterizedTestInvocationContext}.
- */
+/** Copy of {@code org.junit.jupiter.params.ParameterizedTestInvocationContext}. */
 class ParameterizedTestInvocationContext implements TestTemplateInvocationContext {
 
-	private final ParameterizedTestNameFormatter formatter;
-	private final ParameterizedTestContext constructorContext;
-	private final ParameterizedTestContext methodContext;
-	private final Object[] arguments;
+    private final ParameterizedTestNameFormatter formatter;
+    private final ParameterizedTestContext constructorContext;
+    private final ParameterizedTestContext methodContext;
+    private final Object[] arguments;
 
-	ParameterizedTestInvocationContext(ParameterizedTestNameFormatter formatter,
-			ParameterizedTestContext constructorContext, ParameterizedTestContext methodContext, Object[] arguments) {
-		this.formatter = formatter;
-		this.constructorContext = constructorContext;
-		this.methodContext = methodContext;
-		this.arguments = arguments;
-	}
+    ParameterizedTestInvocationContext(
+            ParameterizedTestNameFormatter formatter,
+            ParameterizedTestContext constructorContext,
+            ParameterizedTestContext methodContext,
+            Object[] arguments) {
+        this.formatter = formatter;
+        this.constructorContext = constructorContext;
+        this.methodContext = methodContext;
+        this.arguments = arguments;
+    }
 
-	@Override
-	public String getDisplayName(int invocationIndex) {
-		return this.formatter.format(invocationIndex, this.arguments);
-	}
+    @Override
+    public String getDisplayName(int invocationIndex) {
+        return this.formatter.format(invocationIndex, this.arguments);
+    }
 
-	@Override
-	public List<Extension> getAdditionalExtensions() {
-		return Collections.singletonList(
-				new ParameterizedTestParameterResolver(this.constructorContext, this.methodContext, this.arguments));
-	}
-
+    @Override
+    public List<Extension> getAdditionalExtensions() {
+        return Collections.singletonList(
+                new ParameterizedTestParameterResolver(
+                        this.constructorContext, this.methodContext, this.arguments));
+    }
 }

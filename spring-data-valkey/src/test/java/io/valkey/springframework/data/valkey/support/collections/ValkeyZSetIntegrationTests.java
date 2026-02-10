@@ -25,22 +25,22 @@ import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
  */
 public class ValkeyZSetIntegrationTests extends AbstractValkeyZSetTestIntegration<Object> {
 
-	/**
-	 * Constructs a new <code>ValkeyZSetTests</code> instance.
-	 *
-	 * @param factory
-	 * @param template
-	 */
-	public ValkeyZSetIntegrationTests(ObjectFactory<Object> factory, ValkeyTemplate template) {
-		super(factory, template);
-	}
+    /**
+     * Constructs a new <code>ValkeyZSetTests</code> instance.
+     *
+     * @param factory
+     * @param template
+     */
+    public ValkeyZSetIntegrationTests(ObjectFactory<Object> factory, ValkeyTemplate template) {
+        super(factory, template);
+    }
 
-	ValkeyStore copyStore(ValkeyStore store) {
-		return ValkeyZSet.create(store.getKey(), store.getOperations());
-	}
+    ValkeyStore copyStore(ValkeyStore store) {
+        return ValkeyZSet.create(store.getKey(), store.getOperations());
+    }
 
-	AbstractValkeyCollection<Object> createCollection() {
-		String valkeyName = getClass().getName();
-		return new DefaultValkeyZSet(valkeyName, template);
-	}
+    AbstractValkeyCollection<Object> createCollection() {
+        String valkeyName = getClass().getName();
+        return new DefaultValkeyZSet(valkeyName, template);
+    }
 }

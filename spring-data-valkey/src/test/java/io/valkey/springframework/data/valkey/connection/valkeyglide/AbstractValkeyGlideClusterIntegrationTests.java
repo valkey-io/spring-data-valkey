@@ -15,11 +15,16 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -30,30 +35,19 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
-
 /**
- * Abstract base class for Valkey Glide cluster integration tests that provides common setup, 
+ * Abstract base class for Valkey Glide cluster integration tests that provides common setup,
  * teardown, and utility methods to reduce code duplication across cluster test classes.
- * 
- * This class handles:
- * - Cluster connection factory creation and management via JUnit extension
- * - Server availability validation
- * - Test lifecycle management (setup/teardown)
- * - Common utility methods for key cleanup with proper error handling
- * - Cluster-specific helper methods for topology and node operations
- * - CRC16 slot calculation for hash tag support
- * 
- * Subclasses should:
- * - Override {@link #getTestKeyPatterns()} to define their specific test key patterns
- * - Implement their cluster command-specific test methods
- * - Call {@link #cleanupKey(String)} for individual key cleanup in tests
- * 
+ *
+ * <p>This class handles: - Cluster connection factory creation and management via JUnit extension -
+ * Server availability validation - Test lifecycle management (setup/teardown) - Common utility
+ * methods for key cleanup with proper error handling - Cluster-specific helper methods for topology
+ * and node operations - CRC16 slot calculation for hash tag support
+ *
+ * <p>Subclasses should: - Override {@link #getTestKeyPatterns()} to define their specific test key
+ * patterns - Implement their cluster command-specific test methods - Call {@link
+ * #cleanupKey(String)} for individual key cleanup in tests
+ *
  * @author Ilia Kolominsky
  * @since 2.0
  */
@@ -62,7 +56,8 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 @ExtendWith(ValkeyGlideConnectionFactoryExtension.class)
 public abstract class AbstractValkeyGlideClusterIntegrationTests {
 
-    protected static final Logger logger = LoggerFactory.getLogger(AbstractValkeyGlideClusterIntegrationTests.class);
+    protected static final Logger logger =
+            LoggerFactory.getLogger(AbstractValkeyGlideClusterIntegrationTests.class);
 
     protected ValkeyConnectionFactory connectionFactory;
     protected ValkeyClusterConnection clusterConnection;
@@ -75,7 +70,7 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
     @BeforeEach
     void setUp() {
         clusterConnection = connectionFactory.getClusterConnection();
-        
+
         // Clean up any existing test keys
         cleanupTestKeys();
     }
@@ -97,15 +92,15 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
     // ==================== Helper Methods ====================
 
     /**
-     * Cleans up all test keys defined by the subclass pattern.
-     * This method is called automatically during setup and teardown.
-     * 
-     * Cleanup exceptions are logged but don't stop the cleanup process to ensure
-     * other keys can still be cleaned up. This is important for test isolation.
+     * Cleans up all test keys defined by the subclass pattern. This method is called automatically
+     * during setup and teardown.
+     *
+     * <p>Cleanup exceptions are logged but don't stop the cleanup process to ensure other keys can
+     * still be cleaned up. This is important for test isolation.
      */
     protected void cleanupTestKeys() {
         String[] testKeys = getTestKeyPatterns();
-        
+
         for (String key : testKeys) {
             try {
                 clusterConnection.keyCommands().del(key.getBytes());
@@ -115,11 +110,11 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
             }
         }
     }
-    
+
     /**
-     * Cleans up a single test key. This method should be called in finally blocks
-     * of individual test methods to ensure proper cleanup.
-     * 
+     * Cleans up a single test key. This method should be called in finally blocks of individual test
+     * methods to ensure proper cleanup.
+     *
      * @param key the key to delete
      */
     protected void cleanupKey(String key) {
@@ -131,9 +126,9 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
     }
 
     /**
-     * Cleans up multiple test keys. This method should be called in finally blocks
-     * of individual test methods to ensure proper cleanup.
-     * 
+     * Cleans up multiple test keys. This method should be called in finally blocks of individual test
+     * methods to ensure proper cleanup.
+     *
      * @param keys the keys to delete
      */
     protected void cleanupKeys(String... keys) {
@@ -144,25 +139,25 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
 
     /**
      * Retrieves all active master nodes in the cluster using the topology provider.
-     * 
+     *
      * @return collection of active master nodes
      */
     protected Collection<ValkeyClusterNode> getActiveMasterNodes() {
         Iterable<ValkeyClusterNode> allNodes = clusterConnection.clusterCommands().clusterGetNodes();
         Set<ValkeyClusterNode> masters = new HashSet<>();
-        
+
         for (ValkeyClusterNode node : allNodes) {
             if (node.isMaster()) {
                 masters.add(node);
             }
         }
-        
+
         return masters;
     }
 
     /**
      * Retrieves replicas for a given master node.
-     * 
+     *
      * @param master the master node
      * @return collection of replica nodes
      */
@@ -172,7 +167,7 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
 
     /**
      * Finds the node serving a given slot.
-     * 
+     *
      * @param slot the slot number
      * @return the node serving the slot, or null if not found
      */
@@ -181,9 +176,9 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
     }
 
     /**
-     * Calculates the CRC16 slot for a given key using Valkey cluster slot calculation.
-     * Supports hash tags (e.g., "{user}:123" → slot for "user").
-     * 
+     * Calculates the CRC16 slot for a given key using Valkey cluster slot calculation. Supports hash
+     * tags (e.g., "{user}:123" → slot for "user").
+     *
      * @param key the key to calculate slot for
      * @return the slot number (0-16383)
      */
@@ -192,9 +187,9 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
     }
 
     /**
-     * Calculates the CRC16 slot for a given key using Valkey cluster slot calculation.
-     * Supports hash tags (e.g., "{user}:123" → slot for "user").
-     * 
+     * Calculates the CRC16 slot for a given key using Valkey cluster slot calculation. Supports hash
+     * tags (e.g., "{user}:123" → slot for "user").
+     *
      * @param key the key bytes to calculate slot for
      * @return the slot number (0-16383)
      */
@@ -202,14 +197,14 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
         // Find hash tag if present
         int start = -1;
         int end = -1;
-        
+
         for (int i = 0; i < key.length; i++) {
             if (key[i] == '{') {
                 start = i;
                 break;
             }
         }
-        
+
         if (start >= 0) {
             for (int i = start + 1; i < key.length; i++) {
                 if (key[i] == '}') {
@@ -218,7 +213,7 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
                 }
             }
         }
-        
+
         // If hash tag found and not empty, use the content between braces
         byte[] toHash;
         if (start >= 0 && end >= 0 && end > start + 1) {
@@ -226,23 +221,23 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
         } else {
             toHash = key;
         }
-        
+
         return crc16(toHash) & 0x3FFF; // & 0x3FFF is equivalent to % 16384
     }
 
     /**
      * CRC16 implementation for Valkey cluster slot calculation.
-     * 
+     *
      * @param bytes the bytes to hash
      * @return the CRC16 checksum
      */
     private int crc16(byte[] bytes) {
         int crc = 0;
-        
+
         for (byte b : bytes) {
             crc = ((crc << 8) ^ CRC16_TAB[((crc >> 8) ^ (b & 0xFF)) & 0xFF]) & 0xFFFF;
         }
-        
+
         return crc;
     }
 
@@ -283,18 +278,17 @@ public abstract class AbstractValkeyGlideClusterIntegrationTests {
     };
 
     /**
-     * Returns an array of test key patterns that should be cleaned up during
-     * setup and teardown. Subclasses must implement this method to define their
-     * specific test key patterns.
-     * 
+     * Returns an array of test key patterns that should be cleaned up during setup and teardown.
+     * Subclasses must implement this method to define their specific test key patterns.
+     *
      * @return array of test key patterns used by the subclass
      */
     protected abstract String[] getTestKeyPatterns();
 
     /**
-     * Utility method to merge multiple arrays of test key patterns.
-     * Useful for subclasses that need to combine common patterns with specific ones.
-     * 
+     * Utility method to merge multiple arrays of test key patterns. Useful for subclasses that need
+     * to combine common patterns with specific ones.
+     *
      * @param arrays the arrays to merge
      * @return merged array containing all unique keys
      */

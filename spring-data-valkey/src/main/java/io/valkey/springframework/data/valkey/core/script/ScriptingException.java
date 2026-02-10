@@ -26,22 +26,22 @@ import org.springframework.core.NestedRuntimeException;
 @SuppressWarnings("serial")
 public class ScriptingException extends NestedRuntimeException {
 
-	/**
-	 * Constructs a new {@link ScriptingException} instance.
-	 *
-	 * @param msg the detail message.
-	 */
-	public ScriptingException(String msg) {
-		super(msg);
-	}
+    /**
+     * Constructs a new {@link ScriptingException} instance.
+     *
+     * @param msg the detail message.
+     */
+    public ScriptingException(String msg) {
+        super(msg);
+    }
 
-	/**
-	 * Constructs a new {@link ScriptingException} instance.
-	 *
-	 * @param msg the detail message.
-	 * @param cause the nested exception.
-	 */
-	public ScriptingException(String msg, Throwable cause) {
-		super(msg, cause);
-	}
+    /**
+     * Constructs a new {@link ScriptingException} instance.
+     *
+     * @param msg the detail message.
+     * @param cause the nested exception.
+     */
+    public ScriptingException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

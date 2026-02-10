@@ -27,42 +27,42 @@ import java.util.Collection;
  */
 public interface ValkeySentinelCommands {
 
-	/**
-	 * Force a failover as if the {@literal master} was not reachable.
-	 *
-	 * @param master must not be {@literal null}.
-	 */
-	void failover(NamedNode master);
+    /**
+     * Force a failover as if the {@literal master} was not reachable.
+     *
+     * @param master must not be {@literal null}.
+     */
+    void failover(NamedNode master);
 
-	/**
-	 * Get a {@link Collection} of monitored masters and their state.
-	 *
-	 * @return Collection of {@link ValkeyServer}s. Never {@literal null}.
-	 */
-	Collection<ValkeyServer> masters();
+    /**
+     * Get a {@link Collection} of monitored masters and their state.
+     *
+     * @return Collection of {@link ValkeyServer}s. Never {@literal null}.
+     */
+    Collection<ValkeyServer> masters();
 
-	/**
-	 * Show list of replicas for given {@literal master}.
-	 *
-	 * @param master must not be {@literal null}.
-	 * @return Collection of {@link ValkeyServer}s. Never {@literal null}.
-	 */
-	Collection<ValkeyServer> replicas(NamedNode master);
+    /**
+     * Show list of replicas for given {@literal master}.
+     *
+     * @param master must not be {@literal null}.
+     * @return Collection of {@link ValkeyServer}s. Never {@literal null}.
+     */
+    Collection<ValkeyServer> replicas(NamedNode master);
 
-	/**
-	 * Removes given {@literal master}. The server will no longer be monitored and will no longer be returned by
-	 * {@link #masters()}.
-	 *
-	 * @param master must not be {@literal null}.
-	 */
-	void remove(NamedNode master);
+    /**
+     * Removes given {@literal master}. The server will no longer be monitored and will no longer be
+     * returned by {@link #masters()}.
+     *
+     * @param master must not be {@literal null}.
+     */
+    void remove(NamedNode master);
 
-	/**
-	 * Tell sentinel to start monitoring a new {@literal master} with the specified {@link ValkeyServer#getName()},
-	 * {@link ValkeyServer#getHost()}, {@link ValkeyServer#getPort()}, and {@link ValkeyServer#getQuorum()}.
-	 *
-	 * @param master must not be {@literal null}.
-	 */
-	void monitor(ValkeyServer master);
-
+    /**
+     * Tell sentinel to start monitoring a new {@literal master} with the specified {@link
+     * ValkeyServer#getName()}, {@link ValkeyServer#getHost()}, {@link ValkeyServer#getPort()}, and
+     * {@link ValkeyServer#getQuorum()}.
+     *
+     * @param master must not be {@literal null}.
+     */
+    void monitor(ValkeyServer master);
 }

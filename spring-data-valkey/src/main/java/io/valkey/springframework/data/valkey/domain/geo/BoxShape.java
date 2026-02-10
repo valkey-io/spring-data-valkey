@@ -23,25 +23,24 @@ import org.springframework.util.Assert;
  *
  * @author Mark Paluch
  * @since 2.6
- *
  */
 public class BoxShape implements GeoShape {
 
-	private final BoundingBox boundingBox;
+    private final BoundingBox boundingBox;
 
-	public BoxShape(BoundingBox boundingBox) {
+    public BoxShape(BoundingBox boundingBox) {
 
-		Assert.notNull(boundingBox, "BoundingBox must not be null");
+        Assert.notNull(boundingBox, "BoundingBox must not be null");
 
-		this.boundingBox = boundingBox;
-	}
+        this.boundingBox = boundingBox;
+    }
 
-	public BoundingBox getBoundingBox() {
-		return boundingBox;
-	}
+    public BoundingBox getBoundingBox() {
+        return boundingBox;
+    }
 
-	@Override
-	public Metric getMetric() {
-		return boundingBox.getHeight().getMetric();
-	}
+    @Override
+    public Metric getMetric() {
+        return boundingBox.getHeight().getMetric();
+    }
 }

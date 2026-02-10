@@ -17,16 +17,16 @@ package io.valkey.springframework.data.valkey.test.condition;
 
 import static org.junit.jupiter.api.extension.ConditionEvaluationResult.*;
 
+import io.valkey.springframework.data.valkey.SettingsUtils;
 import java.util.Optional;
-
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.platform.commons.util.AnnotationUtils;
-import io.valkey.springframework.data.valkey.SettingsUtils;
 
 /**
- * {@link ExecutionCondition} for {@link EnabledOnValkeyClusterCondition @EnabledOnValkeyClusterAvailable}.
+ * {@link ExecutionCondition} for {@link
+ * EnabledOnValkeyClusterCondition @EnabledOnValkeyClusterAvailable}.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -34,26 +34,27 @@ import io.valkey.springframework.data.valkey.SettingsUtils;
  */
 class EnabledOnValkeyClusterCondition implements ExecutionCondition {
 
-	private static final ConditionEvaluationResult ENABLED_BY_DEFAULT = enabled(
-			"@EnabledOnClusterAvailable is not present");
+    private static final ConditionEvaluationResult ENABLED_BY_DEFAULT =
+            enabled("@EnabledOnClusterAvailable is not present");
 
-	@Override
-	public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+    @Override
+    public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
 
-		Optional<EnabledOnValkeyClusterAvailable> optional = AnnotationUtils.findAnnotation(context.getElement(),
-				EnabledOnValkeyClusterAvailable.class);
+        Optional<EnabledOnValkeyClusterAvailable> optional =
+                AnnotationUtils.findAnnotation(context.getElement(), EnabledOnValkeyClusterAvailable.class);
 
-		if (!optional.isPresent()) {
-			return ENABLED_BY_DEFAULT;
-		}
+        if (!optional.isPresent()) {
+            return ENABLED_BY_DEFAULT;
+        }
 
-		if (ValkeyDetector.isClusterAvailable()) {
-			return enabled("Connection successful to Valkey Cluster at %s:%d".formatted(SettingsUtils.getHost(),
-					SettingsUtils.getClusterPort()));
-		}
+        if (ValkeyDetector.isClusterAvailable()) {
+            return enabled(
+                    "Connection successful to Valkey Cluster at %s:%d"
+                            .formatted(SettingsUtils.getHost(), SettingsUtils.getClusterPort()));
+        }
 
-		return disabled("Cannot connect to Valkey Cluster at %s:%d".formatted(SettingsUtils.getHost(),
-				SettingsUtils.getClusterPort()));
-	}
-
+        return disabled(
+                "Cannot connect to Valkey Cluster at %s:%d"
+                        .formatted(SettingsUtils.getHost(), SettingsUtils.getClusterPort()));
+    }
 }

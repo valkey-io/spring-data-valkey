@@ -26,21 +26,23 @@ import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
  */
 public class ValkeyListIntegrationTests extends AbstractValkeyListIntegrationTests<Object> {
 
-	/**
-	 * Constructs a new, parameterized {@link ValkeyListIntegrationTests}.
-	 *
-	 * @param factory {@link ObjectFactory} used to create different types of elements to store in the list.
-	 * @param template {@link ValkeyTemplate} used to perform operations on Valkey.
-	 */
-	public ValkeyListIntegrationTests(ObjectFactory<Object> factory, ValkeyTemplate<Object, Object> template) {
-		super(factory, template);
-	}
+    /**
+     * Constructs a new, parameterized {@link ValkeyListIntegrationTests}.
+     *
+     * @param factory {@link ObjectFactory} used to create different types of elements to store in the
+     *     list.
+     * @param template {@link ValkeyTemplate} used to perform operations on Valkey.
+     */
+    public ValkeyListIntegrationTests(
+            ObjectFactory<Object> factory, ValkeyTemplate<Object, Object> template) {
+        super(factory, template);
+    }
 
-	ValkeyStore copyStore(ValkeyStore store) {
-		return ValkeyList.create(store.getKey(), store.getOperations());
-	}
+    ValkeyStore copyStore(ValkeyStore store) {
+        return ValkeyList.create(store.getKey(), store.getOperations());
+    }
 
-	AbstractValkeyCollection<Object> createCollection() {
-		return new DefaultValkeyList<Object>(getClass().getName(), this.template);
-	}
+    AbstractValkeyCollection<Object> createCollection() {
+        return new DefaultValkeyList<Object>(getClass().getName(), this.template);
+    }
 }

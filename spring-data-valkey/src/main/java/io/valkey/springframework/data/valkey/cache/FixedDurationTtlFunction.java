@@ -15,14 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.cache;
 
-import java.time.Duration;
-
 import io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter.TtlFunction;
+import java.time.Duration;
 import org.springframework.lang.Nullable;
 
 /**
- * {@link TtlFunction} implementation returning the given, predetermined {@link Duration} used for per cache entry
- * {@literal time-to-live (TTL) expiration}.
+ * {@link TtlFunction} implementation returning the given, predetermined {@link Duration} used for
+ * per cache entry {@literal time-to-live (TTL) expiration}.
  *
  * @author Mark Paluch
  * @author John Blum
@@ -32,8 +31,8 @@ import org.springframework.lang.Nullable;
  */
 public record FixedDurationTtlFunction(Duration duration) implements TtlFunction {
 
-	@Override
-	public Duration getTimeToLive(Object key, @Nullable Object value) {
-		return this.duration;
-	}
+    @Override
+    public Duration getTimeToLive(Object key, @Nullable Object value) {
+        return this.duration;
+    }
 }

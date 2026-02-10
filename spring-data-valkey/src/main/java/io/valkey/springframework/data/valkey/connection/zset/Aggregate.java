@@ -22,5 +22,7 @@ package io.valkey.springframework.data.valkey.connection.zset;
  * @since 3.0
  */
 public enum Aggregate {
-	SUM, MIN, MAX;
+    SUM,
+    MIN,
+    MAX;
 }

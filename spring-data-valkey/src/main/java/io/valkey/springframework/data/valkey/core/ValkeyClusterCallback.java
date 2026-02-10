@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
+import org.springframework.dao.DataAccessException;
 import org.springframework.lang.Nullable;
 
 /**
@@ -28,14 +28,14 @@ import org.springframework.lang.Nullable;
  */
 public interface ValkeyClusterCallback<T> {
 
-	/**
-	 * Gets called by {@link ClusterOperations} with an active Valkey connection. Does not need to care about activating or
-	 * closing the connection or handling exceptions.
-	 *
-	 * @param connection never {@literal null}.
-	 * @return
-	 * @throws DataAccessException
-	 */
-	@Nullable
-	T doInValkey(ValkeyClusterConnection connection) throws DataAccessException;
+    /**
+     * Gets called by {@link ClusterOperations} with an active Valkey connection. Does not need to
+     * care about activating or closing the connection or handling exceptions.
+     *
+     * @param connection never {@literal null}.
+     * @return
+     * @throws DataAccessException
+     */
+    @Nullable
+    T doInValkey(ValkeyClusterConnection connection) throws DataAccessException;
 }

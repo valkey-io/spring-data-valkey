@@ -15,10 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.AbstractTransactionalTestBase;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
@@ -28,13 +28,13 @@ import org.springframework.test.context.ContextConfiguration;
 @ContextConfiguration
 public class TransactionalJedisIntegrationTests extends AbstractTransactionalTestBase {
 
-	@Configuration
-	public static class JedisContextConfiguration extends ValkeyContextConfiguration {
+    @Configuration
+    public static class JedisContextConfiguration extends ValkeyContextConfiguration {
 
-		@Override
-		@Bean
-		public JedisConnectionFactory valkeyConnectionFactory() {
-			return new JedisConnectionFactory(SettingsUtils.standaloneConfiguration());
-		}
-	}
+        @Override
+        @Bean
+        public JedisConnectionFactory valkeyConnectionFactory() {
+            return new JedisConnectionFactory(SettingsUtils.standaloneConfiguration());
+        }
+    }
 }

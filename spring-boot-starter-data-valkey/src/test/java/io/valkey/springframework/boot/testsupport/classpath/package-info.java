@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Custom JUnit extension to change the classpath.
- */
+/** Custom JUnit extension to change the classpath. */
 package io.valkey.springframework.boot.testsupport.classpath;

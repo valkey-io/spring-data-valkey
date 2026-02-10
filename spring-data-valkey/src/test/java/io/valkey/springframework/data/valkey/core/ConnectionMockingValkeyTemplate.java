@@ -15,10 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import org.mockito.Mockito;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
+import org.mockito.Mockito;
 
 /**
  * Test extension to {@link ValkeyTemplate} to use a Mockito mocked {@link ValkeyConnection}.
@@ -27,52 +27,50 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
  */
 public class ConnectionMockingValkeyTemplate<K, V> extends ValkeyTemplate<K, V> {
 
-	private final ValkeyConnection connectionMock;
+    private final ValkeyConnection connectionMock;
 
-	private ConnectionMockingValkeyTemplate() {
+    private ConnectionMockingValkeyTemplate() {
 
-		connectionMock = Mockito.mock(ValkeyConnection.class);
+        connectionMock = Mockito.mock(ValkeyConnection.class);
 
-		ValkeyConnectionFactory connectionFactory = Mockito.mock(ValkeyConnectionFactory.class);
-		Mockito.when(connectionFactory.getConnection()).thenReturn(connectionMock);
+        ValkeyConnectionFactory connectionFactory = Mockito.mock(ValkeyConnectionFactory.class);
+        Mockito.when(connectionFactory.getConnection()).thenReturn(connectionMock);
 
-		setConnectionFactory(connectionFactory);
-	}
+        setConnectionFactory(connectionFactory);
+    }
 
-	static <K, V> ConnectionMockingValkeyTemplate<K, V> template() {
-		return builder().build();
-	}
+    static <K, V> ConnectionMockingValkeyTemplate<K, V> template() {
+        return builder().build();
+    }
 
-	static MockTemplateBuilder builder() {
-		return new MockTemplateBuilder();
-	}
+    static MockTemplateBuilder builder() {
+        return new MockTemplateBuilder();
+    }
 
-	public ValkeyConnection verify() {
-		return Mockito.verify(connectionMock);
-	}
+    public ValkeyConnection verify() {
+        return Mockito.verify(connectionMock);
+    }
 
-	public byte[] serializeKey(K key) {
-		return ((ValkeySerializer<K>) getKeySerializer()).serialize(key);
-	}
+    public byte[] serializeKey(K key) {
+        return ((ValkeySerializer<K>) getKeySerializer()).serialize(key);
+    }
 
-	public ValkeyConnection never() {
-		return Mockito.verify(connectionMock, Mockito.never());
-	}
+    public ValkeyConnection never() {
+        return Mockito.verify(connectionMock, Mockito.never());
+    }
 
-	public ValkeyConnection doReturn(Object o) {
-		return Mockito.doReturn(o).when(connectionMock);
-	}
+    public ValkeyConnection doReturn(Object o) {
+        return Mockito.doReturn(o).when(connectionMock);
+    }
 
-	public static class MockTemplateBuilder {
+    public static class MockTemplateBuilder {
 
-		private ConnectionMockingValkeyTemplate template = new ConnectionMockingValkeyTemplate();
+        private ConnectionMockingValkeyTemplate template = new ConnectionMockingValkeyTemplate();
 
-		public <K, V> ConnectionMockingValkeyTemplate<K, V> build() {
+        public <K, V> ConnectionMockingValkeyTemplate<K, V> build() {
 
-			template.afterPropertiesSet();
-			return template;
-		}
-
-	}
-
+            template.afterPropertiesSet();
+            return template;
+        }
+    }
 }

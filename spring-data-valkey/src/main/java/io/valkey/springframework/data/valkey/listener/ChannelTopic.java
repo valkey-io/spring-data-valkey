@@ -26,25 +26,25 @@ import org.springframework.util.Assert;
  */
 public class ChannelTopic extends AbstractTopic {
 
-	/**
-	 * Constructs a new {@link ChannelTopic} instance.
-	 *
-	 * @param channelName must not be {@literal null}.
-	 */
-	public ChannelTopic(String channelName) {
+    /**
+     * Constructs a new {@link ChannelTopic} instance.
+     *
+     * @param channelName must not be {@literal null}.
+     */
+    public ChannelTopic(String channelName) {
 
-		super(channelName);
-		Assert.notNull(channelName, "Channel name must not be null");
-	}
+        super(channelName);
+        Assert.notNull(channelName, "Channel name must not be null");
+    }
 
-	/**
-	 * Create a new {@link ChannelTopic} for channel subscriptions.
-	 *
-	 * @param channelName {@link String name} of the Valkey channel; must not be {@literal null}.
-	 * @return the {@link ChannelTopic} for the given {@code channelName}.
-	 * @since 2.1
-	 */
-	public static ChannelTopic of(String channelName) {
-		return new ChannelTopic(channelName);
-	}
+    /**
+     * Create a new {@link ChannelTopic} for channel subscriptions.
+     *
+     * @param channelName {@link String name} of the Valkey channel; must not be {@literal null}.
+     * @return the {@link ChannelTopic} for the given {@code channelName}.
+     * @since 2.1
+     */
+    public static ChannelTopic of(String channelName) {
+        return new ChannelTopic(channelName);
+    }
 }

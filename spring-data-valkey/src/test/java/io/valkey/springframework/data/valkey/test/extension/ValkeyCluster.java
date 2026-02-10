@@ -15,6 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.test.extension;
 
+import io.valkey.springframework.data.valkey.SettingsUtils;
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Inherited;
@@ -22,17 +23,14 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import io.valkey.springframework.data.valkey.SettingsUtils;
-
 /**
  * {@code @ValkeyCluster} is used to qualify a connection resource to point to Valkey Cluster.
  *
  * @author Mark Paluch
  * @see SettingsUtils#getClusterPort()
  */
-@Target({ ElementType.PARAMETER })
+@Target({ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface ValkeyCluster {
-}
+public @interface ValkeyCluster {}

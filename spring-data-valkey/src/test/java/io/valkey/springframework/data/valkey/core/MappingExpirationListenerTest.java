@@ -22,9 +22,11 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import io.valkey.springframework.data.valkey.connection.Message;
+import io.valkey.springframework.data.valkey.core.convert.ValkeyConverter;
+import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -33,9 +35,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.core.convert.ConversionService;
-import io.valkey.springframework.data.valkey.connection.Message;
-import io.valkey.springframework.data.valkey.core.convert.ValkeyConverter;
-import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer;
 
 /**
  * @author Lucian Torje
@@ -45,66 +44,81 @@ import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerConta
 @MockitoSettings(strictness = Strictness.LENIENT)
 class MappingExpirationListenerTest {
 
-	@Mock private ValkeyOperations<?, ?> valkeyOperations;
-	@Mock private ValkeyConverter valkeyConverter;
-	@Mock private ValkeyMessageListenerContainer listenerContainer;
-	@Mock private Message message;
+    @Mock private ValkeyOperations<?, ?> valkeyOperations;
+    @Mock private ValkeyConverter valkeyConverter;
+    @Mock private ValkeyMessageListenerContainer listenerContainer;
+    @Mock private Message message;
 
-	private ValkeyKeyValueAdapter.MappingExpirationListener listener;
+    private ValkeyKeyValueAdapter.MappingExpirationListener listener;
 
-	@Test // GH-2954
-	void testOnNonKeyExpiration() {
+    @Test // GH-2954
+    void testOnNonKeyExpiration() {
 
-		byte[] key = "testKey".getBytes();
-		when(message.getBody()).thenReturn(key);
-		listener = new ValkeyKeyValueAdapter.MappingExpirationListener(listenerContainer, valkeyOperations, valkeyConverter,
-				ValkeyKeyValueAdapter.ShadowCopy.ON);
+        byte[] key = "testKey".getBytes();
+        when(message.getBody()).thenReturn(key);
+        listener =
+                new ValkeyKeyValueAdapter.MappingExpirationListener(
+                        listenerContainer,
+                        valkeyOperations,
+                        valkeyConverter,
+                        ValkeyKeyValueAdapter.ShadowCopy.ON);
 
-		listener.onMessage(message, null);
+        listener.onMessage(message, null);
 
-		verify(valkeyOperations, times(0)).execute(any(ValkeyCallback.class));
-	}
+        verify(valkeyOperations, times(0)).execute(any(ValkeyCallback.class));
+    }
 
-	@Test // GH-2954
-	void testOnValidKeyExpirationWithShadowCopiesDisabled() {
+    @Test // GH-2954
+    void testOnValidKeyExpirationWithShadowCopiesDisabled() {
 
-		List<Object> eventList = new ArrayList<>();
+        List<Object> eventList = new ArrayList<>();
 
-		byte[] key = "abc:testKey".getBytes();
-		when(message.getBody()).thenReturn(key);
+        byte[] key = "abc:testKey".getBytes();
+        when(message.getBody()).thenReturn(key);
 
-		listener = new ValkeyKeyValueAdapter.MappingExpirationListener(listenerContainer, valkeyOperations, valkeyConverter,
-				ValkeyKeyValueAdapter.ShadowCopy.OFF);
-		listener.setApplicationEventPublisher(eventList::add);
-		listener.onMessage(message, null);
+        listener =
+                new ValkeyKeyValueAdapter.MappingExpirationListener(
+                        listenerContainer,
+                        valkeyOperations,
+                        valkeyConverter,
+                        ValkeyKeyValueAdapter.ShadowCopy.OFF);
+        listener.setApplicationEventPublisher(eventList::add);
+        listener.onMessage(message, null);
 
-		verify(valkeyOperations, times(1)).execute(any(ValkeyCallback.class));
-		assertThat(eventList).hasSize(1);
-		assertThat(eventList.get(0)).isInstanceOf(ValkeyKeyExpiredEvent.class);
-		assertThat(((ValkeyKeyExpiredEvent) (eventList.get(0))).getKeyspace()).isEqualTo("abc");
-		assertThat(((ValkeyKeyExpiredEvent) (eventList.get(0))).getId()).isEqualTo("testKey".getBytes());
-	}
+        verify(valkeyOperations, times(1)).execute(any(ValkeyCallback.class));
+        assertThat(eventList).hasSize(1);
+        assertThat(eventList.get(0)).isInstanceOf(ValkeyKeyExpiredEvent.class);
+        assertThat(((ValkeyKeyExpiredEvent) (eventList.get(0))).getKeyspace()).isEqualTo("abc");
+        assertThat(((ValkeyKeyExpiredEvent) (eventList.get(0))).getId())
+                .isEqualTo("testKey".getBytes());
+    }
 
-	@Test // GH-2954
-	void testOnValidKeyExpirationWithShadowCopiesEnabled() {
+    @Test // GH-2954
+    void testOnValidKeyExpirationWithShadowCopiesEnabled() {
 
-		ConversionService conversionService = Mockito.mock(ConversionService.class);
-		List<Object> eventList = new ArrayList<>();
+        ConversionService conversionService = Mockito.mock(ConversionService.class);
+        List<Object> eventList = new ArrayList<>();
 
-		byte[] key = "abc:testKey".getBytes();
-		when(message.getBody()).thenReturn(key);
-		when(valkeyConverter.getConversionService()).thenReturn(conversionService);
-		when(conversionService.convert(any(), eq(byte[].class))).thenReturn("foo".getBytes());
+        byte[] key = "abc:testKey".getBytes();
+        when(message.getBody()).thenReturn(key);
+        when(valkeyConverter.getConversionService()).thenReturn(conversionService);
+        when(conversionService.convert(any(), eq(byte[].class))).thenReturn("foo".getBytes());
 
-		listener = new ValkeyKeyValueAdapter.MappingExpirationListener(listenerContainer, valkeyOperations, valkeyConverter,
-				ValkeyKeyValueAdapter.ShadowCopy.ON);
-		listener.setApplicationEventPublisher(eventList::add);
-		listener.onMessage(message, null);
+        listener =
+                new ValkeyKeyValueAdapter.MappingExpirationListener(
+                        listenerContainer,
+                        valkeyOperations,
+                        valkeyConverter,
+                        ValkeyKeyValueAdapter.ShadowCopy.ON);
+        listener.setApplicationEventPublisher(eventList::add);
+        listener.onMessage(message, null);
 
-		verify(valkeyOperations, times(2)).execute(any(ValkeyCallback.class)); // delete entry in index, delete phantom key
-		assertThat(eventList).hasSize(1);
-		assertThat(eventList.get(0)).isInstanceOf(ValkeyKeyExpiredEvent.class);
-		assertThat(((ValkeyKeyExpiredEvent) (eventList.get(0))).getKeyspace()).isEqualTo("abc");
-		assertThat(((ValkeyKeyExpiredEvent) (eventList.get(0))).getId()).isEqualTo("testKey".getBytes());
-	}
+        verify(valkeyOperations, times(2))
+                .execute(any(ValkeyCallback.class)); // delete entry in index, delete phantom key
+        assertThat(eventList).hasSize(1);
+        assertThat(eventList.get(0)).isInstanceOf(ValkeyKeyExpiredEvent.class);
+        assertThat(((ValkeyKeyExpiredEvent) (eventList.get(0))).getKeyspace()).isEqualTo("abc");
+        assertThat(((ValkeyKeyExpiredEvent) (eventList.get(0))).getId())
+                .isEqualTo("testKey".getBytes());
+    }
 }

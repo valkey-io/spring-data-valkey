@@ -18,19 +18,16 @@ package io.valkey.springframework.data.valkey.core;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.connection.ReactivePubSubCommands;
+import io.valkey.springframework.data.valkey.connection.ReactiveSubscription;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
-
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.junit.jupiter.api.Test;
-
-import io.valkey.springframework.data.valkey.connection.ReactivePubSubCommands;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.ReactiveSubscription;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 
 /**
  * Unit tests for {@link ReactiveValkeyTemplate}.
@@ -39,50 +36,54 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializationConte
  */
 class ReactiveValkeyTemplateUnitTests {
 
-	private ReactiveValkeyConnectionFactory connectionFactoryMock = mock(ReactiveValkeyConnectionFactory.class);
-	private ReactiveValkeyConnection connectionMock = mock(ReactiveValkeyConnection.class);
+    private ReactiveValkeyConnectionFactory connectionFactoryMock =
+            mock(ReactiveValkeyConnectionFactory.class);
+    private ReactiveValkeyConnection connectionMock = mock(ReactiveValkeyConnection.class);
 
-	@Test // DATAREDIS-999
-	void closeShouldUseAsyncRelease() {
+    @Test // DATAREDIS-999
+    void closeShouldUseAsyncRelease() {
 
-		when(connectionFactoryMock.getReactiveConnection()).thenReturn(connectionMock);
-		when(connectionMock.closeLater()).thenReturn(Mono.empty());
+        when(connectionFactoryMock.getReactiveConnection()).thenReturn(connectionMock);
+        when(connectionMock.closeLater()).thenReturn(Mono.empty());
 
-		ReactiveValkeyTemplate<String, String> template = new ReactiveValkeyTemplate<>(connectionFactoryMock,
-				ValkeySerializationContext.string());
+        ReactiveValkeyTemplate<String, String> template =
+                new ReactiveValkeyTemplate<>(connectionFactoryMock, ValkeySerializationContext.string());
 
-		template.execute(connection -> Mono.empty()) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        template
+                .execute(connection -> Mono.empty()) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		verify(connectionMock).closeLater();
-		verifyNoMoreInteractions(connectionMock);
-	}
+        verify(connectionMock).closeLater();
+        verifyNoMoreInteractions(connectionMock);
+    }
 
-	@Test // DATAREDIS-1053
-	void listenToShouldSubscribeToChannel() {
+    @Test // DATAREDIS-1053
+    void listenToShouldSubscribeToChannel() {
 
-		AtomicBoolean closed = new AtomicBoolean();
-		when(connectionFactoryMock.getReactiveConnection()).thenReturn(connectionMock);
-		when(connectionMock.closeLater()).thenReturn(Mono.<Void> empty().doOnSubscribe(ignore -> closed.set(true)));
+        AtomicBoolean closed = new AtomicBoolean();
+        when(connectionFactoryMock.getReactiveConnection()).thenReturn(connectionMock);
+        when(connectionMock.closeLater())
+                .thenReturn(Mono.<Void>empty().doOnSubscribe(ignore -> closed.set(true)));
 
-		ReactivePubSubCommands pubSubCommands = mock(ReactivePubSubCommands.class);
-		ReactiveSubscription subscription = mock(ReactiveSubscription.class);
+        ReactivePubSubCommands pubSubCommands = mock(ReactivePubSubCommands.class);
+        ReactiveSubscription subscription = mock(ReactiveSubscription.class);
 
-		when(connectionMock.pubSubCommands()).thenReturn(pubSubCommands);
-		when(pubSubCommands.subscribe(any())).thenReturn(Mono.empty());
-		when(pubSubCommands.createSubscription(any())).thenReturn(Mono.just(subscription));
-		when(subscription.receive()).thenReturn(Flux.create(sink -> {}));
+        when(connectionMock.pubSubCommands()).thenReturn(pubSubCommands);
+        when(pubSubCommands.subscribe(any())).thenReturn(Mono.empty());
+        when(pubSubCommands.createSubscription(any())).thenReturn(Mono.just(subscription));
+        when(subscription.receive()).thenReturn(Flux.create(sink -> {}));
 
-		ReactiveValkeyTemplate<String, String> template = new ReactiveValkeyTemplate<>(connectionFactoryMock,
-				ValkeySerializationContext.string());
+        ReactiveValkeyTemplate<String, String> template =
+                new ReactiveValkeyTemplate<>(connectionFactoryMock, ValkeySerializationContext.string());
 
-		template.listenToChannel("channel") //
-				.as(StepVerifier::create) //
-				.thenAwait() //
-				.thenCancel() //
-				.verify();
+        template
+                .listenToChannel("channel") //
+                .as(StepVerifier::create) //
+                .thenAwait() //
+                .thenCancel() //
+                .verify();
 
-		assertThat(closed).isTrue();
-	}
+        assertThat(closed).isTrue();
+    }
 }

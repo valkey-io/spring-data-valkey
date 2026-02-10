@@ -22,18 +22,17 @@ import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.pubsub.StatefulRedisClusterPubSubConnection;
 import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
-
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * {@link LettuceConnectionProvider} and {@link ValkeyClientProvider} for Valkey Cluster connections.
+ * {@link LettuceConnectionProvider} and {@link ValkeyClientProvider} for Valkey Cluster
+ * connections.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -43,89 +42,94 @@ import org.springframework.util.Assert;
  */
 class ClusterConnectionProvider implements LettuceConnectionProvider, ValkeyClientProvider {
 
-	private volatile boolean initialized;
+    private volatile boolean initialized;
 
-	private final Lock lock = new ReentrantLock();
+    private final Lock lock = new ReentrantLock();
 
-	@Nullable
-	private final ReadFrom readFrom;
+    @Nullable private final ReadFrom readFrom;
 
-	private final RedisClusterClient client;
+    private final RedisClusterClient client;
 
-	private final RedisCodec<?, ?> codec;
+    private final RedisCodec<?, ?> codec;
 
-	/**
-	 * Create new {@link ClusterConnectionProvider}.
-	 *
-	 * @param client must not be {@literal null}.
-	 * @param codec must not be {@literal null}.
-	 */
-	ClusterConnectionProvider(RedisClusterClient client, RedisCodec<?, ?> codec) {
-		this(client, codec, null);
-	}
+    /**
+     * Create new {@link ClusterConnectionProvider}.
+     *
+     * @param client must not be {@literal null}.
+     * @param codec must not be {@literal null}.
+     */
+    ClusterConnectionProvider(RedisClusterClient client, RedisCodec<?, ?> codec) {
+        this(client, codec, null);
+    }
 
-	/**
-	 * Create new {@link ClusterConnectionProvider}.
-	 *
-	 * @param client must not be {@literal null}.
-	 * @param codec must not be {@literal null}.
-	 * @param readFrom can be {@literal null}.
-	 * @since 2.1
-	 */
-	ClusterConnectionProvider(RedisClusterClient client, RedisCodec<?, ?> codec, @Nullable ReadFrom readFrom) {
+    /**
+     * Create new {@link ClusterConnectionProvider}.
+     *
+     * @param client must not be {@literal null}.
+     * @param codec must not be {@literal null}.
+     * @param readFrom can be {@literal null}.
+     * @since 2.1
+     */
+    ClusterConnectionProvider(
+            RedisClusterClient client, RedisCodec<?, ?> codec, @Nullable ReadFrom readFrom) {
 
-		Assert.notNull(client, "Client must not be null");
-		Assert.notNull(codec, "Codec must not be null");
+        Assert.notNull(client, "Client must not be null");
+        Assert.notNull(codec, "Codec must not be null");
 
-		this.client = client;
-		this.codec = codec;
-		this.readFrom = readFrom;
-	}
+        this.client = client;
+        this.codec = codec;
+        this.readFrom = readFrom;
+    }
 
-	private Optional<ReadFrom> getReadFrom() {
-		return Optional.ofNullable(this.readFrom);
-	}
+    private Optional<ReadFrom> getReadFrom() {
+        return Optional.ofNullable(this.readFrom);
+    }
 
-	@Override
-	public <T extends StatefulConnection<?, ?>> CompletableFuture<T> getConnectionAsync(Class<T> connectionType) {
+    @Override
+    public <T extends StatefulConnection<?, ?>> CompletableFuture<T> getConnectionAsync(
+            Class<T> connectionType) {
 
-		if (!initialized) {
+        if (!initialized) {
 
-			// Partitions have to be initialized before asynchronous usage.
-			// Needs to happen only once. Initialize eagerly if blocking is not an options.
-			lock.lock();
+            // Partitions have to be initialized before asynchronous usage.
+            // Needs to happen only once. Initialize eagerly if blocking is not an options.
+            lock.lock();
 
-			try {
-				if (!initialized) {
-					client.getPartitions();
-					initialized = true;
-				}
-			} finally {
-				lock.unlock();
-			}
-		}
+            try {
+                if (!initialized) {
+                    client.getPartitions();
+                    initialized = true;
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
 
-		if (connectionType.equals(StatefulRedisPubSubConnection.class)
-				|| connectionType.equals(StatefulRedisClusterPubSubConnection.class)) {
+        if (connectionType.equals(StatefulRedisPubSubConnection.class)
+                || connectionType.equals(StatefulRedisClusterPubSubConnection.class)) {
 
-			return client.connectPubSubAsync(codec).thenApply(connectionType::cast);
-		}
+            return client.connectPubSubAsync(codec).thenApply(connectionType::cast);
+        }
 
-		if (StatefulRedisClusterConnection.class.isAssignableFrom(connectionType)
-				|| connectionType.equals(StatefulConnection.class)) {
+        if (StatefulRedisClusterConnection.class.isAssignableFrom(connectionType)
+                || connectionType.equals(StatefulConnection.class)) {
 
-			return client.connectAsync(codec).thenApply(connection -> {
-						getReadFrom().ifPresent(connection::setReadFrom);
-						return connectionType.cast(connection);
-					});
-		}
+            return client
+                    .connectAsync(codec)
+                    .thenApply(
+                            connection -> {
+                                getReadFrom().ifPresent(connection::setReadFrom);
+                                return connectionType.cast(connection);
+                            });
+        }
 
-		return LettuceFutureUtils
-				.failed(new InvalidDataAccessApiUsageException("Connection type %s not supported".formatted(connectionType)));
-	}
+        return LettuceFutureUtils.failed(
+                new InvalidDataAccessApiUsageException(
+                        "Connection type %s not supported".formatted(connectionType)));
+    }
 
-	@Override
-	public RedisClusterClient getValkeyClient() {
-		return this.client;
-	}
+    @Override
+    public RedisClusterClient getValkeyClient() {
+        return this.client;
+    }
 }

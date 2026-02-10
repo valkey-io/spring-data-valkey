@@ -20,9 +20,9 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * {@link ConvertingCursor} wraps a given cursor and applies given {@link Converter} to items prior to returning them.
- * This allows to easily perform required conversion whereas the underlying implementation may still work with its
- * native types.
+ * {@link ConvertingCursor} wraps a given cursor and applies given {@link Converter} to items prior
+ * to returning them. This allows to easily perform required conversion whereas the underlying
+ * implementation may still work with its native types.
  *
  * @author Christoph Strobl
  * @param <S>
@@ -31,61 +31,61 @@ import org.springframework.util.Assert;
  */
 public class ConvertingCursor<S, T> implements Cursor<T> {
 
-	private final Cursor<S> delegate;
-	private final Converter<S, T> converter;
+    private final Cursor<S> delegate;
+    private final Converter<S, T> converter;
 
-	/**
-	 * @param cursor Cursor must not be {@literal null}.
-	 * @param converter Converter must not be {@literal null}.
-	 */
-	public ConvertingCursor(Cursor<S> cursor, Converter<S, T> converter) {
+    /**
+     * @param cursor Cursor must not be {@literal null}.
+     * @param converter Converter must not be {@literal null}.
+     */
+    public ConvertingCursor(Cursor<S> cursor, Converter<S, T> converter) {
 
-		Assert.notNull(cursor, "Cursor must not be null");
-		Assert.notNull(converter, "Converter must not be null");
+        Assert.notNull(cursor, "Cursor must not be null");
+        Assert.notNull(converter, "Converter must not be null");
 
-		this.delegate = cursor;
-		this.converter = converter;
-	}
+        this.delegate = cursor;
+        this.converter = converter;
+    }
 
-	@Override
-	public boolean hasNext() {
-		return delegate.hasNext();
-	}
+    @Override
+    public boolean hasNext() {
+        return delegate.hasNext();
+    }
 
-	@Override
-	@Nullable
-	public T next() {
-		return converter.convert(delegate.next());
-	}
+    @Override
+    @Nullable
+    public T next() {
+        return converter.convert(delegate.next());
+    }
 
-	@Override
-	public void remove() {
-		delegate.remove();
-	}
+    @Override
+    public void remove() {
+        delegate.remove();
+    }
 
-	@Override
-	public void close() {
-		delegate.close();
-	}
+    @Override
+    public void close() {
+        delegate.close();
+    }
 
-	@Override
-	public CursorId getId() {
-		return delegate.getId();
-	}
+    @Override
+    public CursorId getId() {
+        return delegate.getId();
+    }
 
-	@Override
-	@Deprecated
-	public long getCursorId() {
-		return delegate.getCursorId();
-	}
+    @Override
+    @Deprecated
+    public long getCursorId() {
+        return delegate.getCursorId();
+    }
 
-	@Override
-	public boolean isClosed() {
-		return delegate.isClosed();
-	}
+    @Override
+    public boolean isClosed() {
+        return delegate.isClosed();
+    }
 
-	@Override
-	public long getPosition() {
-		return delegate.getPosition();
-	}
+    @Override
+    public long getPosition() {
+        return delegate.getPosition();
+    }
 }

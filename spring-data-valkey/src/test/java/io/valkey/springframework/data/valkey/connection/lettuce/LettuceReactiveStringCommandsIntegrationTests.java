@@ -15,17 +15,27 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assume.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldIncrBy.Overflow.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldType.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.Offset.offset;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assume.*;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
+import io.valkey.springframework.data.valkey.connection.ReactiveStringCommands.SetCommand;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.ByteBufferResponse;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.CommandResponse;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.MultiValueResponse;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.RangeCommand;
+import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.BitOperation;
+import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import io.valkey.springframework.data.valkey.test.util.HexStringUtils;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
@@ -36,552 +46,708 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.assertj.core.data.Offset;
-
 import org.springframework.data.domain.Range;
 import org.springframework.data.domain.Range.Bound;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.ByteBufferResponse;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.CommandResponse;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.MultiValueResponse;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.RangeCommand;
-import io.valkey.springframework.data.valkey.connection.ReactiveStringCommands.SetCommand;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.BitOperation;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
-import io.valkey.springframework.data.valkey.core.types.Expiration;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
-import io.valkey.springframework.data.valkey.test.util.HexStringUtils;
-import io.valkey.springframework.data.valkey.util.ByteUtils;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 /**
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author Michele Mancioppi
  */
-public class LettuceReactiveStringCommandsIntegrationTests extends LettuceReactiveCommandsTestSupport {
-
-	public LettuceReactiveStringCommandsIntegrationTests(Fixture fixture) {
-		super(fixture);
-	}
-
-	@ParameterizedValkeyTest // GH-2050
-	@EnabledOnCommand("GETEX")
-	void getExShouldWorkCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().getEx(KEY_1_BBUFFER, Expiration.seconds(10)).as(StepVerifier::create) //
-				.expectNext(VALUE_1_BBUFFER) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(1L);
-	}
-
-	@ParameterizedValkeyTest // GH-2050
-	@EnabledOnCommand("GETDEL")
-	void getDelShouldWorkCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().getDel(KEY_1_BBUFFER).as(StepVerifier::create) //
-				.expectNext(VALUE_1_BBUFFER) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.exists(KEY_1)).isZero();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void getSetShouldReturnPreviousValueCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().getSet(KEY_1_BBUFFER, VALUE_2_BBUFFER).as(StepVerifier::create) //
-				.expectNext(VALUE_1_BBUFFER) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525, DATAREDIS-645
-	void getSetShouldNotEmitPreviousValueCorrectlyWhenNotExists() {
-
-		connection.stringCommands().getSet(KEY_1_BBUFFER, VALUE_2_BBUFFER).as(StepVerifier::create).verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void setShouldAddValueCorrectly() {
-
-		connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER).as(StepVerifier::create) //
-				.expectNext(true) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_1);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void setShouldAddValuesCorrectly() {
-
-		List<SetCommand> setCommands = Arrays.asList(SetCommand.set(KEY_1_BBUFFER).value(VALUE_1_BBUFFER),
-				SetCommand.set(KEY_2_BBUFFER).value(VALUE_2_BBUFFER));
-
-		connection.stringCommands().set(Flux.fromIterable(setCommands)).as(StepVerifier::create) //
-				.expectNextCount(2) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeCommands.get(KEY_2)).isEqualTo(VALUE_2);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void getShouldRetrieveValueCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().get(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(VALUE_1_BBUFFER)
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525, DATAREDIS-645
-	void getShouldNotEmitValueValueIfAbsent() {
-		connection.stringCommands().get(KEY_1_BBUFFER).as(StepVerifier::create).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void getShouldRetrieveValuesCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		Stream<KeyCommand> stream = Stream.of(new KeyCommand(KEY_1_BBUFFER), new KeyCommand(KEY_2_BBUFFER));
-		Flux<ByteBufferResponse<KeyCommand>> result = connection.stringCommands().get(Flux.fromStream(stream));
-
-		result.map(CommandResponse::getOutput).map(ByteUtils::getBytes).map(String::new).as(StepVerifier::create) //
-				.expectNext(new String(ByteUtils.getBytes(VALUE_1_BBUFFER)), new String(ByteUtils.getBytes(VALUE_2_BBUFFER))) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void getShouldRetrieveValuesWithNullCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_3, VALUE_3);
-
-		Stream<KeyCommand> stream = Stream.of(new KeyCommand(KEY_1_BBUFFER), new KeyCommand(KEY_2_BBUFFER),
-				new KeyCommand(KEY_3_BBUFFER));
-		Flux<ByteBufferResponse<KeyCommand>> result = connection.stringCommands().get(Flux.fromStream(stream));
-
-		result.map(CommandResponse::isPresent).as(StepVerifier::create) //
-				.expectNext(true, false, true) //
-				.verifyComplete();
-
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void mGetShouldRetrieveValueCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		connection.stringCommands().mGet(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).as(StepVerifier::create) //
-				.consumeNextWith(byteBuffers -> assertThat(byteBuffers).containsExactly(VALUE_1_BBUFFER, VALUE_2_BBUFFER))//
-				.verifyComplete();
-
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void mGetShouldRetrieveNullValueCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_3, VALUE_3);
-
-		Mono<List<ByteBuffer>> result = connection.stringCommands()
-				.mGet(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER));
-
-		assertThat(result.block()).containsExactly(VALUE_1_BBUFFER, null, VALUE_3_BBUFFER);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void mGetShouldRetrieveValuesCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		List<List<ByteBuffer>> lists = Arrays.asList(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER),
-				Collections.singletonList(KEY_2_BBUFFER));
-		Flux<List<ByteBuffer>> result = connection.stringCommands().mGet(Flux.fromIterable(lists))
-				.map(MultiValueResponse::getOutput);
-
-		Set<List<ByteBuffer>> expected = new HashSet<>();
-		expected.add(Arrays.asList(VALUE_1_BBUFFER, VALUE_2_BBUFFER));
-		expected.add(Collections.singletonList(VALUE_2_BBUFFER));
-
-		result.collect(Collectors.toSet()).as(StepVerifier::create) //
-				.expectNext(expected) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void setNXshouldOnlySetValueWhenNotPresent() {
-
-		connection.stringCommands().setNX(KEY_1_BBUFFER, VALUE_1_BBUFFER).as(StepVerifier::create) //
-				.expectNext(true) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void setNXshouldNotSetValueWhenAlreadyPresent() {
-
-		nativeCommands.setnx(KEY_1, VALUE_1);
-
-		connection.stringCommands().setNX(KEY_1_BBUFFER, VALUE_2_BBUFFER).as(StepVerifier::create) //
-				.expectNext(false) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void setEXshouldSetKeyAndExpirationTime() {
-
-		connection.stringCommands().setEX(KEY_1_BBUFFER, VALUE_1_BBUFFER, Expiration.seconds(3)).as(StepVerifier::create) //
-				.expectNext(true) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.ttl(KEY_1) > 1).isTrue();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void pSetEXshouldSetKeyAndExpirationTime() {
-
-		connection.stringCommands().pSetEX(KEY_1_BBUFFER, VALUE_1_BBUFFER, Expiration.milliseconds(600))
-				.as(StepVerifier::create) //
-				.expectNext(true) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.pttl(KEY_1) > 1).isTrue();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void mSetShouldAddMultipleKeyValuePairs() {
-
-		Map<ByteBuffer, ByteBuffer> map = new LinkedHashMap<>();
-		map.put(KEY_1_BBUFFER, VALUE_1_BBUFFER);
-		map.put(KEY_2_BBUFFER, VALUE_2_BBUFFER);
-
-		connection.stringCommands().mSet(map).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeCommands.get(KEY_2)).isEqualTo(VALUE_2);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void mSetNXShouldAddMultipleKeyValuePairs() {
-
-		assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
-
-		Map<ByteBuffer, ByteBuffer> map = new LinkedHashMap<>();
-		map.put(KEY_1_BBUFFER, VALUE_1_BBUFFER);
-		map.put(KEY_2_BBUFFER, VALUE_2_BBUFFER);
-
-		connection.stringCommands().mSetNX(map).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_1);
-		assertThat(nativeCommands.get(KEY_2)).isEqualTo(VALUE_2);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void mSetNXShouldNotAddMultipleKeyValuePairsWhenAlreadyExit() {
-
-		assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
-
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		Map<ByteBuffer, ByteBuffer> map = new LinkedHashMap<>();
-		map.put(KEY_1_BBUFFER, VALUE_1_BBUFFER);
-		map.put(KEY_2_BBUFFER, VALUE_2_BBUFFER);
-
-		connection.stringCommands().mSetNX(map).as(StepVerifier::create).expectNext(false).verifyComplete();
-
-		assertThat(nativeCommands.exists(KEY_1)).isEqualTo(0L);
-		assertThat(nativeCommands.get(KEY_2)).isEqualTo(VALUE_2);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void appendShouldDoItsThing() {
-
-		connection.stringCommands().append(KEY_1_BBUFFER, VALUE_1_BBUFFER).as(StepVerifier::create) //
-				.expectNext(7L) //
-				.verifyComplete();
-
-		connection.stringCommands().append(KEY_1_BBUFFER, VALUE_2_BBUFFER).as(StepVerifier::create) //
-				.expectNext(14L) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void getRangeShouldReturnSubstringCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().getRange(KEY_1_BBUFFER, 2, 3).as(StepVerifier::create) //
-				.expectNext(ByteBuffer.wrap("lu".getBytes())) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void getRangeShouldReturnSubstringCorrectlyWithMinUnbound() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		RangeCommand rangeCommand = RangeCommand.key(KEY_1_BBUFFER)
-				.within(Range.of(Bound.unbounded(), Bound.inclusive(2L)));
-
-		connection.stringCommands().getRange(Mono.just(rangeCommand)).as(StepVerifier::create) //
-				.expectNext(new ReactiveValkeyConnection.ByteBufferResponse<>(rangeCommand, ByteBuffer.wrap("val".getBytes())))
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void getRangeShouldReturnSubstringCorrectlyWithMaxUnbound() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		RangeCommand rangeCommand = RangeCommand.key(KEY_1_BBUFFER)
-				.within(Range.of(Bound.inclusive(0L), Bound.unbounded()));
-
-		connection.stringCommands().getRange(Mono.just(rangeCommand)).as(StepVerifier::create) //
-				.expectNext(new ReactiveValkeyConnection.ByteBufferResponse<>(rangeCommand, ByteBuffer.wrap(VALUE_1.getBytes())))
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void setRangeShouldReturnNewStringLengthCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().setRange(KEY_1_BBUFFER, VALUE_2_BBUFFER, 3).as(StepVerifier::create) //
-				.expectNext(10L) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void getBitShouldReturnValueCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().getBit(KEY_1_BBUFFER, 1).as(StepVerifier::create) //
-				.expectNext(true) //
-				.verifyComplete();
-
-		connection.stringCommands().getBit(KEY_1_BBUFFER, 7).as(StepVerifier::create) //
-				.expectNext(false) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void setBitShouldReturnValueCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().setBit(KEY_1_BBUFFER, 1, false).as(StepVerifier::create) //
-				.expectNext(true) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.getbit(KEY_1, 1)).isEqualTo(0L);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void bitCountShouldReturnValueCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().bitCount(KEY_1_BBUFFER).as(StepVerifier::create) //
-				.expectNext(28L) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void bitCountShouldCountInRangeCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().bitCount(KEY_1_BBUFFER, 2, 4).as(StepVerifier::create) //
-				.expectNext(13L) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-562
-	void bitFieldSetShouldWorkCorrectly() {
-
-		connection.stringCommands().bitField(KEY_1_BBUFFER, create().set(INT_8).valueAt(offset(0L)).to(10L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(0L)).verifyComplete();
-
-		connection.stringCommands().bitField(KEY_1_BBUFFER, create().set(INT_8).valueAt(offset(0L)).to(20L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(10L)).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-562
-	void bitFieldGetShouldWorkCorrectly() {
-
-		connection.stringCommands().bitField(KEY_1_BBUFFER, create().get(INT_8).valueAt(offset(0L)))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(0L)).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-562
-	void bitFieldIncrByShouldWorkCorrectly() {
-
-		connection.stringCommands().bitField(KEY_1_BBUFFER, create().incr(INT_8).valueAt(offset(100L)).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(1L)).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-562
-	void bitFieldIncrByWithOverflowShouldWorkCorrectly() {
-
-		connection.stringCommands()
-				.bitField(KEY_1_BBUFFER, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(1L)).verifyComplete();
-		connection.stringCommands()
-				.bitField(KEY_1_BBUFFER, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(2L)).verifyComplete();
-		connection.stringCommands()
-				.bitField(KEY_1_BBUFFER, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(3L)).verifyComplete();
-		connection.stringCommands()
-				.bitField(KEY_1_BBUFFER, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(null)).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-562
-	void bitfieldShouldAllowMultipleSubcommands() {
-
-		connection.stringCommands()
-				.bitField(KEY_1_BBUFFER, create().incr(signed(5)).valueAt(offset(100L)).by(1L).get(unsigned(4)).valueAt(0L))
-				.as(StepVerifier::create)
-				.expectNext(Arrays.asList(1L, 0L)).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void bitOpAndShouldWorkAsExpected() {
-
-		assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		connection.stringCommands().bitOp(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), BitOperation.AND, KEY_3_BBUFFER)
-				.as(StepVerifier::create) //
-				.expectNext(7L) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_3)).isEqualTo("value-0");
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void bitOpOrShouldWorkAsExpected() {
-
-		assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		connection.stringCommands().bitOp(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), BitOperation.OR, KEY_3_BBUFFER)
-				.as(StepVerifier::create) //
-				.expectNext(7L) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_3)).isEqualTo(VALUE_3);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void bitNotShouldThrowExceptionWhenMoreThanOnSourceKey() {
-
-		assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
-
-		connection.stringCommands().bitOp(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), BitOperation.NOT, KEY_3_BBUFFER)
-				.as(StepVerifier::create) //
-				.expectError(IllegalArgumentException.class) //
-				.verify();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void strLenShouldReturnValueCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().strLen(KEY_1_BBUFFER).as(StepVerifier::create) //
-				.expectNext(7L) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-697
-	void bitPosShouldReturnPositionCorrectly() {
-
-		nativeBinaryCommands.set(KEY_1_BBUFFER, ByteBuffer.wrap(HexStringUtils.hexToBytes("fff000")));
-
-		connection.stringCommands().bitPos(KEY_1_BBUFFER, false).as(StepVerifier::create).expectNext(12L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-697
-	void bitPosShouldReturnPositionInRangeCorrectly() {
-
-		nativeBinaryCommands.set(KEY_1_BBUFFER, ByteBuffer.wrap(HexStringUtils.hexToBytes("fff0f0")));
-
-		connection.stringCommands().bitPos(KEY_1_BBUFFER, true, Range.of(Bound.inclusive(2L), Bound.unbounded()))
-				.as(StepVerifier::create)
-				.expectNext(16L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-1103
-	void setKeepTTL() {
-
-		long expireSeconds = 10;
-		nativeCommands.setex(KEY_1, expireSeconds, VALUE_1);
-
-		connection.stringCommands().set(KEY_1_BBUFFER, VALUE_2_BBUFFER, Expiration.keepTtl(), SetOption.upsert())
-				.as(StepVerifier::create) //
-				.expectNext(true) //
-				.verifyComplete();
-
-		assertThat(nativeBinaryCommands.ttl(KEY_1_BBUFFER)).isCloseTo(expireSeconds, Offset.offset(5L));
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
-	}
-
-	@ParameterizedValkeyTest // GH-2853
-	void setGetMono() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().setGet(KEY_1_BBUFFER, VALUE_2_BBUFFER, Expiration.keepTtl(), SetOption.upsert())
-				.as(StepVerifier::create) //
-				.expectNext(VALUE_1_BBUFFER) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
-	}
-
-	@ParameterizedValkeyTest // GH-2853
-	void setGetFlux() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.stringCommands().setGet(Mono.just(SetCommand.set(KEY_1_BBUFFER).value(VALUE_2_BBUFFER).expiring(Expiration.keepTtl()).withSetOption( SetOption.upsert())))
-				.map(CommandResponse::getOutput)
-				.as(StepVerifier::create) //
-				.expectNext(VALUE_1_BBUFFER) //
-				.verifyComplete();
-
-		assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
-	}
-
+public class LettuceReactiveStringCommandsIntegrationTests
+        extends LettuceReactiveCommandsTestSupport {
+
+    public LettuceReactiveStringCommandsIntegrationTests(Fixture fixture) {
+        super(fixture);
+    }
+
+    @ParameterizedValkeyTest // GH-2050
+    @EnabledOnCommand("GETEX")
+    void getExShouldWorkCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .getEx(KEY_1_BBUFFER, Expiration.seconds(10))
+                .as(StepVerifier::create) //
+                .expectNext(VALUE_1_BBUFFER) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(1L);
+    }
+
+    @ParameterizedValkeyTest // GH-2050
+    @EnabledOnCommand("GETDEL")
+    void getDelShouldWorkCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .getDel(KEY_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(VALUE_1_BBUFFER) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.exists(KEY_1)).isZero();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void getSetShouldReturnPreviousValueCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .getSet(KEY_1_BBUFFER, VALUE_2_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(VALUE_1_BBUFFER) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525, DATAREDIS-645
+    void getSetShouldNotEmitPreviousValueCorrectlyWhenNotExists() {
+
+        connection
+                .stringCommands()
+                .getSet(KEY_1_BBUFFER, VALUE_2_BBUFFER)
+                .as(StepVerifier::create)
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void setShouldAddValueCorrectly() {
+
+        connection
+                .stringCommands()
+                .set(KEY_1_BBUFFER, VALUE_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_1);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void setShouldAddValuesCorrectly() {
+
+        List<SetCommand> setCommands =
+                Arrays.asList(
+                        SetCommand.set(KEY_1_BBUFFER).value(VALUE_1_BBUFFER),
+                        SetCommand.set(KEY_2_BBUFFER).value(VALUE_2_BBUFFER));
+
+        connection
+                .stringCommands()
+                .set(Flux.fromIterable(setCommands))
+                .as(StepVerifier::create) //
+                .expectNextCount(2) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeCommands.get(KEY_2)).isEqualTo(VALUE_2);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void getShouldRetrieveValueCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .get(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(VALUE_1_BBUFFER)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525, DATAREDIS-645
+    void getShouldNotEmitValueValueIfAbsent() {
+        connection.stringCommands().get(KEY_1_BBUFFER).as(StepVerifier::create).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void getShouldRetrieveValuesCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        Stream<KeyCommand> stream =
+                Stream.of(new KeyCommand(KEY_1_BBUFFER), new KeyCommand(KEY_2_BBUFFER));
+        Flux<ByteBufferResponse<KeyCommand>> result =
+                connection.stringCommands().get(Flux.fromStream(stream));
+
+        result
+                .map(CommandResponse::getOutput)
+                .map(ByteUtils::getBytes)
+                .map(String::new)
+                .as(StepVerifier::create) //
+                .expectNext(
+                        new String(ByteUtils.getBytes(VALUE_1_BBUFFER)),
+                        new String(ByteUtils.getBytes(VALUE_2_BBUFFER))) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void getShouldRetrieveValuesWithNullCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_3, VALUE_3);
+
+        Stream<KeyCommand> stream =
+                Stream.of(
+                        new KeyCommand(KEY_1_BBUFFER),
+                        new KeyCommand(KEY_2_BBUFFER),
+                        new KeyCommand(KEY_3_BBUFFER));
+        Flux<ByteBufferResponse<KeyCommand>> result =
+                connection.stringCommands().get(Flux.fromStream(stream));
+
+        result
+                .map(CommandResponse::isPresent)
+                .as(StepVerifier::create) //
+                .expectNext(true, false, true) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void mGetShouldRetrieveValueCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        connection
+                .stringCommands()
+                .mGet(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        byteBuffers ->
+                                assertThat(byteBuffers).containsExactly(VALUE_1_BBUFFER, VALUE_2_BBUFFER)) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void mGetShouldRetrieveNullValueCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_3, VALUE_3);
+
+        Mono<List<ByteBuffer>> result =
+                connection
+                        .stringCommands()
+                        .mGet(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER));
+
+        assertThat(result.block()).containsExactly(VALUE_1_BBUFFER, null, VALUE_3_BBUFFER);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void mGetShouldRetrieveValuesCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        List<List<ByteBuffer>> lists =
+                Arrays.asList(
+                        Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), Collections.singletonList(KEY_2_BBUFFER));
+        Flux<List<ByteBuffer>> result =
+                connection
+                        .stringCommands()
+                        .mGet(Flux.fromIterable(lists))
+                        .map(MultiValueResponse::getOutput);
+
+        Set<List<ByteBuffer>> expected = new HashSet<>();
+        expected.add(Arrays.asList(VALUE_1_BBUFFER, VALUE_2_BBUFFER));
+        expected.add(Collections.singletonList(VALUE_2_BBUFFER));
+
+        result
+                .collect(Collectors.toSet())
+                .as(StepVerifier::create) //
+                .expectNext(expected) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void setNXshouldOnlySetValueWhenNotPresent() {
+
+        connection
+                .stringCommands()
+                .setNX(KEY_1_BBUFFER, VALUE_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void setNXshouldNotSetValueWhenAlreadyPresent() {
+
+        nativeCommands.setnx(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .setNX(KEY_1_BBUFFER, VALUE_2_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(false) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void setEXshouldSetKeyAndExpirationTime() {
+
+        connection
+                .stringCommands()
+                .setEX(KEY_1_BBUFFER, VALUE_1_BBUFFER, Expiration.seconds(3))
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.ttl(KEY_1) > 1).isTrue();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void pSetEXshouldSetKeyAndExpirationTime() {
+
+        connection
+                .stringCommands()
+                .pSetEX(KEY_1_BBUFFER, VALUE_1_BBUFFER, Expiration.milliseconds(600))
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.pttl(KEY_1) > 1).isTrue();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void mSetShouldAddMultipleKeyValuePairs() {
+
+        Map<ByteBuffer, ByteBuffer> map = new LinkedHashMap<>();
+        map.put(KEY_1_BBUFFER, VALUE_1_BBUFFER);
+        map.put(KEY_2_BBUFFER, VALUE_2_BBUFFER);
+
+        connection
+                .stringCommands()
+                .mSet(map)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeCommands.get(KEY_2)).isEqualTo(VALUE_2);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void mSetNXShouldAddMultipleKeyValuePairs() {
+
+        assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
+
+        Map<ByteBuffer, ByteBuffer> map = new LinkedHashMap<>();
+        map.put(KEY_1_BBUFFER, VALUE_1_BBUFFER);
+        map.put(KEY_2_BBUFFER, VALUE_2_BBUFFER);
+
+        connection
+                .stringCommands()
+                .mSetNX(map)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_1);
+        assertThat(nativeCommands.get(KEY_2)).isEqualTo(VALUE_2);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void mSetNXShouldNotAddMultipleKeyValuePairsWhenAlreadyExit() {
+
+        assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
+
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        Map<ByteBuffer, ByteBuffer> map = new LinkedHashMap<>();
+        map.put(KEY_1_BBUFFER, VALUE_1_BBUFFER);
+        map.put(KEY_2_BBUFFER, VALUE_2_BBUFFER);
+
+        connection
+                .stringCommands()
+                .mSetNX(map)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+
+        assertThat(nativeCommands.exists(KEY_1)).isEqualTo(0L);
+        assertThat(nativeCommands.get(KEY_2)).isEqualTo(VALUE_2);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void appendShouldDoItsThing() {
+
+        connection
+                .stringCommands()
+                .append(KEY_1_BBUFFER, VALUE_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(7L) //
+                .verifyComplete();
+
+        connection
+                .stringCommands()
+                .append(KEY_1_BBUFFER, VALUE_2_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(14L) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void getRangeShouldReturnSubstringCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .getRange(KEY_1_BBUFFER, 2, 3)
+                .as(StepVerifier::create) //
+                .expectNext(ByteBuffer.wrap("lu".getBytes())) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void getRangeShouldReturnSubstringCorrectlyWithMinUnbound() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        RangeCommand rangeCommand =
+                RangeCommand.key(KEY_1_BBUFFER).within(Range.of(Bound.unbounded(), Bound.inclusive(2L)));
+
+        connection
+                .stringCommands()
+                .getRange(Mono.just(rangeCommand))
+                .as(StepVerifier::create) //
+                .expectNext(
+                        new ReactiveValkeyConnection.ByteBufferResponse<>(
+                                rangeCommand, ByteBuffer.wrap("val".getBytes())))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void getRangeShouldReturnSubstringCorrectlyWithMaxUnbound() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        RangeCommand rangeCommand =
+                RangeCommand.key(KEY_1_BBUFFER).within(Range.of(Bound.inclusive(0L), Bound.unbounded()));
+
+        connection
+                .stringCommands()
+                .getRange(Mono.just(rangeCommand))
+                .as(StepVerifier::create) //
+                .expectNext(
+                        new ReactiveValkeyConnection.ByteBufferResponse<>(
+                                rangeCommand, ByteBuffer.wrap(VALUE_1.getBytes())))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void setRangeShouldReturnNewStringLengthCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .setRange(KEY_1_BBUFFER, VALUE_2_BBUFFER, 3)
+                .as(StepVerifier::create) //
+                .expectNext(10L) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void getBitShouldReturnValueCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .getBit(KEY_1_BBUFFER, 1)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .verifyComplete();
+
+        connection
+                .stringCommands()
+                .getBit(KEY_1_BBUFFER, 7)
+                .as(StepVerifier::create) //
+                .expectNext(false) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void setBitShouldReturnValueCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .setBit(KEY_1_BBUFFER, 1, false)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.getbit(KEY_1, 1)).isEqualTo(0L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void bitCountShouldReturnValueCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .bitCount(KEY_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(28L) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void bitCountShouldCountInRangeCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .bitCount(KEY_1_BBUFFER, 2, 4)
+                .as(StepVerifier::create) //
+                .expectNext(13L) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-562
+    void bitFieldSetShouldWorkCorrectly() {
+
+        connection
+                .stringCommands()
+                .bitField(KEY_1_BBUFFER, create().set(INT_8).valueAt(offset(0L)).to(10L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(0L))
+                .verifyComplete();
+
+        connection
+                .stringCommands()
+                .bitField(KEY_1_BBUFFER, create().set(INT_8).valueAt(offset(0L)).to(20L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(10L))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-562
+    void bitFieldGetShouldWorkCorrectly() {
+
+        connection
+                .stringCommands()
+                .bitField(KEY_1_BBUFFER, create().get(INT_8).valueAt(offset(0L)))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(0L))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-562
+    void bitFieldIncrByShouldWorkCorrectly() {
+
+        connection
+                .stringCommands()
+                .bitField(KEY_1_BBUFFER, create().incr(INT_8).valueAt(offset(100L)).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(1L))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-562
+    void bitFieldIncrByWithOverflowShouldWorkCorrectly() {
+
+        connection
+                .stringCommands()
+                .bitField(
+                        KEY_1_BBUFFER, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(1L))
+                .verifyComplete();
+        connection
+                .stringCommands()
+                .bitField(
+                        KEY_1_BBUFFER, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(2L))
+                .verifyComplete();
+        connection
+                .stringCommands()
+                .bitField(
+                        KEY_1_BBUFFER, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(3L))
+                .verifyComplete();
+        connection
+                .stringCommands()
+                .bitField(
+                        KEY_1_BBUFFER, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(null))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-562
+    void bitfieldShouldAllowMultipleSubcommands() {
+
+        connection
+                .stringCommands()
+                .bitField(
+                        KEY_1_BBUFFER,
+                        create().incr(signed(5)).valueAt(offset(100L)).by(1L).get(unsigned(4)).valueAt(0L))
+                .as(StepVerifier::create)
+                .expectNext(Arrays.asList(1L, 0L))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void bitOpAndShouldWorkAsExpected() {
+
+        assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        connection
+                .stringCommands()
+                .bitOp(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), BitOperation.AND, KEY_3_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(7L) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_3)).isEqualTo("value-0");
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void bitOpOrShouldWorkAsExpected() {
+
+        assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        connection
+                .stringCommands()
+                .bitOp(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), BitOperation.OR, KEY_3_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(7L) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_3)).isEqualTo(VALUE_3);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void bitNotShouldThrowExceptionWhenMoreThanOnSourceKey() {
+
+        assumeTrue(connectionProvider instanceof StandaloneConnectionProvider);
+
+        connection
+                .stringCommands()
+                .bitOp(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), BitOperation.NOT, KEY_3_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectError(IllegalArgumentException.class) //
+                .verify();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void strLenShouldReturnValueCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .strLen(KEY_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(7L) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-697
+    void bitPosShouldReturnPositionCorrectly() {
+
+        nativeBinaryCommands.set(KEY_1_BBUFFER, ByteBuffer.wrap(HexStringUtils.hexToBytes("fff000")));
+
+        connection
+                .stringCommands()
+                .bitPos(KEY_1_BBUFFER, false)
+                .as(StepVerifier::create)
+                .expectNext(12L)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-697
+    void bitPosShouldReturnPositionInRangeCorrectly() {
+
+        nativeBinaryCommands.set(KEY_1_BBUFFER, ByteBuffer.wrap(HexStringUtils.hexToBytes("fff0f0")));
+
+        connection
+                .stringCommands()
+                .bitPos(KEY_1_BBUFFER, true, Range.of(Bound.inclusive(2L), Bound.unbounded()))
+                .as(StepVerifier::create)
+                .expectNext(16L)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-1103
+    void setKeepTTL() {
+
+        long expireSeconds = 10;
+        nativeCommands.setex(KEY_1, expireSeconds, VALUE_1);
+
+        connection
+                .stringCommands()
+                .set(KEY_1_BBUFFER, VALUE_2_BBUFFER, Expiration.keepTtl(), SetOption.upsert())
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .verifyComplete();
+
+        assertThat(nativeBinaryCommands.ttl(KEY_1_BBUFFER)).isCloseTo(expireSeconds, Offset.offset(5L));
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
+    }
+
+    @ParameterizedValkeyTest // GH-2853
+    void setGetMono() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .setGet(KEY_1_BBUFFER, VALUE_2_BBUFFER, Expiration.keepTtl(), SetOption.upsert())
+                .as(StepVerifier::create) //
+                .expectNext(VALUE_1_BBUFFER) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
+    }
+
+    @ParameterizedValkeyTest // GH-2853
+    void setGetFlux() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .stringCommands()
+                .setGet(
+                        Mono.just(
+                                SetCommand.set(KEY_1_BBUFFER)
+                                        .value(VALUE_2_BBUFFER)
+                                        .expiring(Expiration.keepTtl())
+                                        .withSetOption(SetOption.upsert())))
+                .map(CommandResponse::getOutput)
+                .as(StepVerifier::create) //
+                .expectNext(VALUE_1_BBUFFER) //
+                .verifyComplete();
+
+        assertThat(nativeCommands.get(KEY_1)).isEqualTo(VALUE_2);
+    }
 }

@@ -16,15 +16,14 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import io.valkey.springframework.boot.testsupport.classpath.ClassPathExclusions;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /**
  * Tests for {@link ValkeyAutoConfiguration} when commons-pool2 is not on the classpath.
@@ -34,17 +33,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ClassPathExclusions("commons-pool2-*.jar")
 class ValkeyAutoConfigurationLettuceWithoutCommonsPool2Tests {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
-		.withPropertyValues("spring.data.valkey.client-type:lettuce");
+    private final ApplicationContextRunner contextRunner =
+            new ApplicationContextRunner()
+                    .withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class))
+                    .withPropertyValues("spring.data.valkey.client-type:lettuce");
 
-	@Test
-	void poolWithoutCommonsPool2IsDisabledByDefault() {
-		this.contextRunner.withPropertyValues("spring.data.valkey.host:foo").run((context) -> {
-			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
-			assertThat(cf.getHostName()).isEqualTo("foo");
-			assertThat(cf.getClientConfiguration()).isNotInstanceOf(LettucePoolingClientConfiguration.class);
-		});
-	}
-
+    @Test
+    void poolWithoutCommonsPool2IsDisabledByDefault() {
+        this.contextRunner
+                .withPropertyValues("spring.data.valkey.host:foo")
+                .run(
+                        (context) -> {
+                            LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
+                            assertThat(cf.getHostName()).isEqualTo("foo");
+                            assertThat(cf.getClientConfiguration())
+                                    .isNotInstanceOf(LettucePoolingClientConfiguration.class);
+                        });
+    }
 }

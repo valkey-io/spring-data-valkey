@@ -17,14 +17,13 @@ package io.valkey.springframework.data.valkey.support.atomic;
 
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.core.ValkeyOperations;
+import io.valkey.springframework.data.valkey.core.ValueOperations;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import io.valkey.springframework.data.valkey.core.ValkeyOperations;
-import io.valkey.springframework.data.valkey.core.ValueOperations;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 
 /**
  * Unit tests for {@link ValkeyAtomicDouble}.
@@ -34,19 +33,19 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 @ExtendWith(MockitoExtension.class)
 class ValkeyAtomicDoubleUnitTests {
 
-	@Mock ValkeyOperations<String, Double> operationsMock;
-	@Mock ValueOperations<String, Double> valueOperationsMock;
+    @Mock ValkeyOperations<String, Double> operationsMock;
+    @Mock ValueOperations<String, Double> valueOperationsMock;
 
-	@Test // DATAREDIS-872
-	@SuppressWarnings("unchecked")
-	void shouldUseSetIfAbsentForInitialValue() {
+    @Test // DATAREDIS-872
+    @SuppressWarnings("unchecked")
+    void shouldUseSetIfAbsentForInitialValue() {
 
-		when(operationsMock.opsForValue()).thenReturn(valueOperationsMock);
-		when(operationsMock.getKeySerializer()).thenReturn(mock(ValkeySerializer.class));
-		when(operationsMock.getValueSerializer()).thenReturn(mock(ValkeySerializer.class));
+        when(operationsMock.opsForValue()).thenReturn(valueOperationsMock);
+        when(operationsMock.getKeySerializer()).thenReturn(mock(ValkeySerializer.class));
+        when(operationsMock.getValueSerializer()).thenReturn(mock(ValkeySerializer.class));
 
-		new ValkeyAtomicDouble("id", operationsMock);
+        new ValkeyAtomicDouble("id", operationsMock);
 
-		verify(valueOperationsMock).setIfAbsent("id", 0d);
-	}
+        verify(valueOperationsMock).setIfAbsent("id", 0d);
+    }
 }

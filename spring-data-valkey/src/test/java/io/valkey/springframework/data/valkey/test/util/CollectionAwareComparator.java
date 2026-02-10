@@ -18,45 +18,43 @@ package io.valkey.springframework.data.valkey.test.util;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
-
 import org.springframework.util.ObjectUtils;
 
 /**
- * Generic comparator that dives into {@link java.util.Collections} and uses
- * {@link ObjectUtils#nullSafeEquals(Object, Object)}.
+ * Generic comparator that dives into {@link java.util.Collections} and uses {@link
+ * ObjectUtils#nullSafeEquals(Object, Object)}.
  *
  * @author Mark Paluch
  */
 public enum CollectionAwareComparator implements Comparator<Object> {
+    INSTANCE;
 
-	INSTANCE;
+    @Override
+    public int compare(Object o1, Object o2) {
 
-	@Override
-	public int compare(Object o1, Object o2) {
+        if (o1 instanceof Collection<?> c1 && o2 instanceof Collection<?> c2) {
 
-		if (o1 instanceof Collection<?> c1 && o2 instanceof Collection<?> c2) {
+            if (c1.size() != c2.size()) {
+                return 1;
+            }
 
-			if (c1.size() != c2.size()) {
-				return 1;
-			}
+            Iterator<?> i1 = c1.iterator();
+            Iterator<?> i2 = c2.iterator();
 
-			Iterator<?> i1 = c1.iterator();
-			Iterator<?> i2 = c2.iterator();
+            while (i1.hasNext()) {
+                int result = compare(i1.next(), i2.next());
+                if (result != 0) {
+                    return result;
+                }
+            }
 
-			while (i1.hasNext()) {
-				int result = compare(i1.next(), i2.next());
-				if (result != 0) {
-					return result;
-				}
-			}
+            return 0;
+        }
 
-			return 0;
-		}
+        if (!ObjectUtils.nullSafeEquals(o1, o2)) {
+            return 1;
+        }
 
-		if (!ObjectUtils.nullSafeEquals(o1, o2)) {
-			return 1;
-		}
-
-		return 0;
-	}
+        return 0;
+    }
 }

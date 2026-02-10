@@ -15,9 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.serializer;
 
-import java.nio.ByteBuffer;
-
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
+import java.nio.ByteBuffer;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -31,67 +30,69 @@ import org.springframework.util.Assert;
  */
 class ValkeySerializerToSerializationPairAdapter<T> implements SerializationPair<T> {
 
-	private static final ValkeySerializerToSerializationPairAdapter<?> BYTE_BUFFER =
-			new ValkeySerializerToSerializationPairAdapter<>(null);
+    private static final ValkeySerializerToSerializationPairAdapter<?> BYTE_BUFFER =
+            new ValkeySerializerToSerializationPairAdapter<>(null);
 
-	private static final ValkeySerializerToSerializationPairAdapter<byte[]> BYTE_ARRAY =
-			new ValkeySerializerToSerializationPairAdapter<>(ValkeySerializer.byteArray());
+    private static final ValkeySerializerToSerializationPairAdapter<byte[]> BYTE_ARRAY =
+            new ValkeySerializerToSerializationPairAdapter<>(ValkeySerializer.byteArray());
 
-	private final DefaultSerializationPair<T> pair;
+    private final DefaultSerializationPair<T> pair;
 
-	ValkeySerializerToSerializationPairAdapter(@Nullable ValkeySerializer<T> serializer) {
-		pair = new DefaultSerializationPair<>(new DefaultValkeyElementReader<>(serializer),
-				new DefaultValkeyElementWriter<>(serializer));
-	}
+    ValkeySerializerToSerializationPairAdapter(@Nullable ValkeySerializer<T> serializer) {
+        pair =
+                new DefaultSerializationPair<>(
+                        new DefaultValkeyElementReader<>(serializer),
+                        new DefaultValkeyElementWriter<>(serializer));
+    }
 
-	/**
-	 * @return the {@link ValkeySerializerToSerializationPairAdapter} for {@link ByteBuffer}.
-	 * @deprecated since 2.2. Please use {@link #byteBuffer()} instead.
-	 */
-	@SuppressWarnings("unchecked")
-	@Deprecated
-	static <T> SerializationPair<T> raw() {
-		return (SerializationPair<T>) byteBuffer();
-	}
+    /**
+     * @return the {@link ValkeySerializerToSerializationPairAdapter} for {@link ByteBuffer}.
+     * @deprecated since 2.2. Please use {@link #byteBuffer()} instead.
+     */
+    @SuppressWarnings("unchecked")
+    @Deprecated
+    static <T> SerializationPair<T> raw() {
+        return (SerializationPair<T>) byteBuffer();
+    }
 
-	/**
-	 * @return the {@link ValkeySerializerToSerializationPairAdapter} for {@code byte[]}.
-	 * @since 2.2
-	 */
-	static SerializationPair<byte[]> byteArray() {
-		return BYTE_ARRAY;
-	}
+    /**
+     * @return the {@link ValkeySerializerToSerializationPairAdapter} for {@code byte[]}.
+     * @since 2.2
+     */
+    static SerializationPair<byte[]> byteArray() {
+        return BYTE_ARRAY;
+    }
 
-	/**
-	 * @return the {@link ValkeySerializerToSerializationPairAdapter} for {@link ByteBuffer}.
-	 * @since 2.2
-	 */
-	@SuppressWarnings("unchecked")
-	static SerializationPair<ByteBuffer> byteBuffer() {
-		return (SerializationPair<ByteBuffer>) BYTE_BUFFER;
-	}
+    /**
+     * @return the {@link ValkeySerializerToSerializationPairAdapter} for {@link ByteBuffer}.
+     * @since 2.2
+     */
+    @SuppressWarnings("unchecked")
+    static SerializationPair<ByteBuffer> byteBuffer() {
+        return (SerializationPair<ByteBuffer>) BYTE_BUFFER;
+    }
 
-	/**
-	 * Create a {@link SerializationPair} from given {@link ValkeySerializer}.
-	 *
-	 * @param <T> {@link Class type} of {@link Object} handled by the {@link ValkeySerializer}.
-	 * @param valkeySerializer must not be {@literal null}.
-	 * @return the given {@link ValkeySerializer} adapted as a {@link SerializationPair}.
-	 */
-	public static <T> SerializationPair<T> from(ValkeySerializer<T> valkeySerializer) {
+    /**
+     * Create a {@link SerializationPair} from given {@link ValkeySerializer}.
+     *
+     * @param <T> {@link Class type} of {@link Object} handled by the {@link ValkeySerializer}.
+     * @param valkeySerializer must not be {@literal null}.
+     * @return the given {@link ValkeySerializer} adapted as a {@link SerializationPair}.
+     */
+    public static <T> SerializationPair<T> from(ValkeySerializer<T> valkeySerializer) {
 
-		Assert.notNull(valkeySerializer, "ValkeySerializer must not be null");
+        Assert.notNull(valkeySerializer, "ValkeySerializer must not be null");
 
-		return new ValkeySerializerToSerializationPairAdapter<>(valkeySerializer);
-	}
+        return new ValkeySerializerToSerializationPairAdapter<>(valkeySerializer);
+    }
 
-	@Override
-	public ValkeyElementReader<T> getReader() {
-		return pair.getReader();
-	}
+    @Override
+    public ValkeyElementReader<T> getReader() {
+        return pair.getReader();
+    }
 
-	@Override
-	public ValkeyElementWriter<T> getWriter() {
-		return pair.getWriter();
-	}
+    @Override
+    public ValkeyElementWriter<T> getWriter() {
+        return pair.getWriter();
+    }
 }

@@ -19,7 +19,6 @@ import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.function.Function;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -27,10 +26,11 @@ import org.springframework.util.StringUtils;
 
 /**
  * Value object which may or may not contain a Valkey password.
- * <p>
- * If a password is present, {@code isPresent()} will return {@code true} and {@code get()} will return the value.
- * <p>
- * The password is stored as character array.
+ *
+ * <p>If a password is present, {@code isPresent()} will return {@code true} and {@code get()} will
+ * return the value.
+ *
+ * <p>The password is stored as character array.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -38,126 +38,126 @@ import org.springframework.util.StringUtils;
  */
 public class ValkeyPassword {
 
-	private static final ValkeyPassword NONE = new ValkeyPassword(new char[] {});
+    private static final ValkeyPassword NONE = new ValkeyPassword(new char[] {});
 
-	private final char[] thePassword;
+    private final char[] thePassword;
 
-	private ValkeyPassword(char[] thePassword) {
-		this.thePassword = thePassword;
-	}
+    private ValkeyPassword(char[] thePassword) {
+        this.thePassword = thePassword;
+    }
 
-	/**
-	 * Create a {@link ValkeyPassword} from a {@link String}.
-	 *
-	 * @param passwordAsString the password as string.
-	 * @return the {@link ValkeyPassword} for {@code passwordAsString}.
-	 */
-	public static ValkeyPassword of(@Nullable String passwordAsString) {
+    /**
+     * Create a {@link ValkeyPassword} from a {@link String}.
+     *
+     * @param passwordAsString the password as string.
+     * @return the {@link ValkeyPassword} for {@code passwordAsString}.
+     */
+    public static ValkeyPassword of(@Nullable String passwordAsString) {
 
-		return Optional.ofNullable(passwordAsString) //
-				.filter(StringUtils::hasText) //
-				.map(it -> new ValkeyPassword(it.toCharArray())) //
-				.orElseGet(ValkeyPassword::none);
-	}
+        return Optional.ofNullable(passwordAsString) //
+                .filter(StringUtils::hasText) //
+                .map(it -> new ValkeyPassword(it.toCharArray())) //
+                .orElseGet(ValkeyPassword::none);
+    }
 
-	/**
-	 * Create a {@link ValkeyPassword} from a {@code char} array.
-	 *
-	 * @param passwordAsChars the password as char array.
-	 * @return the {@link ValkeyPassword} for {@code passwordAsChars}.
-	 */
-	public static ValkeyPassword of(@Nullable char[] passwordAsChars) {
+    /**
+     * Create a {@link ValkeyPassword} from a {@code char} array.
+     *
+     * @param passwordAsChars the password as char array.
+     * @return the {@link ValkeyPassword} for {@code passwordAsChars}.
+     */
+    public static ValkeyPassword of(@Nullable char[] passwordAsChars) {
 
-		return Optional.ofNullable(passwordAsChars) //
-				.filter(it -> !ObjectUtils.isEmpty(passwordAsChars)) //
-				.map(it -> new ValkeyPassword(Arrays.copyOf(it, it.length))) //
-				.orElseGet(ValkeyPassword::none);
-	}
+        return Optional.ofNullable(passwordAsChars) //
+                .filter(it -> !ObjectUtils.isEmpty(passwordAsChars)) //
+                .map(it -> new ValkeyPassword(Arrays.copyOf(it, it.length))) //
+                .orElseGet(ValkeyPassword::none);
+    }
 
-	/**
-	 * Create an absent {@link ValkeyPassword}.
-	 *
-	 * @return the absent {@link ValkeyPassword}.
-	 */
-	public static ValkeyPassword none() {
-		return NONE;
-	}
+    /**
+     * Create an absent {@link ValkeyPassword}.
+     *
+     * @return the absent {@link ValkeyPassword}.
+     */
+    public static ValkeyPassword none() {
+        return NONE;
+    }
 
-	/**
-	 * Return {@code true} if there is a password present, otherwise {@code false}.
-	 *
-	 * @return {@code true} if there is a password present, otherwise {@code false}
-	 */
-	public boolean isPresent() {
-		return !ObjectUtils.isEmpty(thePassword);
-	}
+    /**
+     * Return {@code true} if there is a password present, otherwise {@code false}.
+     *
+     * @return {@code true} if there is a password present, otherwise {@code false}
+     */
+    public boolean isPresent() {
+        return !ObjectUtils.isEmpty(thePassword);
+    }
 
-	/**
-	 * Return the password value if present. Throws {@link NoSuchElementException} if the password is absent.
-	 *
-	 * @return the password.
-	 * @throws NoSuchElementException if the password is absent.
-	 */
-	public char[] get() throws NoSuchElementException {
+    /**
+     * Return the password value if present. Throws {@link NoSuchElementException} if the password is
+     * absent.
+     *
+     * @return the password.
+     * @throws NoSuchElementException if the password is absent.
+     */
+    public char[] get() throws NoSuchElementException {
 
-		if (isPresent()) {
-			return Arrays.copyOf(thePassword, thePassword.length);
-		}
+        if (isPresent()) {
+            return Arrays.copyOf(thePassword, thePassword.length);
+        }
 
-		throw new NoSuchElementException("No password present.");
-	}
+        throw new NoSuchElementException("No password present.");
+    }
 
-	/**
-	 * Map the password using a {@link Function} and return a {@link Optional} containing the mapped value.
-	 * <p>
-	 * Absent passwords return a {@link Optional#empty()}.
-	 *
-	 * @param mapper must not be {@literal null}.
-	 * @return the mapped result.
-	 */
-	public <R> Optional<R> map(Function<char[], R> mapper) {
+    /**
+     * Map the password using a {@link Function} and return a {@link Optional} containing the mapped
+     * value.
+     *
+     * <p>Absent passwords return a {@link Optional#empty()}.
+     *
+     * @param mapper must not be {@literal null}.
+     * @return the mapped result.
+     */
+    public <R> Optional<R> map(Function<char[], R> mapper) {
 
-		Assert.notNull(mapper, "Mapper function must not be null");
+        Assert.notNull(mapper, "Mapper function must not be null");
 
-		return toOptional().map(mapper);
-	}
+        return toOptional().map(mapper);
+    }
 
-	/**
-	 * Adopt the password to {@link Optional} containing the password value.
-	 * <p>
-	 * Absent passwords return a {@link Optional#empty()}.
-	 *
-	 * @return the {@link Optional} containing the password value.
-	 */
-	public Optional<char[]> toOptional() {
+    /**
+     * Adopt the password to {@link Optional} containing the password value.
+     *
+     * <p>Absent passwords return a {@link Optional#empty()}.
+     *
+     * @return the {@link Optional} containing the password value.
+     */
+    public Optional<char[]> toOptional() {
 
-		if (isPresent()) {
-			return Optional.of(get());
-		}
+        if (isPresent()) {
+            return Optional.of(get());
+        }
 
-		return Optional.empty();
-	}
+        return Optional.empty();
+    }
 
-	@Override
-	public String toString() {
-		return "%s[%s]".formatted(getClass().getSimpleName(), isPresent() ? "*****" : "<none>");
-	}
+    @Override
+    public String toString() {
+        return "%s[%s]".formatted(getClass().getSimpleName(), isPresent() ? "*****" : "<none>");
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
+    @Override
+    public boolean equals(@Nullable Object o) {
 
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-		ValkeyPassword password = (ValkeyPassword) o;
+        ValkeyPassword password = (ValkeyPassword) o;
 
-		return ObjectUtils.nullSafeEquals(thePassword, password.thePassword);
-	}
+        return ObjectUtils.nullSafeEquals(thePassword, password.thePassword);
+    }
 
-	@Override
-	public int hashCode() {
-		return ObjectUtils.nullSafeHashCode(thePassword);
-	}
+    @Override
+    public int hashCode() {
+        return ObjectUtils.nullSafeHashCode(thePassword);
+    }
 }

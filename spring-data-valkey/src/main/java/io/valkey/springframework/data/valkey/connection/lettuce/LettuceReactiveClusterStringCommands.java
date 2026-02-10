@@ -15,18 +15,16 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.reactivestreams.Publisher;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.ReactiveClusterStringCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import org.reactivestreams.Publisher;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Christoph Strobl
@@ -34,45 +32,58 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
  * @since 2.0
  */
 class LettuceReactiveClusterStringCommands extends LettuceReactiveStringCommands
-		implements ReactiveClusterStringCommands {
+        implements ReactiveClusterStringCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveClusterStringCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterStringCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveClusterStringCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterStringCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 
-	@Override
-	public Flux<ReactiveValkeyConnection.NumericResponse<BitOpCommand, Long>> bitOp(Publisher<BitOpCommand> commands) {
+    @Override
+    public Flux<ReactiveValkeyConnection.NumericResponse<BitOpCommand, Long>> bitOp(
+            Publisher<BitOpCommand> commands) {
 
-		return getConnection().execute(cmd -> Flux.from(commands).concatMap(command -> {
+        return getConnection()
+                .execute(
+                        cmd ->
+                                Flux.from(commands)
+                                        .concatMap(
+                                                command -> {
+                                                    List<ByteBuffer> keys = new ArrayList<>(command.getKeys());
+                                                    keys.add(command.getDestinationKey());
 
-			List<ByteBuffer> keys = new ArrayList<>(command.getKeys());
-			keys.add(command.getDestinationKey());
+                                                    if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
+                                                        return super.bitOp(Mono.just(command));
+                                                    }
 
-			if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
-				return super.bitOp(Mono.just(command));
-			}
+                                                    return Mono.error(
+                                                            new InvalidDataAccessApiUsageException(
+                                                                    "All keys must map to the same slot for BITOP command."));
+                                                }));
+    }
 
-			return Mono
-					.error(new InvalidDataAccessApiUsageException("All keys must map to the same slot for BITOP command."));
-		}));
-	}
+    @Override
+    public Flux<ReactiveValkeyConnection.BooleanResponse<MSetCommand>> mSetNX(
+            Publisher<MSetCommand> commands) {
 
-	@Override
-	public Flux<ReactiveValkeyConnection.BooleanResponse<MSetCommand>> mSetNX(Publisher<MSetCommand> commands) {
+        return getConnection()
+                .execute(
+                        cmd ->
+                                Flux.from(commands)
+                                        .concatMap(
+                                                command -> {
+                                                    if (ClusterSlotHashUtil.isSameSlotForAllKeys(
+                                                            command.getKeyValuePairs().keySet())) {
+                                                        return super.mSetNX(Mono.just(command));
+                                                    }
 
-		return getConnection().execute(cmd -> Flux.from(commands).concatMap(command -> {
-
-			if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getKeyValuePairs().keySet())) {
-				return super.mSetNX(Mono.just(command));
-			}
-
-			return Mono
-					.error(new InvalidDataAccessApiUsageException("All keys must map to the same slot for MSETNX command."));
-		}));
-	}
+                                                    return Mono.error(
+                                                            new InvalidDataAccessApiUsageException(
+                                                                    "All keys must map to the same slot for MSETNX command."));
+                                                }));
+    }
 }

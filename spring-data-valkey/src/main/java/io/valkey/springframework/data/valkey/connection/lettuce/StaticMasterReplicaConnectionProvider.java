@@ -23,17 +23,15 @@ import io.lettuce.core.codec.RedisCodec;
 import io.lettuce.core.masterreplica.MasterReplica;
 import io.lettuce.core.masterreplica.StatefulRedisMasterReplicaConnection;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
-
 import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
-
 import org.springframework.lang.Nullable;
 
 /**
- * {@link LettuceConnectionProvider} implementation for a static Master/Replica connection suitable for eg. AWS
- * ElastiCache with replicas setup.<br/>
+ * {@link LettuceConnectionProvider} implementation for a static Master/Replica connection suitable
+ * for eg. AWS ElastiCache with replicas setup.<br>
  * Lettuce auto-discovers node roles from the static {@link RedisURI} collection.
  *
  * @author Mark Paluch
@@ -42,61 +40,69 @@ import org.springframework.lang.Nullable;
  */
 class StaticMasterReplicaConnectionProvider implements LettuceConnectionProvider {
 
-	private final RedisClient client;
-	private final RedisCodec<?, ?> codec;
-	private final Optional<ReadFrom> readFrom;
-	private final Collection<RedisURI> nodes;
+    private final RedisClient client;
+    private final RedisCodec<?, ?> codec;
+    private final Optional<ReadFrom> readFrom;
+    private final Collection<RedisURI> nodes;
 
-	/**
-	 * Create new {@link StaticMasterReplicaConnectionProvider}.
-	 *
-	 * @param client must not be {@literal null}.
-	 * @param codec must not be {@literal null}.
-	 * @param nodes must not be {@literal null}.
-	 * @param readFrom can be {@literal null}.
-	 */
-	StaticMasterReplicaConnectionProvider(RedisClient client, RedisCodec<?, ?> codec, Collection<RedisURI> nodes,
-			@Nullable ReadFrom readFrom) {
+    /**
+     * Create new {@link StaticMasterReplicaConnectionProvider}.
+     *
+     * @param client must not be {@literal null}.
+     * @param codec must not be {@literal null}.
+     * @param nodes must not be {@literal null}.
+     * @param readFrom can be {@literal null}.
+     */
+    StaticMasterReplicaConnectionProvider(
+            RedisClient client,
+            RedisCodec<?, ?> codec,
+            Collection<RedisURI> nodes,
+            @Nullable ReadFrom readFrom) {
 
-		this.client = client;
-		this.codec = codec;
-		this.readFrom = Optional.ofNullable(readFrom);
-		this.nodes = nodes;
-	}
+        this.client = client;
+        this.codec = codec;
+        this.readFrom = Optional.ofNullable(readFrom);
+        this.nodes = nodes;
+    }
 
-	@Override
-	public <T extends StatefulConnection<?, ?>> T getConnection(Class<T> connectionType) {
+    @Override
+    public <T extends StatefulConnection<?, ?>> T getConnection(Class<T> connectionType) {
 
-		if (connectionType.equals(StatefulRedisPubSubConnection.class)) {
-			throw new UnsupportedOperationException("Pub/Sub connections not supported with Master/Replica configurations");
-		}
+        if (connectionType.equals(StatefulRedisPubSubConnection.class)) {
+            throw new UnsupportedOperationException(
+                    "Pub/Sub connections not supported with Master/Replica configurations");
+        }
 
-		if (StatefulConnection.class.isAssignableFrom(connectionType)) {
+        if (StatefulConnection.class.isAssignableFrom(connectionType)) {
 
-			StatefulRedisMasterReplicaConnection<?, ?> connection = MasterReplica.connect(client, codec, nodes);
-			readFrom.ifPresent(connection::setReadFrom);
+            StatefulRedisMasterReplicaConnection<?, ?> connection =
+                    MasterReplica.connect(client, codec, nodes);
+            readFrom.ifPresent(connection::setReadFrom);
 
-			return connectionType.cast(connection);
-		}
+            return connectionType.cast(connection);
+        }
 
-		throw new UnsupportedOperationException("Connection type %s not supported".formatted(connectionType));
-	}
+        throw new UnsupportedOperationException(
+                "Connection type %s not supported".formatted(connectionType));
+    }
 
-	@Override
-	public <T extends StatefulConnection<?, ?>> CompletionStage<T> getConnectionAsync(Class<T> connectionType) {
+    @Override
+    public <T extends StatefulConnection<?, ?>> CompletionStage<T> getConnectionAsync(
+            Class<T> connectionType) {
 
-		if (StatefulConnection.class.isAssignableFrom(connectionType)) {
+        if (StatefulConnection.class.isAssignableFrom(connectionType)) {
 
-			CompletableFuture<? extends StatefulRedisMasterReplicaConnection<?, ?>> connection = MasterReplica
-					.connectAsync(client, codec, nodes);
+            CompletableFuture<? extends StatefulRedisMasterReplicaConnection<?, ?>> connection =
+                    MasterReplica.connectAsync(client, codec, nodes);
 
-			return connection.thenApply(it -> {
+            return connection.thenApply(
+                    it -> {
+                        readFrom.ifPresent(it::setReadFrom);
+                        return connectionType.cast(it);
+                    });
+        }
 
-				readFrom.ifPresent(it::setReadFrom);
-				return connectionType.cast(it);
-			});
-		}
-
-		throw new UnsupportedOperationException("Connection type %s not supported".formatted(connectionType));
-	}
+        throw new UnsupportedOperationException(
+                "Connection type %s not supported".formatted(connectionType));
+    }
 }

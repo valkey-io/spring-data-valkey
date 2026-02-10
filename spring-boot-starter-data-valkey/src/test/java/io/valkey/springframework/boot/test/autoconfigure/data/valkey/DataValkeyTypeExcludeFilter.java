@@ -25,10 +25,10 @@ import org.springframework.boot.test.autoconfigure.filter.StandardAnnotationCust
  * @author Jayaram Pradhan
  * @since 0.1.0
  */
-public final class DataValkeyTypeExcludeFilter extends StandardAnnotationCustomizableTypeExcludeFilter<DataValkeyTest> {
+public final class DataValkeyTypeExcludeFilter
+        extends StandardAnnotationCustomizableTypeExcludeFilter<DataValkeyTest> {
 
-	DataValkeyTypeExcludeFilter(Class<?> testClass) {
-		super(testClass);
-	}
-
+    DataValkeyTypeExcludeFilter(Class<?> testClass) {
+        super(testClass);
+    }
 }

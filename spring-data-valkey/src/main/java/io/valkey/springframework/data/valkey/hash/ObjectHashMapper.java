@@ -15,26 +15,25 @@
  */
 package io.valkey.springframework.data.valkey.hash;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Set;
-
-import org.springframework.data.convert.CustomConversions;
 import io.valkey.springframework.data.valkey.core.convert.IndexResolver;
 import io.valkey.springframework.data.valkey.core.convert.IndexedData;
 import io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverter;
+import io.valkey.springframework.data.valkey.core.convert.ReferenceResolver;
 import io.valkey.springframework.data.valkey.core.convert.ValkeyConverter;
 import io.valkey.springframework.data.valkey.core.convert.ValkeyCustomConversions;
 import io.valkey.springframework.data.valkey.core.convert.ValkeyData;
-import io.valkey.springframework.data.valkey.core.convert.ReferenceResolver;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Set;
+import org.springframework.data.convert.CustomConversions;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * {@link HashMapper} based on {@link MappingValkeyConverter}. Supports nested properties and simple types like
- * {@link String}.
+ * {@link HashMapper} based on {@link MappingValkeyConverter}. Supports nested properties and simple
+ * types like {@link String}.
  *
  * <pre>
  * <code>
@@ -71,138 +70,139 @@ import org.springframework.util.Assert;
  */
 public class ObjectHashMapper implements HashMapper<Object, byte[], byte[]> {
 
-	@Nullable private volatile static ObjectHashMapper sharedInstance;
+    @Nullable private static volatile ObjectHashMapper sharedInstance;
 
-	private final ValkeyConverter converter;
+    private final ValkeyConverter converter;
 
-	/**
-	 * Creates new {@link ObjectHashMapper}.
-	 */
-	public ObjectHashMapper() {
-		this(new ValkeyCustomConversions());
-	}
+    /** Creates new {@link ObjectHashMapper}. */
+    public ObjectHashMapper() {
+        this(new ValkeyCustomConversions());
+    }
 
-	/**
-	 * Creates a new {@link ObjectHashMapper} using the given {@link ValkeyConverter} for conversion.
-	 *
-	 * @param converter must not be {@literal null}.
-	 * @throws IllegalArgumentException if the given {@literal converter} is {@literal null}.
-	 * @since 2.4
-	 */
-	public ObjectHashMapper(ValkeyConverter converter) {
+    /**
+     * Creates a new {@link ObjectHashMapper} using the given {@link ValkeyConverter} for conversion.
+     *
+     * @param converter must not be {@literal null}.
+     * @throws IllegalArgumentException if the given {@literal converter} is {@literal null}.
+     * @since 2.4
+     */
+    public ObjectHashMapper(ValkeyConverter converter) {
 
-		Assert.notNull(converter, "Converter must not be null");
-		this.converter = converter;
-	}
+        Assert.notNull(converter, "Converter must not be null");
+        this.converter = converter;
+    }
 
-	/**
-	 * Creates new {@link ObjectHashMapper}.
-	 *
-	 * @param customConversions can be {@literal null}.
-	 * @since 2.0
-	 */
-	public ObjectHashMapper(@Nullable CustomConversions customConversions) {
+    /**
+     * Creates new {@link ObjectHashMapper}.
+     *
+     * @param customConversions can be {@literal null}.
+     * @since 2.0
+     */
+    public ObjectHashMapper(@Nullable CustomConversions customConversions) {
 
-		MappingValkeyConverter mappingConverter = new MappingValkeyConverter(new ValkeyMappingContext(),
-				new NoOpIndexResolver(), new NoOpReferenceResolver());
-		mappingConverter.setCustomConversions(customConversions == null ? new ValkeyCustomConversions() : customConversions);
-		mappingConverter.afterPropertiesSet();
+        MappingValkeyConverter mappingConverter =
+                new MappingValkeyConverter(
+                        new ValkeyMappingContext(), new NoOpIndexResolver(), new NoOpReferenceResolver());
+        mappingConverter.setCustomConversions(
+                customConversions == null ? new ValkeyCustomConversions() : customConversions);
+        mappingConverter.afterPropertiesSet();
 
-		converter = mappingConverter;
-	}
+        converter = mappingConverter;
+    }
 
-	/**
-	 * Return a shared default {@link ObjectHashMapper} instance, lazily building it once needed.
-	 * <p>
-	 * <b>NOTE:</b> We highly recommend constructing individual {@link ObjectHashMapper} instances for customization
-	 * purposes. This accessor is only meant as a fallback for code paths which need simple type coercion but cannot
-	 * access a longer-lived {@link ObjectHashMapper} instance any other way.
-	 *
-	 * @return the shared {@link ObjectHashMapper} instance (never {@literal null}).
-	 * @since 2.4
-	 */
-	public static ObjectHashMapper getSharedInstance() {
+    /**
+     * Return a shared default {@link ObjectHashMapper} instance, lazily building it once needed.
+     *
+     * <p><b>NOTE:</b> We highly recommend constructing individual {@link ObjectHashMapper} instances
+     * for customization purposes. This accessor is only meant as a fallback for code paths which need
+     * simple type coercion but cannot access a longer-lived {@link ObjectHashMapper} instance any
+     * other way.
+     *
+     * @return the shared {@link ObjectHashMapper} instance (never {@literal null}).
+     * @since 2.4
+     */
+    public static ObjectHashMapper getSharedInstance() {
 
-		ObjectHashMapper cs = sharedInstance;
-		if (cs == null) {
-			synchronized (ObjectHashMapper.class) {
-				cs = sharedInstance;
-				if (cs == null) {
-					cs = new ObjectHashMapper();
-					sharedInstance = cs;
-				}
-			}
-		}
-		return cs;
-	}
+        ObjectHashMapper cs = sharedInstance;
+        if (cs == null) {
+            synchronized (ObjectHashMapper.class) {
+                cs = sharedInstance;
+                if (cs == null) {
+                    cs = new ObjectHashMapper();
+                    sharedInstance = cs;
+                }
+            }
+        }
+        return cs;
+    }
 
-	@Override
-	public Map<byte[], byte[]> toHash(Object source) {
+    @Override
+    public Map<byte[], byte[]> toHash(Object source) {
 
-		if (source == null) {
-			return Collections.emptyMap();
-		}
+        if (source == null) {
+            return Collections.emptyMap();
+        }
 
-		ValkeyData sink = new ValkeyData();
-		converter.write(source, sink);
-		return sink.getBucket().rawMap();
-	}
+        ValkeyData sink = new ValkeyData();
+        converter.write(source, sink);
+        return sink.getBucket().rawMap();
+    }
 
-	@Override
-	public Object fromHash(Map<byte[], byte[]> hash) {
+    @Override
+    public Object fromHash(Map<byte[], byte[]> hash) {
 
-		if (hash == null || hash.isEmpty()) {
-			return null;
-		}
+        if (hash == null || hash.isEmpty()) {
+            return null;
+        }
 
-		return converter.read(Object.class, new ValkeyData(hash));
-	}
+        return converter.read(Object.class, new ValkeyData(hash));
+    }
 
-	/**
-	 * Convert a {@code hash} (map) to an object and return the casted result.
-	 *
-	 * @param hash
-	 * @param type
-	 * @param <T>
-	 * @return
-	 */
-	public <T> T fromHash(Map<byte[], byte[]> hash, Class<T> type) {
-		return type.cast(fromHash(hash));
-	}
+    /**
+     * Convert a {@code hash} (map) to an object and return the casted result.
+     *
+     * @param hash
+     * @param type
+     * @param <T>
+     * @return
+     */
+    public <T> T fromHash(Map<byte[], byte[]> hash, Class<T> type) {
+        return type.cast(fromHash(hash));
+    }
 
-	/**
-	 * {@link ReferenceResolver} implementation always returning an empty {@link Map}.
-	 *
-	 * @author Christoph Strobl
-	 */
-	private static class NoOpReferenceResolver implements ReferenceResolver {
+    /**
+     * {@link ReferenceResolver} implementation always returning an empty {@link Map}.
+     *
+     * @author Christoph Strobl
+     */
+    private static class NoOpReferenceResolver implements ReferenceResolver {
 
-		private static final Map<byte[], byte[]> NO_REFERENCE = Collections.emptyMap();
+        private static final Map<byte[], byte[]> NO_REFERENCE = Collections.emptyMap();
 
-		@Override
-		public Map<byte[], byte[]> resolveReference(Object id, String keyspace) {
-			return NO_REFERENCE;
-		}
-	}
+        @Override
+        public Map<byte[], byte[]> resolveReference(Object id, String keyspace) {
+            return NO_REFERENCE;
+        }
+    }
 
-	/**
-	 * {@link IndexResolver} always returning an empty {@link Set}.
-	 *
-	 * @author Christoph Strobl
-	 */
-	private static class NoOpIndexResolver implements IndexResolver {
+    /**
+     * {@link IndexResolver} always returning an empty {@link Set}.
+     *
+     * @author Christoph Strobl
+     */
+    private static class NoOpIndexResolver implements IndexResolver {
 
-		private static final Set<IndexedData> NO_INDEXES = Collections.emptySet();
+        private static final Set<IndexedData> NO_INDEXES = Collections.emptySet();
 
-		@Override
-		public Set<IndexedData> resolveIndexesFor(TypeInformation<?> typeInformation, Object value) {
-			return NO_INDEXES;
-		}
+        @Override
+        public Set<IndexedData> resolveIndexesFor(TypeInformation<?> typeInformation, Object value) {
+            return NO_INDEXES;
+        }
 
-		@Override
-		public Set<IndexedData> resolveIndexesFor(String keyspace, String path, TypeInformation<?> typeInformation,
-				Object value) {
-			return NO_INDEXES;
-		}
-	}
+        @Override
+        public Set<IndexedData> resolveIndexesFor(
+                String keyspace, String path, TypeInformation<?> typeInformation, Object value) {
+            return NO_INDEXES;
+        }
+    }
 }
