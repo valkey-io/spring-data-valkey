@@ -1,0 +1,11 @@
+{
+    "schema_version": "1.0",
+    "description": "spring-data-valkey with valkey-glide driver, standalone with tls",
+    "driver_id": "spring-data-valkey",
+    "mode": "standalone",
+    "tls": {},
+    "specific_driver_config": {
+        "secondary_driver_id": "valkey-glide",
+        "secondary_driver_config": {}
+    }
+}

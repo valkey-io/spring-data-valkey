@@ -78,7 +78,7 @@ class PostgreSQLPublisher:
     def connect(self):
         """Establish connection to PostgreSQL"""
         import psycopg2
-        
+
         creds = self._get_credentials()
         self.connection = psycopg2.connect(
             host=self.host,
@@ -102,15 +102,15 @@ class PostgreSQLPublisher:
             results JSONB NOT NULL,
             created_at TIMESTAMPTZ DEFAULT NOW()
         );
-        
-        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_job_id 
+
+        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_job_id
             ON {self.TABLE_NAME} (job_id);
-        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_timestamp 
+        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_timestamp
             ON {self.TABLE_NAME} (timestamp);
-        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_config_client 
-            ON {self.TABLE_NAME} ((config->'client'->>'client_name'));
-        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_config_workload 
-            ON {self.TABLE_NAME} ((config->'workload'->'benchmark-profile'->>'name'));
+        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_config_driver
+            ON {self.TABLE_NAME} ((config->'driver'->>'driver_id'));
+        CREATE INDEX IF NOT EXISTS idx_{self.TABLE_NAME}_config_workload
+            ON {self.TABLE_NAME} ((config->'workload'->'benchmark_profile'->>'name'));
         """
 
         with self.connection.cursor() as cursor:
@@ -389,7 +389,7 @@ class MonitoringManager:
     def _ensure_flamegraph_tools(self) -> bool:
         """Check if FlameGraph tools are available"""
         stackcollapse = Path(self.FLAMEGRAPH_PATH) / "stackcollapse-perf.pl"
-        
+
         if stackcollapse.exists():
             return True
         else:
@@ -460,7 +460,7 @@ class MonitoringManager:
     def start_perf_record(self, pid: int):
         """Start perf record for flame graph generation"""
         self.perf_data_file = self.work_dir / "perf_record.data"
-        
+
         cmd = [
             "perf", "record",
             "-F", "99",
@@ -468,7 +468,7 @@ class MonitoringManager:
             "-g",
             "-o", str(self.perf_data_file)
         ]
-        
+
         self.perf_record_process = subprocess.Popen(
             cmd,
             stdout=subprocess.DEVNULL,
@@ -511,14 +511,13 @@ class MonitoringManager:
 
         try:
             print("Generating collapsed stacks...")
-            
-            # Run: perf script -i perf.data | stackcollapse-perf.pl > collapsed.txt
+
             perf_script = subprocess.Popen(
                 ["perf", "script", "-i", str(self.perf_data_file)],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL
             )
-            
+
             with open(collapsed_file, "w") as f:
                 stackcollapse_proc = subprocess.Popen(
                     ["perl", str(stackcollapse)],
@@ -528,7 +527,7 @@ class MonitoringManager:
                 )
                 perf_script.stdout.close()
                 stackcollapse_proc.wait(timeout=60)
-            
+
             perf_script.wait(timeout=10)
 
             if collapsed_file.exists() and collapsed_file.stat().st_size > 0:
@@ -561,10 +560,8 @@ class MonitoringManager:
 
     def stop_all(self):
         """Stop all monitoring processes"""
-        # Stop perf record first (needs SIGINT)
         self.stop_perf_record()
 
-        # Stop perf stat (needs SIGINT)
         if "perf_stat" in self.processes:
             perf_proc = self.processes.pop("perf_stat")
             try:
@@ -577,7 +574,6 @@ class MonitoringManager:
             except Exception as e:
                 print(f"Warning stopping perf: {e}")
 
-        # Stop other processes (use SIGTERM to process group)
         for name, proc in self.processes.items():
             try:
                 os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
@@ -590,7 +586,6 @@ class MonitoringManager:
             except Exception as e:
                 print(f"Warning stopping {name}: {e}")
 
-        # Close file handles
         for fh in self._file_handles.values():
             try:
                 fh.close()
@@ -715,10 +710,10 @@ def parse_sar_network(filepath: Path) -> dict:
 
     return result
 
+
 def convert_collapsed_to_nested_set(collapsed_file: Path, output_csv: Path) -> bool:
     """Convert collapsed stacks to nested set model CSV (which grafana can use)"""
     try:
-        # Build tree from collapsed stacks
         root = {"name": "total", "children": {}, "self_value": 0}
 
         with open(collapsed_file) as f:
@@ -747,7 +742,6 @@ def convert_collapsed_to_nested_set(collapsed_file: Path, output_csv: Path) -> b
                     node = node["children"][frame]
                 node["self_value"] += count
 
-        # Calculate cumulative values (bottom-up)
         def calc_total(node):
             total = node["self_value"]
             for child in node["children"].values():
@@ -757,7 +751,6 @@ def convert_collapsed_to_nested_set(collapsed_file: Path, output_csv: Path) -> b
 
         calc_total(root)
 
-        # Depth-first traversal to create nested set model
         rows = []
 
         def dfs(node, level):
@@ -767,7 +760,6 @@ def convert_collapsed_to_nested_set(collapsed_file: Path, output_csv: Path) -> b
                 "self": node["self_value"],
                 "label": node["name"]
             })
-            # Sort children by total_value descending for consistent output
             sorted_children = sorted(
                 node["children"].values(),
                 key=lambda n: n["total_value"],
@@ -778,13 +770,12 @@ def convert_collapsed_to_nested_set(collapsed_file: Path, output_csv: Path) -> b
 
         dfs(root, 0)
 
-        # Write CSV
         with open(output_csv, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=["level", "value", "self", "label"])
             writer.writeheader()
             writer.writerows(rows)
 
-        print(f"✓ Generated nestes set flame graph CSV: {len(rows)} rows")
+        print(f"✓ Generated nested set flame graph CSV: {len(rows)} rows")
         return True
 
     except Exception as e:
@@ -814,7 +805,6 @@ def parse_perf_stat(filepath: Path, hardware_available: bool) -> dict:
 
     content = filepath.read_text()
 
-    # Software events (always available)
     for key, pattern in [
         ("context_switches", r"([\d,]+)\s+context-switches"),
         ("cpu_migrations", r"([\d,]+)\s+cpu-migrations"),
@@ -824,7 +814,6 @@ def parse_perf_stat(filepath: Path, hardware_available: bool) -> dict:
         if match:
             result[key] = int(match.group(1).replace(",", ""))
 
-    # Hardware events (only on bare metal)
     if hardware_available:
         for key, pattern in [
             ("cpu_cycles", r"([\d,]+)\s+cycles"),
@@ -838,7 +827,6 @@ def parse_perf_stat(filepath: Path, hardware_available: bool) -> dict:
             if match:
                 result[key] = int(match.group(1).replace(",", ""))
 
-        # Calculate derived metrics
         if result["cpu_cycles"] and result["instructions"]:
             result["ipc"] = round(result["instructions"] / result["cpu_cycles"], 2)
         if result["cache_references"] and result["cache_references"] > 0:
@@ -883,7 +871,7 @@ class BenchmarkRunner:
     """Main benchmark orchestration class"""
 
     INFRA_CORES = "0-3"
-    
+
     # S3 configuration
     S3_BUCKET = "java-benchmarks-artifacts"
     S3_REGION = "us-east-1"
@@ -900,7 +888,7 @@ class BenchmarkRunner:
         project_dir: Path,
         output_file: Path,
         workload_config: dict,
-        client_config: dict,
+        driver_config: dict,
         skip_infra: bool = False,
         network_delay_ms: int = 1,
         publish_to_db: bool = True,
@@ -913,7 +901,7 @@ class BenchmarkRunner:
         self.project_dir = project_dir
         self.output_file = output_file
         self.workload_config = workload_config
-        self.client_config = client_config
+        self.driver_config = driver_config
         self.skip_infra = skip_infra
         self.network_delay_ms = network_delay_ms
         self.publish_to_db = publish_to_db
@@ -1017,7 +1005,7 @@ class BenchmarkRunner:
             print(f"⚠ Failed to publish to PostgreSQL: {e}")
             import traceback
             traceback.print_exc()
-            
+
     def run(self, workload_config_path: Path):
         """Execute the full benchmark workflow"""
         self.variance_control.setup(network_delay_ms=self.network_delay_ms)
@@ -1057,11 +1045,9 @@ class BenchmarkRunner:
                 print("\nGenerating flame graph data...")
                 collapsed_file = monitor.generate_collapsed_stacks()
                 if collapsed_file:
-                    # Upload raw collapsed stacks
                     s3_key = f"{self.job_id}/collapsed.txt"
                     collapsed_stacks_url = self._upload_to_s3(collapsed_file, s3_key)
 
-                    # Convert to nested set model and upload
                     nested_set_csv = work_dir / "flamegraph_grafana.csv"
                     if convert_collapsed_to_nested_set(collapsed_file, nested_set_csv):
                         s3_key = f"{self.job_id}/flamegraph_grafana.csv"
@@ -1086,7 +1072,7 @@ class BenchmarkRunner:
                 # Build result structure
                 config = {
                     "workload": self.workload_config,
-                    "client": self.client_config
+                    "driver": self.driver_config
                 }
 
                 results = {
@@ -1104,7 +1090,6 @@ class BenchmarkRunner:
                     }
                 }
 
-                # Final output structure
                 output = {
                     "job_id": self.job_id,
                     "timestamp": self.timestamp,
@@ -1112,7 +1097,6 @@ class BenchmarkRunner:
                     "results": results
                 }
 
-                # Write JSON output
                 with open(self.output_file, "w") as f:
                     json.dump(output, f, indent=2)
 
@@ -1124,23 +1108,23 @@ class BenchmarkRunner:
             finally:
                 self.stop_infrastructure()
                 self.variance_control.teardown()
-                
+
     def _upload_to_s3(self, local_path: Path, s3_key: str) -> Optional[str]:
         """Upload file to S3 and return the S3 URL"""
         try:
             import boto3
-            
+
             s3_client = boto3.client('s3', region_name=self.S3_REGION)
             s3_client.upload_file(
                 str(local_path),
                 self.S3_BUCKET,
                 s3_key
             )
-            
+
             s3_url = f"s3://{self.S3_BUCKET}/{s3_key}"
             print(f"✓ Uploaded to {s3_url}")
             return s3_url
-            
+
         except Exception as e:
             print(f"⚠ Failed to upload to S3: {e}")
             import traceback
@@ -1152,11 +1136,11 @@ def main():
     parser = argparse.ArgumentParser(description="Benchmark runner")
     parser.add_argument("--output", type=str, default="benchmark_results.json")
     parser.add_argument("--workload-config", type=str, required=True)
-    parser.add_argument("--client-config", type=str, required=True)
+    parser.add_argument("--driver-config", type=str, required=True)
     parser.add_argument("--project-dir", type=str, default=None)
     parser.add_argument("--skip-infra", action="store_true")
     parser.add_argument("--network-delay", type=int, default=1)
-    
+
     # PostgreSQL options
     parser.add_argument("--no-publish", action="store_true", help="Skip publishing to PostgreSQL")
     parser.add_argument("--pg-host", type=str, default=None)
@@ -1164,25 +1148,25 @@ def main():
     parser.add_argument("--pg-database", type=str, default=None)
     parser.add_argument("--pg-secret-name", type=str, default=None)
     parser.add_argument("--pg-region", type=str, default=None)
-    
+
     args = parser.parse_args()
 
     project_dir = Path(args.project_dir) if args.project_dir else Path.cwd()
     output_file = Path(args.output)
     workload_config_path = Path(args.workload_config)
-    client_config_path = Path(args.client_config)
+    driver_config_path = Path(args.driver_config)
 
     workload_config = load_json_config(workload_config_path)
-    client_config = load_json_config(client_config_path)
+    driver_config = load_json_config(driver_config_path)
 
-    print(f"Loaded workload config: {workload_config['benchmark-profile']['name']}")
-    print(f"Loaded client config: {client_config['client_name']}")
+    print(f"Loaded workload config: {workload_config['benchmark_profile']['name']}")
+    print(f"Loaded driver config: {driver_config['driver_id']}")
 
     runner = BenchmarkRunner(
         project_dir=project_dir,
         output_file=output_file,
         workload_config=workload_config,
-        client_config=client_config,
+        driver_config=driver_config,
         skip_infra=args.skip_infra,
         network_delay_ms=args.network_delay,
         publish_to_db=not args.no_publish,

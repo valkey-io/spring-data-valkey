@@ -81,14 +81,13 @@ def get_phase_duration(phase_config: dict, default_duration: int = 60) -> int:
     """Get phase duration from completion config"""
     completion = phase_config.get("completion", {})
     if completion.get("type") == "duration":
-        return completion.get("duration_seconds", default_duration)
+        return completion.get("seconds", default_duration)
     else:
         # For request-based completion, simulate with a duration
-        # In real benchmark, this would be driven by actual request count
-        total_requests = completion.get("total_requests", 1000000)
-        target_rps = phase_config.get("target_rps", 10000)
-        if target_rps > 0:
-            return max(1, total_requests // target_rps)
+        total_requests = completion.get("requests", 1000000)
+        rps_limit = phase_config.get("rps_limit", -1)
+        if rps_limit > 0:
+            return max(1, total_requests // rps_limit)
         return default_duration
 
 
@@ -96,20 +95,20 @@ def get_phase_requests(phase_config: dict) -> int:
     """Get total requests for a phase"""
     completion = phase_config.get("completion", {})
     if completion.get("type") == "requests":
-        return completion.get("total_requests", 1000000)
+        return completion.get("requests", 1000000)
     else:
-        # For duration-based, estimate based on target RPS
-        duration = completion.get("duration_seconds", 60)
-        target_rps = phase_config.get("target_rps", -1)
-        if target_rps > 0:
-            return duration * target_rps
+        # For duration-based, estimate based on RPS limit
+        duration = completion.get("seconds", 60)
+        rps_limit = phase_config.get("rps_limit", -1)
+        if rps_limit > 0:
+            return duration * rps_limit
         else:
             # Unlimited RPS, use keyspace size as estimate
             return phase_config.get("keyspace", {}).get("keys_count", 100000)
 
 
 def generate_phase_results(phase_config: dict, total_requests: int) -> list:
-    operations = phase_config.get("operations", [])
+    commands = phase_config.get("commands", [])
     results = []
 
     latency_profiles = {
@@ -123,26 +122,26 @@ def generate_phase_results(phase_config: dict, total_requests: int) -> list:
         ]
     }
 
-    total_weight = sum(op.get("weight", 1.0) for op in operations)
+    total_weight = sum(cmd.get("weight", 1.0) for cmd in commands)
 
-    for op in operations:
-        command = op.get("command", "").upper()
-        weight = op.get("weight", 1.0)
-        op_requests = int(total_requests * (weight / total_weight))
+    for cmd in commands:
+        command = cmd.get("command", "").upper()
+        weight = cmd.get("weight", 1.0)
+        cmd_requests = int(total_requests * (weight / total_weight))
 
-        failed = max(0, int(op_requests * 0.00001))
-        successful = op_requests - failed
+        failed = max(0, int(cmd_requests * 0.00001))
+        successful = cmd_requests - failed
 
         profile = latency_profiles.get(command, latency_profiles["GET"])
 
         results.append({
             "name": command,
-            "num_requests": op_requests,
+            "num_requests": cmd_requests,
             "successful_requests": successful,
             "failed_requests": failed,
             "latency_min_us": 85 if command == "SET" else 92,
             "latency_max_us": 4400 if command == "SET" else 5100,
-            "histogram": generate_histogram(profile, op_requests)
+            "histogram": generate_histogram(profile, cmd_requests)
         })
 
     return results
@@ -155,7 +154,7 @@ def main():
     args = parser.parse_args()
 
     workload_config = load_workload_config(Path(args.workload_config))
-    profile_name = workload_config.get("benchmark-profile", {}).get("name", "Unknown")
+    profile_name = workload_config.get("benchmark_profile", {}).get("name", "Unknown")
 
     warmup_config = get_phase_config(workload_config, "WARMUP")
     steady_config = get_phase_config(workload_config, "STEADY")
@@ -185,10 +184,10 @@ def main():
         # ========== WARMUP PHASE ==========
         print(f"Starting WARMUP phase ({warmup_duration}s)...", file=sys.stderr)
 
-        warmup_ops = warmup_config.get("operations", [{"command": "SET", "weight": 1.0}])
+        warmup_cmds = warmup_config.get("commands", [{"command": "set", "weight": 1.0}])
         warmup_running = [
             {
-                "name": op.get("command", "").upper(),
+                "name": cmd.get("command", "").upper(),
                 "num_requests": 0,
                 "successful_requests": 0,
                 "failed_requests": 0,
@@ -196,7 +195,7 @@ def main():
                 "latency_max_us": 0,
                 "histogram": []
             }
-            for op in warmup_ops
+            for cmd in warmup_cmds
         ]
         write_row(writer, f, "WARMUP", "running", start_time, warmup_running)
 
@@ -217,10 +216,10 @@ def main():
         # ========== STEADY STATE PHASE ==========
         print(f"Starting STEADY phase ({steady_duration}s)...", file=sys.stderr)
 
-        steady_ops = steady_config.get("operations", [])
+        steady_cmds = steady_config.get("commands", [])
         steady_running = [
             {
-                "name": op.get("command", "").upper(),
+                "name": cmd.get("command", "").upper(),
                 "num_requests": 0,
                 "successful_requests": 0,
                 "failed_requests": 0,
@@ -228,7 +227,7 @@ def main():
                 "latency_max_us": 0,
                 "histogram": []
             }
-            for op in steady_ops
+            for cmd in steady_cmds
         ]
         write_row(writer, f, "STEADY", "running", start_time, steady_running)
 
