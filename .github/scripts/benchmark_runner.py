@@ -874,8 +874,6 @@ class BenchmarkRunner:
         print(f"Core allocation: Server={self.INFRA_CORES}, "
               f"Benchmark={self.benchmark_cores}")
 
-        print(f"Versions: {json.dumps(self.versions, indent=2)}")
-
     def _find_java_jar(self) -> Path:
         """Find the benchmark JAR file dynamically."""
         target_dir = self.resp_bench_dir / "java/target"
@@ -888,6 +886,35 @@ class BenchmarkRunner:
         if len(jars) > 1:
             print(f"Warning: Multiple JARs found, using: {jars[0]}")
         return jars[0]
+
+    def _extract_versions_from_metadata(self, all_phases: dict) -> dict:
+        """Extract version info from resp-bench phase metadata."""
+        # Prefer STEADY phase, fall back to any available phase
+        metadata = None
+        for phase_id in ["STEADY", "WARMUP"]:
+            if phase_id in all_phases:
+                metadata = all_phases[phase_id].get("metadata", {})
+                if metadata:
+                    break
+
+        if not metadata:
+            # Fall back to first available phase
+            for phase_record in all_phases.values():
+                metadata = phase_record.get("metadata", {})
+                if metadata:
+                    break
+
+        if not metadata:
+            print("Warning: No metadata found in phase records, using empty versions")
+            return {}
+
+        return {
+            "primary_driver_id": metadata.get("driver_id"),
+            "primary_driver_version": metadata.get("primary_driver_version"),
+            "secondary_driver_id": metadata.get("secondary_driver_id"),
+            "secondary_driver_version": metadata.get("secondary_driver_version"),
+            "commit_id": metadata.get("commit_id")
+        }
 
     def _is_cluster_mode(self) -> bool:
         """Check if the driver config specifies cluster mode."""
@@ -1090,6 +1117,9 @@ class BenchmarkRunner:
 
                 steady_record = metrics_watcher.get_phase_record("STEADY")
 
+                # Extract versions from resp-bench metadata (prefer STEADY, fall back to any phase)
+                versions = self._extract_versions_from_metadata(all_phases)
+
                 # Parse system-level metrics
                 perf_counters = parse_perf_stat(
                     monitor.output_files.get("perf_stat", Path()),
@@ -1138,7 +1168,7 @@ class BenchmarkRunner:
                 output = {
                     "job_id": self.job_id,
                     "timestamp": self.timestamp,
-                    "versions": self.versions,
+                    "versions": versions,
                     "config": config,
                     "results": results
                 }
@@ -1149,7 +1179,7 @@ class BenchmarkRunner:
                 print(f"\nResults written to {self.output_file}")
 
                 # Publish to PostgreSQL
-                self._publish_to_postgresql(self.versions, config, results)
+                self._publish_to_postgresql(versions, config, results)
 
             finally:
                 self.stop_infrastructure()
@@ -1167,8 +1197,8 @@ def main():
     parser.add_argument("--skip-infra", action="store_true")
     parser.add_argument("--network-delay", type=int, default=1)
 
-    parser.add_argument("--versions-json", type=str, required=True,
-                        help="JSON string with version info")
+    parser.add_argument("--versions-json", type=str, default="{}",
+                        help="JSON string with version info (optional, versions extracted from resp-bench output)")
 
     parser.add_argument("--job-id-prefix", type=str, default="",
                         help="Optional prefix for the job ID "
@@ -1217,7 +1247,6 @@ def main():
     print(f"Loaded workload config: "
           f"{runner.workload_config['benchmark_profile']['name']}")
     print(f"Loaded driver config: {runner.driver_config['driver_id']}")
-    print(f"Versions: {json.dumps(versions, indent=2)}")
 
     runner.run()
 

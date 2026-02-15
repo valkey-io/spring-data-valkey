@@ -244,7 +244,7 @@ jobs:
 
           # Install system dependencies
           sudo apt-get update
-          sudo apt-get install -y git gcc pkg-config openssl libssl-dev unzip cmake
+          sudo apt-get install -y git gcc pkg-config openssl libssl-dev unzip cmake python3-pip
 
           # Install Rust
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -260,7 +260,7 @@ jobs:
           protoc --version
 
           # Install ziglang and cargo-zigbuild (required for Linux builds)
-          sudo pip3 install ziglang --break-system-packages
+          sudo python3 -m pip install ziglang
           cargo install --locked cargo-zigbuild
 
           echo "✓ valkey-glide build dependencies installed"
