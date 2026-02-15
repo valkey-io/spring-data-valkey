@@ -6,7 +6,7 @@ Benchmark runner that orchestrates:
 3. Collecting system metrics (perf, CPU, disk I/O, network)
 4. Outputting results to JSON and PostgreSQL
 
-The benchmark app writes JSONL metrics (one JSON object per line).
+The benchmark app writes NDJSON metrics (one JSON object per line).
 Each line contains phase info, totals, and per-command metrics with HDR latency histograms.
 """
 
@@ -27,6 +27,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from hdrh.histogram import HdrHistogram
+
 
 def generate_job_id(prefix: str = ""):
     now = datetime.now(timezone.utc)
@@ -44,6 +46,46 @@ def get_timestamp():
 def load_json_config(filepath: Path) -> dict:
     with open(filepath) as f:
         return json.load(f)
+
+
+def extract_buckets_from_hdr(payload_b64: str) -> list:
+    """
+    Decode HDR histogram payload and extract buckets.
+    Returns list of [upper_bound_us, count] pairs.
+    """
+    if not payload_b64:
+        return []
+
+    try:
+        # Pass base64 string directly - hdrh handles decoding internally
+        histogram = HdrHistogram.decode(payload_b64)
+        buckets = []
+        for item in histogram.get_recorded_iterator():
+            buckets.append([
+                item.value_iterated_to,
+                item.count_at_value_iterated_to
+            ])
+        return buckets
+    except Exception as e:
+        print(f"Warning: Failed to decode HDR histogram: {e}")
+        return []
+
+
+def add_buckets_to_phase_records(phase_records: dict) -> dict:
+    """
+    Process phase records and add explicit buckets to each command's latency data.
+    Modifies the records in place and returns them.
+    """
+    for phase_id, record in phase_records.items():
+        metrics = record.get("metrics", {})
+        for cmd_name, cmd_data in metrics.items():
+            latency = cmd_data.get("latency", {})
+            hdr = latency.get("hdr", {})
+            payload = hdr.get("payload_b64", "")
+            if payload and "buckets" not in hdr:
+                hdr["buckets"] = extract_buckets_from_hdr(payload)
+
+    return phase_records
 
 
 class PostgreSQLPublisher:
@@ -791,18 +833,20 @@ class BenchmarkRunner:
         "rds!cluster-7be93190-f497-428f-85e5-c33b16781f63"
     DEFAULT_PG_REGION = "us-east-1"
 
-    def __init__(self, project_dir: Path, output_file: Path,
-                 workload_config: dict, driver_config: dict,
+    def __init__(self, resp_bench_dir: Path, output_file: Path,
+                 workload_config_path: Path, driver_config_path: Path,
                  versions: dict,
                  job_id_prefix: str = "",
                  skip_infra: bool = False, network_delay_ms: int = 1,
                  publish_to_db: bool = True, pg_host: str = None,
                  pg_port: int = None, pg_database: str = None,
                  pg_secret_name: str = None, pg_region: str = None):
-        self.project_dir = project_dir
+        self.resp_bench_dir = resp_bench_dir
         self.output_file = output_file
-        self.workload_config = workload_config
-        self.driver_config = driver_config
+        self.workload_config_path = workload_config_path
+        self.driver_config_path = driver_config_path
+        self.workload_config = load_json_config(workload_config_path)
+        self.driver_config = load_json_config(driver_config_path)
         self.versions = versions
         self.skip_infra = skip_infra
         self.network_delay_ms = network_delay_ms
@@ -817,6 +861,9 @@ class BenchmarkRunner:
         self.pg_secret_name = pg_secret_name or self.DEFAULT_PG_SECRET_NAME
         self.pg_region = pg_region or self.DEFAULT_PG_REGION
 
+        # Java JAR path - find the shaded JAR dynamically
+        self.java_jar = self._find_java_jar()
+
         cpu_count = os.cpu_count() or 8
         if cpu_count > 4:
             self.benchmark_cores = f"4-{cpu_count - 1}"
@@ -829,58 +876,123 @@ class BenchmarkRunner:
 
         print(f"Versions: {json.dumps(self.versions, indent=2)}")
 
+    def _find_java_jar(self) -> Path:
+        """Find the benchmark JAR file dynamically."""
+        target_dir = self.resp_bench_dir / "java/target"
+        # Look for the shaded JAR (excludes -sources, -javadoc, original-)
+        jars = list(target_dir.glob("resp-bench-java-*.jar"))
+        jars = [j for j in jars if not any(x in j.name for x in
+                ["-sources", "-javadoc", "original-"])]
+        if not jars:
+            raise RuntimeError(f"No benchmark JAR found in {target_dir}")
+        if len(jars) > 1:
+            print(f"Warning: Multiple JARs found, using: {jars[0]}")
+        return jars[0]
+
+    def _is_cluster_mode(self) -> bool:
+        """Check if the driver config specifies cluster mode."""
+        return self.driver_config.get("mode", "standalone") == "cluster"
+
+    def _get_server_port(self) -> int:
+        """Get the primary server port based on mode."""
+        return 7379 if self._is_cluster_mode() else 6379
+
+    def _pin_server_processes(self):
+        """Pin all running valkey-server processes to designated cores."""
+        work_dir = self.resp_bench_dir / "work"
+        pinned = 0
+        for pid_file in work_dir.glob("*.pid"):
+            try:
+                pid = int(pid_file.read_text().strip())
+                result = subprocess.run(
+                    ["taskset", "-cp", self.INFRA_CORES, str(pid)],
+                    capture_output=True, text=True)
+                if result.returncode == 0:
+                    pinned += 1
+                else:
+                    print(f"  Warning: Failed to pin PID {pid}: {result.stderr}")
+            except (ValueError, FileNotFoundError) as e:
+                print(f"  Warning: Could not read PID from {pid_file}: {e}")
+        print(f"Pinned {pinned} server processes to cores {self.INFRA_CORES}")
+
     def start_infrastructure(self):
         if self.skip_infra:
             print("Skipping infrastructure setup")
             return
 
-        print(f"Starting Valkey infrastructure on cores {self.INFRA_CORES}...")
-        subprocess.run(["make", "cluster-stop"], cwd=self.project_dir,
+        is_cluster = self._is_cluster_mode()
+        mode_name = "cluster" if is_cluster else "standalone"
+        make_target = "server-cluster-init" if is_cluster else "server-standalone-start"
+        stop_target = "server-cluster-stop" if is_cluster else "server-standalone-stop"
+        port = self._get_server_port()
+
+        print(f"Starting Valkey {mode_name} infrastructure on cores {self.INFRA_CORES}...")
+        subprocess.run(["make", stop_target], cwd=self.resp_bench_dir,
                         capture_output=True)
         subprocess.run(["pkill", "-f", "valkey-server"], capture_output=True)
         time.sleep(1)
 
-        work_dir = self.project_dir / "work"
+        work_dir = self.resp_bench_dir / "work"
         if work_dir.exists():
             shutil.rmtree(work_dir)
 
         result = subprocess.run(
-            ["taskset", "-c", self.INFRA_CORES, "make", "cluster-init"],
-            cwd=self.project_dir, timeout=600)
+            ["taskset", "-c", self.INFRA_CORES, "make", make_target],
+            cwd=self.resp_bench_dir, timeout=600)
         if result.returncode != 0:
             raise RuntimeError(
-                f"Failed to start infrastructure "
+                f"Failed to start {mode_name} infrastructure "
                 f"(exit code {result.returncode})")
         time.sleep(2)
 
-        valkey_cli = self.project_dir / "work/valkey/bin/valkey-cli"
-        result = subprocess.run([str(valkey_cli), "-p", "7379", "ping"],
+        valkey_cli = self.resp_bench_dir / "work/valkey/bin/valkey-cli"
+        result = subprocess.run([str(valkey_cli), "-p", str(port), "ping"],
                                 capture_output=True, text=True)
         if "PONG" not in result.stdout:
-            raise RuntimeError("Valkey verification failed")
-        print("Valkey infrastructure started and verified")
+            raise RuntimeError(f"Valkey verification failed on port {port}")
+        print(f"Valkey {mode_name} infrastructure started and verified on port {port}")
+
+        # Pin server processes to designated cores
+        self._pin_server_processes()
 
     def stop_infrastructure(self):
         if self.skip_infra:
             return
-        print("Stopping Valkey infrastructure...")
-        subprocess.run(["make", "cluster-stop"], cwd=self.project_dir,
+        is_cluster = self._is_cluster_mode()
+        mode_name = "cluster" if is_cluster else "standalone"
+        stop_target = "server-cluster-stop" if is_cluster else "server-standalone-stop"
+
+        print(f"Stopping Valkey {mode_name} infrastructure...")
+        subprocess.run(["make", stop_target], cwd=self.resp_bench_dir,
                         capture_output=True)
-        subprocess.run(["make", "clean"], cwd=self.project_dir,
+        subprocess.run(["make", "clean"], cwd=self.resp_bench_dir,
                         capture_output=True)
         print("Valkey infrastructure stopped")
 
-    def run_benchmark(self, output_metrics: Path,
-                      workload_config_path: Path) -> subprocess.Popen:
-        benchmark_script = (self.project_dir
-                            / ".github/scripts/mock_benchmark.py")
+    def run_benchmark(self, output_metrics: Path) -> subprocess.Popen:
+        port = self._get_server_port()
+        server = f"localhost:{port}"
+
         cmd = [
             "taskset", "-c", self.benchmark_cores,
-            "python3", str(benchmark_script),
-            "--workload-config", str(workload_config_path),
-            "--output", str(output_metrics)
+            "java", "-jar", str(self.java_jar),
+            "--server", server,
+            "--driver", str(self.driver_config_path),
+            "--workload", str(self.workload_config_path),
+            "--metrics", str(output_metrics)
         ]
-        print(f"Starting benchmark on cores {self.benchmark_cores}")
+
+        # Add commit ID if available
+        commit_id = self.versions.get("primary_driver_version")
+        if commit_id:
+            cmd.extend(["--commit-id", commit_id])
+
+        print(f"Starting Java benchmark on cores {self.benchmark_cores}")
+        print(f"  Server: {server}")
+        print(f"  Driver: {self.driver_config_path}")
+        print(f"  Workload: {self.workload_config_path}")
+        print(f"  Command: {' '.join(cmd)}")
+
         return subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
 
@@ -920,20 +1032,19 @@ class BenchmarkRunner:
             traceback.print_exc()
             return None
 
-    def run(self, workload_config_path: Path):
+    def run(self):
         """Execute the full benchmark workflow"""
         self.variance_control.setup(network_delay_ms=self.network_delay_ms)
 
         with tempfile.TemporaryDirectory() as tmpdir:
             work_dir = Path(tmpdir)
-            benchmark_metrics = work_dir / "benchmark_metrics.jsonl"
+            benchmark_metrics = work_dir / "benchmark_metrics.ndjson"
 
             try:
                 self.start_infrastructure()
 
                 print("Starting benchmark...")
-                benchmark_proc = self.run_benchmark(
-                    benchmark_metrics, workload_config_path)
+                benchmark_proc = self.run_benchmark(benchmark_metrics)
 
                 metrics_watcher = MetricsWatcher(benchmark_metrics)
                 metrics_watcher.start()
@@ -973,6 +1084,10 @@ class BenchmarkRunner:
 
                 # Collect all phase records from the benchmark
                 all_phases = metrics_watcher.get_all_phase_records()
+
+                # Add explicit buckets to HDR histograms
+                add_buckets_to_phase_records(all_phases)
+
                 steady_record = metrics_watcher.get_phase_record("STEADY")
 
                 # Parse system-level metrics
@@ -986,8 +1101,8 @@ class BenchmarkRunner:
                 network_stats = parse_sar_network(
                     monitor.output_files.get("sar_network", Path()))
 
-                # Copy JSONL metrics to output directory
-                output_metrics_path = self.output_file.with_suffix('.jsonl')
+                # Copy NDJSON metrics to output directory
+                output_metrics_path = self.output_file.with_suffix('.ndjson')
                 if benchmark_metrics.exists():
                     shutil.copy(benchmark_metrics, output_metrics_path)
                     print(f"Benchmark metrics saved to {output_metrics_path}")
@@ -1047,7 +1162,8 @@ def main():
                         default="benchmark_results.json")
     parser.add_argument("--workload-config", type=str, required=True)
     parser.add_argument("--driver-config", type=str, required=True)
-    parser.add_argument("--project-dir", type=str, default=None)
+    parser.add_argument("--resp-bench-dir", type=str, required=True,
+                        help="Path to the cloned resp-bench repository")
     parser.add_argument("--skip-infra", action="store_true")
     parser.add_argument("--network-delay", type=int, default=1)
 
@@ -1068,15 +1184,10 @@ def main():
 
     args = parser.parse_args()
 
-
-    project_dir = (Path(args.project_dir)
-                   if args.project_dir else Path.cwd())
+    resp_bench_dir = Path(args.resp_bench_dir)
     output_file = Path(args.output)
     workload_config_path = Path(args.workload_config)
     driver_config_path = Path(args.driver_config)
-
-    workload_config = load_json_config(workload_config_path)
-    driver_config = load_json_config(driver_config_path)
 
     # Parse versions JSON from the workflow
     try:
@@ -1086,16 +1197,11 @@ def main():
         print(f"  Raw value: {args.versions_json}")
         raise SystemExit(1)
 
-    print(f"Loaded workload config: "
-          f"{workload_config['benchmark_profile']['name']}")
-    print(f"Loaded driver config: {driver_config['driver_id']}")
-    print(f"Versions: {json.dumps(versions, indent=2)}")
-
     runner = BenchmarkRunner(
-        project_dir=project_dir,
+        resp_bench_dir=resp_bench_dir,
         output_file=output_file,
-        workload_config=workload_config,
-        driver_config=driver_config,
+        workload_config_path=workload_config_path,
+        driver_config_path=driver_config_path,
         versions=versions,
         job_id_prefix=args.job_id_prefix,
         skip_infra=args.skip_infra,
@@ -1107,7 +1213,13 @@ def main():
         pg_secret_name=args.pg_secret_name,
         pg_region=args.pg_region
     )
-    runner.run(workload_config_path)
+
+    print(f"Loaded workload config: "
+          f"{runner.workload_config['benchmark_profile']['name']}")
+    print(f"Loaded driver config: {runner.driver_config['driver_id']}")
+    print(f"Versions: {json.dumps(versions, indent=2)}")
+
+    runner.run()
 
 
 if __name__ == "__main__":
