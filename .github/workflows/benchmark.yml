@@ -4,27 +4,27 @@ on:
   workflow_dispatch:
     inputs:
       driver:
-        description: 'Driver config JSON path relative to resp-bench/configs/drivers/ (e.g., "example-jedis-standalone")'
+        description: 'Driver config (default: spring-data-valkey with valkey-glide)'
         required: true
         type: string
         default: 'example-spring-data-valkey-glide-standalone'
       workload:
-        description: 'Workload config JSON path relative to resp-bench/configs/workloads/ (e.g., "example-workload")'
+        description: 'Workload config (default: example-workload)'
         required: true
         type: string
         default: 'example-workload'
       primary_version:
-        description: 'Primary driver version or commit ID. Must be EMPTY for spring-data-valkey (auto-resolved to branch HEAD).'
+        description: 'Primary driver version. Leave empty for spring-data-valkey (uses branch HEAD).'
         required: false
         type: string
         default: ''
       secondary_version:
-        description: 'Secondary driver version or commit ID. Must be EMPTY if driver config has no secondary driver.'
+        description: 'Secondary driver version (e.g., valkey-glide commit). Leave empty to use default.'
         required: false
         type: string
         default: ''
       job_id_prefix:
-        description: 'Optional prefix for the job ID (e.g., "regression", "nightly", "pr-123")'
+        description: 'Optional job ID prefix (e.g., "nightly", "pr-123")'
         required: false
         type: string
         default: ''
@@ -37,7 +37,7 @@ env:
   DEFAULT_DRIVER: 'example-spring-data-valkey-glide-standalone'
   DEFAULT_WORKLOAD: 'example-workload'
   DEFAULT_PRIMARY_VERSION: ''
-  DEFAULT_SECONDARY_VERSION: '6f96c84'
+  DEFAULT_SECONDARY_VERSION: ''
   DEFAULT_JOB_ID_PREFIX: ''
   RESP_BENCH_REPO: 'https://github.com/ikolomi/resp-bench.git'
 
@@ -65,6 +65,7 @@ jobs:
       - name: Resolve inputs
         id: inputs
         run: |
+          # TODO: this is for testing only. Remove once possible 
           if [ "${{ github.event_name }}" = "push" ]; then
             DRIVER="${{ env.DEFAULT_DRIVER }}"
             WORKLOAD="${{ env.DEFAULT_WORKLOAD }}"
@@ -136,7 +137,8 @@ jobs:
           echo "driver_id=$DRIVER_ID" >> $GITHUB_OUTPUT
           echo "secondary_driver_id=$SECONDARY_DRIVER_ID" >> $GITHUB_OUTPUT
 
-          # Check if we need to build spring-data-valkey locally
+          # Check if we need to build spring-data-valkey locally - this is always the case when
+          # running a spring-data-valkey benchmark
           if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
             echo "build_sdv=true" >> $GITHUB_OUTPUT
           else
@@ -167,43 +169,26 @@ jobs:
       - name: Validate and resolve versions
         id: versions
         run: |
-          DRIVER="${{ steps.inputs.outputs.driver }}"
           PRIMARY_VERSION="${{ steps.inputs.outputs.primary_version }}"
           SECONDARY_VERSION="${{ steps.inputs.outputs.secondary_version }}"
           DRIVER_ID="${{ steps.driver-info.outputs.driver_id }}"
           SECONDARY_DRIVER_ID="${{ steps.driver-info.outputs.secondary_driver_id }}"
 
-          ERRORS=0
-
-          # Rule 1: spring-data-valkey must NOT have explicit primary version
+          # spring-data-valkey must NOT have explicit primary version (uses branch HEAD)
           if [ "$DRIVER_ID" = "spring-data-valkey" ] && [ -n "$PRIMARY_VERSION" ]; then
-            echo "ERROR: primary_version must NOT be provided when driver_id is 'spring-data-valkey'."
-            echo "       The branch HEAD commit SHA is used automatically."
-            ERRORS=$((ERRORS + 1))
-          fi
-
-          # Rule 2: no secondary driver but secondary version provided
-          if [ -z "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ]; then
-            echo "ERROR: secondary_version was provided but driver '$DRIVER' has no secondary driver."
-            ERRORS=$((ERRORS + 1))
-          fi
-
-          if [ "$ERRORS" -gt 0 ]; then
-            echo "========================================="
-            echo "VALIDATION FAILED: $ERRORS error(s) found"
-            echo "========================================="
+            echo "ERROR: primary_version must be empty for spring-data-valkey (uses branch HEAD automatically)"
             exit 1
           fi
 
-          # Resolve spring-data-valkey: use branch HEAD commit SHA
-          if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
-            PRIMARY_VERSION="${{ github.sha }}"
-            echo "Resolved spring-data-valkey primary_version to HEAD: $PRIMARY_VERSION"
+          # Cannot provide secondary version if driver has no secondary driver
+          if [ -z "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ]; then
+            echo "ERROR: secondary_version provided but driver has no secondary driver"
+            exit 1
           fi
 
-          # If no secondary driver exists, force secondary version to empty
-          if [ -z "$SECONDARY_DRIVER_ID" ]; then
-            SECONDARY_VERSION=""
+          # Resolve primary version for spring-data-valkey
+          if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
+            PRIMARY_VERSION="${{ github.sha }}"
           fi
 
           # Build versions JSON
@@ -219,12 +204,9 @@ jobs:
               secondary_driver_version: (if $sv == "" then null else $sv end)
             }')
 
-          echo ""
-          echo "Resolved versions JSON:"
-          echo "$VERSIONS_JSON" | jq .
           echo "versions_json=$VERSIONS_JSON" >> $GITHUB_OUTPUT
           echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
-          echo "✓ All version validations passed"
+          echo "$VERSIONS_JSON" | jq .
 
       - name: Build spring-data-valkey
         id: build-sdv
@@ -241,7 +223,7 @@ jobs:
           echo "Commit: $COMMIT_SHORT"
           echo "Build version: $SDV_VERSION"
 
-          # Set version to include commit ID (like valkey-glide does)
+          # Set version to include commit ID
           mvn versions:set -DnewVersion="$SDV_VERSION" -DgenerateBackupPoms=false -q
 
           # Build and install
@@ -253,7 +235,7 @@ jobs:
       - name: Install valkey-glide build dependencies
         if: steps.driver-info.outputs.secondary_driver_id == 'valkey-glide' && steps.driver-info.outputs.secondary_is_commit == 'true'
         run: |
-          echo "Installing dependencies for building valkey-glide from source (per DEVELOPER.md)..."
+          echo "Installing dependencies for building valkey-glide from source"
 
           # Install system dependencies
           sudo apt-get update
@@ -264,7 +246,7 @@ jobs:
           source "$HOME/.cargo/env"
           rustc --version
 
-          # Install protobuf compiler v29.1 (as required by DEVELOPER.md)
+          # Install protobuf compiler v29.1
           PROTOC_VERSION="29.1"
           curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
           unzip -o "protoc-${PROTOC_VERSION}-linux-x86_64.zip" -d "$HOME/.local"
@@ -297,7 +279,7 @@ jobs:
           GLIDE_VERSION="${COMMIT_ID:0:8}-SNAPSHOT"
           echo "Building valkey-glide version: $GLIDE_VERSION"
 
-          # Build per DEVELOPER.md
+          # build
           cd java
           ./gradlew :client:buildAll -x test
           GLIDE_RELEASE_VERSION="$GLIDE_VERSION" ./gradlew publishToMavenLocal -x test
@@ -321,7 +303,9 @@ jobs:
             sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$SDV_VERSION</spring-data-valkey.version>|" java/pom.xml
           fi
 
-          # Update secondary driver version
+          # Update secondary driver version if a version/commit-id for it was supplied. Otherwise use defaults.
+          # If secondary version is glide and it was built locally, update the pom.xml file to use this built version.
+          # Otherwise, update the version supplied in the pom.xml.
           if [ -n "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ]; then
             case "$SECONDARY_DRIVER_ID" in
               valkey-glide)
@@ -357,89 +341,24 @@ jobs:
           echo "✓ Java benchmark built"
           ls -la java/target/*.jar
 
-      - name: Verify metal instance
-        run: |
-          echo "=== System Info ==="
-          lscpu | grep "Model name"
-          echo "CPU cores: $(nproc)"
-
-          VIRT=$(systemd-detect-virt 2>/dev/null || echo "none")
-          echo "Virtualization: $VIRT"
-          if [ "$VIRT" != "none" ]; then
-            echo "WARNING: Not running on bare metal!"
-          fi
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y sysstat iproute2 python3-pip
-
-          # Install Python dependencies system-wide
+          sudo apt-get install -y sysstat python3-pip
           sudo python3 -m pip install psycopg2-binary boto3 hdrhistogram
 
-          # Install async-profiler for Java flame graphs
-          ASYNC_PROFILER_VERSION="3.0"
-          if [ ! -f "/opt/async-profiler/asprof" ]; then
-            echo "Installing async-profiler ${ASYNC_PROFILER_VERSION}..."
-            curl -sL "https://github.com/async-profiler/async-profiler/releases/download/v${ASYNC_PROFILER_VERSION}/async-profiler-${ASYNC_PROFILER_VERSION}-linux-x64.tar.gz" | sudo tar xzf - -C /opt
-            sudo mv /opt/async-profiler-${ASYNC_PROFILER_VERSION}-linux-x64 /opt/async-profiler
+          # async-profiler for flame graphs
+          if [ ! -f "/opt/async-profiler/bin/asprof" ]; then
+            curl -sL "https://github.com/async-profiler/async-profiler/releases/download/v3.0/async-profiler-3.0-linux-x64.tar.gz" | sudo tar xzf - -C /opt
+            sudo mv /opt/async-profiler-3.0-linux-x64 /opt/async-profiler
           fi
-          /opt/async-profiler/asprof --version && echo "✓ async-profiler installed"
+          /opt/async-profiler/bin/asprof --version
 
-          CODENAME=$(lsb_release -cs)
-          KERNEL=$(uname -r)
-          echo "Ubuntu: $CODENAME, Kernel: $KERNEL"
-
-          if sudo apt-get install -y linux-tools-$(uname -r) 2>/dev/null; then
-            echo "✓ Installed kernel-matched perf tools"
-          else
-            echo "Kernel-matched tools not available, trying HWE fallback..."
-
-            cd /tmp
-
-            KERNEL_MAJOR=$(echo $KERNEL | cut -d'.' -f1,2)
-            echo "Looking for HWE tools for kernel $KERNEL_MAJOR..."
-
-            HWE_PKG=$(apt-cache search "linux-hwe.*tools.*${KERNEL_MAJOR}" 2>/dev/null | \
-                      grep -oP "linux-hwe-[\d.]+-tools-[\d.]+-\d+" | \
-                      sort -V | tail -1)
-
-            if [ -n "$HWE_PKG" ]; then
-              echo "Found HWE package: $HWE_PKG"
-              apt-get download "$HWE_PKG"
-            else
-              echo "No matching HWE package found, trying generic..."
-              sudo apt-get install -y linux-tools-generic 2>/dev/null || true
-            fi
-
-            for deb in linux-hwe*tools*.deb; do
-              if [ -f "$deb" ]; then
-                echo "Extracting $deb..."
-                sudo mkdir -p /opt/perf-tools
-                sudo dpkg -x "$deb" /opt/perf-tools
-                PERF_BIN=$(find /opt/perf-tools -name "perf" -type f 2>/dev/null | head -1)
-                if [ -n "$PERF_BIN" ]; then
-                  sudo ln -sf "$PERF_BIN" /usr/local/bin/perf
-                  echo "✓ Linked perf from $PERF_BIN"
-                fi
-                rm -f "$deb"
-                break
-              fi
-            done
-
-            cd -
-          fi
-
-          # Set perf permissions before verification
-          sudo sysctl -w kernel.perf_event_paranoid=-1
-          sudo sysctl -w kernel.kptr_restrict=0
-
-          echo ""
-          echo "=== Perf Verification ==="
-          which perf
-          perf --version
-          perf stat -e task-clock -- sleep 0.1
-          echo "✓ Perf installed and working"
+          # perf for hardware counters
+          sudo apt-get install -y linux-tools-$(uname -r) 2>/dev/null || \
+            sudo apt-get install -y linux-tools-generic 2>/dev/null || true
+          command -v perf && perf --version || echo "perf not available"
 
       - name: Run benchmark
         run: |
@@ -448,22 +367,16 @@ jobs:
           JOB_ID_PREFIX="${{ steps.inputs.outputs.job_id_prefix }}"
           VERSIONS_JSON='${{ steps.versions.outputs.versions_json }}'
 
-          if [ -n "$JOB_ID_PREFIX" ]; then
-            python3 .github/scripts/benchmark_runner.py \
-              --output "benchmark_results_${DRIVER}_${WORKLOAD}.json" \
-              --workload-config "resp-bench/configs/workloads/${WORKLOAD}.json" \
-              --driver-config "resp-bench/configs/drivers/${DRIVER}.json" \
-              --resp-bench-dir "${{ github.workspace }}/resp-bench" \
-              --versions-json "$VERSIONS_JSON" \
-              --job-id-prefix "$JOB_ID_PREFIX"
-          else
-            python3 .github/scripts/benchmark_runner.py \
-              --output "benchmark_results_${DRIVER}_${WORKLOAD}.json" \
-              --workload-config "resp-bench/configs/workloads/${WORKLOAD}.json" \
-              --driver-config "resp-bench/configs/drivers/${DRIVER}.json" \
-              --resp-bench-dir "${{ github.workspace }}/resp-bench" \
-              --versions-json "$VERSIONS_JSON"
-          fi
+          PREFIX_ARG=""
+          [ -n "$JOB_ID_PREFIX" ] && PREFIX_ARG="--job-id-prefix $JOB_ID_PREFIX"
+
+          python3 -u .github/scripts/benchmark_runner.py \
+            --output "benchmark_results_${DRIVER}_${WORKLOAD}.json" \
+            --workload-config "resp-bench/configs/workloads/${WORKLOAD}.json" \
+            --driver-config "resp-bench/configs/drivers/${DRIVER}.json" \
+            --resp-bench-dir "${{ github.workspace }}/resp-bench" \
+            --versions-json "$VERSIONS_JSON" \
+            $PREFIX_ARG
 
       - name: Display results summary
         if: always()
@@ -586,3 +499,4 @@ jobs:
           path: |
             benchmark_results_${{ steps.inputs.outputs.driver }}_${{ steps.inputs.outputs.workload }}.json
             benchmark_results_${{ steps.inputs.outputs.driver }}_${{ steps.inputs.outputs.workload }}.ndjson
+            benchmark_results_${{ steps.inputs.outputs.driver }}_${{ steps.inputs.outputs.workload }}_collapsed.txt

@@ -362,6 +362,8 @@ class MetricsWatcher:
         self.metrics_path = metrics_path
         self.warmup_done_event = threading.Event()
         self.steady_done_event = threading.Event()
+        self.error_event = threading.Event()
+        self.error_message: Optional[str] = None
         self.tail_process: Optional[subprocess.Popen] = None
         self.watcher_thread: Optional[threading.Thread] = None
         self.phase_records: dict = {}
@@ -399,6 +401,12 @@ class MetricsWatcher:
     def wait_for_steady_done(self) -> None:
         self.steady_done_event.wait()
 
+    def has_error(self) -> bool:
+        return self.error_event.is_set()
+
+    def get_error(self) -> Optional[str]:
+        return self.error_message
+
     def get_phase_record(self, phase_id: str) -> Optional[dict]:
         return self.phase_records.get(phase_id)
 
@@ -431,7 +439,16 @@ class MetricsWatcher:
 
         print(f"  [Metrics] Phase: {phase_id}, Status: {status}")
 
-        if status == "COMPLETED":
+        if status == "ERROR":
+            error_msg = record.get("error", "Unknown error")
+            self.error_message = f"Phase {phase_id} failed: {error_msg}"
+            print(f"  ✗ {self.error_message}")
+            self.phase_records[phase_id] = record
+            self.error_event.set()
+            # Unblock waiters so they can check for error
+            self.warmup_done_event.set()
+            self.steady_done_event.set()
+        elif status == "COMPLETED":
             self.phase_records[phase_id] = record
 
             if phase_id == "WARMUP" and not self.warmup_done_event.is_set():
@@ -1131,6 +1148,8 @@ class BenchmarkRunner:
 
                 print("Waiting for WARMUP phase to complete...")
                 metrics_watcher.wait_for_warmup_done()
+                if metrics_watcher.has_error():
+                    raise RuntimeError(metrics_watcher.get_error())
 
                 print("Starting monitoring for STEADY phase...")
                 monitor = MonitoringManager(work_dir)
@@ -1138,11 +1157,13 @@ class BenchmarkRunner:
 
                 print("Waiting for STEADY phase to complete...")
                 metrics_watcher.wait_for_steady_done()
+                if metrics_watcher.has_error():
+                    raise RuntimeError(metrics_watcher.get_error())
 
                 monitor.stop_all()
                 metrics_watcher.stop()
 
-                stdout, stderr = benchmark_proc.communicate(timeout=10)
+                _, stderr = benchmark_proc.communicate(timeout=10)
                 print(f"Benchmark stderr:\n{stderr.decode()}")
 
                 # Get collapsed stacks from async-profiler and upload to S3
@@ -1189,6 +1210,13 @@ class BenchmarkRunner:
                 if benchmark_metrics.exists():
                     shutil.copy(benchmark_metrics, output_metrics_path)
                     print(f"Benchmark metrics saved to {output_metrics_path}")
+
+                # Copy collapsed stacks to output directory for artifact upload
+                if collapsed_file and collapsed_file.exists():
+                    output_collapsed_path = self.output_file.with_name(
+                        self.output_file.stem + '_collapsed.txt')
+                    shutil.copy(collapsed_file, output_collapsed_path)
+                    print(f"Collapsed stacks saved to {output_collapsed_path}")
 
                 # Build result structure
                 config = {
