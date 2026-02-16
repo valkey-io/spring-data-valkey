@@ -231,9 +231,22 @@ jobs:
         if: steps.driver-info.outputs.build_sdv == 'true'
         run: |
           echo "Building spring-data-valkey from current branch..."
+
+          # Get base version and short commit ID
+          BASE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          COMMIT_SHORT="${GITHUB_SHA:0:7}"
+          SDV_VERSION="${BASE_VERSION}-${COMMIT_SHORT}"
+
+          echo "Base version: $BASE_VERSION"
+          echo "Commit: $COMMIT_SHORT"
+          echo "Build version: $SDV_VERSION"
+
+          # Set version to include commit ID (like valkey-glide does)
+          mvn versions:set -DnewVersion="$SDV_VERSION" -DgenerateBackupPoms=false -q
+
+          # Build and install
           mvn install -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -Dgpg.skip=true -q
 
-          SDV_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
           echo "✓ Built spring-data-valkey version: $SDV_VERSION"
           echo "version=$SDV_VERSION" >> $GITHUB_OUTPUT
 
