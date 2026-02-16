@@ -219,9 +219,11 @@ class VarianceControl:
         self.original_turbo_state = None
         self.tc_configured = False
         self.nmi_watchdog_original = None
+        self.smt_original = None
 
     def setup(self, network_delay_ms: int = 1):
         print("Setting up variance control...")
+        self._disable_smt()
         self._disable_turbo_boost()
         self._setup_network_delay(network_delay_ms)
         self._disable_nmi_watchdog()
@@ -230,6 +232,7 @@ class VarianceControl:
 
     def teardown(self):
         print("Restoring system settings...")
+        self._restore_smt()
         self._restore_turbo_boost()
         self._remove_network_delay()
         self._restore_nmi_watchdog()
@@ -265,6 +268,35 @@ class VarianceControl:
                 print("  ✓ Turbo boost restored")
             except Exception as e:
                 print(f"  ⚠ Could not restore turbo boost: {e}")
+
+    def _disable_smt(self):
+        """Disable SMT (hyperthreading) for consistent benchmark results."""
+        smt_control = Path("/sys/devices/system/cpu/smt/control")
+        try:
+            if smt_control.exists():
+                self.smt_original = smt_control.read_text().strip()
+                if self.smt_original != "off":
+                    subprocess.run(["sudo", "tee", str(smt_control)],
+                                   input=b"off", capture_output=True)
+                    print("  ✓ SMT (hyperthreading) disabled")
+                else:
+                    print("  ✓ SMT already disabled")
+            else:
+                print("  ⚠ SMT control not available")
+        except Exception as e:
+            print(f"  ⚠ Could not disable SMT: {e}")
+
+    def _restore_smt(self):
+        """Restore SMT to original state."""
+        if self.smt_original and self.smt_original != "off":
+            smt_control = Path("/sys/devices/system/cpu/smt/control")
+            try:
+                subprocess.run(["sudo", "tee", str(smt_control)],
+                               input=self.smt_original.encode(),
+                               capture_output=True)
+                print("  ✓ SMT restored")
+            except Exception as e:
+                print(f"  ⚠ Could not restore SMT: {e}")
 
     def _setup_network_delay(self, delay_ms: int):
         try:
