@@ -54,8 +54,8 @@ on:
       - trigger-bench-flavors
 
 env:
-  DEFAULT_PRIMARY_DRIVER: "spring-data-valkey"
-  DEFAULT_SECONDARY_DRIVER: "jedis"
+  DEFAULT_PRIMARY_DRIVER: "valkey-glide"
+  DEFAULT_SECONDARY_DRIVER: "none"
   DEFAULT_WORKLOAD: "example-workload"
   DEFAULT_PRIMARY_VERSION: ""
   DEFAULT_SECONDARY_VERSION: ""
