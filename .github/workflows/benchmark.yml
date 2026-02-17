@@ -55,7 +55,7 @@ on:
 
 env:
   DEFAULT_PRIMARY_DRIVER: "spring-data-valkey"
-  DEFAULT_SECONDARY_DRIVER: "lettuce"
+  DEFAULT_SECONDARY_DRIVER: "jedis"
   DEFAULT_WORKLOAD: "example-workload"
   DEFAULT_PRIMARY_VERSION: ""
   DEFAULT_SECONDARY_VERSION: ""
