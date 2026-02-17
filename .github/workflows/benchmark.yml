@@ -55,10 +55,10 @@ on:
 
 env:
   DEFAULT_PRIMARY_DRIVER: "spring-data-valkey"
-  DEFAULT_SECONDARY_DRIVER: "jedis"
+  DEFAULT_SECONDARY_DRIVER: "lettuce"
   DEFAULT_WORKLOAD: "example-workload"
   DEFAULT_PRIMARY_VERSION: ""
-  DEFAULT_SECONDARY_VERSION: "5.3.0"
+  DEFAULT_SECONDARY_VERSION: ""
   DEFAULT_JOB_ID_PREFIX: ""
   RESP_BENCH_REPO: "https://github.com/ikolomi/resp-bench.git"
 
