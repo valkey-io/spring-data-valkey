@@ -49,17 +49,7 @@ on:
         type: string
         default: ""
 
-  push:
-    branches:
-      - add-benchmark-ci
-
 env:
-  DEFAULT_PRIMARY_DRIVER: "spring-data-valkey"
-  DEFAULT_SECONDARY_DRIVER: "valkey-glide"
-  DEFAULT_WORKLOAD: "example-workload"
-  DEFAULT_PRIMARY_VERSION: ""
-  DEFAULT_SECONDARY_VERSION: ""
-  DEFAULT_JOB_ID_PREFIX: ""
   RESP_BENCH_REPO: "https://github.com/ikolomi/resp-bench.git"
 
 jobs:
@@ -89,22 +79,12 @@ jobs:
       - name: Resolve inputs
         id: inputs
         run: |
-          # TODO: this is for testing only. Remove once possible
-          if [ "${{ github.event_name }}" = "push" ]; then
-            PRIMARY_DRIVER="${{ env.DEFAULT_PRIMARY_DRIVER }}"
-            SECONDARY_DRIVER="${{ env.DEFAULT_SECONDARY_DRIVER }}"
-            WORKLOAD="${{ env.DEFAULT_WORKLOAD }}"
-            PRIMARY_VERSION="${{ env.DEFAULT_PRIMARY_VERSION }}"
-            SECONDARY_VERSION="${{ env.DEFAULT_SECONDARY_VERSION }}"
-            JOB_ID_PREFIX="${{ env.DEFAULT_JOB_ID_PREFIX }}"
-          else
-            PRIMARY_DRIVER="${{ github.event.inputs.primary_driver }}"
-            SECONDARY_DRIVER="${{ github.event.inputs.secondary_driver }}"
-            WORKLOAD="${{ github.event.inputs.workload }}"
-            PRIMARY_VERSION="${{ github.event.inputs.primary_version }}"
-            SECONDARY_VERSION="${{ github.event.inputs.secondary_version }}"
-            JOB_ID_PREFIX="${{ github.event.inputs.job_id_prefix }}"
-          fi
+          PRIMARY_DRIVER="${{ github.event.inputs.primary_driver }}"
+          SECONDARY_DRIVER="${{ github.event.inputs.secondary_driver }}"
+          WORKLOAD="${{ github.event.inputs.workload }}"
+          PRIMARY_VERSION="${{ github.event.inputs.primary_version }}"
+          SECONDARY_VERSION="${{ github.event.inputs.secondary_version }}"
+          JOB_ID_PREFIX="${{ github.event.inputs.job_id_prefix }}"
 
           echo "primary_driver=$PRIMARY_DRIVER" >> $GITHUB_OUTPUT
           echo "secondary_driver=$SECONDARY_DRIVER" >> $GITHUB_OUTPUT
