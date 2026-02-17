@@ -51,14 +51,14 @@ on:
 
   push:
     branches:
-      - add-benchmark-ci
+      - trigger-bench-flavors
 
 env:
   DEFAULT_PRIMARY_DRIVER: "spring-data-valkey"
-  DEFAULT_SECONDARY_DRIVER: "valkey-glide"
+  DEFAULT_SECONDARY_DRIVER: "lettuce"
   DEFAULT_WORKLOAD: "example-workload"
   DEFAULT_PRIMARY_VERSION: ""
-  DEFAULT_SECONDARY_VERSION: ""
+  DEFAULT_SECONDARY_VERSION: "6.6.0.RELEASE"
   DEFAULT_JOB_ID_PREFIX: ""
   RESP_BENCH_REPO: "https://github.com/ikolomi/resp-bench.git"
 
