@@ -1253,7 +1253,7 @@ def main():
     parser.add_argument("--resp-bench-commit", type=str, required=True,
                         help="Git commit ID of the resp-bench repository")
     parser.add_argument("--skip-infra", action="store_true")
-    parser.add_argument("--network-delay-ms", type=int, default=1)
+    parser.add_argument("--network-delay-ms", type=int, default=0)
     parser.add_argument("--job-id-prefix", type=str, default="",
                         help="Optional prefix for the job ID "
                              "(e.g., 'regression', 'nightly', 'pr-123')")
