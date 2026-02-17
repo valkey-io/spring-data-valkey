@@ -15,15 +15,15 @@
  */
 package io.valkey.springframework.data.valkey.connection.convert;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.springframework.core.convert.converter.Converter;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo.ValkeyClientInfoBuilder;
+import java.util.ArrayList;
+import java.util.List;
+import org.springframework.core.convert.converter.Converter;
 
 /**
- * {@link Converter} implementation to create one {@link ValkeyClientInfo} per line entry in given {@link String} array.
+ * {@link Converter} implementation to create one {@link ValkeyClientInfo} per line entry in given
+ * {@link String} array.
  *
  * <pre>
  * ## sample of single line
@@ -33,19 +33,20 @@ import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo.ValkeyC
  * @author Christoph Strobl
  * @since 1.3
  */
-public class StringToValkeyClientInfoConverter implements Converter<String[], List<ValkeyClientInfo>> {
+public class StringToValkeyClientInfoConverter
+        implements Converter<String[], List<ValkeyClientInfo>> {
 
-	public static final StringToValkeyClientInfoConverter INSTANCE = new StringToValkeyClientInfoConverter();
+    public static final StringToValkeyClientInfoConverter INSTANCE =
+            new StringToValkeyClientInfoConverter();
 
-	@Override
-	public List<ValkeyClientInfo> convert(String[] lines) {
+    @Override
+    public List<ValkeyClientInfo> convert(String[] lines) {
 
-		List<ValkeyClientInfo> clientInfoList = new ArrayList<>(lines.length);
-		for (String line : lines) {
-			clientInfoList.add(ValkeyClientInfoBuilder.fromString(line));
-		}
+        List<ValkeyClientInfo> clientInfoList = new ArrayList<>(lines.length);
+        for (String line : lines) {
+            clientInfoList.add(ValkeyClientInfoBuilder.fromString(line));
+        }
 
-		return clientInfoList;
-	}
-
+        return clientInfoList;
+    }
 }

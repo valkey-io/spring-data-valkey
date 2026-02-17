@@ -16,13 +16,11 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.KeyValue;
-
+import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
+import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClusterConnection.LettuceMultiKeyClusterCommandCallback;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
-import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClusterConnection.LettuceMultiKeyClusterCommandCallback;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -33,91 +31,101 @@ import org.springframework.util.CollectionUtils;
  */
 class LettuceClusterListCommands extends LettuceListCommands {
 
-	private final LettuceClusterConnection connection;
+    private final LettuceClusterConnection connection;
 
-	LettuceClusterListCommands(LettuceClusterConnection connection) {
+    LettuceClusterListCommands(LettuceClusterConnection connection) {
 
-		super(connection);
-		this.connection = connection;
-	}
+        super(connection);
+        this.connection = connection;
+    }
 
-	@Override
-	public List<byte[]> bLPop(int timeout, byte[]... keys) {
+    @Override
+    public List<byte[]> bLPop(int timeout, byte[]... keys) {
 
-		Assert.notNull(keys, "Keys must not be null");
-		Assert.noNullElements(keys, "Keys must not contain null elements");
+        Assert.notNull(keys, "Keys must not be null");
+        Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
-			return super.bLPop(timeout, keys);
-		}
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
+            return super.bLPop(timeout, keys);
+        }
 
-		List<KeyValue<byte[], byte[]>> resultList = connection.getClusterCommandExecutor().executeMultiKeyCommand(
-				(LettuceMultiKeyClusterCommandCallback<KeyValue<byte[], byte[]>>) (client, key) -> client.blpop(timeout, key),
-				Arrays.asList(keys)).resultsAsList();
+        List<KeyValue<byte[], byte[]>> resultList =
+                connection
+                        .getClusterCommandExecutor()
+                        .executeMultiKeyCommand(
+                                (LettuceMultiKeyClusterCommandCallback<KeyValue<byte[], byte[]>>)
+                                        (client, key) -> client.blpop(timeout, key),
+                                Arrays.asList(keys))
+                        .resultsAsList();
 
-		for (KeyValue<byte[], byte[]> kv : resultList) {
-			if (kv != null) {
-				return LettuceConverters.toBytesList(kv);
-			}
-		}
+        for (KeyValue<byte[], byte[]> kv : resultList) {
+            if (kv != null) {
+                return LettuceConverters.toBytesList(kv);
+            }
+        }
 
-		return Collections.emptyList();
-	}
+        return Collections.emptyList();
+    }
 
-	@Override
-	public List<byte[]> bRPop(int timeout, byte[]... keys) {
+    @Override
+    public List<byte[]> bRPop(int timeout, byte[]... keys) {
 
-		Assert.notNull(keys, "Keys must not be null");
-		Assert.noNullElements(keys, "Keys must not contain null elements");
+        Assert.notNull(keys, "Keys must not be null");
+        Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
-			return super.bRPop(timeout, keys);
-		}
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
+            return super.bRPop(timeout, keys);
+        }
 
-		List<KeyValue<byte[], byte[]>> resultList = connection.getClusterCommandExecutor().executeMultiKeyCommand(
-				(LettuceMultiKeyClusterCommandCallback<KeyValue<byte[], byte[]>>) (client, key) -> client.brpop(timeout, key),
-				Arrays.asList(keys)).resultsAsList();
+        List<KeyValue<byte[], byte[]>> resultList =
+                connection
+                        .getClusterCommandExecutor()
+                        .executeMultiKeyCommand(
+                                (LettuceMultiKeyClusterCommandCallback<KeyValue<byte[], byte[]>>)
+                                        (client, key) -> client.brpop(timeout, key),
+                                Arrays.asList(keys))
+                        .resultsAsList();
 
-		for (KeyValue<byte[], byte[]> kv : resultList) {
-			if (kv != null) {
-				return LettuceConverters.toBytesList(kv);
-			}
-		}
+        for (KeyValue<byte[], byte[]> kv : resultList) {
+            if (kv != null) {
+                return LettuceConverters.toBytesList(kv);
+            }
+        }
 
-		return Collections.emptyList();
-	}
+        return Collections.emptyList();
+    }
 
-	@Override
-	public byte[] rPopLPush(byte[] srcKey, byte[] dstKey) {
+    @Override
+    public byte[] rPopLPush(byte[] srcKey, byte[] dstKey) {
 
-		Assert.notNull(srcKey, "Source key must not be null");
-		Assert.notNull(dstKey, "Destination key must not be null");
+        Assert.notNull(srcKey, "Source key must not be null");
+        Assert.notNull(dstKey, "Destination key must not be null");
 
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(srcKey, dstKey)) {
-			return super.rPopLPush(srcKey, dstKey);
-		}
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(srcKey, dstKey)) {
+            return super.rPopLPush(srcKey, dstKey);
+        }
 
-		byte[] val = rPop(srcKey);
-		lPush(dstKey, val);
-		return val;
-	}
+        byte[] val = rPop(srcKey);
+        lPush(dstKey, val);
+        return val;
+    }
 
-	@Override
-	public byte[] bRPopLPush(int timeout, byte[] srcKey, byte[] dstKey) {
+    @Override
+    public byte[] bRPopLPush(int timeout, byte[] srcKey, byte[] dstKey) {
 
-		Assert.notNull(srcKey, "Source key must not be null");
-		Assert.notNull(dstKey, "Destination key must not be null");
+        Assert.notNull(srcKey, "Source key must not be null");
+        Assert.notNull(dstKey, "Destination key must not be null");
 
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(srcKey, dstKey)) {
-			return super.bRPopLPush(timeout, srcKey, dstKey);
-		}
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(srcKey, dstKey)) {
+            return super.bRPopLPush(timeout, srcKey, dstKey);
+        }
 
-		List<byte[]> val = bRPop(timeout, srcKey);
-		if (!CollectionUtils.isEmpty(val)) {
-			lPush(dstKey, val.get(1));
-			return val.get(1);
-		}
+        List<byte[]> val = bRPop(timeout, srcKey);
+        if (!CollectionUtils.isEmpty(val)) {
+            lPush(dstKey, val.get(1));
+            return val.get(1);
+        }
 
-		return null;
-	}
+        return null;
+    }
 }

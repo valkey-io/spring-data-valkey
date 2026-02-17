@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.connection;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
 import org.springframework.lang.Nullable;
 
 /**
@@ -28,143 +27,146 @@ import org.springframework.lang.Nullable;
  */
 public class DefaultSortParameters implements SortParameters {
 
-	private @Nullable byte[] byPattern;
-	private @Nullable Range limit;
-	private final List<byte[]> getPattern = new ArrayList<>(4);
-	private @Nullable Order order;
-	private @Nullable Boolean alphabetic;
+    private @Nullable byte[] byPattern;
+    private @Nullable Range limit;
+    private final List<byte[]> getPattern = new ArrayList<>(4);
+    private @Nullable Order order;
+    private @Nullable Boolean alphabetic;
 
-	/**
-	 * Constructs a new <code>DefaultSortParameters</code> instance.
-	 */
-	public DefaultSortParameters() {
-		this(null, null, null, null, null);
-	}
+    /** Constructs a new <code>DefaultSortParameters</code> instance. */
+    public DefaultSortParameters() {
+        this(null, null, null, null, null);
+    }
 
-	/**
-	 * Constructs a new <code>DefaultSortParameters</code> instance.
-	 *
-	 * @param limit
-	 * @param order
-	 * @param alphabetic
-	 */
-	public DefaultSortParameters(@Nullable Range limit, @Nullable Order order, @Nullable Boolean alphabetic) {
-		this(null, limit, null, order, alphabetic);
-	}
+    /**
+     * Constructs a new <code>DefaultSortParameters</code> instance.
+     *
+     * @param limit
+     * @param order
+     * @param alphabetic
+     */
+    public DefaultSortParameters(
+            @Nullable Range limit, @Nullable Order order, @Nullable Boolean alphabetic) {
+        this(null, limit, null, order, alphabetic);
+    }
 
-	/**
-	 * Constructs a new <code>DefaultSortParameters</code> instance.
-	 *
-	 * @param byPattern
-	 * @param limit
-	 * @param getPattern
-	 * @param order
-	 * @param alphabetic
-	 */
-	public DefaultSortParameters(@Nullable byte[] byPattern, @Nullable Range limit, @Nullable byte[][] getPattern,
-			@Nullable Order order, @Nullable Boolean alphabetic) {
-		super();
-		this.byPattern = byPattern;
-		this.limit = limit;
-		this.order = order;
-		this.alphabetic = alphabetic;
-		setGetPattern(getPattern);
-	}
+    /**
+     * Constructs a new <code>DefaultSortParameters</code> instance.
+     *
+     * @param byPattern
+     * @param limit
+     * @param getPattern
+     * @param order
+     * @param alphabetic
+     */
+    public DefaultSortParameters(
+            @Nullable byte[] byPattern,
+            @Nullable Range limit,
+            @Nullable byte[][] getPattern,
+            @Nullable Order order,
+            @Nullable Boolean alphabetic) {
+        super();
+        this.byPattern = byPattern;
+        this.limit = limit;
+        this.order = order;
+        this.alphabetic = alphabetic;
+        setGetPattern(getPattern);
+    }
 
-	@Nullable
-	public byte[] getByPattern() {
-		return byPattern;
-	}
+    @Nullable
+    public byte[] getByPattern() {
+        return byPattern;
+    }
 
-	public void setByPattern(byte[] byPattern) {
-		this.byPattern = byPattern;
-	}
+    public void setByPattern(byte[] byPattern) {
+        this.byPattern = byPattern;
+    }
 
-	public Range getLimit() {
-		return limit;
-	}
+    public Range getLimit() {
+        return limit;
+    }
 
-	public void setLimit(Range limit) {
-		this.limit = limit;
-	}
+    public void setLimit(Range limit) {
+        this.limit = limit;
+    }
 
-	public byte[][] getGetPattern() {
-		return getPattern.toArray(new byte[getPattern.size()][]);
-	}
+    public byte[][] getGetPattern() {
+        return getPattern.toArray(new byte[getPattern.size()][]);
+    }
 
-	public void addGetPattern(byte[] gPattern) {
-		getPattern.add(gPattern);
-	}
+    public void addGetPattern(byte[] gPattern) {
+        getPattern.add(gPattern);
+    }
 
-	public void setGetPattern(@Nullable byte[][] gPattern) {
-		getPattern.clear();
+    public void setGetPattern(@Nullable byte[][] gPattern) {
+        getPattern.clear();
 
-		if (gPattern == null) {
-			return;
-		}
+        if (gPattern == null) {
+            return;
+        }
 
-		Collections.addAll(getPattern, gPattern);
-	}
+        Collections.addAll(getPattern, gPattern);
+    }
 
-	@Nullable
-	public Order getOrder() {
-		return order;
-	}
+    @Nullable
+    public Order getOrder() {
+        return order;
+    }
 
-	public void setOrder(Order order) {
-		this.order = order;
-	}
+    public void setOrder(Order order) {
+        this.order = order;
+    }
 
-	@Nullable
-	public Boolean isAlphabetic() {
-		return alphabetic;
-	}
+    @Nullable
+    public Boolean isAlphabetic() {
+        return alphabetic;
+    }
 
-	public void setAlphabetic(Boolean alphabetic) {
-		this.alphabetic = alphabetic;
-	}
+    public void setAlphabetic(Boolean alphabetic) {
+        this.alphabetic = alphabetic;
+    }
 
-	//
-	// builder like methods
-	//
+    //
+    // builder like methods
+    //
 
-	public DefaultSortParameters order(Order order) {
-		setOrder(order);
-		return this;
-	}
+    public DefaultSortParameters order(Order order) {
+        setOrder(order);
+        return this;
+    }
 
-	public DefaultSortParameters alpha() {
-		setAlphabetic(true);
-		return this;
-	}
+    public DefaultSortParameters alpha() {
+        setAlphabetic(true);
+        return this;
+    }
 
-	public DefaultSortParameters asc() {
-		setOrder(Order.ASC);
-		return this;
-	}
+    public DefaultSortParameters asc() {
+        setOrder(Order.ASC);
+        return this;
+    }
 
-	public DefaultSortParameters desc() {
-		setOrder(Order.DESC);
-		return this;
-	}
+    public DefaultSortParameters desc() {
+        setOrder(Order.DESC);
+        return this;
+    }
 
-	public DefaultSortParameters numeric() {
-		setAlphabetic(false);
-		return this;
-	}
+    public DefaultSortParameters numeric() {
+        setAlphabetic(false);
+        return this;
+    }
 
-	public DefaultSortParameters get(byte[] pattern) {
-		addGetPattern(pattern);
-		return this;
-	}
+    public DefaultSortParameters get(byte[] pattern) {
+        addGetPattern(pattern);
+        return this;
+    }
 
-	public DefaultSortParameters by(byte[] pattern) {
-		setByPattern(pattern);
-		return this;
-	}
+    public DefaultSortParameters by(byte[] pattern) {
+        setByPattern(pattern);
+        return this;
+    }
 
-	public DefaultSortParameters limit(long start, long count) {
-		setLimit(new Range(start, count));
-		return this;
-	}
+    public DefaultSortParameters limit(long start, long count) {
+        setLimit(new Range(start, count));
+        return this;
+    }
 }

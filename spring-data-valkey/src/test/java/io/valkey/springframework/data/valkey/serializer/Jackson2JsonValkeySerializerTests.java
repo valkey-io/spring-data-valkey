@@ -17,15 +17,12 @@ package io.valkey.springframework.data.valkey.serializer;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Arrays;
-
-import org.junit.jupiter.api.Test;
-
-import io.valkey.springframework.data.valkey.Person;
-import io.valkey.springframework.data.valkey.PersonObjectFactory;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import io.valkey.springframework.data.valkey.Person;
+import io.valkey.springframework.data.valkey.PersonObjectFactory;
+import java.util.Arrays;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link Jackson2JsonValkeySerializer}.
@@ -36,48 +33,52 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
  */
 class Jackson2JsonValkeySerializerTests {
 
-	private Jackson2JsonValkeySerializer<Person> serializer = new Jackson2JsonValkeySerializer<>(Person.class);
+    private Jackson2JsonValkeySerializer<Person> serializer =
+            new Jackson2JsonValkeySerializer<>(Person.class);
 
-	@Test // DATAREDIS-241
-	void testJackson2JsonSerializer() throws Exception {
+    @Test // DATAREDIS-241
+    void testJackson2JsonSerializer() throws Exception {
 
-		Person person = new PersonObjectFactory().instance();
-		assertThat(serializer.deserialize(serializer.serialize(person))).isEqualTo(person);
-	}
+        Person person = new PersonObjectFactory().instance();
+        assertThat(serializer.deserialize(serializer.serialize(person))).isEqualTo(person);
+    }
 
-	@Test // DATAREDIS-241
-	void testJackson2JsonSerializerShouldReturnEmptyByteArrayWhenSerializingNull() {
-		assertThat(serializer.serialize(null)).isEqualTo(new byte[0]);
-	}
+    @Test // DATAREDIS-241
+    void testJackson2JsonSerializerShouldReturnEmptyByteArrayWhenSerializingNull() {
+        assertThat(serializer.serialize(null)).isEqualTo(new byte[0]);
+    }
 
-	@Test // DTATVALKEY-241
-	void testJackson2JsonSerializerShouldReturnNullWhenDerserializingEmtyByteArray() {
-		assertThat(serializer.deserialize(new byte[0])).isNull();
-	}
+    @Test // DTATVALKEY-241
+    void testJackson2JsonSerializerShouldReturnNullWhenDerserializingEmtyByteArray() {
+        assertThat(serializer.deserialize(new byte[0])).isNull();
+    }
 
-	@Test // DTATVALKEY-241
-	void testJackson2JsonSerilizerShouldThrowExceptionWhenDeserializingInvalidByteArray() {
+    @Test // DTATVALKEY-241
+    void testJackson2JsonSerilizerShouldThrowExceptionWhenDeserializingInvalidByteArray() {
 
-		Person person = new PersonObjectFactory().instance();
-		byte[] serializedValue = serializer.serialize(person);
-		Arrays.sort(serializedValue); // corrupt serialization result
+        Person person = new PersonObjectFactory().instance();
+        byte[] serializedValue = serializer.serialize(person);
+        Arrays.sort(serializedValue); // corrupt serialization result
 
-		assertThatExceptionOfType(SerializationException.class).isThrownBy(() -> serializer.deserialize(serializedValue));
-	}
+        assertThatExceptionOfType(SerializationException.class)
+                .isThrownBy(() -> serializer.deserialize(serializedValue));
+    }
 
-	@Test // DTATVALKEY-241
-	void testJackson2JsonSerilizerThrowsExceptionWhenSettingNullObjectMapper() {
-		assertThatIllegalArgumentException().isThrownBy(() -> serializer.setObjectMapper(null));
-	}
+    @Test // DTATVALKEY-241
+    void testJackson2JsonSerilizerThrowsExceptionWhenSettingNullObjectMapper() {
+        assertThatIllegalArgumentException().isThrownBy(() -> serializer.setObjectMapper(null));
+    }
 
-	@Test // GH-2322
-	void shouldConsiderWriter() {
+    @Test // GH-2322
+    void shouldConsiderWriter() {
 
-		serializer = new Jackson2JsonValkeySerializer<>(new ObjectMapper(),
-				TypeFactory.defaultInstance().constructType(Person.class), JacksonObjectReader.create(),
-				(mapper, source) -> "foo".getBytes());
-		Person person = new PersonObjectFactory().instance();
-		assertThat(serializer.serialize(person)).isEqualTo("foo".getBytes());
-	}
-
+        serializer =
+                new Jackson2JsonValkeySerializer<>(
+                        new ObjectMapper(),
+                        TypeFactory.defaultInstance().constructType(Person.class),
+                        JacksonObjectReader.create(),
+                        (mapper, source) -> "foo".getBytes());
+        Person person = new PersonObjectFactory().instance();
+        assertThat(serializer.serialize(person)).isEqualTo("foo".getBytes());
+    }
 }

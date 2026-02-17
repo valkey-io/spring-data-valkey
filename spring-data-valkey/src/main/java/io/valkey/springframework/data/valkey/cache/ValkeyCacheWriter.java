@@ -15,23 +15,23 @@
  */
 package io.valkey.springframework.data.valkey.cache;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * {@link ValkeyCacheWriter} provides low-level access to Valkey commands ({@code SET, SETNX, GET, EXPIRE,...}) used for
- * caching.
- * <p>
- * The {@link ValkeyCacheWriter} may be shared by multiple cache implementations and is responsible for reading/writing
- * binary data from/to Valkey. The implementation honors potential cache lock flags that might be set.
- * <p>
- * The default {@link ValkeyCacheWriter} implementation can be customized with {@link BatchStrategy} to tune performance
- * behavior.
+ * {@link ValkeyCacheWriter} provides low-level access to Valkey commands ({@code SET, SETNX, GET,
+ * EXPIRE,...}) used for caching.
+ *
+ * <p>The {@link ValkeyCacheWriter} may be shared by multiple cache implementations and is
+ * responsible for reading/writing binary data from/to Valkey. The implementation honors potential
+ * cache lock flags that might be set.
+ *
+ * <p>The default {@link ValkeyCacheWriter} implementation can be customized with {@link
+ * BatchStrategy} to tune performance behavior.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -40,290 +40,315 @@ import org.springframework.util.Assert;
  */
 public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 
-	/**
-	 * Create new {@link ValkeyCacheWriter} without locking behavior.
-	 *
-	 * @param connectionFactory must not be {@literal null}.
-	 * @return new instance of {@link DefaultValkeyCacheWriter}.
-	 */
-	static ValkeyCacheWriter nonLockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory) {
-		return nonLockingValkeyCacheWriter(connectionFactory, BatchStrategies.keys());
-	}
+    /**
+     * Create new {@link ValkeyCacheWriter} without locking behavior.
+     *
+     * @param connectionFactory must not be {@literal null}.
+     * @return new instance of {@link DefaultValkeyCacheWriter}.
+     */
+    static ValkeyCacheWriter nonLockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory) {
+        return nonLockingValkeyCacheWriter(connectionFactory, BatchStrategies.keys());
+    }
 
-	/**
-	 * Create new {@link ValkeyCacheWriter} without locking behavior.
-	 *
-	 * @param connectionFactory must not be {@literal null}.
-	 * @param batchStrategy must not be {@literal null}.
-	 * @return new instance of {@link DefaultValkeyCacheWriter}.
-	 * @since 2.6
-	 */
-	static ValkeyCacheWriter nonLockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory,
-			BatchStrategy batchStrategy) {
+    /**
+     * Create new {@link ValkeyCacheWriter} without locking behavior.
+     *
+     * @param connectionFactory must not be {@literal null}.
+     * @param batchStrategy must not be {@literal null}.
+     * @return new instance of {@link DefaultValkeyCacheWriter}.
+     * @since 2.6
+     */
+    static ValkeyCacheWriter nonLockingValkeyCacheWriter(
+            ValkeyConnectionFactory connectionFactory, BatchStrategy batchStrategy) {
 
-		Assert.notNull(connectionFactory, "ConnectionFactory must not be null");
-		Assert.notNull(batchStrategy, "BatchStrategy must not be null");
+        Assert.notNull(connectionFactory, "ConnectionFactory must not be null");
+        Assert.notNull(batchStrategy, "BatchStrategy must not be null");
 
-		return new DefaultValkeyCacheWriter(connectionFactory, batchStrategy);
-	}
+        return new DefaultValkeyCacheWriter(connectionFactory, batchStrategy);
+    }
 
-	/**
-	 * Create new {@link ValkeyCacheWriter} with locking behavior.
-	 *
-	 * @param connectionFactory must not be {@literal null}.
-	 * @return new instance of {@link DefaultValkeyCacheWriter}.
-	 */
-	static ValkeyCacheWriter lockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory) {
-		return lockingValkeyCacheWriter(connectionFactory, BatchStrategies.keys());
-	}
+    /**
+     * Create new {@link ValkeyCacheWriter} with locking behavior.
+     *
+     * @param connectionFactory must not be {@literal null}.
+     * @return new instance of {@link DefaultValkeyCacheWriter}.
+     */
+    static ValkeyCacheWriter lockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory) {
+        return lockingValkeyCacheWriter(connectionFactory, BatchStrategies.keys());
+    }
 
-	/**
-	 * Create new {@link ValkeyCacheWriter} with locking behavior.
-	 *
-	 * @param connectionFactory must not be {@literal null}.
-	 * @param batchStrategy must not be {@literal null}.
-	 * @return new instance of {@link DefaultValkeyCacheWriter}.
-	 * @since 2.6
-	 */
-	static ValkeyCacheWriter lockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory,
-			BatchStrategy batchStrategy) {
+    /**
+     * Create new {@link ValkeyCacheWriter} with locking behavior.
+     *
+     * @param connectionFactory must not be {@literal null}.
+     * @param batchStrategy must not be {@literal null}.
+     * @return new instance of {@link DefaultValkeyCacheWriter}.
+     * @since 2.6
+     */
+    static ValkeyCacheWriter lockingValkeyCacheWriter(
+            ValkeyConnectionFactory connectionFactory, BatchStrategy batchStrategy) {
 
-		return lockingValkeyCacheWriter(connectionFactory, Duration.ofMillis(50), TtlFunction.persistent(), batchStrategy);
-	}
+        return lockingValkeyCacheWriter(
+                connectionFactory, Duration.ofMillis(50), TtlFunction.persistent(), batchStrategy);
+    }
 
-	/**
-	 * Create new {@link ValkeyCacheWriter} with locking behavior.
-	 *
-	 * @param connectionFactory must not be {@literal null}.
-	 * @param sleepTime sleep time between lock access attempts, must not be {@literal null}.
-	 * @param lockTtlFunction TTL function to compute the Lock TTL. The function is called with contextual keys and values
-	 *          (such as the cache name on cleanup or the actual key/value on put requests); must not be {@literal null}.
-	 * @param batchStrategy must not be {@literal null}.
-	 * @return new instance of {@link DefaultValkeyCacheWriter}.
-	 * @since 3.2
-	 */
-	static ValkeyCacheWriter lockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory, Duration sleepTime,
-			TtlFunction lockTtlFunction, BatchStrategy batchStrategy) {
+    /**
+     * Create new {@link ValkeyCacheWriter} with locking behavior.
+     *
+     * @param connectionFactory must not be {@literal null}.
+     * @param sleepTime sleep time between lock access attempts, must not be {@literal null}.
+     * @param lockTtlFunction TTL function to compute the Lock TTL. The function is called with
+     *     contextual keys and values (such as the cache name on cleanup or the actual key/value on
+     *     put requests); must not be {@literal null}.
+     * @param batchStrategy must not be {@literal null}.
+     * @return new instance of {@link DefaultValkeyCacheWriter}.
+     * @since 3.2
+     */
+    static ValkeyCacheWriter lockingValkeyCacheWriter(
+            ValkeyConnectionFactory connectionFactory,
+            Duration sleepTime,
+            TtlFunction lockTtlFunction,
+            BatchStrategy batchStrategy) {
 
-		Assert.notNull(connectionFactory, "ConnectionFactory must not be null");
+        Assert.notNull(connectionFactory, "ConnectionFactory must not be null");
 
-		return new DefaultValkeyCacheWriter(connectionFactory, sleepTime, lockTtlFunction, CacheStatisticsCollector.none(),
-				batchStrategy);
-	}
+        return new DefaultValkeyCacheWriter(
+                connectionFactory,
+                sleepTime,
+                lockTtlFunction,
+                CacheStatisticsCollector.none(),
+                batchStrategy);
+    }
 
-	/**
-	 * Get the binary value representation from Valkey stored for the given key.
-	 *
-	 * @param name must not be {@literal null}.
-	 * @param key must not be {@literal null}.
-	 * @return {@literal null} if key does not exist.
-	 * @see #get(String, byte[], Duration)
-	 */
-	@Nullable
-	byte[] get(String name, byte[] key);
+    /**
+     * Get the binary value representation from Valkey stored for the given key.
+     *
+     * @param name must not be {@literal null}.
+     * @param key must not be {@literal null}.
+     * @return {@literal null} if key does not exist.
+     * @see #get(String, byte[], Duration)
+     */
+    @Nullable
+    byte[] get(String name, byte[] key);
 
-	/**
-	 * Get the binary value representation from Valkey stored for the given key and set the given {@link Duration TTL
-	 * expiration} for the cache entry.
-	 *
-	 * @param name must not be {@literal null}.
-	 * @param key must not be {@literal null}.
-	 * @param ttl {@link Duration} specifying the {@literal expiration timeout} for the cache entry.
-	 * @return {@literal null} if key does not exist or has {@literal expired}.
-	 */
-	@Nullable
-	default byte[] get(String name, byte[] key, @Nullable Duration ttl) {
-		return get(name, key);
-	}
+    /**
+     * Get the binary value representation from Valkey stored for the given key and set the given
+     * {@link Duration TTL expiration} for the cache entry.
+     *
+     * @param name must not be {@literal null}.
+     * @param key must not be {@literal null}.
+     * @param ttl {@link Duration} specifying the {@literal expiration timeout} for the cache entry.
+     * @return {@literal null} if key does not exist or has {@literal expired}.
+     */
+    @Nullable
+    default byte[] get(String name, byte[] key, @Nullable Duration ttl) {
+        return get(name, key);
+    }
 
-	/**
-	 * Get the binary value representation from Valkey stored for the given key and set the given {@link Duration TTL
-	 * expiration} for the cache entry, obtaining the value from {@code valueLoader} if necessary.
-	 * <p>
-	 * If possible (and configured for locking), implementations should ensure that the loading operation is synchronized
-	 * so that the specified {@code valueLoader} is only called once in case of concurrent access on the same key.
-	 *
-	 * @param name must not be {@literal null}.
-	 * @param key must not be {@literal null}.
-	 * @param valueLoader value loader that creates the value if the cache lookup has been not successful.
-	 * @param ttl {@link Duration} specifying the {@literal expiration timeout} for the cache entry.
-	 * @param timeToIdleEnabled {@literal true} to enable Time to Idle when retrieving the value.
-	 * @since 3.4
-	 */
-	default byte[] get(String name, byte[] key, Supplier<byte[]> valueLoader, @Nullable Duration ttl,
-			boolean timeToIdleEnabled) {
+    /**
+     * Get the binary value representation from Valkey stored for the given key and set the given
+     * {@link Duration TTL expiration} for the cache entry, obtaining the value from {@code
+     * valueLoader} if necessary.
+     *
+     * <p>If possible (and configured for locking), implementations should ensure that the loading
+     * operation is synchronized so that the specified {@code valueLoader} is only called once in case
+     * of concurrent access on the same key.
+     *
+     * @param name must not be {@literal null}.
+     * @param key must not be {@literal null}.
+     * @param valueLoader value loader that creates the value if the cache lookup has been not
+     *     successful.
+     * @param ttl {@link Duration} specifying the {@literal expiration timeout} for the cache entry.
+     * @param timeToIdleEnabled {@literal true} to enable Time to Idle when retrieving the value.
+     * @since 3.4
+     */
+    default byte[] get(
+            String name,
+            byte[] key,
+            Supplier<byte[]> valueLoader,
+            @Nullable Duration ttl,
+            boolean timeToIdleEnabled) {
 
-		byte[] bytes = timeToIdleEnabled ? get(name, key, ttl) : get(name, key);
+        byte[] bytes = timeToIdleEnabled ? get(name, key, ttl) : get(name, key);
 
-		if (bytes == null) {
-			bytes = valueLoader.get();
-			put(name, key, bytes, ttl);
-		}
+        if (bytes == null) {
+            bytes = valueLoader.get();
+            put(name, key, bytes, ttl);
+        }
 
-		return bytes;
-	}
+        return bytes;
+    }
 
-	/**
-	 * Determines whether the asynchronous {@link #retrieve(String, byte[])} and
-	 * {@link #retrieve(String, byte[], Duration)} cache operations are supported by the implementation.
-	 * <p>
-	 * The main factor for whether the {@literal retrieve} operation can be supported will primarily be determined by the
-	 * Valkey driver in use at runtime.
-	 * <p>
-	 * Returns {@literal false} by default. This will have an effect of {@link ValkeyCache#retrieve(Object)} and
-	 * {@link ValkeyCache#retrieve(Object, Supplier)} throwing an {@link UnsupportedOperationException}.
-	 *
-	 * @return {@literal true} if asynchronous {@literal retrieve} operations are supported by the implementation.
-	 * @since 3.2
-	 */
-	default boolean supportsAsyncRetrieve() {
-		return false;
-	}
+    /**
+     * Determines whether the asynchronous {@link #retrieve(String, byte[])} and {@link
+     * #retrieve(String, byte[], Duration)} cache operations are supported by the implementation.
+     *
+     * <p>The main factor for whether the {@literal retrieve} operation can be supported will
+     * primarily be determined by the Valkey driver in use at runtime.
+     *
+     * <p>Returns {@literal false} by default. This will have an effect of {@link
+     * ValkeyCache#retrieve(Object)} and {@link ValkeyCache#retrieve(Object, Supplier)} throwing an
+     * {@link UnsupportedOperationException}.
+     *
+     * @return {@literal true} if asynchronous {@literal retrieve} operations are supported by the
+     *     implementation.
+     * @since 3.2
+     */
+    default boolean supportsAsyncRetrieve() {
+        return false;
+    }
 
-	/**
-	 * Asynchronously retrieves the {@link CompletableFuture value} to which the {@link ValkeyCache} maps the given
-	 * {@code byte[] key}.
-	 * <p>
-	 * This operation is non-blocking.
-	 *
-	 * @param name {@link String} with the name of the {@link ValkeyCache}.
-	 * @param key {@code byte[] key} mapped to the {@link CompletableFuture value} in the {@link ValkeyCache}.
-	 * @return the {@link CompletableFuture value} to which the {@link ValkeyCache} maps the given {@code byte[] key}.
-	 * @see #retrieve(String, byte[], Duration)
-	 * @since 3.2
-	 */
-	default CompletableFuture<byte[]> retrieve(String name, byte[] key) {
-		return retrieve(name, key, null);
-	}
+    /**
+     * Asynchronously retrieves the {@link CompletableFuture value} to which the {@link ValkeyCache}
+     * maps the given {@code byte[] key}.
+     *
+     * <p>This operation is non-blocking.
+     *
+     * @param name {@link String} with the name of the {@link ValkeyCache}.
+     * @param key {@code byte[] key} mapped to the {@link CompletableFuture value} in the {@link
+     *     ValkeyCache}.
+     * @return the {@link CompletableFuture value} to which the {@link ValkeyCache} maps the given
+     *     {@code byte[] key}.
+     * @see #retrieve(String, byte[], Duration)
+     * @since 3.2
+     */
+    default CompletableFuture<byte[]> retrieve(String name, byte[] key) {
+        return retrieve(name, key, null);
+    }
 
-	/**
-	 * Asynchronously retrieves the {@link CompletableFuture value} to which the {@link ValkeyCache} maps the given
-	 * {@code byte[] key} setting the {@link Duration TTL expiration} for the cache entry.
-	 * <p>
-	 * This operation is non-blocking.
-	 *
-	 * @param name {@link String} with the name of the {@link ValkeyCache}.
-	 * @param key {@code byte[] key} mapped to the {@link CompletableFuture value} in the {@link ValkeyCache}.
-	 * @param ttl {@link Duration} specifying the {@literal expiration timeout} for the cache entry.
-	 * @return the {@link CompletableFuture value} to which the {@link ValkeyCache} maps the given {@code byte[] key}.
-	 * @since 3.2
-	 */
-	CompletableFuture<byte[]> retrieve(String name, byte[] key, @Nullable Duration ttl);
+    /**
+     * Asynchronously retrieves the {@link CompletableFuture value} to which the {@link ValkeyCache}
+     * maps the given {@code byte[] key} setting the {@link Duration TTL expiration} for the cache
+     * entry.
+     *
+     * <p>This operation is non-blocking.
+     *
+     * @param name {@link String} with the name of the {@link ValkeyCache}.
+     * @param key {@code byte[] key} mapped to the {@link CompletableFuture value} in the {@link
+     *     ValkeyCache}.
+     * @param ttl {@link Duration} specifying the {@literal expiration timeout} for the cache entry.
+     * @return the {@link CompletableFuture value} to which the {@link ValkeyCache} maps the given
+     *     {@code byte[] key}.
+     * @since 3.2
+     */
+    CompletableFuture<byte[]> retrieve(String name, byte[] key, @Nullable Duration ttl);
 
-	/**
-	 * Write the given key/value pair to Valkey and set the expiration time if defined.
-	 *
-	 * @param name cache name must not be {@literal null}.
-	 * @param key key for the cache entry. Must not be {@literal null}.
-	 * @param value value stored for the key. Must not be {@literal null}.
-	 * @param ttl optional expiration time. Can be {@literal null}.
-	 */
-	void put(String name, byte[] key, byte[] value, @Nullable Duration ttl);
+    /**
+     * Write the given key/value pair to Valkey and set the expiration time if defined.
+     *
+     * @param name cache name must not be {@literal null}.
+     * @param key key for the cache entry. Must not be {@literal null}.
+     * @param value value stored for the key. Must not be {@literal null}.
+     * @param ttl optional expiration time. Can be {@literal null}.
+     */
+    void put(String name, byte[] key, byte[] value, @Nullable Duration ttl);
 
-	/**
-	 * Store the given key/value pair asynchronously to Valkey and set the expiration time if defined.
-	 * <p>
-	 * This operation is non-blocking.
-	 *
-	 * @param name cache name must not be {@literal null}.
-	 * @param key key for the cache entry. Must not be {@literal null}.
-	 * @param value value stored for the key. Must not be {@literal null}.
-	 * @param ttl optional expiration time. Can be {@literal null}.
-	 * @since 3.2
-	 */
-	CompletableFuture<Void> store(String name, byte[] key, byte[] value, @Nullable Duration ttl);
+    /**
+     * Store the given key/value pair asynchronously to Valkey and set the expiration time if defined.
+     *
+     * <p>This operation is non-blocking.
+     *
+     * @param name cache name must not be {@literal null}.
+     * @param key key for the cache entry. Must not be {@literal null}.
+     * @param value value stored for the key. Must not be {@literal null}.
+     * @param ttl optional expiration time. Can be {@literal null}.
+     * @since 3.2
+     */
+    CompletableFuture<Void> store(String name, byte[] key, byte[] value, @Nullable Duration ttl);
 
-	/**
-	 * Write the given value to Valkey if the key does not already exist.
-	 *
-	 * @param name cache name must not be {@literal null}.
-	 * @param key key for the cache entry. Must not be {@literal null}.
-	 * @param value value stored for the key. Must not be {@literal null}.
-	 * @param ttl optional expiration time. Can be {@literal null}.
-	 * @return {@literal null} if the value has been written, the value stored for the key if it already exists.
-	 */
-	@Nullable
-	byte[] putIfAbsent(String name, byte[] key, byte[] value, @Nullable Duration ttl);
+    /**
+     * Write the given value to Valkey if the key does not already exist.
+     *
+     * @param name cache name must not be {@literal null}.
+     * @param key key for the cache entry. Must not be {@literal null}.
+     * @param value value stored for the key. Must not be {@literal null}.
+     * @param ttl optional expiration time. Can be {@literal null}.
+     * @return {@literal null} if the value has been written, the value stored for the key if it
+     *     already exists.
+     */
+    @Nullable
+    byte[] putIfAbsent(String name, byte[] key, byte[] value, @Nullable Duration ttl);
 
-	/**
-	 * Remove the given key from Valkey.
-	 *
-	 * @param name cache name must not be {@literal null}.
-	 * @param key key for the cache entry. Must not be {@literal null}.
-	 */
-	void remove(String name, byte[] key);
+    /**
+     * Remove the given key from Valkey.
+     *
+     * @param name cache name must not be {@literal null}.
+     * @param key key for the cache entry. Must not be {@literal null}.
+     */
+    void remove(String name, byte[] key);
 
-	/**
-	 * Remove all keys following the given pattern.
-	 *
-	 * @param name cache name must not be {@literal null}.
-	 * @param pattern pattern for the keys to remove. Must not be {@literal null}.
-	 */
-	void clean(String name, byte[] pattern);
+    /**
+     * Remove all keys following the given pattern.
+     *
+     * @param name cache name must not be {@literal null}.
+     * @param pattern pattern for the keys to remove. Must not be {@literal null}.
+     */
+    void clean(String name, byte[] pattern);
 
-	/**
-	 * Reset all statistics counters and gauges for this cache.
-	 *
-	 * @since 2.4
-	 */
-	void clearStatistics(String name);
+    /**
+     * Reset all statistics counters and gauges for this cache.
+     *
+     * @since 2.4
+     */
+    void clearStatistics(String name);
 
-	/**
-	 * Obtain a {@link ValkeyCacheWriter} using the given {@link CacheStatisticsCollector} to collect metrics.
-	 *
-	 * @param cacheStatisticsCollector must not be {@literal null}.
-	 * @return new instance of {@link ValkeyCacheWriter}.
-	 */
-	ValkeyCacheWriter withStatisticsCollector(CacheStatisticsCollector cacheStatisticsCollector);
+    /**
+     * Obtain a {@link ValkeyCacheWriter} using the given {@link CacheStatisticsCollector} to collect
+     * metrics.
+     *
+     * @param cacheStatisticsCollector must not be {@literal null}.
+     * @return new instance of {@link ValkeyCacheWriter}.
+     */
+    ValkeyCacheWriter withStatisticsCollector(CacheStatisticsCollector cacheStatisticsCollector);
 
-	/**
-	 * Function to compute the time to live from the cache {@code key} and {@code value}.
-	 *
-	 * @author Mark Paluch
-	 * @since 3.2
-	 */
-	@FunctionalInterface
-	interface TtlFunction {
+    /**
+     * Function to compute the time to live from the cache {@code key} and {@code value}.
+     *
+     * @author Mark Paluch
+     * @since 3.2
+     */
+    @FunctionalInterface
+    interface TtlFunction {
 
-		Duration NO_EXPIRATION = Duration.ZERO;
+        Duration NO_EXPIRATION = Duration.ZERO;
 
-		/**
-		 * Creates a {@literal Singleton} {@link TtlFunction} using the given {@link Duration}.
-		 *
-		 * @param duration the time to live. Can be {@link Duration#ZERO} for persistent values (i.e. cache entry does not
-		 *          expire).
-		 * @return a singleton {@link TtlFunction} using {@link Duration}.
-		 */
-		static TtlFunction just(Duration duration) {
+        /**
+         * Creates a {@literal Singleton} {@link TtlFunction} using the given {@link Duration}.
+         *
+         * @param duration the time to live. Can be {@link Duration#ZERO} for persistent values (i.e.
+         *     cache entry does not expire).
+         * @return a singleton {@link TtlFunction} using {@link Duration}.
+         */
+        static TtlFunction just(Duration duration) {
 
-			Assert.notNull(duration, "TTL Duration must not be null");
+            Assert.notNull(duration, "TTL Duration must not be null");
 
-			return new FixedDurationTtlFunction(duration);
-		}
+            return new FixedDurationTtlFunction(duration);
+        }
 
-		/**
-		 * Returns a {@link TtlFunction} to create persistent entires that do not expire.
-		 *
-		 * @return a {@link TtlFunction} to create persistent entires that do not expire.
-		 */
-		static TtlFunction persistent() {
-			return just(NO_EXPIRATION);
-		}
+        /**
+         * Returns a {@link TtlFunction} to create persistent entires that do not expire.
+         *
+         * @return a {@link TtlFunction} to create persistent entires that do not expire.
+         */
+        static TtlFunction persistent() {
+            return just(NO_EXPIRATION);
+        }
 
-		/**
-		 * Compute a {@link Duration time-to-live (TTL)} using the cache {@code key} and {@code value}.
-		 * <p>
-		 * The {@link Duration time-to-live (TTL)} is computed on each write operation. Valkey uses millisecond granularity
-		 * for timeouts. Any more granular values (e.g. micros or nanos) are not considered and will be truncated due to
-		 * rounding. Returning {@link Duration#ZERO}, or a value less than {@code Duration.ofMillis(1)}, results in a
-		 * persistent value that does not expire.
-		 *
-		 * @param key the cache key.
-		 * @param value the cache value. Can be {@literal null} if the cache supports {@literal null} value caching.
-		 * @return the computed {@link Duration time-to-live (TTL)}. Can be {@link Duration#ZERO} for persistent values
-		 *         (i.e. cache entry does not expire).
-		 */
-		Duration getTimeToLive(Object key, @Nullable Object value);
-
-	}
+        /**
+         * Compute a {@link Duration time-to-live (TTL)} using the cache {@code key} and {@code value}.
+         *
+         * <p>The {@link Duration time-to-live (TTL)} is computed on each write operation. Valkey uses
+         * millisecond granularity for timeouts. Any more granular values (e.g. micros or nanos) are not
+         * considered and will be truncated due to rounding. Returning {@link Duration#ZERO}, or a value
+         * less than {@code Duration.ofMillis(1)}, results in a persistent value that does not expire.
+         *
+         * @param key the cache key.
+         * @param value the cache value. Can be {@literal null} if the cache supports {@literal null}
+         *     value caching.
+         * @return the computed {@link Duration time-to-live (TTL)}. Can be {@link Duration#ZERO} for
+         *     persistent values (i.e. cache entry does not expire).
+         */
+        Duration getTimeToLive(Object key, @Nullable Object value);
+    }
 }

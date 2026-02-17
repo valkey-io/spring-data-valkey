@@ -16,9 +16,8 @@
 
 package io.valkey.springframework.boot.test.autoconfigure.data.valkey;
 
-import org.springframework.data.annotation.Id;
-
 import io.valkey.springframework.data.valkey.core.ValkeyHash;
+import org.springframework.data.annotation.Id;
 
 /**
  * Example graph used with {@link DataValkeyTest @DataValkeyTest} tests.
@@ -28,25 +27,23 @@ import io.valkey.springframework.data.valkey.core.ValkeyHash;
 @ValkeyHash("persons")
 public class PersonHash {
 
-	@Id
-	private String id;
+    @Id private String id;
 
-	private String description;
+    private String description;
 
-	public String getId() {
-		return this.id;
-	}
+    public String getId() {
+        return this.id;
+    }
 
-	public void setId(String id) {
-		this.id = id;
-	}
+    public void setId(String id) {
+        this.id = id;
+    }
 
-	public String getDescription() {
-		return this.description;
-	}
+    public String getDescription() {
+        return this.description;
+    }
 
-	public void setDescription(String description) {
-		this.description = description;
-	}
-
+    public void setDescription(String description) {
+        this.description = description;
+    }
 }

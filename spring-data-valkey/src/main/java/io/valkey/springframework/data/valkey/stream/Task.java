@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.stream;
 
 import java.time.Duration;
-
 import org.springframework.scheduling.SchedulingAwareRunnable;
 
 /**
@@ -27,37 +26,41 @@ import org.springframework.scheduling.SchedulingAwareRunnable;
  */
 public interface Task extends SchedulingAwareRunnable, Cancelable {
 
-	/**
-	 * @return {@literal true} if the task is currently {@link State#RUNNING running}.
-	 */
-	default boolean isActive() {
-		return State.RUNNING.equals(getState());
-	}
+    /**
+     * @return {@literal true} if the task is currently {@link State#RUNNING running}.
+     */
+    default boolean isActive() {
+        return State.RUNNING.equals(getState());
+    }
 
-	/**
-	 * Get the current lifecycle phase.
-	 *
-	 * @return never {@literal null}.
-	 */
-	State getState();
+    /**
+     * Get the current lifecycle phase.
+     *
+     * @return never {@literal null}.
+     */
+    State getState();
 
-	/**
-	 * Synchronous, <strong>blocking</strong> call that awaits until this {@link Task} becomes active. Start awaiting is
-	 * rearmed after {@link #cancel() cancelling} to support restart.
-	 *
-	 * @param timeout must not be {@literal null}.
-	 * @return {@code true} if the task was started. {@code false} if the waiting time elapsed before task was started.
-	 * @throws InterruptedException if the current thread is interrupted while waiting.
-	 */
-	boolean awaitStart(Duration timeout) throws InterruptedException;
+    /**
+     * Synchronous, <strong>blocking</strong> call that awaits until this {@link Task} becomes active.
+     * Start awaiting is rearmed after {@link #cancel() cancelling} to support restart.
+     *
+     * @param timeout must not be {@literal null}.
+     * @return {@code true} if the task was started. {@code false} if the waiting time elapsed before
+     *     task was started.
+     * @throws InterruptedException if the current thread is interrupted while waiting.
+     */
+    boolean awaitStart(Duration timeout) throws InterruptedException;
 
-	/**
-	 * The {@link Task.State} defining the lifecycle phase the actual {@link Task}.
-	 *
-	 * @author Mark Paluch
-	 * @since 2.2
-	 */
-	enum State {
-		CREATED, STARTING, RUNNING, CANCELLED;
-	}
+    /**
+     * The {@link Task.State} defining the lifecycle phase the actual {@link Task}.
+     *
+     * @author Mark Paluch
+     * @since 2.2
+     */
+    enum State {
+        CREATED,
+        STARTING,
+        RUNNING,
+        CANCELLED;
+    }
 }

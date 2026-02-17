@@ -19,7 +19,8 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataAccessException;
 
 /**
- * {@link FallbackExceptionTranslationStrategy} returns {@link ValkeySystemException} for unknown {@link Exception}s.
+ * {@link FallbackExceptionTranslationStrategy} returns {@link ValkeySystemException} for unknown
+ * {@link Exception}s.
  *
  * @author Christoph Strobl
  * @author Thomas Darimont
@@ -28,25 +29,24 @@ import org.springframework.dao.DataAccessException;
  */
 public class FallbackExceptionTranslationStrategy extends PassThroughExceptionTranslationStrategy {
 
-	public FallbackExceptionTranslationStrategy(Converter<Exception, DataAccessException> converter) {
-		super(converter);
-	}
+    public FallbackExceptionTranslationStrategy(Converter<Exception, DataAccessException> converter) {
+        super(converter);
+    }
 
-	@Override
-	public DataAccessException translate(Exception e) {
+    @Override
+    public DataAccessException translate(Exception e) {
 
-		DataAccessException translated = super.translate(e);
-		return translated != null ? translated : getFallback(e);
-	}
+        DataAccessException translated = super.translate(e);
+        return translated != null ? translated : getFallback(e);
+    }
 
-	/**
-	 * Returns a new {@link ValkeySystemException} wrapping the given {@link Exception}.
-	 *
-	 * @param e causing exception.
-	 * @return the fallback exception.
-	 */
-	protected ValkeySystemException getFallback(Exception e) {
-		return new ValkeySystemException("Unknown valkey exception", e);
-	}
-
+    /**
+     * Returns a new {@link ValkeySystemException} wrapping the given {@link Exception}.
+     *
+     * @param e causing exception.
+     * @return the fallback exception.
+     */
+    protected ValkeySystemException getFallback(Exception e) {
+        return new ValkeySystemException("Unknown valkey exception", e);
+    }
 }

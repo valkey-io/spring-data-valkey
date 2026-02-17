@@ -15,6 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.aot.ValkeyRuntimeHints;
+import io.valkey.springframework.data.valkey.connection.DataType;
+import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.scope.ScopedObject;
 import org.springframework.aot.hint.MemberCategory;
@@ -22,11 +27,6 @@ import org.springframework.aot.hint.RuntimeHints;
 import org.springframework.aot.test.agent.EnabledIfRuntimeHintsAgent;
 import org.springframework.aot.test.agent.RuntimeHintsInvocations;
 import org.springframework.aot.test.agent.RuntimeHintsRecorder;
-import io.valkey.springframework.data.valkey.aot.ValkeyRuntimeHints;
-import io.valkey.springframework.data.valkey.connection.DataType;
-import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 
 /**
  * @author Christoph Strobl
@@ -34,29 +34,40 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 @EnabledIfRuntimeHintsAgent
 class BoundOperationsProxyFactoryRuntimeHintTests {
 
-	@Test // GH-2395
-	void boundOpsRuntimeHints() {
+    @Test // GH-2395
+    void boundOpsRuntimeHints() {
 
-		LettuceConnectionFactory connectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
-		ValkeyTemplate template = new ValkeyTemplate<>();
-		template.setConnectionFactory(connectionFactory);
-		template.afterPropertiesSet();
+        LettuceConnectionFactory connectionFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+        ValkeyTemplate template = new ValkeyTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.afterPropertiesSet();
 
-		BoundOperationsProxyFactory factory = new BoundOperationsProxyFactory();
-		BoundListOperations listOp = factory.createProxy(BoundListOperations.class, "key", DataType.LIST, template,
-				ValkeyOperations::opsForList);
+        BoundOperationsProxyFactory factory = new BoundOperationsProxyFactory();
+        BoundListOperations listOp =
+                factory.createProxy(
+                        BoundListOperations.class,
+                        "key",
+                        DataType.LIST,
+                        template,
+                        ValkeyOperations::opsForList);
 
-		RuntimeHintsInvocations invocations = RuntimeHintsRecorder.record(() -> {
-			listOp.trim(0, 10);
-		});
+        RuntimeHintsInvocations invocations =
+                RuntimeHintsRecorder.record(
+                        () -> {
+                            listOp.trim(0, 10);
+                        });
 
-		RuntimeHints hints = ValkeyRuntimeHints.valkeyHints(it -> {
-			// hints that should come from another module
-			it.reflection().registerType(ScopedObject.class,
-					hint -> hint.withMembers(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));
-		});
+        RuntimeHints hints =
+                ValkeyRuntimeHints.valkeyHints(
+                        it -> {
+                            // hints that should come from another module
+                            it.reflection()
+                                    .registerType(
+                                            ScopedObject.class,
+                                            hint -> hint.withMembers(MemberCategory.INVOKE_DECLARED_CONSTRUCTORS));
+                        });
 
-		invocations.assertThat().match(hints);
-	}
+        invocations.assertThat().match(hints);
+    }
 }

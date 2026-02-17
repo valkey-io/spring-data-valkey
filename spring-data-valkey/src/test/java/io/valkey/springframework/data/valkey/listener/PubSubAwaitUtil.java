@@ -18,15 +18,12 @@ package io.valkey.springframework.data.valkey.listener;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.output.ArrayOutput;
 import io.lettuce.core.output.IntegerOutput;
-
-import java.util.List;
-import java.util.concurrent.Callable;
-
-import org.awaitility.Awaitility;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnection;
+import java.util.List;
+import java.util.concurrent.Callable;
+import org.awaitility.Awaitility;
 
 /**
  * Utility providing await support.
@@ -35,82 +32,92 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectio
  */
 class PubSubAwaitUtil {
 
-	/**
-	 * Run the {@link Runnable} and wait until the number of Pub/Sub patterns has increased in comparison to before
-	 * running the callback.
-	 *
-	 * @param connectionFactory
-	 * @param runnable
-	 */
-	public static void runAndAwaitPatternSubscription(ValkeyConnectionFactory connectionFactory, Runnable runnable) {
+    /**
+     * Run the {@link Runnable} and wait until the number of Pub/Sub patterns has increased in
+     * comparison to before running the callback.
+     *
+     * @param connectionFactory
+     * @param runnable
+     */
+    public static void runAndAwaitPatternSubscription(
+            ValkeyConnectionFactory connectionFactory, Runnable runnable) {
 
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
 
-			Number before = numPat(connection);
+            Number before = numPat(connection);
 
-			runnable.run();
+            runnable.run();
 
-			runAndAwait(runnable, () -> {
+            runAndAwait(
+                    runnable,
+                    () -> {
+                        Number after = numPat(connection);
 
-				Number after = numPat(connection);
+                        return after.longValue() > before.longValue();
+                    });
+        }
+    }
 
-				return after.longValue() > before.longValue();
-			});
-		}
-	}
+    /**
+     * Run the {@link Runnable} and wait until the number of channel subscribers has increased in
+     * comparison to before running the callback.
+     *
+     * @param connectionFactory
+     * @param channel
+     * @param runnable
+     */
+    public static void runAndAwaitChannelSubscription(
+            ValkeyConnectionFactory connectionFactory, String channel, Runnable runnable) {
 
-	/**
-	 * Run the {@link Runnable} and wait until the number of channel subscribers has increased in comparison to before
-	 * running the callback.
-	 *
-	 * @param connectionFactory
-	 * @param channel
-	 * @param runnable
-	 */
-	public static void runAndAwaitChannelSubscription(ValkeyConnectionFactory connectionFactory, String channel,
-			Runnable runnable) {
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
 
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            Number before = numSub(connection, channel);
 
-			Number before = numSub(connection, channel);
+            runnable.run();
 
-			runnable.run();
+            runAndAwait(
+                    runnable,
+                    () -> {
+                        Number after = numSub(connection, channel);
 
-			runAndAwait(runnable, () -> {
+                        return after.longValue() > before.longValue();
+                    });
+        }
+    }
 
-				Number after = numSub(connection, channel);
+    private static long numPat(ValkeyConnection connection) {
 
-				return after.longValue() > before.longValue();
-			});
-		}
-	}
+        if (connection instanceof LettuceConnection lettuceConnection) {
+            return ((Number)
+                            lettuceConnection.execute(
+                                    "PUBSUB", new IntegerOutput<>(ByteArrayCodec.INSTANCE), "NUMPAT".getBytes()))
+                    .longValue();
+        }
 
-	private static long numPat(ValkeyConnection connection) {
+        return ((Number) connection.execute("PUBSUB", "NUMPAT".getBytes())).longValue();
+    }
 
-		if (connection instanceof LettuceConnection lettuceConnection) {
-			return ((Number) lettuceConnection.execute("PUBSUB", new IntegerOutput<>(ByteArrayCodec.INSTANCE),
-					"NUMPAT".getBytes())).longValue();
-		}
+    private static long numSub(ValkeyConnection connection, String channel) {
 
-		return ((Number) connection.execute("PUBSUB", "NUMPAT".getBytes())).longValue();
-	}
+        List<?> pubsub;
+        if (connection instanceof LettuceConnection lettuceConnection) {
+            pubsub =
+                    (List<?>)
+                            lettuceConnection.execute(
+                                    "PUBSUB",
+                                    new ArrayOutput<>(ByteArrayCodec.INSTANCE),
+                                    "NUMSUB".getBytes(),
+                                    channel.getBytes());
+        } else {
+            pubsub = (List<?>) connection.execute("PUBSUB", "NUMSUB".getBytes(), channel.getBytes());
+        }
 
-	private static long numSub(ValkeyConnection connection, String channel) {
+        return ((Number) pubsub.get(1)).longValue();
+    }
 
-		List<?> pubsub;
-		if (connection instanceof LettuceConnection lettuceConnection) {
-			pubsub = (List<?>) lettuceConnection.execute("PUBSUB", new ArrayOutput<>(ByteArrayCodec.INSTANCE),
-					"NUMSUB".getBytes(), channel.getBytes());
-		} else {
-			pubsub = (List<?>) connection.execute("PUBSUB", "NUMSUB".getBytes(), channel.getBytes());
-		}
+    private static void runAndAwait(Runnable runnable, Callable<Boolean> predicate) {
 
-		return ((Number) pubsub.get(1)).longValue();
-	}
-
-	private static void runAndAwait(Runnable runnable, Callable<Boolean> predicate) {
-
-		runnable.run();
-		Awaitility.await().until(predicate);
-	}
+        runnable.run();
+        Awaitility.await().until(predicate);
+    }
 }

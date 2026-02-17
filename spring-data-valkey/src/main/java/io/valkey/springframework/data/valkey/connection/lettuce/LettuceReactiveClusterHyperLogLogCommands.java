@@ -15,20 +15,18 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-
-import org.reactivestreams.Publisher;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.ReactiveClusterHyperLogLogCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
+import org.reactivestreams.Publisher;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Christoph Strobl
@@ -36,51 +34,67 @@ import org.springframework.util.Assert;
  * @since 2.0
  */
 class LettuceReactiveClusterHyperLogLogCommands extends LettuceReactiveHyperLogLogCommands
-		implements ReactiveClusterHyperLogLogCommands {
+        implements ReactiveClusterHyperLogLogCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveClusterHyperLogLogCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterHyperLogLogCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveClusterHyperLogLogCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterHyperLogLogCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 
-	@Override
-	public Flux<BooleanResponse<PfMergeCommand>> pfMerge(Publisher<PfMergeCommand> commands) {
+    @Override
+    public Flux<BooleanResponse<PfMergeCommand>> pfMerge(Publisher<PfMergeCommand> commands) {
 
-		return getConnection().execute(cmd -> Flux.from(commands).concatMap(command -> {
+        return getConnection()
+                .execute(
+                        cmd ->
+                                Flux.from(commands)
+                                        .concatMap(
+                                                command -> {
+                                                    Assert.notNull(command.getKey(), "Key must not be null for PFMERGE");
+                                                    Assert.notEmpty(
+                                                            command.getSourceKeys(),
+                                                            "Source keys must not be null or empty for PFMERGE");
 
-			Assert.notNull(command.getKey(), "Key must not be null for PFMERGE");
-			Assert.notEmpty(command.getSourceKeys(), "Source keys must not be null or empty for PFMERGE");
+                                                    List<ByteBuffer> keys = new ArrayList<>(command.getSourceKeys());
+                                                    keys.add(command.getKey());
 
-			List<ByteBuffer> keys = new ArrayList<>(command.getSourceKeys());
-			keys.add(command.getKey());
+                                                    if (ClusterSlotHashUtil.isSameSlotForAllKeys(
+                                                            keys.toArray(new ByteBuffer[keys.size()]))) {
+                                                        return super.pfMerge(Mono.just(command));
+                                                    }
 
-			if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys.toArray(new ByteBuffer[keys.size()]))) {
-				return super.pfMerge(Mono.just(command));
-			}
+                                                    return Mono.error(
+                                                            new InvalidDataAccessApiUsageException(
+                                                                    "All keys must map to same slot for PFMERGE in cluster mode"));
+                                                }));
+    }
 
-			return Mono
-					.error(new InvalidDataAccessApiUsageException("All keys must map to same slot for PFMERGE in cluster mode"));
-		}));
-	}
+    @Override
+    public Flux<NumericResponse<PfCountCommand, Long>> pfCount(Publisher<PfCountCommand> commands) {
 
-	@Override
-	public Flux<NumericResponse<PfCountCommand, Long>> pfCount(Publisher<PfCountCommand> commands) {
+        return getConnection()
+                .execute(
+                        cmd ->
+                                Flux.from(commands)
+                                        .concatMap(
+                                                command -> {
+                                                    Assert.notEmpty(
+                                                            command.getKeys(), "Keys must be null or empty for PFCOUNT");
 
-		return getConnection().execute(cmd -> Flux.from(commands).concatMap(command -> {
+                                                    if (ClusterSlotHashUtil.isSameSlotForAllKeys(
+                                                            command
+                                                                    .getKeys()
+                                                                    .toArray(new ByteBuffer[command.getKeys().size()]))) {
+                                                        return super.pfCount(Mono.just(command));
+                                                    }
 
-			Assert.notEmpty(command.getKeys(), "Keys must be null or empty for PFCOUNT");
-
-			if (ClusterSlotHashUtil
-					.isSameSlotForAllKeys(command.getKeys().toArray(new ByteBuffer[command.getKeys().size()]))) {
-				return super.pfCount(Mono.just(command));
-			}
-
-			return Mono
-					.error(new InvalidDataAccessApiUsageException("All keys must map to same slot for PFCOUNT in cluster mode"));
-		}));
-	}
+                                                    return Mono.error(
+                                                            new InvalidDataAccessApiUsageException(
+                                                                    "All keys must map to same slot for PFCOUNT in cluster mode"));
+                                                }));
+    }
 }

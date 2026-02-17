@@ -15,62 +15,74 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import org.reactivestreams.Publisher;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.ReactiveClusterZSetCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
+import org.reactivestreams.Publisher;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Christoph Strobl
  * @author Mark Paluch
  * @since 2.0
  */
-class LettuceReactiveClusterZSetCommands extends LettuceReactiveZSetCommands implements ReactiveClusterZSetCommands {
+class LettuceReactiveClusterZSetCommands extends LettuceReactiveZSetCommands
+        implements ReactiveClusterZSetCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveClusterZSetCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterZSetCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveClusterZSetCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterZSetCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 
-	@Override
-	public Flux<NumericResponse<ZAggregateStoreCommand, Long>> zUnionStore(
-			Publisher<? extends ZAggregateStoreCommand> commands) {
+    @Override
+    public Flux<NumericResponse<ZAggregateStoreCommand, Long>> zUnionStore(
+            Publisher<? extends ZAggregateStoreCommand> commands) {
 
-		return getConnection().execute(cmd -> Flux.from(commands).concatMap(command -> {
+        return getConnection()
+                .execute(
+                        cmd ->
+                                Flux.from(commands)
+                                        .concatMap(
+                                                command -> {
+                                                    Assert.notEmpty(
+                                                            command.getSourceKeys(), "Source keys must not be null or empty");
 
-			Assert.notEmpty(command.getSourceKeys(), "Source keys must not be null or empty");
+                                                    if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getSourceKeys())) {
+                                                        return super.zUnionStore(Mono.just(command));
+                                                    }
 
-			if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getSourceKeys())) {
-				return super.zUnionStore(Mono.just(command));
-			}
+                                                    return Mono.error(
+                                                            new InvalidDataAccessApiUsageException(
+                                                                    "All keys must map to the same slot for ZUNIONSTORE command."));
+                                                }));
+    }
 
-			return Mono
-					.error(new InvalidDataAccessApiUsageException("All keys must map to the same slot for ZUNIONSTORE command."));
-		}));
-	}
+    @Override
+    public Flux<NumericResponse<ZAggregateStoreCommand, Long>> zInterStore(
+            Publisher<? extends ZAggregateStoreCommand> commands) {
+        return getConnection()
+                .execute(
+                        cmd ->
+                                Flux.from(commands)
+                                        .concatMap(
+                                                command -> {
+                                                    Assert.notEmpty(
+                                                            command.getSourceKeys(), "Source keys must not be null or empty");
 
-	@Override
-	public Flux<NumericResponse<ZAggregateStoreCommand, Long>> zInterStore(
-			Publisher<? extends ZAggregateStoreCommand> commands) {
-		return getConnection().execute(cmd -> Flux.from(commands).concatMap(command -> {
+                                                    if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getSourceKeys())) {
+                                                        return super.zInterStore(Mono.just(command));
+                                                    }
 
-			Assert.notEmpty(command.getSourceKeys(), "Source keys must not be null or empty");
-
-			if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getSourceKeys())) {
-				return super.zInterStore(Mono.just(command));
-			}
-
-			return Mono
-					.error(new InvalidDataAccessApiUsageException("All keys must map to the same slot for ZINTERSTORE command."));
-		}));
-	}
+                                                    return Mono.error(
+                                                            new InvalidDataAccessApiUsageException(
+                                                                    "All keys must map to the same slot for ZINTERSTORE command."));
+                                                }));
+    }
 }

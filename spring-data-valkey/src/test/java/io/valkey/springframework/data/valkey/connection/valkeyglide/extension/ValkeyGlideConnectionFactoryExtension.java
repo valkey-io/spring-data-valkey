@@ -15,17 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide.extension;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Supplier;
-
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolutionException;
-import org.junit.jupiter.api.extension.ParameterResolver;
 import io.valkey.springframework.data.valkey.ConnectionFactoryTracker;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
@@ -33,19 +22,30 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
+import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
-import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Supplier;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 import org.springframework.data.util.Lazy;
 
 /**
- * JUnit {@link ParameterResolver} providing pre-cached {@link ValkeyGlideConnectionFactory} instances. Connection factories
- * can be qualified with {@code @ValkeyStanalone} (default) or {@code @ValkeyCluster} to obtain a specific factory instance.
- * Instances are managed by this extension and will be shut down on JVM shutdown.
- * 
- * <p><strong>Note:</strong> Sentinel configurations are not supported by Valkey-Glide and will throw an 
- * {@link UnsupportedOperationException}.
+ * JUnit {@link ParameterResolver} providing pre-cached {@link ValkeyGlideConnectionFactory}
+ * instances. Connection factories can be qualified with {@code @ValkeyStanalone} (default) or
+ * {@code @ValkeyCluster} to obtain a specific factory instance. Instances are managed by this
+ * extension and will be shut down on JVM shutdown.
+ *
+ * <p><strong>Note:</strong> Sentinel configurations are not supported by Valkey-Glide and will
+ * throw an {@link UnsupportedOperationException}.
  *
  * @author Ilia Kolominsky
  * @see ValkeyStanalone
@@ -53,186 +53,203 @@ import org.springframework.data.util.Lazy;
  */
 public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver {
 
-	private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace
-			.create(ValkeyGlideConnectionFactoryExtension.class);
+    private static final ExtensionContext.Namespace NAMESPACE =
+            ExtensionContext.Namespace.create(ValkeyGlideConnectionFactoryExtension.class);
 
-	private static final ValkeyGlideClientConfiguration CLIENT_CONFIGURATION = ValkeyGlideClientConfiguration.builder()
-			.build();
+    private static final ValkeyGlideClientConfiguration CLIENT_CONFIGURATION =
+            ValkeyGlideClientConfiguration.builder().build();
 
-	private static final NewableLazy<ValkeyGlideConnectionFactory> STANDALONE = NewableLazy.of(() -> {
+    private static final NewableLazy<ValkeyGlideConnectionFactory> STANDALONE =
+            NewableLazy.of(
+                    () -> {
+                        ManagedValkeyGlideConnectionFactory factory =
+                                new ManagedValkeyGlideConnectionFactory(
+                                        SettingsUtils.standaloneConfiguration(), CLIENT_CONFIGURATION);
 
-		ManagedValkeyGlideConnectionFactory factory = new ManagedValkeyGlideConnectionFactory(
-				SettingsUtils.standaloneConfiguration(), CLIENT_CONFIGURATION);
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+                        return factory;
+                    });
 
-		return factory;
-	});
+    private static final NewableLazy<ValkeyGlideConnectionFactory> CLUSTER =
+            NewableLazy.of(
+                    () -> {
+                        ManagedValkeyGlideConnectionFactory factory =
+                                new ManagedValkeyGlideConnectionFactory(
+                                        SettingsUtils.clusterConfiguration(), CLIENT_CONFIGURATION);
 
-	private static final NewableLazy<ValkeyGlideConnectionFactory> CLUSTER = NewableLazy.of(() -> {
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-		ManagedValkeyGlideConnectionFactory factory = new ManagedValkeyGlideConnectionFactory(
-				SettingsUtils.clusterConfiguration(), CLIENT_CONFIGURATION);
+                        return factory;
+                    });
 
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+    private static final Map<Class<?>, NewableLazy<ValkeyGlideConnectionFactory>> factories;
 
-		return factory;
-	});
+    static {
+        factories = new HashMap<>();
+        factories.put(ValkeyStanalone.class, STANDALONE);
+        factories.put(ValkeyCluster.class, CLUSTER);
+        // Sentinel is not supported by Valkey-Glide - omitted intentionally
+    }
 
-	private static final Map<Class<?>, NewableLazy<ValkeyGlideConnectionFactory>> factories;
+    /**
+     * Obtain a cached {@link ValkeyGlideConnectionFactory} described by {@code qualifier}. Instances
+     * are managed by this extension and will be shut down on JVM shutdown.
+     *
+     * @param qualifier can be any of {@link ValkeyStanalone}, {@link ValkeyCluster}. {@link
+     *     ValkeySentinel} is not supported.
+     * @return the managed {@link ValkeyGlideConnectionFactory}.
+     * @throws UnsupportedOperationException if {@link ValkeySentinel} is requested.
+     */
+    public static ValkeyGlideConnectionFactory getConnectionFactory(
+            Class<? extends Annotation> qualifier) {
 
-	static {
+        if (ValkeySentinel.class.equals(qualifier)) {
+            throw new UnsupportedOperationException(
+                    "Sentinel connections are not supported with Valkey-Glide!");
+        }
 
-		factories = new HashMap<>();
-		factories.put(ValkeyStanalone.class, STANDALONE);
-		factories.put(ValkeyCluster.class, CLUSTER);
-		// Sentinel is not supported by Valkey-Glide - omitted intentionally
-	}
+        NewableLazy<ValkeyGlideConnectionFactory> factory = factories.get(qualifier);
+        if (factory == null) {
+            throw new IllegalArgumentException("Unsupported qualifier: " + qualifier);
+        }
 
-	/**
-	 * Obtain a cached {@link ValkeyGlideConnectionFactory} described by {@code qualifier}. Instances are managed by this
-	 * extension and will be shut down on JVM shutdown.
-	 *
-	 * @param qualifier can be any of {@link ValkeyStanalone}, {@link ValkeyCluster}. {@link ValkeySentinel} is not supported.
-	 * @return the managed {@link ValkeyGlideConnectionFactory}.
-	 * @throws UnsupportedOperationException if {@link ValkeySentinel} is requested.
-	 */
-	public static ValkeyGlideConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier) {
-		
-		if (ValkeySentinel.class.equals(qualifier)) {
-			throw new UnsupportedOperationException("Sentinel connections are not supported with Valkey-Glide!");
-		}
-		
-		NewableLazy<ValkeyGlideConnectionFactory> factory = factories.get(qualifier);
-		if (factory == null) {
-			throw new IllegalArgumentException("Unsupported qualifier: " + qualifier);
-		}
-		
-		return factory.getNew();
-	}
+        return factory.getNew();
+    }
 
-	/**
-	 * Obtain a new {@link ValkeyGlideConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
-	 * and will be shut down on JVM shutdown.
-	 *
-	 * @param qualifier can be any of {@link ValkeyStanalone}, {@link ValkeyCluster}. {@link ValkeySentinel} is not supported.
-	 * @return the managed {@link ValkeyGlideConnectionFactory}.
-	 * @throws UnsupportedOperationException if {@link ValkeySentinel} is requested.
-	 */
-	public static ValkeyGlideConnectionFactory getNewConnectionFactory(Class<? extends Annotation> qualifier) {
-		
-		if (ValkeySentinel.class.equals(qualifier)) {
-			throw new UnsupportedOperationException("Sentinel connections are not supported with Valkey-Glide!");
-		}
-		
-		NewableLazy<ValkeyGlideConnectionFactory> factory = factories.get(qualifier);
-		if (factory == null) {
-			throw new IllegalArgumentException("Unsupported qualifier: " + qualifier);
-		}
-		
-		return factory.getNew();
-	}
+    /**
+     * Obtain a new {@link ValkeyGlideConnectionFactory} described by {@code qualifier}. Instances are
+     * managed by this extension and will be shut down on JVM shutdown.
+     *
+     * @param qualifier can be any of {@link ValkeyStanalone}, {@link ValkeyCluster}. {@link
+     *     ValkeySentinel} is not supported.
+     * @return the managed {@link ValkeyGlideConnectionFactory}.
+     * @throws UnsupportedOperationException if {@link ValkeySentinel} is requested.
+     */
+    public static ValkeyGlideConnectionFactory getNewConnectionFactory(
+            Class<? extends Annotation> qualifier) {
 
-	@Override
-	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-			throws ParameterResolutionException {
-		return ValkeyConnectionFactory.class.isAssignableFrom(parameterContext.getParameter().getType());
-	}
+        if (ValkeySentinel.class.equals(qualifier)) {
+            throw new UnsupportedOperationException(
+                    "Sentinel connections are not supported with Valkey-Glide!");
+        }
 
-	@Override
-	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-			throws ParameterResolutionException {
+        NewableLazy<ValkeyGlideConnectionFactory> factory = factories.get(qualifier);
+        if (factory == null) {
+            throw new IllegalArgumentException("Unsupported qualifier: " + qualifier);
+        }
 
-		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
+        return factory.getNew();
+    }
 
-		Class<? extends Annotation> qualifier = getQualifier(parameterContext);
+    @Override
+    public boolean supportsParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
+        return ValkeyConnectionFactory.class.isAssignableFrom(
+                parameterContext.getParameter().getType());
+    }
 
-		return store.getOrComputeIfAbsent(qualifier, ValkeyGlideConnectionFactoryExtension::getConnectionFactory);
-	}
+    @Override
+    public Object resolveParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
 
-	private static Class<? extends Annotation> getQualifier(ParameterContext parameterContext) {
+        ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
 
-		if (parameterContext.isAnnotated(ValkeySentinel.class)) {
-			// Explicitly throw exception for sentinel requests
-			throw new UnsupportedOperationException("Sentinel connections are not supported with Valkey-Glide!");
-		}
+        Class<? extends Annotation> qualifier = getQualifier(parameterContext);
 
-		if (parameterContext.isAnnotated(ValkeyCluster.class)) {
-			return ValkeyCluster.class;
-		}
+        return store.getOrComputeIfAbsent(
+                qualifier, ValkeyGlideConnectionFactoryExtension::getConnectionFactory);
+    }
 
-		return ValkeyStanalone.class;
-	}
+    private static Class<? extends Annotation> getQualifier(ParameterContext parameterContext) {
 
-	static class NewableLazy<T> {
+        if (parameterContext.isAnnotated(ValkeySentinel.class)) {
+            // Explicitly throw exception for sentinel requests
+            throw new UnsupportedOperationException(
+                    "Sentinel connections are not supported with Valkey-Glide!");
+        }
 
-		private final Lazy<? extends T> lazy;
+        if (parameterContext.isAnnotated(ValkeyCluster.class)) {
+            return ValkeyCluster.class;
+        }
 
-		private NewableLazy(Supplier<? extends T> supplier) {
-			this.lazy = Lazy.of(supplier);
-		}
+        return ValkeyStanalone.class;
+    }
 
-		public static <T> NewableLazy<T> of(Supplier<? extends T> supplier) {
-			return new NewableLazy<>(supplier);
-		}
+    static class NewableLazy<T> {
 
-		public T getNew() {
-			return lazy.get();
-		}
-	}
+        private final Lazy<? extends T> lazy;
 
-	static class ManagedValkeyGlideConnectionFactory extends ValkeyGlideConnectionFactory
-			implements ConnectionFactoryTracker.Managed, Closeable {
+        private NewableLazy(Supplier<? extends T> supplier) {
+            this.lazy = Lazy.of(supplier);
+        }
 
-		private volatile boolean mayClose;
+        public static <T> NewableLazy<T> of(Supplier<? extends T> supplier) {
+            return new NewableLazy<>(supplier);
+        }
 
-		ManagedValkeyGlideConnectionFactory(ValkeyStandaloneConfiguration standaloneConfig,
-				ValkeyGlideClientConfiguration clientConfig) {
-			super(standaloneConfig, clientConfig);
-		}
+        public T getNew() {
+            return lazy.get();
+        }
+    }
 
-		ManagedValkeyGlideConnectionFactory(ValkeyClusterConfiguration clusterConfig,
-				ValkeyGlideClientConfiguration clientConfig) {
-			super(clusterConfig, clientConfig);
-		}
+    static class ManagedValkeyGlideConnectionFactory extends ValkeyGlideConnectionFactory
+            implements ConnectionFactoryTracker.Managed, Closeable {
 
-		@Override
-		public void destroy() {
+        private volatile boolean mayClose;
 
-			if (!mayClose) {
-				throw new IllegalStateException(
-						"Prematurely attempted to close ManagedValkeyGlideConnectionFactory; Shutdown hook didn't run yet which means that the test run isn't finished yet; Please fix the tests so that they don't close this connection factory.");
-			}
+        ManagedValkeyGlideConnectionFactory(
+                ValkeyStandaloneConfiguration standaloneConfig,
+                ValkeyGlideClientConfiguration clientConfig) {
+            super(standaloneConfig, clientConfig);
+        }
 
-			super.destroy();
-		}
+        ManagedValkeyGlideConnectionFactory(
+                ValkeyClusterConfiguration clusterConfig, ValkeyGlideClientConfiguration clientConfig) {
+            super(clusterConfig, clientConfig);
+        }
 
-		@Override
-		public String toString() {
+        @Override
+        public void destroy() {
 
-			StringBuilder builder = new StringBuilder("ValkeyGlide");
+            if (!mayClose) {
+                throw new IllegalStateException(
+                        "Prematurely attempted to close ManagedValkeyGlideConnectionFactory; Shutdown hook"
+                                + " didn't run yet which means that the test run isn't finished yet; Please fix the"
+                                + " tests so that they don't close this connection factory.");
+            }
 
-			if (isClusterAware()) {
-				builder.append(" Cluster");
-			} else {
-				builder.append(" Standalone");
-			}
+            super.destroy();
+        }
 
-			return builder.toString();
-		}
+        @Override
+        public String toString() {
 
-		@Override
-		public void close() throws IOException {
-			try {
-				mayClose = true;
-				destroy();
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
-		}
-	}
+            StringBuilder builder = new StringBuilder("ValkeyGlide");
+
+            if (isClusterAware()) {
+                builder.append(" Cluster");
+            } else {
+                builder.append(" Standalone");
+            }
+
+            return builder.toString();
+        }
+
+        @Override
+        public void close() throws IOException {
+            try {
+                mayClose = true;
+                destroy();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
 }

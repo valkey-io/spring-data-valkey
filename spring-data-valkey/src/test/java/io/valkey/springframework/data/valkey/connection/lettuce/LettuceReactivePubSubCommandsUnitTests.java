@@ -20,16 +20,14 @@ import static org.mockito.Mockito.*;
 
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import io.lettuce.core.pubsub.api.reactive.RedisPubSubReactiveCommands;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
 import java.nio.ByteBuffer;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 /**
  * Unit tests for {@link LettuceReactivePubSubCommands}.
@@ -39,163 +37,163 @@ import org.mockito.quality.Strictness;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class LettuceReactivePubSubCommandsUnitTests {
 
-	LettuceReactivePubSubCommands sut;
+    LettuceReactivePubSubCommands sut;
 
-	@Mock LettuceReactiveValkeyConnection connection;
+    @Mock LettuceReactiveValkeyConnection connection;
 
-	@Mock StatefulRedisPubSubConnection<ByteBuffer, ByteBuffer> lettuceConnection;
-	@Mock RedisPubSubReactiveCommands<ByteBuffer, ByteBuffer> reactiveCommands;
+    @Mock StatefulRedisPubSubConnection<ByteBuffer, ByteBuffer> lettuceConnection;
+    @Mock RedisPubSubReactiveCommands<ByteBuffer, ByteBuffer> reactiveCommands;
 
-	@SuppressWarnings("unchecked")
-	@BeforeEach
-	void setUp() {
+    @SuppressWarnings("unchecked")
+    @BeforeEach
+    void setUp() {
 
-		when(connection.getPubSubConnection()).thenReturn(Mono.just(lettuceConnection));
-		when(lettuceConnection.reactive()).thenReturn(reactiveCommands);
-		sut = new LettuceReactivePubSubCommands(connection);
-	}
+        when(connection.getPubSubConnection()).thenReturn(Mono.just(lettuceConnection));
+        when(lettuceConnection.reactive()).thenReturn(reactiveCommands);
+        sut = new LettuceReactivePubSubCommands(connection);
+    }
 
-	@Test // GH-2386
-	void shouldSubscribeChannelMultipleTimes() {
+    @Test // GH-2386
+    void shouldSubscribeChannelMultipleTimes() {
 
-		when(reactiveCommands.subscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.subscribe(any())).thenReturn(Mono.empty());
 
-		sut.subscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.subscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.subscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.subscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		verify(reactiveCommands, times(2)).subscribe(wrap("channel"));
-		assertThat(sut.getChannels()).hasSize(1);
-		assertThat(sut.getPatterns()).isEmpty();
-	}
+        verify(reactiveCommands, times(2)).subscribe(wrap("channel"));
+        assertThat(sut.getChannels()).hasSize(1);
+        assertThat(sut.getPatterns()).isEmpty();
+    }
 
-	@Test // GH-2386
-	void shouldNotUnsubscribeChannelIfUsedMultipleTimes() {
+    @Test // GH-2386
+    void shouldNotUnsubscribeChannelIfUsedMultipleTimes() {
 
-		when(reactiveCommands.subscribe(any())).thenReturn(Mono.empty());
-		when(reactiveCommands.unsubscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.subscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.unsubscribe(any())).thenReturn(Mono.empty());
 
-		sut.subscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.subscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.subscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.subscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.unsubscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.unsubscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		verify(reactiveCommands, times(2)).subscribe(wrap("channel"));
-		verifyNoMoreInteractions(reactiveCommands);
-		assertThat(sut.getChannels()).hasSize(1);
-		assertThat(sut.getPatterns()).isEmpty();
-	}
+        verify(reactiveCommands, times(2)).subscribe(wrap("channel"));
+        verifyNoMoreInteractions(reactiveCommands);
+        assertThat(sut.getChannels()).hasSize(1);
+        assertThat(sut.getPatterns()).isEmpty();
+    }
 
-	@Test // GH-2386
-	void shouldUnsubscribeChannelIfNotUsedAnymore() {
+    @Test // GH-2386
+    void shouldUnsubscribeChannelIfNotUsedAnymore() {
 
-		when(reactiveCommands.subscribe(any())).thenReturn(Mono.empty());
-		when(reactiveCommands.unsubscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.subscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.unsubscribe(any())).thenReturn(Mono.empty());
 
-		sut.subscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.subscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.subscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.subscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.unsubscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.unsubscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.unsubscribe(wrap("channel")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.unsubscribe(wrap("channel")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		verify(reactiveCommands, times(2)).subscribe(wrap("channel"));
-		verify(reactiveCommands, times(1)).unsubscribe(wrap("channel"));
-		assertThat(sut.getChannels()).isEmpty();
-		assertThat(sut.getPatterns()).isEmpty();
-	}
+        verify(reactiveCommands, times(2)).subscribe(wrap("channel"));
+        verify(reactiveCommands, times(1)).unsubscribe(wrap("channel"));
+        assertThat(sut.getChannels()).isEmpty();
+        assertThat(sut.getPatterns()).isEmpty();
+    }
 
-	@Test // GH-2386
-	void shouldSubscribePatternMultipleTimes() {
+    @Test // GH-2386
+    void shouldSubscribePatternMultipleTimes() {
 
-		when(reactiveCommands.psubscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.psubscribe(any())).thenReturn(Mono.empty());
 
-		sut.pSubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pSubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.pSubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pSubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		verify(reactiveCommands, times(2)).psubscribe(wrap("pattern"));
-		assertThat(sut.getChannels()).isEmpty();
-		assertThat(sut.getPatterns()).hasSize(1);
-	}
+        verify(reactiveCommands, times(2)).psubscribe(wrap("pattern"));
+        assertThat(sut.getChannels()).isEmpty();
+        assertThat(sut.getPatterns()).hasSize(1);
+    }
 
-	@Test // GH-2386
-	void shouldNotUnsubscribePatternIfUsedMultipleTimes() {
+    @Test // GH-2386
+    void shouldNotUnsubscribePatternIfUsedMultipleTimes() {
 
-		when(reactiveCommands.psubscribe(any())).thenReturn(Mono.empty());
-		when(reactiveCommands.punsubscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.psubscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.punsubscribe(any())).thenReturn(Mono.empty());
 
-		sut.pSubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pSubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.pSubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pSubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.pUnsubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pUnsubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		verify(reactiveCommands, times(2)).psubscribe(wrap("pattern"));
-		verifyNoMoreInteractions(reactiveCommands);
-		assertThat(sut.getChannels()).isEmpty();
-		assertThat(sut.getPatterns()).hasSize(1);
-	}
+        verify(reactiveCommands, times(2)).psubscribe(wrap("pattern"));
+        verifyNoMoreInteractions(reactiveCommands);
+        assertThat(sut.getChannels()).isEmpty();
+        assertThat(sut.getPatterns()).hasSize(1);
+    }
 
-	@Test // GH-2386
-	void shouldUnsubscribePatternIfNotUsedAnymore() {
+    @Test // GH-2386
+    void shouldUnsubscribePatternIfNotUsedAnymore() {
 
-		when(reactiveCommands.psubscribe(any())).thenReturn(Mono.empty());
-		when(reactiveCommands.punsubscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.psubscribe(any())).thenReturn(Mono.empty());
+        when(reactiveCommands.punsubscribe(any())).thenReturn(Mono.empty());
 
-		sut.pSubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pSubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.pSubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pSubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.pUnsubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pUnsubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		sut.pUnsubscribe(wrap("pattern")) //
-				.as(StepVerifier::create) //
-				.verifyComplete();
+        sut.pUnsubscribe(wrap("pattern")) //
+                .as(StepVerifier::create) //
+                .verifyComplete();
 
-		verify(reactiveCommands, times(2)).psubscribe(wrap("pattern"));
-		verify(reactiveCommands, times(1)).punsubscribe(wrap("pattern"));
-		assertThat(sut.getChannels()).isEmpty();
-		assertThat(sut.getPatterns()).isEmpty();
-	}
+        verify(reactiveCommands, times(2)).psubscribe(wrap("pattern"));
+        verify(reactiveCommands, times(1)).punsubscribe(wrap("pattern"));
+        assertThat(sut.getChannels()).isEmpty();
+        assertThat(sut.getPatterns()).isEmpty();
+    }
 
-	private static ByteBuffer wrap(String content) {
-		return ByteBuffer.wrap(content.getBytes());
-	}
+    private static ByteBuffer wrap(String content) {
+        return ByteBuffer.wrap(content.getBytes());
+    }
 }

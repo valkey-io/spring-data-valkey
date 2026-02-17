@@ -20,9 +20,7 @@ package io.valkey.springframework.data.valkey.listener.adapter;
  */
 public class ValkeyMDP {
 
-	public void handleMessage(String message) {
-	}
+    public void handleMessage(String message) {}
 
-	public void anotherHandle(String message) {
-	}
+    public void anotherHandle(String message) {}
 }

@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey;
 
 import java.io.Serializable;
-
 import org.springframework.lang.Nullable;
 
 /**
@@ -26,83 +25,76 @@ import org.springframework.lang.Nullable;
  */
 public class Address implements Serializable {
 
-	private static final long serialVersionUID = 4924045450477798779L;
+    private static final long serialVersionUID = 4924045450477798779L;
 
-	private String street;
+    private String street;
 
-	private Integer number;
+    private Integer number;
 
-	public Address() {}
+    public Address() {}
 
-	/**
-	 * Constructs a new <code>Address</code> instance.
-	 *
-	 * @param street
-	 * @param number
-	 */
-	public Address(String street, int number) {
-		super();
-		this.street = street;
-		this.number = number;
-	}
+    /**
+     * Constructs a new <code>Address</code> instance.
+     *
+     * @param street
+     * @param number
+     */
+    public Address(String street, int number) {
+        super();
+        this.street = street;
+        this.number = number;
+    }
 
-	/**
-	 * Returns the street.
-	 *
-	 * @return Returns the street
-	 */
-	public String getStreet() {
-		return street;
-	}
+    /**
+     * Returns the street.
+     *
+     * @return Returns the street
+     */
+    public String getStreet() {
+        return street;
+    }
 
-	/**
-	 * @param street The street to set.
-	 */
-	public void setStreet(String street) {
-		this.street = street;
-	}
+    /**
+     * @param street The street to set.
+     */
+    public void setStreet(String street) {
+        this.street = street;
+    }
 
-	/**
-	 * Returns the number.
-	 *
-	 * @return Returns the number
-	 */
-	public Integer getNumber() {
-		return number;
-	}
+    /**
+     * Returns the number.
+     *
+     * @return Returns the number
+     */
+    public Integer getNumber() {
+        return number;
+    }
 
-	/**
-	 * @param number The number to set.
-	 */
-	public void setNumber(Integer number) {
-		this.number = number;
-	}
+    /**
+     * @param number The number to set.
+     */
+    public void setNumber(Integer number) {
+        this.number = number;
+    }
 
-	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((number == null) ? 0 : number.hashCode());
-		result = prime * result + ((street == null) ? 0 : street.hashCode());
-		return result;
-	}
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + ((number == null) ? 0 : number.hashCode());
+        result = prime * result + ((street == null) ? 0 : street.hashCode());
+        return result;
+    }
 
-	public boolean equals(@Nullable Object obj) {
-		if (this == obj)
-			return true;
-		if (obj == null)
-			return false;
-		if (!(obj instanceof Address that))
-			return false;
-		if (number == null) {
-			if (that.number != null)
-				return false;
-		} else if (!number.equals(that.number))
-			return false;
-		if (street == null) {
-			if (that.street != null)
-				return false;
-		} else if (!street.equals(that.street))
-			return false;
-		return true;
-	}
+    public boolean equals(@Nullable Object obj) {
+        if (this == obj) return true;
+        if (obj == null) return false;
+        if (!(obj instanceof Address that)) return false;
+        if (number == null) {
+            if (that.number != null) return false;
+        } else if (!number.equals(that.number)) return false;
+        if (street == null) {
+            if (that.street != null) return false;
+        } else if (!street.equals(that.street)) return false;
+        return true;
+    }
 }

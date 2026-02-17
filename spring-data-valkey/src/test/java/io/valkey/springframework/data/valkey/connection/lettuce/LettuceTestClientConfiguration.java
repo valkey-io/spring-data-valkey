@@ -16,11 +16,9 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.resource.ClientResources;
-
-import java.time.Duration;
-
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientConfiguration.LettuceClientConfigurationBuilder;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
+import java.time.Duration;
 
 /**
  * Creates a specific client configuration for Lettuce tests.
@@ -29,20 +27,22 @@ import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientRes
  */
 public class LettuceTestClientConfiguration {
 
-	/**
-	 * @return an initialized {@link LettuceClientConfigurationBuilder} with shutdown timeout and {@link ClientResources}.
-	 * @see LettuceTestClientResources#getSharedClientResources()
-	 */
-	public static LettuceClientConfigurationBuilder builder() {
-		return LettuceClientConfiguration.builder().shutdownTimeout(Duration.ZERO).shutdownQuietPeriod(Duration.ZERO)
-				.clientResources(LettuceTestClientResources.getSharedClientResources());
-	}
+    /**
+     * @return an initialized {@link LettuceClientConfigurationBuilder} with shutdown timeout and
+     *     {@link ClientResources}.
+     * @see LettuceTestClientResources#getSharedClientResources()
+     */
+    public static LettuceClientConfigurationBuilder builder() {
+        return LettuceClientConfiguration.builder()
+                .shutdownTimeout(Duration.ZERO)
+                .shutdownQuietPeriod(Duration.ZERO)
+                .clientResources(LettuceTestClientResources.getSharedClientResources());
+    }
 
-	/**
-	 * @return a defaulted {@link LettuceClientConfiguration} for testing.
-	 */
-	public static LettuceClientConfiguration defaultConfiguration() {
-		return builder().build();
-	}
-
+    /**
+     * @return a defaulted {@link LettuceClientConfiguration} for testing.
+     */
+    public static LettuceClientConfiguration defaultConfiguration() {
+        return builder().build();
+    }
 }

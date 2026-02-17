@@ -16,9 +16,12 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.pubsub.api.reactive.RedisPubSubReactiveCommands;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
+import io.valkey.springframework.data.valkey.connection.ReactivePubSubCommands;
+import io.valkey.springframework.data.valkey.connection.ReactiveSubscription;
+import io.valkey.springframework.data.valkey.connection.ReactiveSubscription.ChannelMessage;
+import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
+import io.valkey.springframework.data.valkey.connection.util.ByteArrayWrapper;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,15 +30,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-
 import org.reactivestreams.Publisher;
-import io.valkey.springframework.data.valkey.connection.ReactivePubSubCommands;
-import io.valkey.springframework.data.valkey.connection.ReactiveSubscription;
-import io.valkey.springframework.data.valkey.connection.ReactiveSubscription.ChannelMessage;
-import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
-import io.valkey.springframework.data.valkey.connection.util.ByteArrayWrapper;
-import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Mark Paluch
@@ -44,196 +42,214 @@ import org.springframework.util.Assert;
  */
 class LettuceReactivePubSubCommands implements ReactivePubSubCommands {
 
-	private final LettuceReactiveValkeyConnection connection;
+    private final LettuceReactiveValkeyConnection connection;
 
-	private final Map<ByteArrayWrapper, Target> channels = new ConcurrentHashMap<>();
+    private final Map<ByteArrayWrapper, Target> channels = new ConcurrentHashMap<>();
 
-	private final Map<ByteArrayWrapper, Target> patterns = new ConcurrentHashMap<>();
+    private final Map<ByteArrayWrapper, Target> patterns = new ConcurrentHashMap<>();
 
-	LettuceReactivePubSubCommands(LettuceReactiveValkeyConnection connection) {
-		this.connection = connection;
-	}
+    LettuceReactivePubSubCommands(LettuceReactiveValkeyConnection connection) {
+        this.connection = connection;
+    }
 
-	public Map<ByteArrayWrapper, Target> getChannels() {
-		return channels;
-	}
+    public Map<ByteArrayWrapper, Target> getChannels() {
+        return channels;
+    }
 
-	public Map<ByteArrayWrapper, Target> getPatterns() {
-		return patterns;
-	}
+    public Map<ByteArrayWrapper, Target> getPatterns() {
+        return patterns;
+    }
 
-	@Override
-	public Mono<ReactiveSubscription> createSubscription(SubscriptionListener listener) {
+    @Override
+    public Mono<ReactiveSubscription> createSubscription(SubscriptionListener listener) {
 
-		return connection.getPubSubConnection().map(pubSubConnection -> new LettuceReactiveSubscription(listener,
-				pubSubConnection, this, connection.translateException()));
-	}
+        return connection
+                .getPubSubConnection()
+                .map(
+                        pubSubConnection ->
+                                new LettuceReactiveSubscription(
+                                        listener, pubSubConnection, this, connection.translateException()));
+    }
 
-	@Override
-	public Flux<Long> publish(Publisher<ChannelMessage<ByteBuffer, ByteBuffer>> messageStream) {
+    @Override
+    public Flux<Long> publish(Publisher<ChannelMessage<ByteBuffer, ByteBuffer>> messageStream) {
 
-		Assert.notNull(messageStream, "ChannelMessage stream must not be null");
+        Assert.notNull(messageStream, "ChannelMessage stream must not be null");
 
-		return connection.getCommands().flatMapMany(commands -> Flux.from(messageStream)
-				.flatMap(message -> commands.publish(message.getChannel(), message.getMessage())));
-	}
+        return connection
+                .getCommands()
+                .flatMapMany(
+                        commands ->
+                                Flux.from(messageStream)
+                                        .flatMap(
+                                                message -> commands.publish(message.getChannel(), message.getMessage())));
+    }
 
-	@Override
-	public Mono<Void> subscribe(ByteBuffer... channels) {
+    @Override
+    public Mono<Void> subscribe(ByteBuffer... channels) {
 
-		Assert.notNull(channels, "Channels must not be null");
+        Assert.notNull(channels, "Channels must not be null");
 
-		Target.trackSubscriptions(channels, this.channels); // track usage but do not limit what to subscribe to
+        Target.trackSubscriptions(
+                channels, this.channels); // track usage but do not limit what to subscribe to
 
-		return doWithPubSub(commands -> commands.subscribe(channels));
-	}
+        return doWithPubSub(commands -> commands.subscribe(channels));
+    }
 
-	public Mono<Void> unsubscribe(ByteBuffer... channels) {
+    public Mono<Void> unsubscribe(ByteBuffer... channels) {
 
-		Assert.notNull(patterns, "Patterns must not be null");
+        Assert.notNull(patterns, "Patterns must not be null");
 
-		ByteBuffer[] actualUnsubscribe = Target.trackUnsubscriptions(channels, this.channels);
+        ByteBuffer[] actualUnsubscribe = Target.trackUnsubscriptions(channels, this.channels);
 
-		if (actualUnsubscribe.length == 0 && channels.length != 0) {
-			return Mono.empty();
-		}
+        if (actualUnsubscribe.length == 0 && channels.length != 0) {
+            return Mono.empty();
+        }
 
-		return doWithPubSub(commands -> commands.unsubscribe(actualUnsubscribe));
-	}
+        return doWithPubSub(commands -> commands.unsubscribe(actualUnsubscribe));
+    }
 
-	@Override
-	public Mono<Void> pSubscribe(ByteBuffer... patterns) {
+    @Override
+    public Mono<Void> pSubscribe(ByteBuffer... patterns) {
 
-		Assert.notNull(patterns, "Patterns must not be null");
+        Assert.notNull(patterns, "Patterns must not be null");
 
-		Target.trackSubscriptions(patterns, this.patterns); // track usage but do not limit what to subscribe to
+        Target.trackSubscriptions(
+                patterns, this.patterns); // track usage but do not limit what to subscribe to
 
-		return doWithPubSub(commands -> commands.psubscribe(patterns));
-	}
+        return doWithPubSub(commands -> commands.psubscribe(patterns));
+    }
 
-	public Mono<Void> pUnsubscribe(ByteBuffer... patterns) {
+    public Mono<Void> pUnsubscribe(ByteBuffer... patterns) {
 
-		Assert.notNull(patterns, "Patterns must not be null");
+        Assert.notNull(patterns, "Patterns must not be null");
 
-		ByteBuffer[] actualUnsubscribe = Target.trackUnsubscriptions(patterns, this.patterns);
+        ByteBuffer[] actualUnsubscribe = Target.trackUnsubscriptions(patterns, this.patterns);
 
-		if (actualUnsubscribe.length == 0 && patterns.length != 0) {
-			return Mono.empty();
-		}
+        if (actualUnsubscribe.length == 0 && patterns.length != 0) {
+            return Mono.empty();
+        }
 
-		return doWithPubSub(commands -> commands.punsubscribe(actualUnsubscribe));
-	}
+        return doWithPubSub(commands -> commands.punsubscribe(actualUnsubscribe));
+    }
 
-	private <T> Mono<T> doWithPubSub(Function<RedisPubSubReactiveCommands<ByteBuffer, ByteBuffer>, Mono<T>> function) {
+    private <T> Mono<T> doWithPubSub(
+            Function<RedisPubSubReactiveCommands<ByteBuffer, ByteBuffer>, Mono<T>> function) {
 
-		return connection.getPubSubConnection().flatMap(pubSubConnection -> function.apply(pubSubConnection.reactive()))
-				.onErrorMap(connection.translateException());
-	}
+        return connection
+                .getPubSubConnection()
+                .flatMap(pubSubConnection -> function.apply(pubSubConnection.reactive()))
+                .onErrorMap(connection.translateException());
+    }
 
-	static class Target {
+    static class Target {
 
-		private static final AtomicLongFieldUpdater<Target> SUBSCRIBERS = AtomicLongFieldUpdater.newUpdater(Target.class,
-				"subscribers");
+        private static final AtomicLongFieldUpdater<Target> SUBSCRIBERS =
+                AtomicLongFieldUpdater.newUpdater(Target.class, "subscribers");
 
-		private final byte[] raw;
+        private final byte[] raw;
 
-		private volatile long subscribers;
+        private volatile long subscribers;
 
-		Target(byte[] raw) {
-			this.raw = raw;
-		}
+        Target(byte[] raw) {
+            this.raw = raw;
+        }
 
-		/**
-		 * Record the subscriptions to {@code targets} and store these in {@code targetMap}.
-		 *
-		 * @param targets
-		 * @param targetMap
-		 */
-		public static void trackSubscriptions(ByteBuffer[] targets, Map<ByteArrayWrapper, Target> targetMap) {
-			doWithTargets(targets, targetMap, Target::allocate);
-		}
+        /**
+         * Record the subscriptions to {@code targets} and store these in {@code targetMap}.
+         *
+         * @param targets
+         * @param targetMap
+         */
+        public static void trackSubscriptions(
+                ByteBuffer[] targets, Map<ByteArrayWrapper, Target> targetMap) {
+            doWithTargets(targets, targetMap, Target::allocate);
+        }
 
-		/**
-		 * Record the un-subscriptions to {@code targets} and store these in {@code targetMap}. Returns the targets to
-		 * actually unsubscribe from if there are no subscribers to a particular target.
-		 *
-		 * @param targets
-		 * @param targetMap
-		 */
-		public static ByteBuffer[] trackUnsubscriptions(ByteBuffer[] targets, Map<ByteArrayWrapper, Target> targetMap) {
-			return doWithTargets(targets, targetMap, Target::deallocate);
-		}
+        /**
+         * Record the un-subscriptions to {@code targets} and store these in {@code targetMap}. Returns
+         * the targets to actually unsubscribe from if there are no subscribers to a particular target.
+         *
+         * @param targets
+         * @param targetMap
+         */
+        public static ByteBuffer[] trackUnsubscriptions(
+                ByteBuffer[] targets, Map<ByteArrayWrapper, Target> targetMap) {
+            return doWithTargets(targets, targetMap, Target::deallocate);
+        }
 
-		static ByteBuffer[] doWithTargets(ByteBuffer[] targets, Map<ByteArrayWrapper, Target> targetMap,
-				BiFunction<ByteBuffer, Map<ByteArrayWrapper, Target>, Boolean> f) {
+        static ByteBuffer[] doWithTargets(
+                ByteBuffer[] targets,
+                Map<ByteArrayWrapper, Target> targetMap,
+                BiFunction<ByteBuffer, Map<ByteArrayWrapper, Target>, Boolean> f) {
 
-			List<ByteBuffer> toSubscribe = new ArrayList<>(targets.length);
+            List<ByteBuffer> toSubscribe = new ArrayList<>(targets.length);
 
-			synchronized (targetMap) {
-				for (ByteBuffer target : targets) {
-					if (f.apply(target, targetMap)) {
-						toSubscribe.add(target);
-					}
-				}
-			}
+            synchronized (targetMap) {
+                for (ByteBuffer target : targets) {
+                    if (f.apply(target, targetMap)) {
+                        toSubscribe.add(target);
+                    }
+                }
+            }
 
-			return toSubscribe.toArray(new ByteBuffer[0]);
-		}
+            return toSubscribe.toArray(new ByteBuffer[0]);
+        }
 
-		boolean increment() {
-			return SUBSCRIBERS.incrementAndGet(this) == 1;
-		}
+        boolean increment() {
+            return SUBSCRIBERS.incrementAndGet(this) == 1;
+        }
 
-		boolean decrement() {
+        boolean decrement() {
 
-			long l = SUBSCRIBERS.get(this);
+            long l = SUBSCRIBERS.get(this);
 
-			if (l > 0) {
-				if (SUBSCRIBERS.compareAndSet(this, l, l - 1)) {
-					return l == 1; // return true if this was the last subscriber
-				}
-			}
+            if (l > 0) {
+                if (SUBSCRIBERS.compareAndSet(this, l, l - 1)) {
+                    return l == 1; // return true if this was the last subscriber
+                }
+            }
 
-			return false;
-		}
+            return false;
+        }
 
-		static boolean allocate(ByteBuffer buffer, Map<ByteArrayWrapper, Target> targets) {
+        static boolean allocate(ByteBuffer buffer, Map<ByteArrayWrapper, Target> targets) {
 
-			byte[] raw = ByteUtils.getBytes(buffer);
+            byte[] raw = ByteUtils.getBytes(buffer);
 
-			ByteArrayWrapper wrapper = new ByteArrayWrapper(raw);
-			Target targetToUse = targets.get(wrapper);
+            ByteArrayWrapper wrapper = new ByteArrayWrapper(raw);
+            Target targetToUse = targets.get(wrapper);
 
-			if (targetToUse == null) {
-				targetToUse = new Target(raw);
-				targets.put(wrapper, targetToUse);
-			}
+            if (targetToUse == null) {
+                targetToUse = new Target(raw);
+                targets.put(wrapper, targetToUse);
+            }
 
-			return targetToUse.increment();
-		}
+            return targetToUse.increment();
+        }
 
-		static boolean deallocate(ByteBuffer buffer, Map<ByteArrayWrapper, Target> targets) {
+        static boolean deallocate(ByteBuffer buffer, Map<ByteArrayWrapper, Target> targets) {
 
-			byte[] raw = ByteUtils.getBytes(buffer);
+            byte[] raw = ByteUtils.getBytes(buffer);
 
-			ByteArrayWrapper wrapper = new ByteArrayWrapper(raw);
-			Target targetToUse = targets.get(wrapper);
+            ByteArrayWrapper wrapper = new ByteArrayWrapper(raw);
+            Target targetToUse = targets.get(wrapper);
 
-			if (targetToUse == null) {
-				return false;
-			}
+            if (targetToUse == null) {
+                return false;
+            }
 
-			if (targetToUse.decrement()) {
-				targets.remove(wrapper);
-				return true;
-			}
+            if (targetToUse.decrement()) {
+                targets.remove(wrapper);
+                return true;
+            }
 
-			return false;
-		}
+            return false;
+        }
 
-		@Override
-		public String toString() {
-			return "%s: Subscribers: %s".formatted(new String(raw), SUBSCRIBERS.get(this));
-		}
-	}
+        @Override
+        public String toString() {
+            return "%s: Subscribers: %s".formatted(new String(raw), SUBSCRIBERS.get(this));
+        }
+    }
 }

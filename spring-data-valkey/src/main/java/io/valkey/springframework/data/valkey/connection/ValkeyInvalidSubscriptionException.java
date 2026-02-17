@@ -24,22 +24,22 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException;
  */
 public class ValkeyInvalidSubscriptionException extends InvalidDataAccessResourceUsageException {
 
-	/**
-	 * Constructs a new <code>ValkeyInvalidSubscriptionException</code> instance.
-	 *
-	 * @param msg
-	 * @param cause
-	 */
-	public ValkeyInvalidSubscriptionException(String msg, Throwable cause) {
-		super(msg, cause);
-	}
+    /**
+     * Constructs a new <code>ValkeyInvalidSubscriptionException</code> instance.
+     *
+     * @param msg
+     * @param cause
+     */
+    public ValkeyInvalidSubscriptionException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 
-	/**
-	 * Constructs a new <code>ValkeyInvalidSubscriptionException</code> instance.
-	 *
-	 * @param msg
-	 */
-	public ValkeyInvalidSubscriptionException(String msg) {
-		super(msg);
-	}
+    /**
+     * Constructs a new <code>ValkeyInvalidSubscriptionException</code> instance.
+     *
+     * @param msg
+     */
+    public ValkeyInvalidSubscriptionException(String msg) {
+        super(msg);
+    }
 }

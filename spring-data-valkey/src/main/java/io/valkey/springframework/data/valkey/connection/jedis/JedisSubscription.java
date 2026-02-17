@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.BinaryJedisPubSub;
-
 import io.valkey.springframework.data.valkey.connection.MessageListener;
 import io.valkey.springframework.data.valkey.connection.util.AbstractSubscription;
 import org.springframework.lang.Nullable;
+import redis.clients.jedis.BinaryJedisPubSub;
 
 /**
  * Jedis specific subscription.
@@ -28,50 +27,53 @@ import org.springframework.lang.Nullable;
  */
 class JedisSubscription extends AbstractSubscription {
 
-	private final BinaryJedisPubSub jedisPubSub;
+    private final BinaryJedisPubSub jedisPubSub;
 
-	JedisSubscription(MessageListener listener, BinaryJedisPubSub jedisPubSub, @Nullable byte[][] channels,
-			@Nullable byte[][] patterns) {
-		super(listener, channels, patterns);
-		this.jedisPubSub = jedisPubSub;
-	}
+    JedisSubscription(
+            MessageListener listener,
+            BinaryJedisPubSub jedisPubSub,
+            @Nullable byte[][] channels,
+            @Nullable byte[][] patterns) {
+        super(listener, channels, patterns);
+        this.jedisPubSub = jedisPubSub;
+    }
 
-	@Override
-	protected void doClose() {
+    @Override
+    protected void doClose() {
 
-		if (!getChannels().isEmpty()) {
-			jedisPubSub.unsubscribe();
-		}
-		if (!getPatterns().isEmpty()) {
-			jedisPubSub.punsubscribe();
-		}
-	}
+        if (!getChannels().isEmpty()) {
+            jedisPubSub.unsubscribe();
+        }
+        if (!getPatterns().isEmpty()) {
+            jedisPubSub.punsubscribe();
+        }
+    }
 
-	@Override
-	protected void doPsubscribe(byte[]... patterns) {
-		jedisPubSub.psubscribe(patterns);
-	}
+    @Override
+    protected void doPsubscribe(byte[]... patterns) {
+        jedisPubSub.psubscribe(patterns);
+    }
 
-	@Override
-	protected void doPUnsubscribe(boolean all, byte[]... patterns) {
-		if (all) {
-			jedisPubSub.punsubscribe();
-		} else {
-			jedisPubSub.punsubscribe(patterns);
-		}
-	}
+    @Override
+    protected void doPUnsubscribe(boolean all, byte[]... patterns) {
+        if (all) {
+            jedisPubSub.punsubscribe();
+        } else {
+            jedisPubSub.punsubscribe(patterns);
+        }
+    }
 
-	@Override
-	protected void doSubscribe(byte[]... channels) {
-		jedisPubSub.subscribe(channels);
-	}
+    @Override
+    protected void doSubscribe(byte[]... channels) {
+        jedisPubSub.subscribe(channels);
+    }
 
-	@Override
-	protected void doUnsubscribe(boolean all, byte[]... channels) {
-		if (all) {
-			jedisPubSub.unsubscribe();
-		} else {
-			jedisPubSub.unsubscribe(channels);
-		}
-	}
+    @Override
+    protected void doUnsubscribe(boolean all, byte[]... channels) {
+        if (all) {
+            jedisPubSub.unsubscribe();
+        } else {
+            jedisPubSub.unsubscribe(channels);
+        }
+    }
 }

@@ -18,7 +18,6 @@ package io.valkey.springframework.boot.testsupport.classpath;
 
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
-
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.InvocationInterceptor;
@@ -31,109 +30,129 @@ import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
 import org.junit.platform.launcher.core.LauncherFactory;
 import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
 import org.junit.platform.launcher.listeners.TestExecutionSummary;
-
 import org.springframework.util.CollectionUtils;
 
 /**
- * A custom {@link Extension} that runs tests using a modified class path. Entries are
- * excluded from the class path using {@link ClassPathExclusions @ClassPathExclusions} and
- * overridden using {@link ClassPathOverrides @ClassPathOverrides} on the test class. For
- * an unchanged copy of the class path {@link ForkedClassPath @ForkedClassPath} can be
- * used. A class loader is created with the customized class path and is used both to load
- * the test class and as the thread context class loader while the test is being run.
+ * A custom {@link Extension} that runs tests using a modified class path. Entries are excluded from
+ * the class path using {@link ClassPathExclusions @ClassPathExclusions} and overridden using {@link
+ * ClassPathOverrides @ClassPathOverrides} on the test class. For an unchanged copy of the class
+ * path {@link ForkedClassPath @ForkedClassPath} can be used. A class loader is created with the
+ * customized class path and is used both to load the test class and as the thread context class
+ * loader while the test is being run.
  *
  * @author Christoph Dreis
  */
 class ModifiedClassPathExtension implements InvocationInterceptor {
 
-	@Override
-	public void interceptBeforeAllMethod(Invocation<Void> invocation,
-			ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
-		intercept(invocation, extensionContext);
-	}
+    @Override
+    public void interceptBeforeAllMethod(
+            Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext extensionContext)
+            throws Throwable {
+        intercept(invocation, extensionContext);
+    }
 
-	@Override
-	public void interceptBeforeEachMethod(Invocation<Void> invocation,
-			ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
-		intercept(invocation, extensionContext);
-	}
+    @Override
+    public void interceptBeforeEachMethod(
+            Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext extensionContext)
+            throws Throwable {
+        intercept(invocation, extensionContext);
+    }
 
-	@Override
-	public void interceptAfterEachMethod(Invocation<Void> invocation,
-			ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
-		intercept(invocation, extensionContext);
-	}
+    @Override
+    public void interceptAfterEachMethod(
+            Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext extensionContext)
+            throws Throwable {
+        intercept(invocation, extensionContext);
+    }
 
-	@Override
-	public void interceptAfterAllMethod(Invocation<Void> invocation,
-			ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
-		intercept(invocation, extensionContext);
-	}
+    @Override
+    public void interceptAfterAllMethod(
+            Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext extensionContext)
+            throws Throwable {
+        intercept(invocation, extensionContext);
+    }
 
-	@Override
-	public void interceptTestMethod(Invocation<Void> invocation, ReflectiveInvocationContext<Method> invocationContext,
-			ExtensionContext extensionContext) throws Throwable {
-		interceptMethod(invocation, invocationContext, extensionContext);
-	}
+    @Override
+    public void interceptTestMethod(
+            Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext extensionContext)
+            throws Throwable {
+        interceptMethod(invocation, invocationContext, extensionContext);
+    }
 
-	@Override
-	public void interceptTestTemplateMethod(Invocation<Void> invocation,
-			ReflectiveInvocationContext<Method> invocationContext, ExtensionContext extensionContext) throws Throwable {
-		interceptMethod(invocation, invocationContext, extensionContext);
-	}
+    @Override
+    public void interceptTestTemplateMethod(
+            Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext extensionContext)
+            throws Throwable {
+        interceptMethod(invocation, invocationContext, extensionContext);
+    }
 
-	private void interceptMethod(Invocation<Void> invocation, ReflectiveInvocationContext<Method> invocationContext,
-			ExtensionContext extensionContext) throws Throwable {
-		if (isModifiedClassPathClassLoader(extensionContext)) {
-			invocation.proceed();
-			return;
-		}
-		Class<?> testClass = extensionContext.getRequiredTestClass();
-		Method testMethod = invocationContext.getExecutable();
-		URLClassLoader modifiedClassLoader = ModifiedClassPathClassLoader.get(testClass, testMethod,
-				invocationContext.getArguments());
-		if (modifiedClassLoader == null) {
-			invocation.proceed();
-			return;
-		}
-		invocation.skip();
-		ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
-		Thread.currentThread().setContextClassLoader(modifiedClassLoader);
-		try {
-			runTest(extensionContext.getUniqueId());
-		}
-		finally {
-			Thread.currentThread().setContextClassLoader(originalClassLoader);
-		}
-	}
+    private void interceptMethod(
+            Invocation<Void> invocation,
+            ReflectiveInvocationContext<Method> invocationContext,
+            ExtensionContext extensionContext)
+            throws Throwable {
+        if (isModifiedClassPathClassLoader(extensionContext)) {
+            invocation.proceed();
+            return;
+        }
+        Class<?> testClass = extensionContext.getRequiredTestClass();
+        Method testMethod = invocationContext.getExecutable();
+        URLClassLoader modifiedClassLoader =
+                ModifiedClassPathClassLoader.get(testClass, testMethod, invocationContext.getArguments());
+        if (modifiedClassLoader == null) {
+            invocation.proceed();
+            return;
+        }
+        invocation.skip();
+        ClassLoader originalClassLoader = Thread.currentThread().getContextClassLoader();
+        Thread.currentThread().setContextClassLoader(modifiedClassLoader);
+        try {
+            runTest(extensionContext.getUniqueId());
+        } finally {
+            Thread.currentThread().setContextClassLoader(originalClassLoader);
+        }
+    }
 
-	private void runTest(String testId) throws Throwable {
-		LauncherDiscoveryRequest request = LauncherDiscoveryRequestBuilder.request()
-			.selectors(DiscoverySelectors.selectUniqueId(testId))
-			.build();
-		Launcher launcher = LauncherFactory.create();
-		TestPlan testPlan = launcher.discover(request);
-		SummaryGeneratingListener listener = new SummaryGeneratingListener();
-		launcher.registerTestExecutionListeners(listener);
-		launcher.execute(testPlan);
-		TestExecutionSummary summary = listener.getSummary();
-		if (!CollectionUtils.isEmpty(summary.getFailures())) {
-			throw summary.getFailures().get(0).getException();
-		}
-	}
+    private void runTest(String testId) throws Throwable {
+        LauncherDiscoveryRequest request =
+                LauncherDiscoveryRequestBuilder.request()
+                        .selectors(DiscoverySelectors.selectUniqueId(testId))
+                        .build();
+        Launcher launcher = LauncherFactory.create();
+        TestPlan testPlan = launcher.discover(request);
+        SummaryGeneratingListener listener = new SummaryGeneratingListener();
+        launcher.registerTestExecutionListeners(listener);
+        launcher.execute(testPlan);
+        TestExecutionSummary summary = listener.getSummary();
+        if (!CollectionUtils.isEmpty(summary.getFailures())) {
+            throw summary.getFailures().get(0).getException();
+        }
+    }
 
-	private void intercept(Invocation<Void> invocation, ExtensionContext extensionContext) throws Throwable {
-		if (isModifiedClassPathClassLoader(extensionContext)) {
-			invocation.proceed();
-			return;
-		}
-		invocation.skip();
-	}
+    private void intercept(Invocation<Void> invocation, ExtensionContext extensionContext)
+            throws Throwable {
+        if (isModifiedClassPathClassLoader(extensionContext)) {
+            invocation.proceed();
+            return;
+        }
+        invocation.skip();
+    }
 
-	private boolean isModifiedClassPathClassLoader(ExtensionContext extensionContext) {
-		Class<?> testClass = extensionContext.getRequiredTestClass();
-		ClassLoader classLoader = testClass.getClassLoader();
-		return classLoader.getClass().getName().equals(ModifiedClassPathClassLoader.class.getName());
-	}
-
+    private boolean isModifiedClassPathClassLoader(ExtensionContext extensionContext) {
+        Class<?> testClass = extensionContext.getRequiredTestClass();
+        ClassLoader classLoader = testClass.getClassLoader();
+        return classLoader.getClass().getName().equals(ModifiedClassPathClassLoader.class.getName());
+    }
 }

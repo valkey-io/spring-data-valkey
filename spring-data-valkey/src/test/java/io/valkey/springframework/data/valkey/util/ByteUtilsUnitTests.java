@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -29,27 +28,27 @@ import org.junit.jupiter.api.Test;
  */
 class ByteUtilsUnitTests {
 
-	@Test // GH-2204
-	void getBytesShouldUseCorrectHeapBufferSpace() {
+    @Test // GH-2204
+    void getBytesShouldUseCorrectHeapBufferSpace() {
 
-		ByteBuffer buffer = ByteBuffer.allocate(16);
-		buffer.put("hello".getBytes(StandardCharsets.US_ASCII));
-		buffer.flip();
+        ByteBuffer buffer = ByteBuffer.allocate(16);
+        buffer.put("hello".getBytes(StandardCharsets.US_ASCII));
+        buffer.flip();
 
-		byte[] bytes = ByteUtils.getBytes(buffer);
+        byte[] bytes = ByteUtils.getBytes(buffer);
 
-		assertThat(bytes).hasSize(5);
-	}
+        assertThat(bytes).hasSize(5);
+    }
 
-	@Test // GH-2204
-	void getBytesShouldUseCorrectDirectBufferSpace() {
+    @Test // GH-2204
+    void getBytesShouldUseCorrectDirectBufferSpace() {
 
-		ByteBuffer buffer = ByteBuffer.allocateDirect(16);
-		buffer.put("hello".getBytes(StandardCharsets.US_ASCII));
-		buffer.flip();
+        ByteBuffer buffer = ByteBuffer.allocateDirect(16);
+        buffer.put("hello".getBytes(StandardCharsets.US_ASCII));
+        buffer.flip();
 
-		byte[] bytes = ByteUtils.getBytes(buffer);
+        byte[] bytes = ByteUtils.getBytes(buffer);
 
-		assertThat(bytes).hasSize(5);
-	}
+        assertThat(bytes).hasSize(5);
+    }
 }

@@ -15,13 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.core.script;
 
+import io.valkey.springframework.data.valkey.serializer.ValkeyElementReader;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.springframework.dao.NonTransientDataAccessException;
-import io.valkey.springframework.data.valkey.serializer.ValkeyElementReader;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import org.springframework.lang.Nullable;
 
 /**
@@ -33,90 +32,91 @@ import org.springframework.lang.Nullable;
  */
 class ScriptUtils {
 
-	private ScriptUtils() {}
+    private ScriptUtils() {}
 
-	/**
-	 * Deserialize {@code result} using {@link ValkeySerializer} to the serializer type. Collection types and intermediate
-	 * collection elements are deserialized recursivly.
-	 *
-	 * @param resultSerializer must not be {@literal null}.
-	 * @param result must not be {@literal null}.
-	 * @return the deserialized result.
-	 */
-	@SuppressWarnings({ "unchecked" })
-	static <T> T deserializeResult(ValkeySerializer<T> resultSerializer, Object result) {
+    /**
+     * Deserialize {@code result} using {@link ValkeySerializer} to the serializer type. Collection
+     * types and intermediate collection elements are deserialized recursivly.
+     *
+     * @param resultSerializer must not be {@literal null}.
+     * @param result must not be {@literal null}.
+     * @return the deserialized result.
+     */
+    @SuppressWarnings({"unchecked"})
+    static <T> T deserializeResult(ValkeySerializer<T> resultSerializer, Object result) {
 
-		if (result instanceof byte[] resultBytes) {
-			return resultSerializer.deserialize(resultBytes);
-		}
+        if (result instanceof byte[] resultBytes) {
+            return resultSerializer.deserialize(resultBytes);
+        }
 
-		if (result instanceof List listResult) {
+        if (result instanceof List listResult) {
 
-			List<Object> results = new ArrayList<>(listResult.size());
+            List<Object> results = new ArrayList<>(listResult.size());
 
-			for (Object obj : listResult) {
-				results.add(deserializeResult(resultSerializer, obj));
-			}
+            for (Object obj : listResult) {
+                results.add(deserializeResult(resultSerializer, obj));
+            }
 
-			return (T) results;
-		}
+            return (T) results;
+        }
 
-		return (T) result;
-	}
+        return (T) result;
+    }
 
-	/**
-	 * Deserialize {@code result} using {@link ValkeyElementReader} to the reader type. Collection types and intermediate
-	 * collection elements are deserialized recursively.
-	 *
-	 * @param reader must not be {@literal null}.
-	 * @param result must not be {@literal null}.
-	 * @return the deserialized result.
-	 */
-	@Nullable
-	@SuppressWarnings({ "unchecked" })
-	static <T> T deserializeResult(ValkeyElementReader<T> reader, Object result) {
+    /**
+     * Deserialize {@code result} using {@link ValkeyElementReader} to the reader type. Collection
+     * types and intermediate collection elements are deserialized recursively.
+     *
+     * @param reader must not be {@literal null}.
+     * @param result must not be {@literal null}.
+     * @return the deserialized result.
+     */
+    @Nullable
+    @SuppressWarnings({"unchecked"})
+    static <T> T deserializeResult(ValkeyElementReader<T> reader, Object result) {
 
-		if (result instanceof ByteBuffer byteBuffer) {
-			return reader.read(byteBuffer);
-		}
+        if (result instanceof ByteBuffer byteBuffer) {
+            return reader.read(byteBuffer);
+        }
 
-		if (result instanceof List listResult) {
+        if (result instanceof List listResult) {
 
-			List<Object> results = new ArrayList<>(listResult.size());
+            List<Object> results = new ArrayList<>(listResult.size());
 
-			for (Object obj : listResult) {
-				results.add(deserializeResult(reader, obj));
-			}
+            for (Object obj : listResult) {
+                results.add(deserializeResult(reader, obj));
+            }
 
-			return (T) results;
-		}
-		return (T) result;
-	}
+            return (T) results;
+        }
+        return (T) result;
+    }
 
-	/**
-	 * Checks whether given {@link Throwable} contains a {@code NOSCRIPT} error. {@code NOSCRIPT} is reported if a script
-	 * was attempted to execute using {@code EVALSHA}.
-	 *
-	 * @param e the exception.
-	 * @return {@literal true} if the exception or one of its causes contains a {@literal NOSCRIPT} error.
-	 */
-	static boolean exceptionContainsNoScriptError(Throwable e) {
+    /**
+     * Checks whether given {@link Throwable} contains a {@code NOSCRIPT} error. {@code NOSCRIPT} is
+     * reported if a script was attempted to execute using {@code EVALSHA}.
+     *
+     * @param e the exception.
+     * @return {@literal true} if the exception or one of its causes contains a {@literal NOSCRIPT}
+     *     error.
+     */
+    static boolean exceptionContainsNoScriptError(Throwable e) {
 
-		if (!(e instanceof NonTransientDataAccessException)) {
-			return false;
-		}
+        if (!(e instanceof NonTransientDataAccessException)) {
+            return false;
+        }
 
-		Throwable current = e;
-		while (current != null) {
+        Throwable current = e;
+        while (current != null) {
 
-			String exMessage = current.getMessage();
-			if (exMessage != null && exMessage.contains("NOSCRIPT")) {
-				return true;
-			}
+            String exMessage = current.getMessage();
+            if (exMessage != null && exMessage.contains("NOSCRIPT")) {
+                return true;
+            }
 
-			current = current.getCause();
-		}
+            current = current.getCause();
+        }
 
-		return false;
-	}
+        return false;
+    }
 }

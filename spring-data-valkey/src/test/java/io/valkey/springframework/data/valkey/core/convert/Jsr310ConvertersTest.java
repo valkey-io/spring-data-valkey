@@ -28,7 +28,6 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Date;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -38,24 +37,24 @@ import org.junit.jupiter.api.Test;
  */
 class Jsr310ConvertersTest {
 
-	@Test // GH-2677
-	void shouldReportSupportedTemporalTypes() {
+    @Test // GH-2677
+    void shouldReportSupportedTemporalTypes() {
 
-		assertThat(Jsr310Converters.supports(Object.class)).isFalse();
-		assertThat(Jsr310Converters.supports(Date.class)).isFalse();
+        assertThat(Jsr310Converters.supports(Object.class)).isFalse();
+        assertThat(Jsr310Converters.supports(Date.class)).isFalse();
 
-		assertThat(Jsr310Converters.supports(Instant.class)).isTrue();
-		assertThat(Jsr310Converters.supports(ZoneId.class)).isTrue();
-		assertThat(Jsr310Converters.supports(ZonedDateTime.class)).isTrue();
+        assertThat(Jsr310Converters.supports(Instant.class)).isTrue();
+        assertThat(Jsr310Converters.supports(ZoneId.class)).isTrue();
+        assertThat(Jsr310Converters.supports(ZonedDateTime.class)).isTrue();
 
-		assertThat(Jsr310Converters.supports(LocalDateTime.class)).isTrue();
-		assertThat(Jsr310Converters.supports(LocalDate.class)).isTrue();
-		assertThat(Jsr310Converters.supports(LocalTime.class)).isTrue();
+        assertThat(Jsr310Converters.supports(LocalDateTime.class)).isTrue();
+        assertThat(Jsr310Converters.supports(LocalDate.class)).isTrue();
+        assertThat(Jsr310Converters.supports(LocalTime.class)).isTrue();
 
-		assertThat(Jsr310Converters.supports(Duration.class)).isTrue();
-		assertThat(Jsr310Converters.supports(Period.class)).isTrue();
+        assertThat(Jsr310Converters.supports(Duration.class)).isTrue();
+        assertThat(Jsr310Converters.supports(Period.class)).isTrue();
 
-		assertThat(Jsr310Converters.supports(OffsetTime.class)).isTrue();
-		assertThat(Jsr310Converters.supports(OffsetDateTime.class)).isTrue();
-	}
+        assertThat(Jsr310Converters.supports(OffsetTime.class)).isTrue();
+        assertThat(Jsr310Converters.supports(OffsetDateTime.class)).isTrue();
+    }
 }

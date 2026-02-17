@@ -16,21 +16,20 @@
 
 package io.valkey.springframework.boot.test.autoconfigure.data.valkey;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.core.env.Environment;
 import org.testcontainers.containers.GenericContainer;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
- * Tests for the {@link DataValkeyTest#properties properties} attribute of
- * {@link DataValkeyTest @DataValkeyTest}.
+ * Tests for the {@link DataValkeyTest#properties properties} attribute of {@link
+ * DataValkeyTest @DataValkeyTest}.
  *
  * @author Artsiom Yudovin
  * @author Moritz Halbritter
@@ -41,33 +40,29 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DataValkeyTest(properties = "spring.profiles.active=test")
 class DataValkeyTestPropertiesIntegrationTests {
 
-	@Container
-	@ServiceConnection
-	@SuppressWarnings("resource")
-	static final GenericContainer<?> valkey = new GenericContainer<>("valkey/valkey:latest")
-		.withExposedPorts(6379);
+    @Container
+    @ServiceConnection
+    @SuppressWarnings("resource")
+    static final GenericContainer<?> valkey =
+            new GenericContainer<>("valkey/valkey:latest").withExposedPorts(6379);
 
-	@Autowired
-	private Environment environment;
+    @Autowired private Environment environment;
 
-	@Test
-	void environmentWithNewProfile() {
-		assertThat(this.environment.getActiveProfiles()).containsExactly("test");
-	}
+    @Test
+    void environmentWithNewProfile() {
+        assertThat(this.environment.getActiveProfiles()).containsExactly("test");
+    }
 
-	@Nested
-	class NestedTests {
+    @Nested
+    class NestedTests {
 
-		@Autowired
-		private Environment innerEnvironment;
+        @Autowired private Environment innerEnvironment;
 
-		@Test
-		void propertiesFromEnclosingClassAffectNestedTests() {
-			assertThat(DataValkeyTestPropertiesIntegrationTests.this.environment.getActiveProfiles())
-				.containsExactly("test");
-			assertThat(this.innerEnvironment.getActiveProfiles()).containsExactly("test");
-		}
-
-	}
-
+        @Test
+        void propertiesFromEnclosingClassAffectNestedTests() {
+            assertThat(DataValkeyTestPropertiesIntegrationTests.this.environment.getActiveProfiles())
+                    .containsExactly("test");
+            assertThat(this.innerEnvironment.getActiveProfiles()).containsExactly("test");
+        }
+    }
 }

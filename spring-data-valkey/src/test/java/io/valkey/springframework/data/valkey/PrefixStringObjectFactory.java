@@ -20,17 +20,17 @@ package io.valkey.springframework.data.valkey;
  */
 public class PrefixStringObjectFactory implements ObjectFactory<String> {
 
-	private final String prefix;
-	private final ObjectFactory<String> delegate;
+    private final String prefix;
+    private final ObjectFactory<String> delegate;
 
-	public PrefixStringObjectFactory(String prefix, ObjectFactory<String> delegate) {
+    public PrefixStringObjectFactory(String prefix, ObjectFactory<String> delegate) {
 
-		this.prefix = prefix;
-		this.delegate = delegate;
-	}
+        this.prefix = prefix;
+        this.delegate = delegate;
+    }
 
-	@Override
-	public String instance() {
-		return prefix.concat(delegate.instance());
-	}
+    @Override
+    public String instance() {
+        return prefix.concat(delegate.instance());
+    }
 }

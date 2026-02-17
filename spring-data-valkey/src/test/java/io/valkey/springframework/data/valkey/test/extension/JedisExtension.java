@@ -15,10 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.test.extension;
 
-import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCluster;
-
+import io.valkey.springframework.data.valkey.SettingsUtils;
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
 import java.util.Arrays;
@@ -28,24 +25,25 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
-
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
-
 import org.springframework.core.ResolvableType;
-import io.valkey.springframework.data.valkey.SettingsUtils;
 import org.springframework.data.util.Lazy;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
 
 /**
- * JUnit 5 {@link Extension} using Jedis providing parameter resolution for connection resources and that reacts to
- * callbacks. The following resource types are supported by this extension:
+ * JUnit 5 {@link Extension} using Jedis providing parameter resolution for connection resources and
+ * that reacts to callbacks. The following resource types are supported by this extension:
+ *
  * <ul>
- * <li>{@link Jedis} (singleton)</li>
- * <li>{@link JediCluster} (singleton)</li>
+ *   <li>{@link Jedis} (singleton)
+ *   <li>{@link JediCluster} (singleton)
  * </ul>
  *
  * <pre class="code">
@@ -61,9 +59,11 @@ import org.springframework.data.util.Lazy;
  * }
  * </pre>
  *
- * <h3>Resource lifecycle</h3> This extension allocates resources lazily and stores them in its {@link ExtensionContext}
- * {@link ExtensionContext.Store} for reuse across multiple tests. Connections are allocated through suppliers. Shutdown
- * is managed by this extension.
+ * <h3>Resource lifecycle</h3>
+ *
+ * This extension allocates resources lazily and stores them in its {@link ExtensionContext} {@link
+ * ExtensionContext.Store} for reuse across multiple tests. Connections are allocated through
+ * suppliers. Shutdown is managed by this extension.
  *
  * @author Mark Paluch
  * @see ParameterResolver
@@ -71,117 +71,131 @@ import org.springframework.data.util.Lazy;
  */
 public class JedisExtension implements ParameterResolver {
 
-	private final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace.create(JedisExtension.class);
+    private final ExtensionContext.Namespace NAMESPACE =
+            ExtensionContext.Namespace.create(JedisExtension.class);
 
-	private static final Set<Class<?>> SUPPORTED_INJECTABLE_TYPES = new HashSet<>(
-			Arrays.asList(Jedis.class, JedisCluster.class));
+    private static final Set<Class<?>> SUPPORTED_INJECTABLE_TYPES =
+            new HashSet<>(Arrays.asList(Jedis.class, JedisCluster.class));
 
-	private static final List<Supplier<?>> SUPPLIERS = Arrays.asList(JedisSupplier.INSTANCE,
-			JedisClusterSupplier.INSTANCE);
+    private static final List<Supplier<?>> SUPPLIERS =
+            Arrays.asList(JedisSupplier.INSTANCE, JedisClusterSupplier.INSTANCE);
 
-	@Override
-	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-			throws ParameterResolutionException {
-		return SUPPORTED_INJECTABLE_TYPES.contains(parameterContext.getParameter().getType());
-	}
+    @Override
+    public boolean supportsParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
+        return SUPPORTED_INJECTABLE_TYPES.contains(parameterContext.getParameter().getType());
+    }
 
-	/**
-	 * Attempt to resolve the {@code requestedResourceType}.
-	 *
-	 * @param extensionContext
-	 * @param requestedResourceType
-	 * @param <T>
-	 * @return
-	 */
-	public <T> T resolve(ExtensionContext extensionContext, Class<T> requestedResourceType) {
+    /**
+     * Attempt to resolve the {@code requestedResourceType}.
+     *
+     * @param extensionContext
+     * @param requestedResourceType
+     * @param <T>
+     * @return
+     */
+    public <T> T resolve(ExtensionContext extensionContext, Class<T> requestedResourceType) {
 
-		ExtensionContext.Store store = getStore(extensionContext);
+        ExtensionContext.Store store = getStore(extensionContext);
 
-		return (T) store.getOrComputeIfAbsent(requestedResourceType, it -> findSupplier(requestedResourceType).get());
-	}
+        return (T)
+                store.getOrComputeIfAbsent(
+                        requestedResourceType, it -> findSupplier(requestedResourceType).get());
+    }
 
-	@Override
-	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-			throws ParameterResolutionException {
+    @Override
+    public Object resolveParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
 
-		ExtensionContext.Store store = getStore(extensionContext);
-		Parameter parameter = parameterContext.getParameter();
-		Type parameterizedType = parameter.getParameterizedType();
+        ExtensionContext.Store store = getStore(extensionContext);
+        Parameter parameter = parameterContext.getParameter();
+        Type parameterizedType = parameter.getParameterizedType();
 
-		return store.getOrComputeIfAbsent(parameter.getType(), it -> doGetInstance(parameterizedType));
-	}
+        return store.getOrComputeIfAbsent(parameter.getType(), it -> doGetInstance(parameterizedType));
+    }
 
-	@SuppressWarnings("unchecked")
-	private static Supplier<Object> findSupplier(Type type) {
+    @SuppressWarnings("unchecked")
+    private static Supplier<Object> findSupplier(Type type) {
 
-		ResolvableType requested = ResolvableType.forType(type);
+        ResolvableType requested = ResolvableType.forType(type);
 
-		Supplier<?> supplier = SUPPLIERS.stream().filter(it -> {
+        Supplier<?> supplier =
+                SUPPLIERS.stream()
+                        .filter(
+                                it -> {
+                                    ResolvableType providedType =
+                                            ResolvableType.forType(it.getClass()).as(Supplier.class).getGeneric(0);
 
-			ResolvableType providedType = ResolvableType.forType(it.getClass()).as(Supplier.class).getGeneric(0);
+                                    if (requested.isAssignableFrom(providedType)) {
+                                        return true;
+                                    }
+                                    return false;
+                                })
+                        .findFirst()
+                        .orElseThrow(() -> new NoSuchElementException("Cannot find a factory for " + type));
 
-			if (requested.isAssignableFrom(providedType)) {
-				return true;
-			}
-			return false;
-		}).findFirst().orElseThrow(() -> new NoSuchElementException("Cannot find a factory for " + type));
+        return (Supplier) supplier;
+    }
 
-		return (Supplier) supplier;
-	}
+    private Object doGetInstance(Type parameterizedType) {
+        return findSupplier(parameterizedType).get();
+    }
 
-	private Object doGetInstance(Type parameterizedType) {
-		return findSupplier(parameterizedType).get();
-	}
+    private ExtensionContext.Store getStore(ExtensionContext extensionContext) {
+        return extensionContext.getStore(NAMESPACE);
+    }
 
-	private ExtensionContext.Store getStore(ExtensionContext extensionContext) {
-		return extensionContext.getStore(NAMESPACE);
-	}
+    static class ResourceFunction {
 
-	static class ResourceFunction {
+        final ResolvableType dependsOn;
+        final ResolvableType provides;
+        final Function<Object, Object> function;
 
-		final ResolvableType dependsOn;
-		final ResolvableType provides;
-		final Function<Object, Object> function;
+        public ResourceFunction(
+                ResolvableType dependsOn, ResolvableType provides, Function<?, ?> function) {
+            this.dependsOn = dependsOn;
+            this.provides = provides;
+            this.function = (Function) function;
+        }
+    }
 
-		public ResourceFunction(ResolvableType dependsOn, ResolvableType provides, Function<?, ?> function) {
-			this.dependsOn = dependsOn;
-			this.provides = provides;
-			this.function = (Function) function;
-		}
-	}
+    enum JedisSupplier implements Supplier<Jedis> {
+        INSTANCE;
 
-	enum JedisSupplier implements Supplier<Jedis> {
+        final Lazy<Jedis> lazy =
+                Lazy.of(
+                        () -> {
+                            Jedis client = new Jedis(SettingsUtils.getHost(), SettingsUtils.getPort());
 
-		INSTANCE;
+                            ShutdownQueue.INSTANCE.register(client);
+                            return client;
+                        });
 
-		final Lazy<Jedis> lazy = Lazy.of(() -> {
-			Jedis client = new Jedis(SettingsUtils.getHost(), SettingsUtils.getPort());
+        @Override
+        public Jedis get() {
+            return lazy.get();
+        }
+    }
 
-			ShutdownQueue.INSTANCE.register(client);
-			return client;
-		});
+    enum JedisClusterSupplier implements Supplier<JedisCluster> {
+        INSTANCE;
 
-		@Override
-		public Jedis get() {
-			return lazy.get();
-		}
-	}
+        final Lazy<JedisCluster> lazy =
+                Lazy.of(
+                        () -> {
+                            JedisCluster client =
+                                    new JedisCluster(
+                                            new HostAndPort(SettingsUtils.getHost(), SettingsUtils.getClusterPort()));
 
-	enum JedisClusterSupplier implements Supplier<JedisCluster> {
+                            ShutdownQueue.INSTANCE.register(client);
+                            return client;
+                        });
 
-		INSTANCE;
-
-		final Lazy<JedisCluster> lazy = Lazy.of(() -> {
-			JedisCluster client = new JedisCluster(new HostAndPort(SettingsUtils.getHost(), SettingsUtils.getClusterPort()));
-
-			ShutdownQueue.INSTANCE.register(client);
-			return client;
-		});
-
-		@Override
-		public JedisCluster get() {
-			return lazy.get();
-		}
-	}
-
+        @Override
+        public JedisCluster get() {
+            return lazy.get();
+        }
+    }
 }

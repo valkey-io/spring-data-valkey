@@ -15,12 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.core.mapping;
 
+import io.valkey.springframework.data.valkey.core.TimeToLive;
+import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.keyvalue.core.mapping.BasicKeyValuePersistentEntity;
 import org.springframework.data.keyvalue.core.mapping.KeySpaceResolver;
 import org.springframework.data.mapping.MappingException;
-import io.valkey.springframework.data.valkey.core.TimeToLive;
-import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -32,72 +32,79 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @param <T>
  */
-public class BasicValkeyPersistentEntity<T> extends BasicKeyValuePersistentEntity<T, ValkeyPersistentProperty>
-		implements ValkeyPersistentEntity<T> {
+public class BasicValkeyPersistentEntity<T>
+        extends BasicKeyValuePersistentEntity<T, ValkeyPersistentProperty>
+        implements ValkeyPersistentEntity<T> {
 
-	private final TimeToLiveAccessor timeToLiveAccessor;
+    private final TimeToLiveAccessor timeToLiveAccessor;
 
-	/**
-	 * Creates new {@link BasicValkeyPersistentEntity}.
-	 *
-	 * @param information must not be {@literal null}.
-	 * @param keySpaceResolver can be {@literal null}.
-	 * @param timeToLiveAccessor can be {@literal null}.
-	 */
-	public BasicValkeyPersistentEntity(TypeInformation<T> information, @Nullable KeySpaceResolver keySpaceResolver,
-			TimeToLiveAccessor timeToLiveAccessor) {
-		super(information, keySpaceResolver);
+    /**
+     * Creates new {@link BasicValkeyPersistentEntity}.
+     *
+     * @param information must not be {@literal null}.
+     * @param keySpaceResolver can be {@literal null}.
+     * @param timeToLiveAccessor can be {@literal null}.
+     */
+    public BasicValkeyPersistentEntity(
+            TypeInformation<T> information,
+            @Nullable KeySpaceResolver keySpaceResolver,
+            TimeToLiveAccessor timeToLiveAccessor) {
+        super(information, keySpaceResolver);
 
-		Assert.notNull(timeToLiveAccessor, "TimeToLiveAccessor must not be null");
-		this.timeToLiveAccessor = timeToLiveAccessor;
-	}
+        Assert.notNull(timeToLiveAccessor, "TimeToLiveAccessor must not be null");
+        this.timeToLiveAccessor = timeToLiveAccessor;
+    }
 
-	@Override
-	public TimeToLiveAccessor getTimeToLiveAccessor() {
-		return this.timeToLiveAccessor;
-	}
+    @Override
+    public TimeToLiveAccessor getTimeToLiveAccessor() {
+        return this.timeToLiveAccessor;
+    }
 
-	@Override
-	@Nullable
-	public ValkeyPersistentProperty getExplicitTimeToLiveProperty() {
-		return this.getPersistentProperty(TimeToLive.class);
-	}
+    @Override
+    @Nullable
+    public ValkeyPersistentProperty getExplicitTimeToLiveProperty() {
+        return this.getPersistentProperty(TimeToLive.class);
+    }
 
-	@Override
-	@Nullable
-	protected ValkeyPersistentProperty returnPropertyIfBetterIdPropertyCandidateOrNull(ValkeyPersistentProperty property) {
+    @Override
+    @Nullable
+    protected ValkeyPersistentProperty returnPropertyIfBetterIdPropertyCandidateOrNull(
+            ValkeyPersistentProperty property) {
 
-		Assert.notNull(property, "Property must not be null");
+        Assert.notNull(property, "Property must not be null");
 
-		if (!property.isIdProperty()) {
-			return null;
-		}
+        if (!property.isIdProperty()) {
+            return null;
+        }
 
-		ValkeyPersistentProperty currentIdProperty = getIdProperty();
-		boolean currentIdPropertyIsSet = currentIdProperty != null;
+        ValkeyPersistentProperty currentIdProperty = getIdProperty();
+        boolean currentIdPropertyIsSet = currentIdProperty != null;
 
-		if (!currentIdPropertyIsSet) {
-			return property;
-		}
+        if (!currentIdPropertyIsSet) {
+            return property;
+        }
 
-		boolean currentIdPropertyIsExplicit = currentIdProperty.isAnnotationPresent(Id.class);
-		boolean newIdPropertyIsExplicit = property.isAnnotationPresent(Id.class);
+        boolean currentIdPropertyIsExplicit = currentIdProperty.isAnnotationPresent(Id.class);
+        boolean newIdPropertyIsExplicit = property.isAnnotationPresent(Id.class);
 
-		if (currentIdPropertyIsExplicit && newIdPropertyIsExplicit) {
-			throw new MappingException(("Attempt to add explicit id property %s but already have a property %s"
-					+ " registered as explicit id; Check your mapping configuration")
-					.formatted(property.getField(), currentIdProperty.getField()));
-		}
+        if (currentIdPropertyIsExplicit && newIdPropertyIsExplicit) {
+            throw new MappingException(
+                    ("Attempt to add explicit id property %s but already have a property %s"
+                                    + " registered as explicit id; Check your mapping configuration")
+                            .formatted(property.getField(), currentIdProperty.getField()));
+        }
 
-		if (!currentIdPropertyIsExplicit && !newIdPropertyIsExplicit) {
-			throw new MappingException(("Attempt to add id property %s but already have a property %s registered as id;"
-					+ " Check your mapping configuration").formatted(property.getField(), currentIdProperty.getField()));
-		}
+        if (!currentIdPropertyIsExplicit && !newIdPropertyIsExplicit) {
+            throw new MappingException(
+                    ("Attempt to add id property %s but already have a property %s registered as id;"
+                                    + " Check your mapping configuration")
+                            .formatted(property.getField(), currentIdProperty.getField()));
+        }
 
-		if (newIdPropertyIsExplicit) {
-			return property;
-		}
+        if (newIdPropertyIsExplicit) {
+            return property;
+        }
 
-		return null;
-	}
+        return null;
+    }
 }

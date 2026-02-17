@@ -18,27 +18,25 @@ package io.valkey.springframework.data.valkey.listener;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
+import io.valkey.springframework.data.valkey.connection.MessageListener;
+import io.valkey.springframework.data.valkey.connection.Subscription;
+import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
+import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAdapter;
+import io.valkey.springframework.data.valkey.listener.adapter.ValkeyListenerExecutionFailedException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.SyncTaskExecutor;
-import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
-import io.valkey.springframework.data.valkey.connection.MessageListener;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.Subscription;
-import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
-import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
-import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAdapter;
-import io.valkey.springframework.data.valkey.listener.adapter.ValkeyListenerExecutionFailedException;
 import org.springframework.util.backoff.FixedBackOff;
 
 /**
@@ -50,193 +48,209 @@ import org.springframework.util.backoff.FixedBackOff;
  */
 class ValkeyMessageListenerContainerUnitTests {
 
-	private final Object handler = new Object() {
+    private final Object handler =
+            new Object() {
 
-		@SuppressWarnings("unused")
-		public void handleMessage(Object message) {}
-	};
+                @SuppressWarnings("unused")
+                public void handleMessage(Object message) {}
+            };
 
-	private final MessageListenerAdapter adapter = new MessageListenerAdapter(handler);
+    private final MessageListenerAdapter adapter = new MessageListenerAdapter(handler);
 
-	private ValkeyMessageListenerContainer container;
+    private ValkeyMessageListenerContainer container;
 
-	private ValkeyConnectionFactory connectionFactoryMock;
-	private ValkeyConnection connectionMock;
-	private Subscription subscriptionMock;
-	private Executor executorMock;
+    private ValkeyConnectionFactory connectionFactoryMock;
+    private ValkeyConnection connectionMock;
+    private Subscription subscriptionMock;
+    private Executor executorMock;
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		executorMock = mock(Executor.class);
-		connectionFactoryMock = mock(JedisConnectionFactory.class);
-		connectionMock = mock(ValkeyConnection.class);
-		subscriptionMock = mock(Subscription.class);
+        executorMock = mock(Executor.class);
+        connectionFactoryMock = mock(JedisConnectionFactory.class);
+        connectionMock = mock(ValkeyConnection.class);
+        subscriptionMock = mock(Subscription.class);
 
-		container = new ValkeyMessageListenerContainer();
-		container.setConnectionFactory(connectionFactoryMock);
-		container.setBeanName("container");
-		container.setTaskExecutor(new SyncTaskExecutor());
-		container.setSubscriptionExecutor(executorMock);
-		container.setMaxSubscriptionRegistrationWaitingTime(1);
-		container.afterPropertiesSet();
-	}
+        container = new ValkeyMessageListenerContainer();
+        container.setConnectionFactory(connectionFactoryMock);
+        container.setBeanName("container");
+        container.setTaskExecutor(new SyncTaskExecutor());
+        container.setSubscriptionExecutor(executorMock);
+        container.setMaxSubscriptionRegistrationWaitingTime(1);
+        container.afterPropertiesSet();
+    }
 
-	@Test // DATAREDIS-840
-	void containerShouldStopGracefullyOnUnsubscribeErrors() {
+    @Test // DATAREDIS-840
+    void containerShouldStopGracefullyOnUnsubscribeErrors() {
 
-		when(connectionFactoryMock.getConnection()).thenReturn(connectionMock);
-		doThrow(new IllegalStateException()).when(subscriptionMock).pUnsubscribe();
+        when(connectionFactoryMock.getConnection()).thenReturn(connectionMock);
+        doThrow(new IllegalStateException()).when(subscriptionMock).pUnsubscribe();
 
-		doAnswer(it -> {
+        doAnswer(
+                        it -> {
+                            Runnable r = it.getArgument(0);
+                            r.run();
+                            return null;
+                        })
+                .when(executorMock)
+                .execute(any());
 
-			Runnable r = it.getArgument(0);
-			r.run();
-			return null;
-		}).when(executorMock).execute(any());
+        doAnswer(
+                        it -> {
+                            SubscriptionListener listener = it.getArgument(0);
+                            when(connectionMock.isSubscribed()).thenReturn(true);
 
-		doAnswer(it -> {
+                            listener.onChannelSubscribed("a".getBytes(StandardCharsets.UTF_8), 0);
 
-			SubscriptionListener listener = it.getArgument(0);
-			when(connectionMock.isSubscribed()).thenReturn(true);
+                            return null;
+                        })
+                .when(connectionMock)
+                .subscribe(any(), any());
 
-			listener.onChannelSubscribed("a".getBytes(StandardCharsets.UTF_8), 0);
+        container.addMessageListener(adapter, new ChannelTopic("a"));
+        container.start();
 
-			return null;
-		}).when(connectionMock).subscribe(any(), any());
+        when(connectionMock.getSubscription()).thenReturn(subscriptionMock);
 
-		container.addMessageListener(adapter, new ChannelTopic("a"));
-		container.start();
+        container.stop();
 
-		when(connectionMock.getSubscription()).thenReturn(subscriptionMock);
+        assertThat(container.isRunning()).isFalse();
+        verify(connectionMock).close();
+    }
 
-		container.stop();
+    @Test // GH-2335
+    void containerStartShouldReportFailureOnValkeyUnavailability() {
 
-		assertThat(container.isRunning()).isFalse();
-		verify(connectionMock).close();
-	}
+        when(connectionFactoryMock.getConnection())
+                .thenThrow(new ValkeyConnectionFailureException("Booh"));
 
-	@Test // GH-2335
-	void containerStartShouldReportFailureOnValkeyUnavailability() {
+        doAnswer(
+                        it -> {
+                            Runnable r = it.getArgument(0);
+                            r.run();
+                            return null;
+                        })
+                .when(executorMock)
+                .execute(any());
 
-		when(connectionFactoryMock.getConnection()).thenThrow(new ValkeyConnectionFailureException("Booh"));
+        container.addMessageListener(adapter, new ChannelTopic("a"));
+        assertThatExceptionOfType(ValkeyListenerExecutionFailedException.class)
+                .isThrownBy(() -> container.start());
 
-		doAnswer(it -> {
+        assertThat(container.isRunning()).isTrue();
+        assertThat(container.isListening()).isFalse();
+    }
 
-			Runnable r = it.getArgument(0);
-			r.run();
-			return null;
-		}).when(executorMock).execute(any());
+    @Test // GH-2335
+    void containerListenShouldReportFailureOnValkeyUnavailability() {
 
-		container.addMessageListener(adapter, new ChannelTopic("a"));
-		assertThatExceptionOfType(ValkeyListenerExecutionFailedException.class).isThrownBy(() -> container.start());
+        when(connectionFactoryMock.getConnection())
+                .thenThrow(new ValkeyConnectionFailureException("Booh"));
 
-		assertThat(container.isRunning()).isTrue();
-		assertThat(container.isListening()).isFalse();
-	}
+        doAnswer(
+                        it -> {
+                            Runnable r = it.getArgument(0);
+                            r.run();
+                            return null;
+                        })
+                .when(executorMock)
+                .execute(any());
 
-	@Test // GH-2335
-	void containerListenShouldReportFailureOnValkeyUnavailability() {
+        container.start();
 
-		when(connectionFactoryMock.getConnection()).thenThrow(new ValkeyConnectionFailureException("Booh"));
+        assertThatExceptionOfType(ValkeyListenerExecutionFailedException.class)
+                .isThrownBy(() -> container.addMessageListener(adapter, new ChannelTopic("a")));
 
-		doAnswer(it -> {
+        assertThat(container.isRunning()).isTrue();
+        assertThat(container.isListening()).isFalse();
+    }
 
-			Runnable r = it.getArgument(0);
-			r.run();
-			return null;
-		}).when(executorMock).execute(any());
+    @Test // GH-2335
+    void shouldRecoverFromConnectionFailure() throws Exception {
 
-		container.start();
+        AtomicInteger requestCount = new AtomicInteger();
+        AtomicBoolean shouldThrowSubscriptionException = new AtomicBoolean();
 
-		assertThatExceptionOfType(ValkeyListenerExecutionFailedException.class)
-				.isThrownBy(() -> container.addMessageListener(adapter, new ChannelTopic("a")));
+        container = new ValkeyMessageListenerContainer();
+        container.setConnectionFactory(connectionFactoryMock);
+        container.setBeanName("container");
+        container.setTaskExecutor(new SyncTaskExecutor());
+        container.setSubscriptionExecutor(new SimpleAsyncTaskExecutor());
+        container.setMaxSubscriptionRegistrationWaitingTime(1000);
+        container.setRecoveryBackoff(new FixedBackOff(1, 5));
+        container.afterPropertiesSet();
 
-		assertThat(container.isRunning()).isTrue();
-		assertThat(container.isListening()).isFalse();
-	}
+        doAnswer(
+                        it -> {
+                            int req = requestCount.incrementAndGet();
+                            if (req == 1 || req == 3) {
+                                return connectionMock;
+                            }
 
-	@Test // GH-2335
-	void shouldRecoverFromConnectionFailure() throws Exception {
+                            throw new ValkeyConnectionFailureException("Booh");
+                        })
+                .when(connectionFactoryMock)
+                .getConnection();
 
-		AtomicInteger requestCount = new AtomicInteger();
-		AtomicBoolean shouldThrowSubscriptionException = new AtomicBoolean();
+        CountDownLatch exceptionWait = new CountDownLatch(1);
+        CountDownLatch armed = new CountDownLatch(1);
+        CountDownLatch recoveryArmed = new CountDownLatch(1);
 
-		container = new ValkeyMessageListenerContainer();
-		container.setConnectionFactory(connectionFactoryMock);
-		container.setBeanName("container");
-		container.setTaskExecutor(new SyncTaskExecutor());
-		container.setSubscriptionExecutor(new SimpleAsyncTaskExecutor());
-		container.setMaxSubscriptionRegistrationWaitingTime(1000);
-		container.setRecoveryBackoff(new FixedBackOff(1, 5));
-		container.afterPropertiesSet();
+        doAnswer(
+                        it -> {
+                            SubscriptionListener listener = it.getArgument(0);
+                            when(connectionMock.isSubscribed()).thenReturn(true);
 
-		doAnswer(it -> {
+                            listener.onChannelSubscribed("a".getBytes(StandardCharsets.UTF_8), 1);
 
-			int req = requestCount.incrementAndGet();
-			if (req == 1 || req == 3) {
-				return connectionMock;
-			}
+                            armed.countDown();
+                            exceptionWait.await();
 
-			throw new ValkeyConnectionFailureException("Booh");
-		}).when(connectionFactoryMock).getConnection();
+                            if (shouldThrowSubscriptionException.compareAndSet(true, false)) {
+                                when(connectionMock.isSubscribed()).thenReturn(false);
+                                throw new ValkeyConnectionFailureException("Disconnected");
+                            }
 
-		CountDownLatch exceptionWait = new CountDownLatch(1);
-		CountDownLatch armed = new CountDownLatch(1);
-		CountDownLatch recoveryArmed = new CountDownLatch(1);
+                            recoveryArmed.countDown();
 
-		doAnswer(it -> {
+                            return null;
+                        })
+                .when(connectionMock)
+                .subscribe(any(), any());
 
-			SubscriptionListener listener = it.getArgument(0);
-			when(connectionMock.isSubscribed()).thenReturn(true);
+        container.start();
+        container.addMessageListener(new MessageListenerAdapter(handler), new ChannelTopic("a"));
+        armed.await();
 
-			listener.onChannelSubscribed("a".getBytes(StandardCharsets.UTF_8), 1);
+        // let an exception happen
+        shouldThrowSubscriptionException.set(true);
+        exceptionWait.countDown();
 
-			armed.countDown();
-			exceptionWait.await();
+        // wait for subscription recovery
+        recoveryArmed.await();
 
-			if (shouldThrowSubscriptionException.compareAndSet(true, false)) {
-				when(connectionMock.isSubscribed()).thenReturn(false);
-				throw new ValkeyConnectionFailureException("Disconnected");
-			}
+        assertThat(recoveryArmed.getCount()).isZero();
+    }
 
-			recoveryArmed.countDown();
+    @Test // GH-964
+    void failsOnDuplicateInit() {
+        assertThatIllegalStateException().isThrownBy(() -> container.afterPropertiesSet());
+    }
 
-			return null;
-		}).when(connectionMock).subscribe(any(), any());
+    @Test // GH-3009
+    void shouldRemoveAllListenersWhenListenerIsNull() {
 
-		container.start();
-		container.addMessageListener(new MessageListenerAdapter(handler), new ChannelTopic("a"));
-		armed.await();
+        MessageListener listener1 = mock(MessageListener.class);
+        MessageListener listener2 = mock(MessageListener.class);
+        Topic topic = new ChannelTopic("topic1");
 
-		// let an exception happen
-		shouldThrowSubscriptionException.set(true);
-		exceptionWait.countDown();
+        container.addMessageListener(listener1, Collections.singletonList(topic));
+        container.addMessageListener(listener2, Collections.singletonList(topic));
 
-		// wait for subscription recovery
-		recoveryArmed.await();
+        container.removeMessageListener(null, Collections.singletonList(topic));
 
-		assertThat(recoveryArmed.getCount()).isZero();
-
-	}
-
-	@Test // GH-964
-	void failsOnDuplicateInit() {
-		assertThatIllegalStateException().isThrownBy(() -> container.afterPropertiesSet());
-	}
-
-	@Test // GH-3009
-	void shouldRemoveAllListenersWhenListenerIsNull() {
-
-		MessageListener listener1 = mock(MessageListener.class);
-		MessageListener listener2 = mock(MessageListener.class);
-		Topic topic = new ChannelTopic("topic1");
-
-		container.addMessageListener(listener1, Collections.singletonList(topic));
-		container.addMessageListener(listener2, Collections.singletonList(topic));
-
-		container.removeMessageListener(null, Collections.singletonList(topic));
-
-		assertThatNoException().isThrownBy(() -> container.removeMessageListener(null, Collections.singletonList(topic)));
-	}
+        assertThatNoException()
+                .isThrownBy(() -> container.removeMessageListener(null, Collections.singletonList(topic)));
+    }
 }

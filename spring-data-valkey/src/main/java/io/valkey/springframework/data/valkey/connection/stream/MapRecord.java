@@ -15,15 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.connection.stream;
 
+import io.valkey.springframework.data.valkey.connection.stream.StreamRecords.MapBackedRecord;
+import io.valkey.springframework.data.valkey.hash.HashMapper;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
-
-import io.valkey.springframework.data.valkey.connection.stream.StreamRecords.MapBackedRecord;
-import io.valkey.springframework.data.valkey.hash.HashMapper;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -39,103 +38,121 @@ import org.springframework.util.Assert;
  */
 public interface MapRecord<S, K, V> extends Record<S, Map<K, V>>, Iterable<Map.Entry<K, V>> {
 
-	/**
-	 * Creates a new {@link MapRecord} associated with the {@code stream} key and {@link Map value}.
-	 *
-	 * @param stream the stream key.
-	 * @param map the value.
-	 * @return the {@link ObjectRecord} holding the {@code stream} key and {@code value}.
-	 */
-	static <S, K, V> MapRecord<S, K, V> create(S stream, Map<K, V> map) {
+    /**
+     * Creates a new {@link MapRecord} associated with the {@code stream} key and {@link Map value}.
+     *
+     * @param stream the stream key.
+     * @param map the value.
+     * @return the {@link ObjectRecord} holding the {@code stream} key and {@code value}.
+     */
+    static <S, K, V> MapRecord<S, K, V> create(S stream, Map<K, V> map) {
 
-		Assert.notNull(stream, "Stream must not be null");
-		Assert.notNull(map, "Map must not be null");
+        Assert.notNull(stream, "Stream must not be null");
+        Assert.notNull(map, "Map must not be null");
 
-		return new MapBackedRecord<>(stream, RecordId.autoGenerate(), map);
-	}
+        return new MapBackedRecord<>(stream, RecordId.autoGenerate(), map);
+    }
 
-	@Override
-	MapRecord<S, K, V> withId(RecordId id);
+    @Override
+    MapRecord<S, K, V> withId(RecordId id);
 
-	@Override
-	<SK> MapRecord<SK, K, V> withStreamKey(SK key);
+    @Override
+    <SK> MapRecord<SK, K, V> withStreamKey(SK key);
 
-	/**
-	 * Apply the given {@link Function mapFunction} to each and every entry in the backing collection to create a new
-	 * {@link MapRecord}.
-	 *
-	 * @param mapFunction must not be {@literal null}.
-	 * @param <HK> the field type of the new backing collection.
-	 * @param <HV> the value type of the new backing collection.
-	 * @return new instance of {@link MapRecord}.
-	 */
-	default <HK, HV> MapRecord<S, HK, HV> mapEntries(Function<Entry<K, V>, Entry<HK, HV>> mapFunction) {
+    /**
+     * Apply the given {@link Function mapFunction} to each and every entry in the backing collection
+     * to create a new {@link MapRecord}.
+     *
+     * @param mapFunction must not be {@literal null}.
+     * @param <HK> the field type of the new backing collection.
+     * @param <HV> the value type of the new backing collection.
+     * @return new instance of {@link MapRecord}.
+     */
+    default <HK, HV> MapRecord<S, HK, HV> mapEntries(
+            Function<Entry<K, V>, Entry<HK, HV>> mapFunction) {
 
-		Map<HK, HV> mapped = new LinkedHashMap<>();
-		iterator().forEachRemaining(it -> {
+        Map<HK, HV> mapped = new LinkedHashMap<>();
+        iterator()
+                .forEachRemaining(
+                        it -> {
+                            Entry<HK, HV> mappedPair = mapFunction.apply(it);
+                            mapped.put(mappedPair.getKey(), mappedPair.getValue());
+                        });
 
-			Entry<HK, HV> mappedPair = mapFunction.apply(it);
-			mapped.put(mappedPair.getKey(), mappedPair.getValue());
-		});
+        return StreamRecords.newRecord().in(getRequiredStream()).withId(getId()).ofMap(mapped);
+    }
 
-		return StreamRecords.newRecord().in(getRequiredStream()).withId(getId()).ofMap(mapped);
-	}
+    /**
+     * Map this {@link MapRecord} by applying the mapping {@link Function}.
+     *
+     * @param mapFunction function to apply to this {@link MapRecord} element.
+     * @return the mapped {@link MapRecord}.
+     */
+    default <SK, HK, HV> MapRecord<SK, HK, HV> map(
+            Function<MapRecord<S, K, V>, MapRecord<SK, HK, HV>> mapFunction) {
+        return mapFunction.apply(this);
+    }
 
-	/**
-	 * Map this {@link MapRecord} by applying the mapping {@link Function}.
-	 *
-	 * @param mapFunction function to apply to this {@link MapRecord} element.
-	 * @return the mapped {@link MapRecord}.
-	 */
-	default <SK, HK, HV> MapRecord<SK, HK, HV> map(Function<MapRecord<S, K, V>, MapRecord<SK, HK, HV>> mapFunction) {
-		return mapFunction.apply(this);
-	}
+    /**
+     * Serialize {@link #getStream() key} and {@link #getValue() field/value pairs} with the given
+     * {@link ValkeySerializer}. An already assigned {@link RecordId id} is carried over to the new
+     * instance.
+     *
+     * @param serializer can be {@literal null} if the {@link Record} only holds binary data.
+     * @return new {@link ByteRecord} holding the serialized values.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    default ByteRecord serialize(@Nullable ValkeySerializer<?> serializer) {
+        return serialize(
+                (ValkeySerializer) serializer,
+                (ValkeySerializer) serializer,
+                (ValkeySerializer) serializer);
+    }
 
-	/**
-	 * Serialize {@link #getStream() key} and {@link #getValue() field/value pairs} with the given
-	 * {@link ValkeySerializer}. An already assigned {@link RecordId id} is carried over to the new instance.
-	 *
-	 * @param serializer can be {@literal null} if the {@link Record} only holds binary data.
-	 * @return new {@link ByteRecord} holding the serialized values.
-	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	default ByteRecord serialize(@Nullable ValkeySerializer<?> serializer) {
-		return serialize((ValkeySerializer) serializer, (ValkeySerializer) serializer, (ValkeySerializer) serializer);
-	}
+    /**
+     * Serialize {@link #getStream() key} with the {@literal streamSerializer}, field names with the
+     * {@literal fieldSerializer} and values with the {@literal valueSerializer}. An already assigned
+     * {@link RecordId id} is carried over to the new instance.
+     *
+     * @param streamSerializer can be {@literal null} if the key is binary.
+     * @param fieldSerializer can be {@literal null} if the fields are binary.
+     * @param valueSerializer can be {@literal null} if the values are binary.
+     * @return new {@link ByteRecord} holding the serialized values.
+     */
+    default ByteRecord serialize(
+            @Nullable ValkeySerializer<? super S> streamSerializer,
+            @Nullable ValkeySerializer<? super K> fieldSerializer,
+            @Nullable ValkeySerializer<? super V> valueSerializer) {
 
-	/**
-	 * Serialize {@link #getStream() key} with the {@literal streamSerializer}, field names with the
-	 * {@literal fieldSerializer} and values with the {@literal valueSerializer}. An already assigned {@link RecordId id}
-	 * is carried over to the new instance.
-	 *
-	 * @param streamSerializer can be {@literal null} if the key is binary.
-	 * @param fieldSerializer can be {@literal null} if the fields are binary.
-	 * @param valueSerializer can be {@literal null} if the values are binary.
-	 * @return new {@link ByteRecord} holding the serialized values.
-	 */
-	default ByteRecord serialize(@Nullable ValkeySerializer<? super S> streamSerializer,
-			@Nullable ValkeySerializer<? super K> fieldSerializer, @Nullable ValkeySerializer<? super V> valueSerializer) {
+        MapRecord<S, byte[], byte[]> binaryMap =
+                mapEntries(
+                        it ->
+                                Collections.singletonMap(
+                                                StreamSerialization.serialize(fieldSerializer, it.getKey()),
+                                                StreamSerialization.serialize(valueSerializer, it.getValue()))
+                                        .entrySet()
+                                        .iterator()
+                                        .next());
 
-		MapRecord<S, byte[], byte[]> binaryMap = mapEntries(
-				it -> Collections.singletonMap(StreamSerialization.serialize(fieldSerializer, it.getKey()),
-						StreamSerialization.serialize(valueSerializer, it.getValue())).entrySet().iterator().next());
+        return StreamRecords.newRecord() //
+                .in(StreamSerialization.serialize(streamSerializer, getRequiredStream())) //
+                .withId(getId()) //
+                .ofBytes(binaryMap.getValue());
+    }
 
-		return StreamRecords.newRecord() //
-				.in(StreamSerialization.serialize(streamSerializer, getRequiredStream())) //
-				.withId(getId()) //
-				.ofBytes(binaryMap.getValue());
-	}
-
-	/**
-	 * Apply the given {@link HashMapper} to the backing value to create a new {@link MapRecord}. An already assigned
-	 * {@link RecordId id} is carried over to the new instance.
-	 *
-	 * @param mapper must not be {@literal null}.
-	 * @param <OV> type of the value backing the {@link ObjectRecord}.
-	 * @return new instance of {@link ObjectRecord}.
-	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	default <OV> ObjectRecord<S, OV> toObjectRecord(HashMapper<? super OV, ? super K, ? super V> mapper) {
-		return Record.<S, OV> of((OV) mapper.fromHash((Map) getValue())).withId(getId()).withStreamKey(getRequiredStream());
-	}
+    /**
+     * Apply the given {@link HashMapper} to the backing value to create a new {@link MapRecord}. An
+     * already assigned {@link RecordId id} is carried over to the new instance.
+     *
+     * @param mapper must not be {@literal null}.
+     * @param <OV> type of the value backing the {@link ObjectRecord}.
+     * @return new instance of {@link ObjectRecord}.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    default <OV> ObjectRecord<S, OV> toObjectRecord(
+            HashMapper<? super OV, ? super K, ? super V> mapper) {
+        return Record.<S, OV>of((OV) mapper.fromHash((Map) getValue()))
+                .withId(getId())
+                .withStreamKey(getRequiredStream());
+    }
 }

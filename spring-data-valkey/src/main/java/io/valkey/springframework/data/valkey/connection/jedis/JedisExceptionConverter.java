@@ -15,20 +15,18 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
+import io.valkey.springframework.data.valkey.ClusterRedirectException;
+import io.valkey.springframework.data.valkey.TooManyClusterRedirectionsException;
+import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
+import java.io.IOException;
+import java.net.UnknownHostException;
+import org.springframework.core.convert.converter.Converter;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import redis.clients.jedis.exceptions.JedisClusterOperationException;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 import redis.clients.jedis.exceptions.JedisException;
 import redis.clients.jedis.exceptions.JedisRedirectionException;
-
-import java.io.IOException;
-import java.net.UnknownHostException;
-
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.ClusterRedirectException;
-import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
-import io.valkey.springframework.data.valkey.TooManyClusterRedirectionsException;
 
 /**
  * Converts Exceptions thrown from Jedis to {@link DataAccessException}s
@@ -41,40 +39,41 @@ import io.valkey.springframework.data.valkey.TooManyClusterRedirectionsException
  */
 public class JedisExceptionConverter implements Converter<Exception, DataAccessException> {
 
-	static final JedisExceptionConverter INSTANCE = new JedisExceptionConverter();
+    static final JedisExceptionConverter INSTANCE = new JedisExceptionConverter();
 
-	public DataAccessException convert(Exception ex) {
+    public DataAccessException convert(Exception ex) {
 
-		if (ex instanceof DataAccessException dae) {
-			return dae;
-		}
+        if (ex instanceof DataAccessException dae) {
+            return dae;
+        }
 
-		if (ex instanceof JedisClusterOperationException && "No more cluster attempts left".equals(ex.getMessage())) {
-			return new TooManyClusterRedirectionsException(ex.getMessage(), ex);
-		}
+        if (ex instanceof JedisClusterOperationException
+                && "No more cluster attempts left".equals(ex.getMessage())) {
+            return new TooManyClusterRedirectionsException(ex.getMessage(), ex);
+        }
 
-		if (ex instanceof JedisRedirectionException rex) {
+        if (ex instanceof JedisRedirectionException rex) {
 
-			return new ClusterRedirectException(rex.getSlot(), rex.getTargetNode().getHost(), rex.getTargetNode().getPort(),
-					ex);
-		}
+            return new ClusterRedirectException(
+                    rex.getSlot(), rex.getTargetNode().getHost(), rex.getTargetNode().getPort(), ex);
+        }
 
-		if (ex instanceof JedisConnectionException) {
-			return new ValkeyConnectionFailureException(ex.getMessage(), ex);
-		}
+        if (ex instanceof JedisConnectionException) {
+            return new ValkeyConnectionFailureException(ex.getMessage(), ex);
+        }
 
-		if (ex instanceof JedisException || ex instanceof UnsupportedOperationException) {
-			return new InvalidDataAccessApiUsageException(ex.getMessage(), ex);
-		}
+        if (ex instanceof JedisException || ex instanceof UnsupportedOperationException) {
+            return new InvalidDataAccessApiUsageException(ex.getMessage(), ex);
+        }
 
-		if (ex instanceof UnknownHostException) {
-			return new ValkeyConnectionFailureException("Unknown host " + ex.getMessage(), ex);
-		}
+        if (ex instanceof UnknownHostException) {
+            return new ValkeyConnectionFailureException("Unknown host " + ex.getMessage(), ex);
+        }
 
-		if (ex instanceof IOException) {
-			return new ValkeyConnectionFailureException("Could not connect to Valkey server", ex);
-		}
+        if (ex instanceof IOException) {
+            return new ValkeyConnectionFailureException("Could not connect to Valkey server", ex);
+        }
 
-		return null;
-	}
+        return null;
+    }
 }

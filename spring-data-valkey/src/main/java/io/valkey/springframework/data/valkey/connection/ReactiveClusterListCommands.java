@@ -19,6 +19,4 @@ package io.valkey.springframework.data.valkey.connection;
  * @author Christoph Strobl
  * @since 2.0
  */
-public interface ReactiveClusterListCommands extends ReactiveListCommands {
-
-}
+public interface ReactiveClusterListCommands extends ReactiveListCommands {}

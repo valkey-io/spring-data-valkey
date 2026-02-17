@@ -18,7 +18,6 @@ package io.valkey.springframework.data.valkey.core;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -33,110 +32,122 @@ import org.springframework.test.util.ReflectionTestUtils;
  */
 class ValkeyCommandUnitTests {
 
-	@Test // DATAREDIS-73
-	void shouldIdentifyAliasCorrectly() {
-		assertThat(ValkeyCommand.CONFIG_SET.isRepresentedBy("setconfig")).isTrue();
-	}
+    @Test // DATAREDIS-73
+    void shouldIdentifyAliasCorrectly() {
+        assertThat(ValkeyCommand.CONFIG_SET.isRepresentedBy("setconfig")).isTrue();
+    }
 
-	@Test // DATAREDIS-73
-	void shouldIdentifyAliasCorrectlyWhenNamePassedInMixedCase() {
-		assertThat(ValkeyCommand.CONFIG_SET.isRepresentedBy("SetConfig")).isTrue();
-	}
+    @Test // DATAREDIS-73
+    void shouldIdentifyAliasCorrectlyWhenNamePassedInMixedCase() {
+        assertThat(ValkeyCommand.CONFIG_SET.isRepresentedBy("SetConfig")).isTrue();
+    }
 
-	@Test // DATAREDIS-73
-	void shouldNotThrowExceptionWhenUsingNullKeyForRepresentationCheck() {
-		assertThat(ValkeyCommand.CONFIG_SET.isRepresentedBy(null)).isFalse();
-	}
+    @Test // DATAREDIS-73
+    void shouldNotThrowExceptionWhenUsingNullKeyForRepresentationCheck() {
+        assertThat(ValkeyCommand.CONFIG_SET.isRepresentedBy(null)).isFalse();
+    }
 
-	@Test // DATAREDIS-73
-	void shouldIdentifyAliasCorrectlyViaLookup() {
-		assertThat(ValkeyCommand.failsafeCommandLookup("setconfig")).isEqualTo(ValkeyCommand.CONFIG_SET);
-	}
+    @Test // DATAREDIS-73
+    void shouldIdentifyAliasCorrectlyViaLookup() {
+        assertThat(ValkeyCommand.failsafeCommandLookup("setconfig"))
+                .isEqualTo(ValkeyCommand.CONFIG_SET);
+    }
 
-	@Test // DATAREDIS-73
-	void shouldIdentifyAliasCorrectlyWhenNamePassedInMixedCaseViaLookup() {
-		assertThat(ValkeyCommand.failsafeCommandLookup("SetConfig")).isEqualTo(ValkeyCommand.CONFIG_SET);
-	}
+    @Test // DATAREDIS-73
+    void shouldIdentifyAliasCorrectlyWhenNamePassedInMixedCaseViaLookup() {
+        assertThat(ValkeyCommand.failsafeCommandLookup("SetConfig"))
+                .isEqualTo(ValkeyCommand.CONFIG_SET);
+    }
 
-	@Test // DATAREDIS-73
-	void shouldReturnUnknownCommandForUnknownCommandString() {
-		assertThat(ValkeyCommand.failsafeCommandLookup("strangecommand")).isEqualTo(ValkeyCommand.UNKNOWN);
-	}
+    @Test // DATAREDIS-73
+    void shouldReturnUnknownCommandForUnknownCommandString() {
+        assertThat(ValkeyCommand.failsafeCommandLookup("strangecommand"))
+                .isEqualTo(ValkeyCommand.UNKNOWN);
+    }
 
-	@Test // DATAREDIS-73, DATAREDIS-972, DATAREDIS-1013
-	void shouldNotThrowExceptionOnValidArgumentCount() {
+    @Test // DATAREDIS-73, DATAREDIS-972, DATAREDIS-1013
+    void shouldNotThrowExceptionOnValidArgumentCount() {
 
-		ValkeyCommand.AUTH.validateArgumentCount(1);
-		ValkeyCommand.ZADD.validateArgumentCount(3);
-		ValkeyCommand.ZADD.validateArgumentCount(4);
-		ValkeyCommand.ZADD.validateArgumentCount(5);
-		ValkeyCommand.ZADD.validateArgumentCount(100);
-		ValkeyCommand.SELECT.validateArgumentCount(1);
-	}
+        ValkeyCommand.AUTH.validateArgumentCount(1);
+        ValkeyCommand.ZADD.validateArgumentCount(3);
+        ValkeyCommand.ZADD.validateArgumentCount(4);
+        ValkeyCommand.ZADD.validateArgumentCount(5);
+        ValkeyCommand.ZADD.validateArgumentCount(100);
+        ValkeyCommand.SELECT.validateArgumentCount(1);
+    }
 
-	@Test // DATAREDIS-822
-	void shouldConsiderMinMaxArguments() {
+    @Test // DATAREDIS-822
+    void shouldConsiderMinMaxArguments() {
 
-		ValkeyCommand.BITPOS.validateArgumentCount(2);
-		ValkeyCommand.BITPOS.validateArgumentCount(3);
-		ValkeyCommand.BITPOS.validateArgumentCount(4);
-	}
+        ValkeyCommand.BITPOS.validateArgumentCount(2);
+        ValkeyCommand.BITPOS.validateArgumentCount(3);
+        ValkeyCommand.BITPOS.validateArgumentCount(4);
+    }
 
-	@Test // DATAREDIS-822
-	void shouldReportArgumentMismatchIfMaxArgumentsExceeded() {
-		assertThatIllegalArgumentException().isThrownBy(() -> ValkeyCommand.SELECT.validateArgumentCount(0))
-				.withMessageContaining("SELECT command requires 1 argument");
-	}
+    @Test // DATAREDIS-822
+    void shouldReportArgumentMismatchIfMaxArgumentsExceeded() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> ValkeyCommand.SELECT.validateArgumentCount(0))
+                .withMessageContaining("SELECT command requires 1 argument");
+    }
 
-	@Test // DATAREDIS-73
-	void shouldThrowExceptionOnInvalidArgumentCountWhenExpectedExactMatch() {
-		assertThatIllegalArgumentException().isThrownBy(() -> ValkeyCommand.AUTH.validateArgumentCount(2))
-				.withMessageContaining("AUTH command requires 1 argument");
-	}
+    @Test // DATAREDIS-73
+    void shouldThrowExceptionOnInvalidArgumentCountWhenExpectedExactMatch() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> ValkeyCommand.AUTH.validateArgumentCount(2))
+                .withMessageContaining("AUTH command requires 1 argument");
+    }
 
-	@Test // DATAREDIS-73
-	void shouldThrowExceptionOnInvalidArgumentCountForDelWhenExpectedMinimalMatch() {
-		assertThatIllegalArgumentException().isThrownBy(() -> ValkeyCommand.DEL.validateArgumentCount(0))
-				.withMessageContaining("DEL command requires at least 1 argument");
-	}
+    @Test // DATAREDIS-73
+    void shouldThrowExceptionOnInvalidArgumentCountForDelWhenExpectedMinimalMatch() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> ValkeyCommand.DEL.validateArgumentCount(0))
+                .withMessageContaining("DEL command requires at least 1 argument");
+    }
 
-	@Test // DATAREDIS-972
-	void shouldThrowExceptionOnInvalidArgumentCountForZaddWhenExpectedMinimalMatch() {
-		assertThatIllegalArgumentException().isThrownBy(() -> ValkeyCommand.ZADD.validateArgumentCount(2))
-				.withMessageContaining("ZADD command requires at least 3 arguments");
-	}
+    @Test // DATAREDIS-972
+    void shouldThrowExceptionOnInvalidArgumentCountForZaddWhenExpectedMinimalMatch() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> ValkeyCommand.ZADD.validateArgumentCount(2))
+                .withMessageContaining("ZADD command requires at least 3 arguments");
+    }
 
-	@Test // GH-2644
-	void isRepresentedByIsCorrectForAllCommandsAndTheirAliases() {
+    @Test // GH-2644
+    void isRepresentedByIsCorrectForAllCommandsAndTheirAliases() {
 
-		for (ValkeyCommand command : ValkeyCommand.values()) {
+        for (ValkeyCommand command : ValkeyCommand.values()) {
 
-			assertThat(command.isRepresentedBy(command.name())).isTrue();
-			assertThat(command.isRepresentedBy(command.name().toLowerCase())).isTrue();
+            assertThat(command.isRepresentedBy(command.name())).isTrue();
+            assertThat(command.isRepresentedBy(command.name().toLowerCase())).isTrue();
 
-			for (String alias : command.getAliases()) {
-				assertThat(command.isRepresentedBy(alias)).isTrue();
-				assertThat(command.isRepresentedBy(alias.toUpperCase())).isTrue();
-			}
-		}
-	}
+            for (String alias : command.getAliases()) {
+                assertThat(command.isRepresentedBy(alias)).isTrue();
+                assertThat(command.isRepresentedBy(alias.toUpperCase())).isTrue();
+            }
+        }
+    }
 
-	@Test // GH-2646
-	void commandRequiresArgumentsIsCorrect() {
+    @Test // GH-2646
+    void commandRequiresArgumentsIsCorrect() {
 
-		Arrays.stream(ValkeyCommand.values())
-				.forEach(command -> assertThat(command.requiresArguments())
-						.describedAs("Valkey command [%s] failed required arguments check", command)
-						.isEqualTo((int) ReflectionTestUtils.getField(command, "minArgs") > 0));
-	}
+        Arrays.stream(ValkeyCommand.values())
+                .forEach(
+                        command ->
+                                assertThat(command.requiresArguments())
+                                        .describedAs("Valkey command [%s] failed required arguments check", command)
+                                        .isEqualTo((int) ReflectionTestUtils.getField(command, "minArgs") > 0));
+    }
 
-	@Test // GH-2646
-	void commandRequiresExactNumberOfArgumentsIsCorrect() {
+    @Test // GH-2646
+    void commandRequiresExactNumberOfArgumentsIsCorrect() {
 
-		Arrays.stream(ValkeyCommand.values())
-				.forEach(command -> assertThat(command.requiresExactNumberOfArguments())
-						.describedAs("Valkey command [%s] failed requires exact arguments check").isEqualTo(
-								ReflectionTestUtils.getField(command, "minArgs") == ReflectionTestUtils.getField(command, "maxArgs")));
-	}
-
+        Arrays.stream(ValkeyCommand.values())
+                .forEach(
+                        command ->
+                                assertThat(command.requiresExactNumberOfArguments())
+                                        .describedAs("Valkey command [%s] failed requires exact arguments check")
+                                        .isEqualTo(
+                                                ReflectionTestUtils.getField(command, "minArgs")
+                                                        == ReflectionTestUtils.getField(command, "maxArgs")));
+    }
 }

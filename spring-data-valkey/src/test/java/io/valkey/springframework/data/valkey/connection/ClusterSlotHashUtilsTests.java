@@ -17,15 +17,12 @@ package io.valkey.springframework.data.valkey.connection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Random;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
 import io.valkey.springframework.data.valkey.test.extension.JedisExtension;
+import java.util.Random;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.util.StringUtils;
-
 import redis.clients.jedis.ConnectionPool;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
@@ -41,106 +38,115 @@ import redis.clients.jedis.JedisCluster;
 @ExtendWith(JedisExtension.class)
 public class ClusterSlotHashUtilsTests {
 
-	private final JedisCluster cluster;
+    private final JedisCluster cluster;
 
-	public ClusterSlotHashUtilsTests(JedisCluster cluster) {
-		this.cluster = cluster;
-	}
+    public ClusterSlotHashUtilsTests(JedisCluster cluster) {
+        this.cluster = cluster;
+    }
 
-	@Test
-	void localCalculationShouldMatchServers() {
+    @Test
+    void localCalculationShouldMatchServers() {
 
-		ConnectionPool pool = cluster.getClusterNodes().values().iterator().next();
-		Jedis jedis = new Jedis(pool.getResource());
+        ConnectionPool pool = cluster.getClusterNodes().values().iterator().next();
+        Jedis jedis = new Jedis(pool.getResource());
 
-		for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
 
-			String key = randomString();
-			int slot = ClusterSlotHashUtil.calculateSlot(key);
+            String key = randomString();
+            int slot = ClusterSlotHashUtil.calculateSlot(key);
 
-			// Guard against closed connection
-			if (!jedis.isConnected()) {
-				jedis.connect();
-			}
+            // Guard against closed connection
+            if (!jedis.isConnected()) {
+                jedis.connect();
+            }
 
-			Long serverSlot = jedis.clusterKeySlot(key);
+            Long serverSlot = jedis.clusterKeySlot(key);
 
-			assertThat(slot)
-					.describedAs("Expected slot for key '%s' to be %s but server calculated %s", key, slot, serverSlot)
-					.isEqualTo(serverSlot.intValue());
-		}
+            assertThat(slot)
+                    .describedAs(
+                            "Expected slot for key '%s' to be %s but server calculated %s", key, slot, serverSlot)
+                    .isEqualTo(serverSlot.intValue());
+        }
 
-		jedis.close();
-	}
+        jedis.close();
+    }
 
-	@Test
-	void localCalculationShoudMatchServersForPrefixedKeys() {
+    @Test
+    void localCalculationShoudMatchServersForPrefixedKeys() {
 
-		ConnectionPool pool = cluster.getClusterNodes().values().iterator().next();
-		Jedis jedis = new Jedis(pool.getResource());
+        ConnectionPool pool = cluster.getClusterNodes().values().iterator().next();
+        Jedis jedis = new Jedis(pool.getResource());
 
-		for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 100; i++) {
 
-			String slotPrefix = "{" + randomString() + "}";
+            String slotPrefix = "{" + randomString() + "}";
 
-			String key1 = slotPrefix + "." + randomString();
-			String key2 = slotPrefix + "." + randomString();
+            String key1 = slotPrefix + "." + randomString();
+            String key2 = slotPrefix + "." + randomString();
 
-			int slot1 = ClusterSlotHashUtil.calculateSlot(key1);
-			int slot2 = ClusterSlotHashUtil.calculateSlot(key2);
+            int slot1 = ClusterSlotHashUtil.calculateSlot(key1);
+            int slot2 = ClusterSlotHashUtil.calculateSlot(key2);
 
-			assertThat(slot2)
-				.describedAs("Expected slot for prefixed keys '%s' and '%s' to be %s but was  %s.", key1, key2, slot1, slot2)
-				.isEqualTo(slot1);
+            assertThat(slot2)
+                    .describedAs(
+                            "Expected slot for prefixed keys '%s' and '%s' to be %s but was  %s.",
+                            key1, key2, slot1, slot2)
+                    .isEqualTo(slot1);
 
-			// Guard against closed connection
-			if (!jedis.isConnected()) {
-				jedis.connect();
-			}
+            // Guard against closed connection
+            if (!jedis.isConnected()) {
+                jedis.connect();
+            }
 
-			Long serverSlot1 = jedis.clusterKeySlot(key1);
-			Long serverSlot2 = jedis.clusterKeySlot(key2);
+            Long serverSlot1 = jedis.clusterKeySlot(key1);
+            Long serverSlot2 = jedis.clusterKeySlot(key2);
 
-			assertThat(slot1)
-					.describedAs("Expected slot for key '%s' to be %s but server calculated %s.", key1, slot1, serverSlot1)
-					.isEqualTo(serverSlot1.intValue());
+            assertThat(slot1)
+                    .describedAs(
+                            "Expected slot for key '%s' to be %s but server calculated %s.",
+                            key1, slot1, serverSlot1)
+                    .isEqualTo(serverSlot1.intValue());
 
-			assertThat(slot1)
-					.describedAs("Expected slot for key '%s' to be %s but server calculated %s.", key2, slot2, serverSlot2)
-					.isEqualTo(serverSlot1.intValue());
-		}
+            assertThat(slot1)
+                    .describedAs(
+                            "Expected slot for key '%s' to be %s but server calculated %s.",
+                            key2, slot2, serverSlot2)
+                    .isEqualTo(serverSlot1.intValue());
+        }
 
-		jedis.close();
-	}
+        jedis.close();
+    }
 
-	/**
-	 * Generate random {@link String} using ASCII chars {@code ' ' (space)} to {@code 'z'}. Explicitly skipping { and }.
-	 *
-	 * @return random {@link String} of ASCII chars.
-	 */
-	private String randomString() {
+    /**
+     * Generate random {@link String} using ASCII chars {@code ' ' (space)} to {@code 'z'}. Explicitly
+     * skipping { and }.
+     *
+     * @return random {@link String} of ASCII chars.
+     */
+    private String randomString() {
 
-		int leftLimit = 32; // letter ' ' (space)
-		int rightLimit = 122; // letter 'z' (tilde)
-		int targetStringLength = 0;
+        int leftLimit = 32; // letter ' ' (space)
+        int rightLimit = 122; // letter 'z' (tilde)
+        int targetStringLength = 0;
 
-		while (targetStringLength == 0) {
-			targetStringLength = new Random().nextInt(100);
-		}
+        while (targetStringLength == 0) {
+            targetStringLength = new Random().nextInt(100);
+        }
 
-		StringBuilder buffer = new StringBuilder(targetStringLength);
+        StringBuilder buffer = new StringBuilder(targetStringLength);
 
-		for (int i = 0; i < targetStringLength; i++) {
-			int randomLimitedInt = leftLimit + (int) (new Random().nextFloat() * (rightLimit - leftLimit));
-			buffer.append((char) randomLimitedInt);
-		}
+        for (int i = 0; i < targetStringLength; i++) {
+            int randomLimitedInt =
+                    leftLimit + (int) (new Random().nextFloat() * (rightLimit - leftLimit));
+            buffer.append((char) randomLimitedInt);
+        }
 
-		String result = buffer.toString();
+        String result = buffer.toString();
 
-		if (StringUtils.hasText(result)) {
-			return result;
-		}
+        if (StringUtils.hasText(result)) {
+            return result;
+        }
 
-		return randomString();
-	}
+        return randomString();
+    }
 }

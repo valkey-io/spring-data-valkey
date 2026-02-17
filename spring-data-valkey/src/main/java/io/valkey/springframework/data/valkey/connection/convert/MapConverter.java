@@ -19,7 +19,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
-
 import org.springframework.core.convert.converter.Converter;
 
 /**
@@ -32,24 +31,25 @@ import org.springframework.core.convert.converter.Converter;
  */
 public class MapConverter<S, T> implements Converter<Map<S, S>, Map<T, T>> {
 
-	private Converter<S, T> itemConverter;
+    private Converter<S, T> itemConverter;
 
-	/**
-	 * @param itemConverter The {@link Converter} to use for converting individual Map keys and values. Must not be
-	 *          {@literal null}.
-	 */
-	public MapConverter(Converter<S, T> itemConverter) {
-		this.itemConverter = itemConverter;
-	}
+    /**
+     * @param itemConverter The {@link Converter} to use for converting individual Map keys and
+     *     values. Must not be {@literal null}.
+     */
+    public MapConverter(Converter<S, T> itemConverter) {
+        this.itemConverter = itemConverter;
+    }
 
-	@Override
-	public Map<T, T> convert(Map<S, S> source) {
+    @Override
+    public Map<T, T> convert(Map<S, S> source) {
 
-		return source.entrySet().stream() //
-				.collect(Collectors.toMap( //
-						e -> itemConverter.convert(e.getKey()), //
-						e -> itemConverter.convert(e.getValue()), //
-						(a, b) -> a, source instanceof LinkedHashMap ? LinkedHashMap::new : HashMap::new));
-	}
-
+        return source.entrySet().stream() //
+                .collect(
+                        Collectors.toMap( //
+                                e -> itemConverter.convert(e.getKey()), //
+                                e -> itemConverter.convert(e.getValue()), //
+                                (a, b) -> a,
+                                source instanceof LinkedHashMap ? LinkedHashMap::new : HashMap::new));
+    }
 }

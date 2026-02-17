@@ -28,16 +28,21 @@ import org.springframework.util.ClassUtils;
  */
 class LettuceRuntimeHints implements RuntimeHintsRegistrar {
 
-	@Override
-	public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
+    @Override
+    public void registerHints(RuntimeHints hints, @Nullable ClassLoader classLoader) {
 
-		if (ClassUtils.isPresent("io.lettuce.core.RedisClient", classLoader)) {
+        if (ClassUtils.isPresent("io.lettuce.core.RedisClient", classLoader)) {
 
-			hints.reflection().registerType(TypeReference.of("io.lettuce.core.RedisClient"),
-					it -> it
-							.onReachableType(
-									TypeReference.of("io.valkey.springframework.data.valkey.connection.lettuce.StandaloneConnectionProvider"))
-							.withMembers(MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.DECLARED_FIELDS));
-		}
-	}
+            hints
+                    .reflection()
+                    .registerType(
+                            TypeReference.of("io.lettuce.core.RedisClient"),
+                            it ->
+                                    it.onReachableType(
+                                                    TypeReference.of(
+                                                            "io.valkey.springframework.data.valkey.connection.lettuce.StandaloneConnectionProvider"))
+                                            .withMembers(
+                                                    MemberCategory.INVOKE_PUBLIC_METHODS, MemberCategory.DECLARED_FIELDS));
+        }
+    }
 }

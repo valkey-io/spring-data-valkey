@@ -17,13 +17,11 @@ package io.valkey.springframework.data.valkey.core;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Collection;
-
-import org.junit.jupiter.api.BeforeEach;
-
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Collection;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * @author Christoph Strobl
@@ -32,108 +30,112 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("testParams")
 public class DefaultHyperLogLogOperationsIntegrationTests<K, V> {
 
-	private final ValkeyTemplate<K, V> valkeyTemplate;
-	private final ObjectFactory<K> keyFactory;
-	private final ObjectFactory<V> valueFactory;
-	private final HyperLogLogOperations<K, V> hyperLogLogOps;
+    private final ValkeyTemplate<K, V> valkeyTemplate;
+    private final ObjectFactory<K> keyFactory;
+    private final ObjectFactory<V> valueFactory;
+    private final HyperLogLogOperations<K, V> hyperLogLogOps;
 
-	public DefaultHyperLogLogOperationsIntegrationTests(ValkeyTemplate<K, V> valkeyTemplate, ObjectFactory<K> keyFactory,
-			ObjectFactory<V> valueFactory) {
+    public DefaultHyperLogLogOperationsIntegrationTests(
+            ValkeyTemplate<K, V> valkeyTemplate,
+            ObjectFactory<K> keyFactory,
+            ObjectFactory<V> valueFactory) {
 
-		this.valkeyTemplate = valkeyTemplate;
-		this.keyFactory = keyFactory;
-		this.valueFactory = valueFactory;
-		this.hyperLogLogOps = valkeyTemplate.opsForHyperLogLog();
-	}
+        this.valkeyTemplate = valkeyTemplate;
+        this.keyFactory = keyFactory;
+        this.valueFactory = valueFactory;
+        this.hyperLogLogOps = valkeyTemplate.opsForHyperLogLog();
+    }
 
-	public static Collection<Object[]> testParams() {
-		return AbstractOperationsTestParams.testParams();
-	}
+    public static Collection<Object[]> testParams() {
+        return AbstractOperationsTestParams.testParams();
+    }
 
-	@BeforeEach
-	void setUp() {
-		valkeyTemplate.execute((ValkeyCallback<Object>) connection -> {
-			connection.flushDb();
-			return null;
-		});
-	}
+    @BeforeEach
+    void setUp() {
+        valkeyTemplate.execute(
+                (ValkeyCallback<Object>)
+                        connection -> {
+                            connection.flushDb();
+                            return null;
+                        });
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-308
-	@SuppressWarnings("unchecked")
-	void addShouldAddDistinctValuesCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-308
+    @SuppressWarnings("unchecked")
+    void addShouldAddDistinctValuesCorrectly() {
 
-		K key = keyFactory.instance();
-		V v1 = valueFactory.instance();
-		V v2 = valueFactory.instance();
-		V v3 = valueFactory.instance();
+        K key = keyFactory.instance();
+        V v1 = valueFactory.instance();
+        V v2 = valueFactory.instance();
+        V v3 = valueFactory.instance();
 
-		assertThat(hyperLogLogOps.add(key, v1, v2, v3)).isEqualTo(1L);
-	}
+        assertThat(hyperLogLogOps.add(key, v1, v2, v3)).isEqualTo(1L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-308
-	@SuppressWarnings("unchecked")
-	void addShouldNotAddExistingValuesCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-308
+    @SuppressWarnings("unchecked")
+    void addShouldNotAddExistingValuesCorrectly() {
 
-		K key = keyFactory.instance();
-		V v1 = valueFactory.instance();
-		V v2 = valueFactory.instance();
-		V v3 = valueFactory.instance();
+        K key = keyFactory.instance();
+        V v1 = valueFactory.instance();
+        V v2 = valueFactory.instance();
+        V v3 = valueFactory.instance();
 
-		hyperLogLogOps.add(key, v1, v2, v3);
-		assertThat(hyperLogLogOps.add(key, v2)).isEqualTo(0L);
-	}
+        hyperLogLogOps.add(key, v1, v2, v3);
+        assertThat(hyperLogLogOps.add(key, v2)).isEqualTo(0L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-308
-	@SuppressWarnings("unchecked")
-	void sizeShouldCountValuesCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-308
+    @SuppressWarnings("unchecked")
+    void sizeShouldCountValuesCorrectly() {
 
-		K key = keyFactory.instance();
-		V v1 = valueFactory.instance();
-		V v2 = valueFactory.instance();
-		V v3 = valueFactory.instance();
+        K key = keyFactory.instance();
+        V v1 = valueFactory.instance();
+        V v2 = valueFactory.instance();
+        V v3 = valueFactory.instance();
 
-		hyperLogLogOps.add(key, v1, v2, v3);
-		// HyperLogLog count is approximate
-		assertThat(hyperLogLogOps.size(key)).isBetween(2L, 4L);
-	}
+        hyperLogLogOps.add(key, v1, v2, v3);
+        // HyperLogLog count is approximate
+        assertThat(hyperLogLogOps.size(key)).isBetween(2L, 4L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-308
-	@SuppressWarnings("unchecked")
-	void sizeShouldCountValuesOfMultipleKeysCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-308
+    @SuppressWarnings("unchecked")
+    void sizeShouldCountValuesOfMultipleKeysCorrectly() {
 
-		K key = keyFactory.instance();
-		V v1 = valueFactory.instance();
-		V v2 = valueFactory.instance();
-		V v3 = valueFactory.instance();
+        K key = keyFactory.instance();
+        V v1 = valueFactory.instance();
+        V v2 = valueFactory.instance();
+        V v3 = valueFactory.instance();
 
-		K key2 = keyFactory.instance();
-		V v4 = valueFactory.instance();
-		V v5 = valueFactory.instance();
+        K key2 = keyFactory.instance();
+        V v4 = valueFactory.instance();
+        V v5 = valueFactory.instance();
 
-		hyperLogLogOps.add(key, v1, v2, v3);
-		hyperLogLogOps.add(key2, v4, v5);
-		assertThat(hyperLogLogOps.size(key, key2)).isGreaterThan(3L);
-	}
+        hyperLogLogOps.add(key, v1, v2, v3);
+        hyperLogLogOps.add(key2, v4, v5);
+        assertThat(hyperLogLogOps.size(key, key2)).isGreaterThan(3L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-308
-	@SuppressWarnings("unchecked")
-	void unionShouldMergeValuesOfMultipleKeysCorrectly() throws InterruptedException {
+    @ParameterizedValkeyTest // DATAREDIS-308
+    @SuppressWarnings("unchecked")
+    void unionShouldMergeValuesOfMultipleKeysCorrectly() throws InterruptedException {
 
-		K sourceKey_1 = keyFactory.instance();
-		V v1 = valueFactory.instance();
-		V v2 = valueFactory.instance();
-		V v3 = valueFactory.instance();
+        K sourceKey_1 = keyFactory.instance();
+        V v1 = valueFactory.instance();
+        V v2 = valueFactory.instance();
+        V v3 = valueFactory.instance();
 
-		K sourceKey_2 = keyFactory.instance();
-		V v4 = valueFactory.instance();
-		V v5 = valueFactory.instance();
+        K sourceKey_2 = keyFactory.instance();
+        V v4 = valueFactory.instance();
+        V v5 = valueFactory.instance();
 
-		K desinationKey = keyFactory.instance();
+        K desinationKey = keyFactory.instance();
 
-		hyperLogLogOps.add(sourceKey_1, v1, v2, v3);
-		hyperLogLogOps.add(sourceKey_2, v4, v5);
-		hyperLogLogOps.union(desinationKey, sourceKey_1, sourceKey_2);
+        hyperLogLogOps.add(sourceKey_1, v1, v2, v3);
+        hyperLogLogOps.add(sourceKey_2, v4, v5);
+        hyperLogLogOps.union(desinationKey, sourceKey_1, sourceKey_2);
 
-		assertThat(hyperLogLogOps.size(desinationKey)).isGreaterThan(3L);
-	}
+        assertThat(hyperLogLogOps.size(desinationKey)).isGreaterThan(3L);
+    }
 }

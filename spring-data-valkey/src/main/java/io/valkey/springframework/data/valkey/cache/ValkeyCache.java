@@ -15,6 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.cache;
 
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.time.Duration;
@@ -26,7 +29,6 @@ import java.util.StringJoiner;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
-
 import org.springframework.cache.Cache;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.cache.support.NullValue;
@@ -34,18 +36,16 @@ import org.springframework.cache.support.SimpleValueWrapper;
 import org.springframework.core.convert.ConversionFailedException;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.TypeDescriptor;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.ReflectionUtils;
 
 /**
- * {@link AbstractValueAdaptingCache Cache} implementation using Valkey as the underlying store for cache data.
- * <p>
- * Use {@link ValkeyCacheManager} to create {@link ValkeyCache} instances.
+ * {@link AbstractValueAdaptingCache Cache} implementation using Valkey as the underlying store for
+ * cache data.
+ *
+ * <p>Use {@link ValkeyCacheManager} to create {@link ValkeyCache} instances.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -57,438 +57,471 @@ import org.springframework.util.ReflectionUtils;
 @SuppressWarnings("unused")
 public class ValkeyCache extends AbstractValueAdaptingCache {
 
-	static final byte[] BINARY_NULL_VALUE = ValkeySerializer.java().serialize(NullValue.INSTANCE);
-
-	static final String CACHE_RETRIEVAL_UNSUPPORTED_OPERATION_EXCEPTION_MESSAGE = "The Valkey driver configured with ValkeyCache through ValkeyCacheWriter does not support CompletableFuture-based retrieval";
-
-	private final ValkeyCacheConfiguration cacheConfiguration;
-
-	private final ValkeyCacheWriter cacheWriter;
-
-	private final String name;
-
-	/**
-	 * Create a new {@link ValkeyCache} with the given {@link String name} and {@link ValkeyCacheConfiguration}, using the
-	 * {@link ValkeyCacheWriter} to execute Valkey commands supporting the cache operations.
-	 *
-	 * @param name {@link String name} for this {@link Cache}; must not be {@literal null}.
-	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing the
-	 *          necessary Valkey commands; must not be {@literal null}.
-	 * @param cacheConfiguration {@link ValkeyCacheConfiguration} applied to this {@link ValkeyCache} on creation; must not
-	 *          be {@literal null}.
-	 * @throws IllegalArgumentException if either the given {@link ValkeyCacheWriter} or {@link ValkeyCacheConfiguration}
-	 *           are {@literal null} or the given {@link String} name for this {@link ValkeyCache} is {@literal null}.
-	 */
-	protected ValkeyCache(String name, ValkeyCacheWriter cacheWriter, ValkeyCacheConfiguration cacheConfiguration) {
-
-		super(cacheConfiguration.getAllowCacheNullValues());
-
-		Assert.notNull(name, "Name must not be null");
-		Assert.notNull(cacheWriter, "CacheWriter must not be null");
-
-		this.name = name;
-		this.cacheWriter = cacheWriter;
-		this.cacheConfiguration = cacheConfiguration;
-	}
-
-	/**
-	 * Get the {@link ValkeyCacheConfiguration} used to configure this {@link ValkeyCache} on initialization.
-	 *
-	 * @return an immutable {@link ValkeyCacheConfiguration} used to configure this {@link ValkeyCache} on initialization.
-	 */
-	public ValkeyCacheConfiguration getCacheConfiguration() {
-		return this.cacheConfiguration;
-	}
-
-	/**
-	 * Gets the configured {@link ValkeyCacheWriter} used to adapt Valkey for cache operations.
-	 *
-	 * @return the configured {@link ValkeyCacheWriter} used to adapt Valkey for cache operations.
-	 */
-	protected ValkeyCacheWriter getCacheWriter() {
-		return this.cacheWriter;
-	}
-
-	/**
-	 * Gets the configured {@link ConversionService} used to convert {@link Object cache keys} to a {@link String} when
-	 * accessing entries in the cache.
-	 *
-	 * @return the configured {@link ConversionService} used to convert {@link Object cache keys} to a {@link String} when
-	 *         accessing entries in the cache.
-	 * @see ValkeyCacheConfiguration#getConversionService()
-	 * @see #getCacheConfiguration()
-	 */
-	protected ConversionService getConversionService() {
-		return getCacheConfiguration().getConversionService();
-	}
-
-	@Override
-	public String getName() {
-		return this.name;
-	}
-
-	@Override
-	public ValkeyCacheWriter getNativeCache() {
-		return getCacheWriter();
-	}
-
-	/**
-	 * Return the {@link CacheStatistics} snapshot for this cache instance.
-	 * <p>
-	 * Statistics are accumulated per cache instance and not from the backing Valkey data store.
-	 *
-	 * @return {@link CacheStatistics} object for this {@link ValkeyCache}.
-	 * @since 2.4
-	 */
-	public CacheStatistics getStatistics() {
-		return getCacheWriter().getCacheStatistics(getName());
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> T get(Object key, Callable<T> valueLoader) {
-
-		byte[] binaryKey = createAndConvertCacheKey(key);
-		byte[] binaryValue = getCacheWriter().get(getName(), binaryKey,
-				() -> serializeCacheValue(toStoreValue(loadCacheValue(key, valueLoader))), getTimeToLive(key),
-				getCacheConfiguration().isTimeToIdleEnabled());
-
-		ValueWrapper result = toValueWrapper(deserializeCacheValue(binaryValue));
-
-		return result != null ? (T) result.get() : null;
-	}
-
-	/**
-	 * Loads the {@link Object} using the given {@link Callable valueLoader}.
-	 *
-	 * @param <T> {@link Class type} of the loaded {@link Object cache value}.
-	 * @param key {@link Object key} mapped to the loaded {@link Object cache value}.
-	 * @param valueLoader {@link Callable} object used to load the {@link Object value} for the given {@link Object key}.
-	 * @return the loaded {@link Object value}.
-	 */
-	protected <T> T loadCacheValue(Object key, Callable<T> valueLoader) {
-
-		try {
-			return valueLoader.call();
-		} catch (Exception ex) {
-			throw new ValueRetrievalException(key, valueLoader, ex);
-		}
-	}
-
-	@Override
-	protected Object lookup(Object key) {
-
-		byte[] binaryKey = createAndConvertCacheKey(key);
-
-		byte[] binaryValue = getCacheConfiguration().isTimeToIdleEnabled()
-				? getCacheWriter().get(getName(), binaryKey, getTimeToLive(key))
-				: getCacheWriter().get(getName(), binaryKey);
-
-		return binaryValue != null ? deserializeCacheValue(binaryValue) : null;
-	}
-
-	private Duration getTimeToLive(Object key) {
-		return getTimeToLive(key, null);
-	}
-
-	private Duration getTimeToLive(Object key, @Nullable Object value) {
-		return getCacheConfiguration().getTtlFunction().getTimeToLive(key, value);
-	}
-
-	@Override
-	public void put(Object key, @Nullable Object value) {
-
-		Object cacheValue = processAndCheckValue(value);
-
-		byte[] binaryKey = createAndConvertCacheKey(key);
-		byte[] binaryValue = serializeCacheValue(cacheValue);
-
-		Duration timeToLive = getTimeToLive(key, value);
-
-		getCacheWriter().put(getName(), binaryKey, binaryValue, timeToLive);
-	}
-
-	@Override
-	public ValueWrapper putIfAbsent(Object key, @Nullable Object value) {
-
-		Object cacheValue = preProcessCacheValue(value);
-
-		if (nullCacheValueIsNotAllowed(cacheValue)) {
-			return get(key);
-		}
-
-		Duration timeToLive = getTimeToLive(key, value);
-
-		byte[] binaryKey = createAndConvertCacheKey(key);
-		byte[] binaryValue = serializeCacheValue(cacheValue);
-		byte[] result = getCacheWriter().putIfAbsent(getName(), binaryKey, binaryValue, timeToLive);
-
-		return result != null ? new SimpleValueWrapper(fromStoreValue(deserializeCacheValue(result))) : null;
-	}
-
-	@Override
-	public void clear() {
-		clear("*");
-	}
-
-	/**
-	 * Clear keys that match the given {@link String keyPattern}.
-	 * <p>
-	 * Useful when cache keys are formatted in a style where Valkey patterns can be used for matching these.
-	 *
-	 * @param keyPattern {@link String pattern} used to match Valkey keys to clear.
-	 * @since 3.0
-	 */
-	public void clear(String keyPattern) {
-		getCacheWriter().clean(getName(), createAndConvertCacheKey(keyPattern));
-	}
-
-	/**
-	 * Reset all statistics counters and gauges for this cache.
-	 *
-	 * @since 2.4
-	 */
-	public void clearStatistics() {
-		getCacheWriter().clearStatistics(getName());
-	}
-
-	@Override
-	public void evict(Object key) {
-		getCacheWriter().remove(getName(), createAndConvertCacheKey(key));
-	}
-
-	@Override
-	public CompletableFuture<ValueWrapper> retrieve(Object key) {
-
-		if (!getCacheWriter().supportsAsyncRetrieve()) {
-			throw new UnsupportedOperationException(CACHE_RETRIEVAL_UNSUPPORTED_OPERATION_EXCEPTION_MESSAGE);
-		}
-
-		return retrieveValue(key);
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> CompletableFuture<T> retrieve(Object key, Supplier<CompletableFuture<T>> valueLoader) {
-
-		return retrieve(key).thenCompose(wrapper -> {
-
-			if (wrapper != null) {
-				return CompletableFuture.completedFuture((T) wrapper.get());
-			}
-
-			return valueLoader.get().thenCompose(value -> {
-
-				Object cacheValue = processAndCheckValue(value);
-
-				byte[] binaryKey = createAndConvertCacheKey(key);
-				byte[] binaryValue = serializeCacheValue(cacheValue);
-
-				Duration timeToLive = getTimeToLive(key, cacheValue);
-
-				return getCacheWriter().store(getName(), binaryKey, binaryValue, timeToLive).thenApply(v -> value);
-			});
-		});
-	}
-
-	private Object processAndCheckValue(@Nullable Object value) {
-
-		Object cacheValue = preProcessCacheValue(value);
-
-		if (nullCacheValueIsNotAllowed(cacheValue)) {
-			throw new IllegalArgumentException(("Cache '%s' does not allow 'null' values; Avoid storing null"
-					+ " via '@Cacheable(unless=\"#result == null\")' or configure ValkeyCache to allow 'null'"
-					+ " via ValkeyCacheConfiguration").formatted(getName()));
-		}
-
-		return cacheValue;
-	}
-
-	/**
-	 * Customization hook called before passing object to
-	 * {@link io.valkey.springframework.data.valkey.serializer.ValkeySerializer}.
-	 *
-	 * @param value can be {@literal null}.
-	 * @return preprocessed value. Can be {@literal null}.
-	 */
-	@Nullable
-	protected Object preProcessCacheValue(@Nullable Object value) {
-		return value != null ? value : isAllowNullValues() ? NullValue.INSTANCE : null;
-	}
-
-	/**
-	 * Serialize the given {@link String cache key}.
-	 *
-	 * @param cacheKey {@link String cache key} to serialize; must not be {@literal null}.
-	 * @return an array of bytes from the given, serialized {@link String cache key}; never {@literal null}.
-	 * @see ValkeyCacheConfiguration#getKeySerializationPair()
-	 */
-	protected byte[] serializeCacheKey(String cacheKey) {
-		return ByteUtils.getBytes(getCacheConfiguration().getKeySerializationPair().write(cacheKey));
-	}
-
-	/**
-	 * Serialize the {@link Object value} to cache as an array of bytes.
-	 *
-	 * @param value {@link Object} to serialize and cache; must not be {@literal null}.
-	 * @return an array of bytes from the serialized {@link Object value}; never {@literal null}.
-	 * @see ValkeyCacheConfiguration#getValueSerializationPair()
-	 */
-	protected byte[] serializeCacheValue(Object value) {
-
-		if (isAllowNullValues() && value instanceof NullValue) {
-			return BINARY_NULL_VALUE;
-		}
-
-		return ByteUtils.getBytes(getCacheConfiguration().getValueSerializationPair().write(value));
-	}
-
-	/**
-	 * Deserialize the given the array of bytes to the actual {@link Object cache value}.
-	 *
-	 * @param value array of bytes to deserialize; must not be {@literal null}.
-	 * @return an {@link Object} deserialized from the array of bytes using the configured value
-	 *         {@link ValkeySerializationContext.SerializationPair}; can be {@literal null}.
-	 * @see ValkeyCacheConfiguration#getValueSerializationPair()
-	 */
-	@Nullable
-	protected Object deserializeCacheValue(byte[] value) {
-
-		if (isAllowNullValues() && ObjectUtils.nullSafeEquals(value, BINARY_NULL_VALUE)) {
-			return NullValue.INSTANCE;
-		}
-
-		return getCacheConfiguration().getValueSerializationPair().read(ByteBuffer.wrap(value));
-	}
-
-	/**
-	 * Customization hook for creating cache key before it gets serialized.
-	 *
-	 * @param key will never be {@literal null}.
-	 * @return never {@literal null}.
-	 */
-	protected String createCacheKey(Object key) {
-
-		String convertedKey = convertKey(key);
-
-		return getCacheConfiguration().usePrefix() ? prefixCacheKey(convertedKey) : convertedKey;
-	}
-
-	/**
-	 * Convert {@code key} to a {@link String} used in cache key creation.
-	 *
-	 * @param key will never be {@literal null}.
-	 * @return never {@literal null}.
-	 * @throws IllegalStateException if {@code key} cannot be converted to {@link String}.
-	 */
-	protected String convertKey(Object key) {
-
-		if (key instanceof String stringKey) {
-			return stringKey;
-		}
-
-		TypeDescriptor source = TypeDescriptor.forObject(key);
-
-		ConversionService conversionService = getConversionService();
-
-		if (conversionService.canConvert(source, TypeDescriptor.valueOf(String.class))) {
-			try {
-				return conversionService.convert(key, String.class);
-			} catch (ConversionFailedException ex) {
-
-				// May fail if the given key is a collection
-				if (isCollectionLikeOrMap(source)) {
-					return convertCollectionLikeOrMapKey(key, source);
-				}
-
-				throw ex;
-			}
-		}
-
-		if (hasToStringMethod(key)) {
-			return key.toString();
-		}
-
-		throw new IllegalStateException(("Cannot convert cache key %s to String; Please register a suitable Converter"
-				+ " via 'ValkeyCacheConfiguration.configureKeyConverters(...)' or override '%s.toString()'")
-				.formatted(source, key.getClass().getName()));
-	}
-
-	private CompletableFuture<ValueWrapper> retrieveValue(Object key) {
-
-		CompletableFuture<byte[]> retrieve = getCacheConfiguration().isTimeToIdleEnabled()
-				? getCacheWriter().retrieve(getName(), createAndConvertCacheKey(key), getTimeToLive(key))
-				: getCacheWriter().retrieve(getName(), createAndConvertCacheKey(key));
-
-		return retrieve //
-				.thenApply(binaryValue -> binaryValue != null ? deserializeCacheValue(binaryValue) : null) //
-				.thenApply(this::toValueWrapper);
-	}
-
-	@Nullable
-	private Object nullSafeDeserializedStoreValue(@Nullable byte[] value) {
-		return value != null ? fromStoreValue(deserializeCacheValue(value)) : null;
-	}
-
-	private boolean hasToStringMethod(Object target) {
-		return hasToStringMethod(target.getClass());
-	}
-
-	private boolean hasToStringMethod(Class<?> type) {
-
-		Method toString = ReflectionUtils.findMethod(type, "toString");
-
-		return toString != null && !Object.class.equals(toString.getDeclaringClass());
-	}
-
-	private boolean isCollectionLikeOrMap(TypeDescriptor source) {
-		return source.isArray() || source.isCollection() || source.isMap();
-	}
-
-	private String convertCollectionLikeOrMapKey(Object key, TypeDescriptor source) {
-
-		if (source.isMap()) {
-
-			int count = 0;
-
-			StringBuilder target = new StringBuilder("{");
-
-			for (Entry<?, ?> entry : ((Map<?, ?>) key).entrySet()) {
-				target.append(convertKey(entry.getKey())).append("=").append(convertKey(entry.getValue()));
-				target.append(++count > 1 ? ", " : "");
-			}
-
-			target.append("}");
-
-			return target.toString();
-
-		} else if (source.isCollection() || source.isArray()) {
-
-			StringJoiner stringJoiner = new StringJoiner(",");
-
-			Collection<?> collection = source.isCollection() ? (Collection<?>) key
-					: Arrays.asList(ObjectUtils.toObjectArray(key));
-
-			for (Object collectedKey : collection) {
-				stringJoiner.add(convertKey(collectedKey));
-			}
-
-			return "[" + stringJoiner + "]";
-		}
-
-		throw new IllegalArgumentException("Cannot convert cache key [%s] to String".formatted(key));
-	}
-
-	private byte[] createAndConvertCacheKey(Object key) {
-		return serializeCacheKey(createCacheKey(key));
-	}
-
-	private String prefixCacheKey(String key) {
-		// allow contextual cache names by computing the key prefix on every call.
-		return getCacheConfiguration().getKeyPrefixFor(getName()) + key;
-	}
-
-	private boolean nullCacheValueIsNotAllowed(@Nullable Object cacheValue) {
-		return cacheValue == null && !isAllowNullValues();
-	}
+    static final byte[] BINARY_NULL_VALUE = ValkeySerializer.java().serialize(NullValue.INSTANCE);
+
+    static final String CACHE_RETRIEVAL_UNSUPPORTED_OPERATION_EXCEPTION_MESSAGE =
+            "The Valkey driver configured with ValkeyCache through ValkeyCacheWriter does not support"
+                    + " CompletableFuture-based retrieval";
+
+    private final ValkeyCacheConfiguration cacheConfiguration;
+
+    private final ValkeyCacheWriter cacheWriter;
+
+    private final String name;
+
+    /**
+     * Create a new {@link ValkeyCache} with the given {@link String name} and {@link
+     * ValkeyCacheConfiguration}, using the {@link ValkeyCacheWriter} to execute Valkey commands
+     * supporting the cache operations.
+     *
+     * @param name {@link String name} for this {@link Cache}; must not be {@literal null}.
+     * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by
+     *     executing the necessary Valkey commands; must not be {@literal null}.
+     * @param cacheConfiguration {@link ValkeyCacheConfiguration} applied to this {@link ValkeyCache}
+     *     on creation; must not be {@literal null}.
+     * @throws IllegalArgumentException if either the given {@link ValkeyCacheWriter} or {@link
+     *     ValkeyCacheConfiguration} are {@literal null} or the given {@link String} name for this
+     *     {@link ValkeyCache} is {@literal null}.
+     */
+    protected ValkeyCache(
+            String name, ValkeyCacheWriter cacheWriter, ValkeyCacheConfiguration cacheConfiguration) {
+
+        super(cacheConfiguration.getAllowCacheNullValues());
+
+        Assert.notNull(name, "Name must not be null");
+        Assert.notNull(cacheWriter, "CacheWriter must not be null");
+
+        this.name = name;
+        this.cacheWriter = cacheWriter;
+        this.cacheConfiguration = cacheConfiguration;
+    }
+
+    /**
+     * Get the {@link ValkeyCacheConfiguration} used to configure this {@link ValkeyCache} on
+     * initialization.
+     *
+     * @return an immutable {@link ValkeyCacheConfiguration} used to configure this {@link
+     *     ValkeyCache} on initialization.
+     */
+    public ValkeyCacheConfiguration getCacheConfiguration() {
+        return this.cacheConfiguration;
+    }
+
+    /**
+     * Gets the configured {@link ValkeyCacheWriter} used to adapt Valkey for cache operations.
+     *
+     * @return the configured {@link ValkeyCacheWriter} used to adapt Valkey for cache operations.
+     */
+    protected ValkeyCacheWriter getCacheWriter() {
+        return this.cacheWriter;
+    }
+
+    /**
+     * Gets the configured {@link ConversionService} used to convert {@link Object cache keys} to a
+     * {@link String} when accessing entries in the cache.
+     *
+     * @return the configured {@link ConversionService} used to convert {@link Object cache keys} to a
+     *     {@link String} when accessing entries in the cache.
+     * @see ValkeyCacheConfiguration#getConversionService()
+     * @see #getCacheConfiguration()
+     */
+    protected ConversionService getConversionService() {
+        return getCacheConfiguration().getConversionService();
+    }
+
+    @Override
+    public String getName() {
+        return this.name;
+    }
+
+    @Override
+    public ValkeyCacheWriter getNativeCache() {
+        return getCacheWriter();
+    }
+
+    /**
+     * Return the {@link CacheStatistics} snapshot for this cache instance.
+     *
+     * <p>Statistics are accumulated per cache instance and not from the backing Valkey data store.
+     *
+     * @return {@link CacheStatistics} object for this {@link ValkeyCache}.
+     * @since 2.4
+     */
+    public CacheStatistics getStatistics() {
+        return getCacheWriter().getCacheStatistics(getName());
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T get(Object key, Callable<T> valueLoader) {
+
+        byte[] binaryKey = createAndConvertCacheKey(key);
+        byte[] binaryValue =
+                getCacheWriter()
+                        .get(
+                                getName(),
+                                binaryKey,
+                                () -> serializeCacheValue(toStoreValue(loadCacheValue(key, valueLoader))),
+                                getTimeToLive(key),
+                                getCacheConfiguration().isTimeToIdleEnabled());
+
+        ValueWrapper result = toValueWrapper(deserializeCacheValue(binaryValue));
+
+        return result != null ? (T) result.get() : null;
+    }
+
+    /**
+     * Loads the {@link Object} using the given {@link Callable valueLoader}.
+     *
+     * @param <T> {@link Class type} of the loaded {@link Object cache value}.
+     * @param key {@link Object key} mapped to the loaded {@link Object cache value}.
+     * @param valueLoader {@link Callable} object used to load the {@link Object value} for the given
+     *     {@link Object key}.
+     * @return the loaded {@link Object value}.
+     */
+    protected <T> T loadCacheValue(Object key, Callable<T> valueLoader) {
+
+        try {
+            return valueLoader.call();
+        } catch (Exception ex) {
+            throw new ValueRetrievalException(key, valueLoader, ex);
+        }
+    }
+
+    @Override
+    protected Object lookup(Object key) {
+
+        byte[] binaryKey = createAndConvertCacheKey(key);
+
+        byte[] binaryValue =
+                getCacheConfiguration().isTimeToIdleEnabled()
+                        ? getCacheWriter().get(getName(), binaryKey, getTimeToLive(key))
+                        : getCacheWriter().get(getName(), binaryKey);
+
+        return binaryValue != null ? deserializeCacheValue(binaryValue) : null;
+    }
+
+    private Duration getTimeToLive(Object key) {
+        return getTimeToLive(key, null);
+    }
+
+    private Duration getTimeToLive(Object key, @Nullable Object value) {
+        return getCacheConfiguration().getTtlFunction().getTimeToLive(key, value);
+    }
+
+    @Override
+    public void put(Object key, @Nullable Object value) {
+
+        Object cacheValue = processAndCheckValue(value);
+
+        byte[] binaryKey = createAndConvertCacheKey(key);
+        byte[] binaryValue = serializeCacheValue(cacheValue);
+
+        Duration timeToLive = getTimeToLive(key, value);
+
+        getCacheWriter().put(getName(), binaryKey, binaryValue, timeToLive);
+    }
+
+    @Override
+    public ValueWrapper putIfAbsent(Object key, @Nullable Object value) {
+
+        Object cacheValue = preProcessCacheValue(value);
+
+        if (nullCacheValueIsNotAllowed(cacheValue)) {
+            return get(key);
+        }
+
+        Duration timeToLive = getTimeToLive(key, value);
+
+        byte[] binaryKey = createAndConvertCacheKey(key);
+        byte[] binaryValue = serializeCacheValue(cacheValue);
+        byte[] result = getCacheWriter().putIfAbsent(getName(), binaryKey, binaryValue, timeToLive);
+
+        return result != null
+                ? new SimpleValueWrapper(fromStoreValue(deserializeCacheValue(result)))
+                : null;
+    }
+
+    @Override
+    public void clear() {
+        clear("*");
+    }
+
+    /**
+     * Clear keys that match the given {@link String keyPattern}.
+     *
+     * <p>Useful when cache keys are formatted in a style where Valkey patterns can be used for
+     * matching these.
+     *
+     * @param keyPattern {@link String pattern} used to match Valkey keys to clear.
+     * @since 3.0
+     */
+    public void clear(String keyPattern) {
+        getCacheWriter().clean(getName(), createAndConvertCacheKey(keyPattern));
+    }
+
+    /**
+     * Reset all statistics counters and gauges for this cache.
+     *
+     * @since 2.4
+     */
+    public void clearStatistics() {
+        getCacheWriter().clearStatistics(getName());
+    }
+
+    @Override
+    public void evict(Object key) {
+        getCacheWriter().remove(getName(), createAndConvertCacheKey(key));
+    }
+
+    @Override
+    public CompletableFuture<ValueWrapper> retrieve(Object key) {
+
+        if (!getCacheWriter().supportsAsyncRetrieve()) {
+            throw new UnsupportedOperationException(
+                    CACHE_RETRIEVAL_UNSUPPORTED_OPERATION_EXCEPTION_MESSAGE);
+        }
+
+        return retrieveValue(key);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> CompletableFuture<T> retrieve(Object key, Supplier<CompletableFuture<T>> valueLoader) {
+
+        return retrieve(key)
+                .thenCompose(
+                        wrapper -> {
+                            if (wrapper != null) {
+                                return CompletableFuture.completedFuture((T) wrapper.get());
+                            }
+
+                            return valueLoader
+                                    .get()
+                                    .thenCompose(
+                                            value -> {
+                                                Object cacheValue = processAndCheckValue(value);
+
+                                                byte[] binaryKey = createAndConvertCacheKey(key);
+                                                byte[] binaryValue = serializeCacheValue(cacheValue);
+
+                                                Duration timeToLive = getTimeToLive(key, cacheValue);
+
+                                                return getCacheWriter()
+                                                        .store(getName(), binaryKey, binaryValue, timeToLive)
+                                                        .thenApply(v -> value);
+                                            });
+                        });
+    }
+
+    private Object processAndCheckValue(@Nullable Object value) {
+
+        Object cacheValue = preProcessCacheValue(value);
+
+        if (nullCacheValueIsNotAllowed(cacheValue)) {
+            throw new IllegalArgumentException(
+                    ("Cache '%s' does not allow 'null' values; Avoid storing null via"
+                                    + " '@Cacheable(unless=\"#result == null\")' or configure ValkeyCache to allow"
+                                    + " 'null' via ValkeyCacheConfiguration")
+                            .formatted(getName()));
+        }
+
+        return cacheValue;
+    }
+
+    /**
+     * Customization hook called before passing object to {@link
+     * io.valkey.springframework.data.valkey.serializer.ValkeySerializer}.
+     *
+     * @param value can be {@literal null}.
+     * @return preprocessed value. Can be {@literal null}.
+     */
+    @Nullable
+    protected Object preProcessCacheValue(@Nullable Object value) {
+        return value != null ? value : isAllowNullValues() ? NullValue.INSTANCE : null;
+    }
+
+    /**
+     * Serialize the given {@link String cache key}.
+     *
+     * @param cacheKey {@link String cache key} to serialize; must not be {@literal null}.
+     * @return an array of bytes from the given, serialized {@link String cache key}; never {@literal
+     *     null}.
+     * @see ValkeyCacheConfiguration#getKeySerializationPair()
+     */
+    protected byte[] serializeCacheKey(String cacheKey) {
+        return ByteUtils.getBytes(getCacheConfiguration().getKeySerializationPair().write(cacheKey));
+    }
+
+    /**
+     * Serialize the {@link Object value} to cache as an array of bytes.
+     *
+     * @param value {@link Object} to serialize and cache; must not be {@literal null}.
+     * @return an array of bytes from the serialized {@link Object value}; never {@literal null}.
+     * @see ValkeyCacheConfiguration#getValueSerializationPair()
+     */
+    protected byte[] serializeCacheValue(Object value) {
+
+        if (isAllowNullValues() && value instanceof NullValue) {
+            return BINARY_NULL_VALUE;
+        }
+
+        return ByteUtils.getBytes(getCacheConfiguration().getValueSerializationPair().write(value));
+    }
+
+    /**
+     * Deserialize the given the array of bytes to the actual {@link Object cache value}.
+     *
+     * @param value array of bytes to deserialize; must not be {@literal null}.
+     * @return an {@link Object} deserialized from the array of bytes using the configured value
+     *     {@link ValkeySerializationContext.SerializationPair}; can be {@literal null}.
+     * @see ValkeyCacheConfiguration#getValueSerializationPair()
+     */
+    @Nullable
+    protected Object deserializeCacheValue(byte[] value) {
+
+        if (isAllowNullValues() && ObjectUtils.nullSafeEquals(value, BINARY_NULL_VALUE)) {
+            return NullValue.INSTANCE;
+        }
+
+        return getCacheConfiguration().getValueSerializationPair().read(ByteBuffer.wrap(value));
+    }
+
+    /**
+     * Customization hook for creating cache key before it gets serialized.
+     *
+     * @param key will never be {@literal null}.
+     * @return never {@literal null}.
+     */
+    protected String createCacheKey(Object key) {
+
+        String convertedKey = convertKey(key);
+
+        return getCacheConfiguration().usePrefix() ? prefixCacheKey(convertedKey) : convertedKey;
+    }
+
+    /**
+     * Convert {@code key} to a {@link String} used in cache key creation.
+     *
+     * @param key will never be {@literal null}.
+     * @return never {@literal null}.
+     * @throws IllegalStateException if {@code key} cannot be converted to {@link String}.
+     */
+    protected String convertKey(Object key) {
+
+        if (key instanceof String stringKey) {
+            return stringKey;
+        }
+
+        TypeDescriptor source = TypeDescriptor.forObject(key);
+
+        ConversionService conversionService = getConversionService();
+
+        if (conversionService.canConvert(source, TypeDescriptor.valueOf(String.class))) {
+            try {
+                return conversionService.convert(key, String.class);
+            } catch (ConversionFailedException ex) {
+
+                // May fail if the given key is a collection
+                if (isCollectionLikeOrMap(source)) {
+                    return convertCollectionLikeOrMapKey(key, source);
+                }
+
+                throw ex;
+            }
+        }
+
+        if (hasToStringMethod(key)) {
+            return key.toString();
+        }
+
+        throw new IllegalStateException(
+                ("Cannot convert cache key %s to String; Please register a suitable Converter via"
+                                + " 'ValkeyCacheConfiguration.configureKeyConverters(...)' or override"
+                                + " '%s.toString()'")
+                        .formatted(source, key.getClass().getName()));
+    }
+
+    private CompletableFuture<ValueWrapper> retrieveValue(Object key) {
+
+        CompletableFuture<byte[]> retrieve =
+                getCacheConfiguration().isTimeToIdleEnabled()
+                        ? getCacheWriter()
+                                .retrieve(getName(), createAndConvertCacheKey(key), getTimeToLive(key))
+                        : getCacheWriter().retrieve(getName(), createAndConvertCacheKey(key));
+
+        return retrieve //
+                .thenApply(
+                        binaryValue -> binaryValue != null ? deserializeCacheValue(binaryValue) : null) //
+                .thenApply(this::toValueWrapper);
+    }
+
+    @Nullable
+    private Object nullSafeDeserializedStoreValue(@Nullable byte[] value) {
+        return value != null ? fromStoreValue(deserializeCacheValue(value)) : null;
+    }
+
+    private boolean hasToStringMethod(Object target) {
+        return hasToStringMethod(target.getClass());
+    }
+
+    private boolean hasToStringMethod(Class<?> type) {
+
+        Method toString = ReflectionUtils.findMethod(type, "toString");
+
+        return toString != null && !Object.class.equals(toString.getDeclaringClass());
+    }
+
+    private boolean isCollectionLikeOrMap(TypeDescriptor source) {
+        return source.isArray() || source.isCollection() || source.isMap();
+    }
+
+    private String convertCollectionLikeOrMapKey(Object key, TypeDescriptor source) {
+
+        if (source.isMap()) {
+
+            int count = 0;
+
+            StringBuilder target = new StringBuilder("{");
+
+            for (Entry<?, ?> entry : ((Map<?, ?>) key).entrySet()) {
+                target.append(convertKey(entry.getKey())).append("=").append(convertKey(entry.getValue()));
+                target.append(++count > 1 ? ", " : "");
+            }
+
+            target.append("}");
+
+            return target.toString();
+
+        } else if (source.isCollection() || source.isArray()) {
+
+            StringJoiner stringJoiner = new StringJoiner(",");
+
+            Collection<?> collection =
+                    source.isCollection()
+                            ? (Collection<?>) key
+                            : Arrays.asList(ObjectUtils.toObjectArray(key));
+
+            for (Object collectedKey : collection) {
+                stringJoiner.add(convertKey(collectedKey));
+            }
+
+            return "[" + stringJoiner + "]";
+        }
+
+        throw new IllegalArgumentException("Cannot convert cache key [%s] to String".formatted(key));
+    }
+
+    private byte[] createAndConvertCacheKey(Object key) {
+        return serializeCacheKey(createCacheKey(key));
+    }
+
+    private String prefixCacheKey(String key) {
+        // allow contextual cache names by computing the key prefix on every call.
+        return getCacheConfiguration().getKeyPrefixFor(getName()) + key;
+    }
+
+    private boolean nullCacheValueIsNotAllowed(@Nullable Object cacheValue) {
+        return cacheValue == null && !isAllowNullValues();
+    }
 }

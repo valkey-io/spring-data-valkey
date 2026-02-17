@@ -21,23 +21,24 @@ import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 
 /**
- * {@code @EnabledIfLongRunningTest} is used to signal that the annotated test method or test class is only
- * <em>enabled</em> if long running tests are enabled. This is a meta-annotation for
+ * {@code @EnabledIfLongRunningTest} is used to signal that the annotated test method or test class
+ * is only <em>enabled</em> if long running tests are enabled. This is a meta-annotation for
  * {@code @EnabledIfSystemProperty(named = "longRunningTest")}.
- * <p>
- * When declared at the class level, the result will apply to all test methods within that class as well.
+ *
+ * <p>When declared at the class level, the result will apply to all test methods within that class
+ * as well.
  *
  * @author Mark Paluch
  */
-@Target({ ElementType.ANNOTATION_TYPE, ElementType.TYPE, ElementType.METHOD })
+@Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE, ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-@EnabledIfSystemProperty(named = "runLongTests", matches = "true", disabledReason = "Long-running tests disabled")
-public @interface EnabledIfLongRunningTest {
-
-}
+@EnabledIfSystemProperty(
+        named = "runLongTests",
+        matches = "true",
+        disabledReason = "Long-running tests disabled")
+public @interface EnabledIfLongRunningTest {}

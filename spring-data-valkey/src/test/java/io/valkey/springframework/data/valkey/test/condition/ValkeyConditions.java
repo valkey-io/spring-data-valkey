@@ -16,19 +16,16 @@
 package io.valkey.springframework.data.valkey.test.condition;
 
 import io.lettuce.core.api.StatefulRedisConnection;
-import io.lettuce.core.api.sync.RedisCommands;
 import io.lettuce.core.cluster.api.StatefulRedisClusterConnection;
 import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
 import io.lettuce.core.models.command.CommandDetail;
 import io.lettuce.core.models.command.CommandDetailParser;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
-
 import org.springframework.data.util.Version;
 
 /**
@@ -38,96 +35,99 @@ import org.springframework.data.util.Version;
  */
 class ValkeyConditions {
 
-	private final Map<String, Integer> commands;
-	private final Version version;
+    private final Map<String, Integer> commands;
+    private final Version version;
 
-	private ValkeyConditions(RedisClusterCommands<String, String> commands) {
+    private ValkeyConditions(RedisClusterCommands<String, String> commands) {
 
-		List<CommandDetail> result = CommandDetailParser.parse(commands.command());
+        List<CommandDetail> result = CommandDetailParser.parse(commands.command());
 
-		this.commands = result.stream()
-				.collect(Collectors.toMap(commandDetail -> commandDetail.getName().toUpperCase(), CommandDetail::getArity));
+        this.commands =
+                result.stream()
+                        .collect(
+                                Collectors.toMap(
+                                        commandDetail -> commandDetail.getName().toUpperCase(),
+                                        CommandDetail::getArity));
 
-		String info = commands.info("server");
+        String info = commands.info("server");
 
-		try {
+        try {
 
-			ByteArrayInputStream inputStream = new ByteArrayInputStream(info.getBytes());
-			Properties p = new Properties();
-			p.load(inputStream);
+            ByteArrayInputStream inputStream = new ByteArrayInputStream(info.getBytes());
+            Properties p = new Properties();
+            p.load(inputStream);
 
-			String versionString = p.getProperty("valkey_version", p.getProperty("redis_version"));
-			version = Version.parse(versionString);
-		} catch (IOException ex) {
-			throw new IllegalStateException(ex);
-		}
-	}
+            String versionString = p.getProperty("valkey_version", p.getProperty("redis_version"));
+            version = Version.parse(versionString);
+        } catch (IOException ex) {
+            throw new IllegalStateException(ex);
+        }
+    }
 
-	/**
-	 * Create {@link ValkeyCommands} given {@link StatefulRedisConnection}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 * @return
-	 */
-	public static ValkeyConditions of(StatefulRedisConnection<String, String> connection) {
-		return new ValkeyConditions(connection.sync());
-	}
+    /**
+     * Create {@link ValkeyCommands} given {@link StatefulRedisConnection}.
+     *
+     * @param connection must not be {@literal null}.
+     * @return
+     */
+    public static ValkeyConditions of(StatefulRedisConnection<String, String> connection) {
+        return new ValkeyConditions(connection.sync());
+    }
 
-	/**
-	 * Create {@link ValkeyCommands} given {@link StatefulRedisClusterConnection}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 * @return
-	 */
-	public static ValkeyConditions of(StatefulRedisClusterConnection<String, String> connection) {
-		return new ValkeyConditions(connection.sync());
-	}
+    /**
+     * Create {@link ValkeyCommands} given {@link StatefulRedisClusterConnection}.
+     *
+     * @param connection must not be {@literal null}.
+     * @return
+     */
+    public static ValkeyConditions of(StatefulRedisClusterConnection<String, String> connection) {
+        return new ValkeyConditions(connection.sync());
+    }
 
-	/**
-	 * Create {@link ValkeyConditions} given {@link ValkeyCommands}.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return
-	 */
-	public static ValkeyConditions of(RedisClusterCommands<String, String> commands) {
-		return new ValkeyConditions(commands);
-	}
+    /**
+     * Create {@link ValkeyConditions} given {@link ValkeyCommands}.
+     *
+     * @param commands must not be {@literal null}.
+     * @return
+     */
+    public static ValkeyConditions of(RedisClusterCommands<String, String> commands) {
+        return new ValkeyConditions(commands);
+    }
 
-	/**
-	 * @return the Valkey {@link Version}.
-	 */
-	public Version getValkeyVersion() {
-		return version;
-	}
+    /**
+     * @return the Valkey {@link Version}.
+     */
+    public Version getValkeyVersion() {
+        return version;
+    }
 
-	/**
-	 * @param command
-	 * @return {@code true} if the command is present.
-	 */
-	public boolean hasCommand(String command) {
-		return commands.containsKey(command.toUpperCase());
-	}
+    /**
+     * @param command
+     * @return {@code true} if the command is present.
+     */
+    public boolean hasCommand(String command) {
+        return commands.containsKey(command.toUpperCase());
+    }
 
-	/**
-	 * @param command command name.
-	 * @param arity expected arity.
-	 * @return {@code true} if the command is present with the given arity.
-	 */
-	public boolean hasCommandArity(String command, int arity) {
+    /**
+     * @param command command name.
+     * @param arity expected arity.
+     * @return {@code true} if the command is present with the given arity.
+     */
+    public boolean hasCommandArity(String command, int arity) {
 
-		if (!hasCommand(command)) {
-			throw new IllegalStateException("Unknown command: " + command + " in " + commands);
-		}
+        if (!hasCommand(command)) {
+            throw new IllegalStateException("Unknown command: " + command + " in " + commands);
+        }
 
-		return commands.get(command.toUpperCase()) == arity;
-	}
+        return commands.get(command.toUpperCase()) == arity;
+    }
 
-	/**
-	 * @param versionNumber
-	 * @return {@code true} if the version number is met.
-	 */
-	public boolean hasVersionGreaterOrEqualsTo(String versionNumber) {
-		return version.isGreaterThanOrEqualTo(Version.parse(versionNumber));
-	}
-
+    /**
+     * @param versionNumber
+     * @return {@code true} if the version number is met.
+     */
+    public boolean hasVersionGreaterOrEqualsTo(String versionNumber) {
+        return version.isGreaterThanOrEqualTo(Version.parse(versionNumber));
+    }
 }

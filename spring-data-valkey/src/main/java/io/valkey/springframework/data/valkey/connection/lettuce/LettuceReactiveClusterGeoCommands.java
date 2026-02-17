@@ -22,14 +22,15 @@ import io.valkey.springframework.data.valkey.connection.ReactiveClusterGeoComman
  * @author Mark Paluch
  * @since 2.0
  */
-class LettuceReactiveClusterGeoCommands extends LettuceReactiveGeoCommands implements ReactiveClusterGeoCommands {
+class LettuceReactiveClusterGeoCommands extends LettuceReactiveGeoCommands
+        implements ReactiveClusterGeoCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveClusterGeoCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterGeoCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveClusterGeoCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterGeoCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 }

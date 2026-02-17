@@ -15,17 +15,16 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
 import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
-
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
- * Valkey <a href="https://valkey.io/commands/#scripting">Scripting</a> commands executed using reactive infrastructure.
+ * Valkey <a href="https://valkey.io/commands/#scripting">Scripting</a> commands executed using
+ * reactive infrastructure.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -33,74 +32,77 @@ import org.springframework.util.Assert;
  */
 public interface ReactiveScriptingCommands {
 
-	/**
-	 * Flush lua script cache.
-	 *
-	 * @see <a href="https://valkey.io/commands/script-flush">Valkey Documentation: SCRIPT FLUSH</a>
-	 */
-	Mono<String> scriptFlush();
+    /**
+     * Flush lua script cache.
+     *
+     * @see <a href="https://valkey.io/commands/script-flush">Valkey Documentation: SCRIPT FLUSH</a>
+     */
+    Mono<String> scriptFlush();
 
-	/**
-	 * Kill current lua script execution.
-	 *
-	 * @see <a href="https://valkey.io/commands/script-kill">Valkey Documentation: SCRIPT KILL</a>
-	 */
-	Mono<String> scriptKill();
+    /**
+     * Kill current lua script execution.
+     *
+     * @see <a href="https://valkey.io/commands/script-kill">Valkey Documentation: SCRIPT KILL</a>
+     */
+    Mono<String> scriptKill();
 
-	/**
-	 * Load lua script into scripts cache, without executing it.<br>
-	 * Execute the script by calling {@link #evalSha(String, ReturnType, int, ByteBuffer...)}.
-	 *
-	 * @param script must not be {@literal null}.
-	 * @return never {@literal null}.
-	 * @see <a href="https://valkey.io/commands/script-load">Valkey Documentation: SCRIPT LOAD</a>
-	 */
-	Mono<String> scriptLoad(ByteBuffer script);
+    /**
+     * Load lua script into scripts cache, without executing it.<br>
+     * Execute the script by calling {@link #evalSha(String, ReturnType, int, ByteBuffer...)}.
+     *
+     * @param script must not be {@literal null}.
+     * @return never {@literal null}.
+     * @see <a href="https://valkey.io/commands/script-load">Valkey Documentation: SCRIPT LOAD</a>
+     */
+    Mono<String> scriptLoad(ByteBuffer script);
 
-	/**
-	 * Check if given {@code scriptSha} exist in script cache.
-	 *
-	 * @param scriptSha The sha1 of the script is present in script cache. Must not be {@literal null}.
-	 * @return a {@link Mono} indicating if script is present.
-	 */
-	default Mono<Boolean> scriptExists(String scriptSha) {
+    /**
+     * Check if given {@code scriptSha} exist in script cache.
+     *
+     * @param scriptSha The sha1 of the script is present in script cache. Must not be {@literal
+     *     null}.
+     * @return a {@link Mono} indicating if script is present.
+     */
+    default Mono<Boolean> scriptExists(String scriptSha) {
 
-		Assert.notNull(scriptSha, "ScriptSha must not be null");
-		return scriptExists(Collections.singletonList(scriptSha)).singleOrEmpty();
-	}
+        Assert.notNull(scriptSha, "ScriptSha must not be null");
+        return scriptExists(Collections.singletonList(scriptSha)).singleOrEmpty();
+    }
 
-	/**
-	 * Check if given {@code scriptShas} exist in script cache.
-	 *
-	 * @param scriptShas must not be {@literal null}.
-	 * @return {@link Flux} emitting one entry per scriptSha in given {@link List}.
-	 * @see <a href="https://valkey.io/commands/script-exists">Valkey Documentation: SCRIPT EXISTS</a>
-	 */
-	Flux<Boolean> scriptExists(List<String> scriptShas);
+    /**
+     * Check if given {@code scriptShas} exist in script cache.
+     *
+     * @param scriptShas must not be {@literal null}.
+     * @return {@link Flux} emitting one entry per scriptSha in given {@link List}.
+     * @see <a href="https://valkey.io/commands/script-exists">Valkey Documentation: SCRIPT EXISTS</a>
+     */
+    Flux<Boolean> scriptExists(List<String> scriptShas);
 
-	/**
-	 * Evaluate given {@code script}.
-	 *
-	 * @param script must not be {@literal null}.
-	 * @param returnType must not be {@literal null}. Using {@link ReturnType#MULTI} emits a {@link List} as-is instead of
-	 *          emitting the individual elements from the array response.
-	 * @param numKeys
-	 * @param keysAndArgs must not be {@literal null}.
-	 * @return never {@literal null}.
-	 * @see <a href="https://valkey.io/commands/eval">Valkey Documentation: EVAL</a>
-	 */
-	<T> Flux<T> eval(ByteBuffer script, ReturnType returnType, int numKeys, ByteBuffer... keysAndArgs);
+    /**
+     * Evaluate given {@code script}.
+     *
+     * @param script must not be {@literal null}.
+     * @param returnType must not be {@literal null}. Using {@link ReturnType#MULTI} emits a {@link
+     *     List} as-is instead of emitting the individual elements from the array response.
+     * @param numKeys
+     * @param keysAndArgs must not be {@literal null}.
+     * @return never {@literal null}.
+     * @see <a href="https://valkey.io/commands/eval">Valkey Documentation: EVAL</a>
+     */
+    <T> Flux<T> eval(
+            ByteBuffer script, ReturnType returnType, int numKeys, ByteBuffer... keysAndArgs);
 
-	/**
-	 * Evaluate given {@code scriptSha}.
-	 *
-	 * @param scriptSha must not be {@literal null}.
-	 * @param returnType must not be {@literal null}. Using {@link ReturnType#MULTI} emits a {@link List} as-is instead of
-	 *          emitting the individual elements from the array response.
-	 * @param numKeys
-	 * @param keysAndArgs must not be {@literal null}.
-	 * @return never {@literal null}.
-	 * @see <a href="https://valkey.io/commands/evalsha">Valkey Documentation: EVALSHA</a>
-	 */
-	<T> Flux<T> evalSha(String scriptSha, ReturnType returnType, int numKeys, ByteBuffer... keysAndArgs);
+    /**
+     * Evaluate given {@code scriptSha}.
+     *
+     * @param scriptSha must not be {@literal null}.
+     * @param returnType must not be {@literal null}. Using {@link ReturnType#MULTI} emits a {@link
+     *     List} as-is instead of emitting the individual elements from the array response.
+     * @param numKeys
+     * @param keysAndArgs must not be {@literal null}.
+     * @return never {@literal null}.
+     * @see <a href="https://valkey.io/commands/evalsha">Valkey Documentation: EVALSHA</a>
+     */
+    <T> Flux<T> evalSha(
+            String scriptSha, ReturnType returnType, int numKeys, ByteBuffer... keysAndArgs);
 }

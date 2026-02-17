@@ -15,14 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
+import io.valkey.springframework.data.valkey.core.Cursor;
+import io.valkey.springframework.data.valkey.core.ScanOptions;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
-import io.valkey.springframework.data.valkey.core.Cursor;
-import io.valkey.springframework.data.valkey.core.ScanOptions;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
@@ -36,531 +35,573 @@ import org.springframework.util.ObjectUtils;
  */
 public interface ValkeyHashCommands {
 
-	/**
-	 * Set the {@code value} of a hash {@code field}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param field must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hset">Valkey Documentation: HSET</a>
-	 */
-	@Nullable
-	Boolean hSet(byte[] key, byte[] field, byte[] value);
+    /**
+     * Set the {@code value} of a hash {@code field}.
+     *
+     * @param key must not be {@literal null}.
+     * @param field must not be {@literal null}.
+     * @param value must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hset">Valkey Documentation: HSET</a>
+     */
+    @Nullable
+    Boolean hSet(byte[] key, byte[] field, byte[] value);
 
-	/**
-	 * Set the {@code value} of a hash {@code field} only if {@code field} does not exist.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param field must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hsetnx">Valkey Documentation: HSETNX</a>
-	 */
-	@Nullable
-	Boolean hSetNX(byte[] key, byte[] field, byte[] value);
+    /**
+     * Set the {@code value} of a hash {@code field} only if {@code field} does not exist.
+     *
+     * @param key must not be {@literal null}.
+     * @param field must not be {@literal null}.
+     * @param value must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hsetnx">Valkey Documentation: HSETNX</a>
+     */
+    @Nullable
+    Boolean hSetNX(byte[] key, byte[] field, byte[] value);
 
-	/**
-	 * Get value for given {@code field} from hash at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param field must not be {@literal null}.
-	 * @return {@literal null} when key or field do not exists or when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hget">Valkey Documentation: HGET</a>
-	 */
-	@Nullable
-	byte[] hGet(byte[] key, byte[] field);
+    /**
+     * Get value for given {@code field} from hash at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param field must not be {@literal null}.
+     * @return {@literal null} when key or field do not exists or when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hget">Valkey Documentation: HGET</a>
+     */
+    @Nullable
+    byte[] hGet(byte[] key, byte[] field);
 
-	/**
-	 * Get values for given {@code fields} from hash at {@code key}. Values are in the order of the requested keys Absent
-	 * field values are represented using {@literal null} in the resulting {@link List}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param fields must not be {@literal empty}.
-	 * @return empty {@link List} if key does not exist. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hmget">Valkey Documentation: HMGET</a>
-	 */
-	@Nullable
-	List<byte[]> hMGet(byte[] key, byte[]... fields);
+    /**
+     * Get values for given {@code fields} from hash at {@code key}. Values are in the order of the
+     * requested keys Absent field values are represented using {@literal null} in the resulting
+     * {@link List}.
+     *
+     * @param key must not be {@literal null}.
+     * @param fields must not be {@literal empty}.
+     * @return empty {@link List} if key does not exist. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/hmget">Valkey Documentation: HMGET</a>
+     */
+    @Nullable
+    List<byte[]> hMGet(byte[] key, byte[]... fields);
 
-	/**
-	 * Set multiple hash fields to multiple values using data provided in {@code hashes}
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param hashes must not be {@literal null}.
-	 * @see <a href="https://valkey.io/commands/hmset">Valkey Documentation: HMSET</a>
-	 */
-	void hMSet(byte[] key, Map<byte[], byte[]> hashes);
+    /**
+     * Set multiple hash fields to multiple values using data provided in {@code hashes}
+     *
+     * @param key must not be {@literal null}.
+     * @param hashes must not be {@literal null}.
+     * @see <a href="https://valkey.io/commands/hmset">Valkey Documentation: HMSET</a>
+     */
+    void hMSet(byte[] key, Map<byte[], byte[]> hashes);
 
-	/**
-	 * Increment {@code value} of a hash {@code field} by the given {@code delta}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param field must not be {@literal null}.
-	 * @param delta
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
-	 */
-	@Nullable
-	Long hIncrBy(byte[] key, byte[] field, long delta);
+    /**
+     * Increment {@code value} of a hash {@code field} by the given {@code delta}.
+     *
+     * @param key must not be {@literal null}.
+     * @param field must not be {@literal null}.
+     * @param delta
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
+     */
+    @Nullable
+    Long hIncrBy(byte[] key, byte[] field, long delta);
 
-	/**
-	 * Increment {@code value} of a hash {@code field} by the given {@code delta}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param field must not be {@literal null}.
-	 * @param delta
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hincrbyfloat">Valkey Documentation: HINCRBYFLOAT</a>
-	 */
-	@Nullable
-	Double hIncrBy(byte[] key, byte[] field, double delta);
+    /**
+     * Increment {@code value} of a hash {@code field} by the given {@code delta}.
+     *
+     * @param key must not be {@literal null}.
+     * @param field must not be {@literal null}.
+     * @param delta
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hincrbyfloat">Valkey Documentation: HINCRBYFLOAT</a>
+     */
+    @Nullable
+    Double hIncrBy(byte[] key, byte[] field, double delta);
 
-	/**
-	 * Determine if given hash {@code field} exists.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param field must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hexits">Valkey Documentation: HEXISTS</a>
-	 */
-	@Nullable
-	Boolean hExists(byte[] key, byte[] field);
+    /**
+     * Determine if given hash {@code field} exists.
+     *
+     * @param key must not be {@literal null}.
+     * @param field must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hexits">Valkey Documentation: HEXISTS</a>
+     */
+    @Nullable
+    Boolean hExists(byte[] key, byte[] field);
 
-	/**
-	 * Delete given hash {@code fields}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param fields must not be {@literal empty}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hdel">Valkey Documentation: HDEL</a>
-	 */
-	@Nullable
-	Long hDel(byte[] key, byte[]... fields);
+    /**
+     * Delete given hash {@code fields}.
+     *
+     * @param key must not be {@literal null}.
+     * @param fields must not be {@literal empty}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hdel">Valkey Documentation: HDEL</a>
+     */
+    @Nullable
+    Long hDel(byte[] key, byte[]... fields);
 
-	/**
-	 * Get size of hash at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hlen">Valkey Documentation: HLEN</a>
-	 */
-	@Nullable
-	Long hLen(byte[] key);
+    /**
+     * Get size of hash at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hlen">Valkey Documentation: HLEN</a>
+     */
+    @Nullable
+    Long hLen(byte[] key);
 
-	/**
-	 * Get key set (fields) of hash at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hkeys">Valkey Documentation: HKEYS</a>?
-	 */
-	@Nullable
-	Set<byte[]> hKeys(byte[] key);
+    /**
+     * Get key set (fields) of hash at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/commands/hkeys">Valkey Documentation: HKEYS</a>?
+     */
+    @Nullable
+    Set<byte[]> hKeys(byte[] key);
 
-	/**
-	 * Get entry set (values) of hash at {@code field}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return empty {@link List} if key does not exist. {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hvals">Valkey Documentation: HVALS</a>
-	 */
-	@Nullable
-	List<byte[]> hVals(byte[] key);
+    /**
+     * Get entry set (values) of hash at {@code field}.
+     *
+     * @param key must not be {@literal null}.
+     * @return empty {@link List} if key does not exist. {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/hvals">Valkey Documentation: HVALS</a>
+     */
+    @Nullable
+    List<byte[]> hVals(byte[] key);
 
-	/**
-	 * Get entire hash stored at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return empty {@link Map} if key does not exist or {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/hgetall">Valkey Documentation: HGETALL</a>
-	 */
-	@Nullable
-	Map<byte[], byte[]> hGetAll(byte[] key);
+    /**
+     * Get entire hash stored at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return empty {@link Map} if key does not exist or {@literal null} when used in pipeline /
+     *     transaction.
+     * @see <a href="https://valkey.io/commands/hgetall">Valkey Documentation: HGETALL</a>
+     */
+    @Nullable
+    Map<byte[], byte[]> hGetAll(byte[] key);
 
-	/**
-	 * Return a random field from the hash stored at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return {@literal null} if key does not exist or when used in pipeline / transaction.
-	 * @since 2.6
-	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
-	 */
-	@Nullable
-	byte[] hRandField(byte[] key);
+    /**
+     * Return a random field from the hash stored at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return {@literal null} if key does not exist or when used in pipeline / transaction.
+     * @since 2.6
+     * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
+     */
+    @Nullable
+    byte[] hRandField(byte[] key);
 
-	/**
-	 * Return a random field from the hash along with its value stored at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return {@literal null} if key does not exist or when used in pipeline / transaction.
-	 * @since 2.6
-	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
-	 */
-	@Nullable
-	Map.Entry<byte[], byte[]> hRandFieldWithValues(byte[] key);
+    /**
+     * Return a random field from the hash along with its value stored at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @return {@literal null} if key does not exist or when used in pipeline / transaction.
+     * @since 2.6
+     * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
+     */
+    @Nullable
+    Map.Entry<byte[], byte[]> hRandFieldWithValues(byte[] key);
 
-	/**
-	 * Return a random field from the hash stored at {@code key}. If the provided {@code count} argument is positive,
-	 * return a list of distinct fields, capped either at {@code count} or the hash size. If {@code count} is negative,
-	 * the behavior changes and the command is allowed to return the same field multiple times. In this case, the number
-	 * of returned fields is the absolute value of the specified count.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param count number of fields to return.
-	 * @return {@literal null} if key does not exist or when used in pipeline / transaction.
-	 * @since 2.6
-	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
-	 */
-	@Nullable
-	List<byte[]> hRandField(byte[] key, long count);
+    /**
+     * Return a random field from the hash stored at {@code key}. If the provided {@code count}
+     * argument is positive, return a list of distinct fields, capped either at {@code count} or the
+     * hash size. If {@code count} is negative, the behavior changes and the command is allowed to
+     * return the same field multiple times. In this case, the number of returned fields is the
+     * absolute value of the specified count.
+     *
+     * @param key must not be {@literal null}.
+     * @param count number of fields to return.
+     * @return {@literal null} if key does not exist or when used in pipeline / transaction.
+     * @since 2.6
+     * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
+     */
+    @Nullable
+    List<byte[]> hRandField(byte[] key, long count);
 
-	/**
-	 * Return a random field from the hash along with its value stored at {@code key}. If the provided {@code count}
-	 * argument is positive, return a list of distinct fields, capped either at {@code count} or the hash size. If
-	 * {@code count} is negative, the behavior changes and the command is allowed to return the same field multiple times.
-	 * In this case, the number of returned fields is the absolute value of the specified count.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param count number of fields to return.
-	 * @return {@literal null} if key does not exist or when used in pipeline / transaction.
-	 * @since 2.6
-	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
-	 */
-	@Nullable
-	List<Map.Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count);
+    /**
+     * Return a random field from the hash along with its value stored at {@code key}. If the provided
+     * {@code count} argument is positive, return a list of distinct fields, capped either at {@code
+     * count} or the hash size. If {@code count} is negative, the behavior changes and the command is
+     * allowed to return the same field multiple times. In this case, the number of returned fields is
+     * the absolute value of the specified count.
+     *
+     * @param key must not be {@literal null}.
+     * @param count number of fields to return.
+     * @return {@literal null} if key does not exist or when used in pipeline / transaction.
+     * @since 2.6
+     * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
+     */
+    @Nullable
+    List<Map.Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count);
 
-	/**
-	 * Use a {@link Cursor} to iterate over entries in hash at {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param options must not be {@literal null}.
-	 * @return
-	 * @since 1.4
-	 * @see <a href="https://valkey.io/commands/hscan">Valkey Documentation: HSCAN</a>
-	 */
-	Cursor<Map.Entry<byte[], byte[]>> hScan(byte[] key, ScanOptions options);
+    /**
+     * Use a {@link Cursor} to iterate over entries in hash at {@code key}.
+     *
+     * @param key must not be {@literal null}.
+     * @param options must not be {@literal null}.
+     * @return
+     * @since 1.4
+     * @see <a href="https://valkey.io/commands/hscan">Valkey Documentation: HSCAN</a>
+     */
+    Cursor<Map.Entry<byte[], byte[]>> hScan(byte[] key, ScanOptions options);
 
-	/**
-	 * Returns the length of the value associated with {@code field} in the hash stored at {@code key}. If the {@code key}
-	 * or the {@code field} do not exist, {@code 0} is returned.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param field must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @since 2.1
-	 * @see <a href="https://valkey.io/commands/hstrlen">Valkey Documentation: HSTRLEN</a>
-	 */
-	@Nullable
-	Long hStrLen(byte[] key, byte[] field);
+    /**
+     * Returns the length of the value associated with {@code field} in the hash stored at {@code
+     * key}. If the {@code key} or the {@code field} do not exist, {@code 0} is returned.
+     *
+     * @param key must not be {@literal null}.
+     * @param field must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @since 2.1
+     * @see <a href="https://valkey.io/commands/hstrlen">Valkey Documentation: HSTRLEN</a>
+     */
+    @Nullable
+    Long hStrLen(byte[] key, byte[] field);
 
-	/**
-	 * Apply a given {@link io.valkey.springframework.data.valkey.core.types.Expiration} to the given {@literal fields}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param expiration the {@link io.valkey.springframework.data.valkey.core.types.Expiration} to apply.
-	 * @param fields the names of the {@literal fields} to apply the {@literal expiration} to.
-	 * @return a {@link List} holding the command result for each field in order - {@code 2} indicating the specific field
-	 *         is deleted already due to expiration, or provided expiry interval is 0; {@code 1} indicating expiration
-	 *         time is set/updated; {@code 0} indicating the expiration time is not set; {@code -2} indicating there is no
-	 *         such field;
-	 * @since 3.5
-	 */
-	default @Nullable List<Long> applyHashFieldExpiration(byte[] key,
-			io.valkey.springframework.data.valkey.core.types.Expiration expiration, byte[]... fields) {
-		return applyHashFieldExpiration(key, expiration, ExpirationOptions.none(), fields);
-	}
+    /**
+     * Apply a given {@link io.valkey.springframework.data.valkey.core.types.Expiration} to the given
+     * {@literal fields}.
+     *
+     * @param key must not be {@literal null}.
+     * @param expiration the {@link io.valkey.springframework.data.valkey.core.types.Expiration} to
+     *     apply.
+     * @param fields the names of the {@literal fields} to apply the {@literal expiration} to.
+     * @return a {@link List} holding the command result for each field in order - {@code 2}
+     *     indicating the specific field is deleted already due to expiration, or provided expiry
+     *     interval is 0; {@code 1} indicating expiration time is set/updated; {@code 0} indicating
+     *     the expiration time is not set; {@code -2} indicating there is no such field;
+     * @since 3.5
+     */
+    default @Nullable List<Long> applyHashFieldExpiration(
+            byte[] key,
+            io.valkey.springframework.data.valkey.core.types.Expiration expiration,
+            byte[]... fields) {
+        return applyHashFieldExpiration(key, expiration, ExpirationOptions.none(), fields);
+    }
 
-	/**
-	 * @param key must not be {@literal null}.
-	 * @param expiration the {@link io.valkey.springframework.data.valkey.core.types.Expiration} to apply.
-	 * @param options additional options to be sent along with the command.
-	 * @param fields the names of the {@literal fields} to apply the {@literal expiration} to.
-	 * @return a {@link List} holding the command result for each field in order - {@code 2} indicating the specific field
-	 *         is deleted already due to expiration, or provided expiry interval is 0; {@code 1} indicating expiration
-	 *         time is set/updated; {@code 0} indicating the expiration time is not set (a provided NX | XX | GT | LT
-	 *         condition is not met); {@code -2} indicating there is no such field;
-	 * @since 3.5
-	 */
-	@Nullable
-	default List<Long> applyHashFieldExpiration(byte[] key,
-			io.valkey.springframework.data.valkey.core.types.Expiration expiration, ExpirationOptions options, byte[]... fields) {
+    /**
+     * @param key must not be {@literal null}.
+     * @param expiration the {@link io.valkey.springframework.data.valkey.core.types.Expiration} to
+     *     apply.
+     * @param options additional options to be sent along with the command.
+     * @param fields the names of the {@literal fields} to apply the {@literal expiration} to.
+     * @return a {@link List} holding the command result for each field in order - {@code 2}
+     *     indicating the specific field is deleted already due to expiration, or provided expiry
+     *     interval is 0; {@code 1} indicating expiration time is set/updated; {@code 0} indicating
+     *     the expiration time is not set (a provided NX | XX | GT | LT condition is not met); {@code
+     *     -2} indicating there is no such field;
+     * @since 3.5
+     */
+    @Nullable
+    default List<Long> applyHashFieldExpiration(
+            byte[] key,
+            io.valkey.springframework.data.valkey.core.types.Expiration expiration,
+            ExpirationOptions options,
+            byte[]... fields) {
 
-		if (expiration.isPersistent()) {
-			return hPersist(key, fields);
-		}
+        if (expiration.isPersistent()) {
+            return hPersist(key, fields);
+        }
 
-		if (ObjectUtils.nullSafeEquals(ExpirationOptions.none(), options)) {
-			if (ObjectUtils.nullSafeEquals(TimeUnit.MILLISECONDS, expiration.getTimeUnit())) {
-				if (expiration.isUnixTimestamp()) {
-					return hpExpireAt(key, expiration.getExpirationTimeInMilliseconds(), fields);
-				}
-				return hpExpire(key, expiration.getExpirationTimeInMilliseconds(), fields);
-			}
-			if (expiration.isUnixTimestamp()) {
-				return hExpireAt(key, expiration.getExpirationTimeInSeconds(), fields);
-			}
-			return hExpire(key, expiration.getExpirationTimeInSeconds(), fields);
-		}
+        if (ObjectUtils.nullSafeEquals(ExpirationOptions.none(), options)) {
+            if (ObjectUtils.nullSafeEquals(TimeUnit.MILLISECONDS, expiration.getTimeUnit())) {
+                if (expiration.isUnixTimestamp()) {
+                    return hpExpireAt(key, expiration.getExpirationTimeInMilliseconds(), fields);
+                }
+                return hpExpire(key, expiration.getExpirationTimeInMilliseconds(), fields);
+            }
+            if (expiration.isUnixTimestamp()) {
+                return hExpireAt(key, expiration.getExpirationTimeInSeconds(), fields);
+            }
+            return hExpire(key, expiration.getExpirationTimeInSeconds(), fields);
+        }
 
-		if (ObjectUtils.nullSafeEquals(TimeUnit.MILLISECONDS, expiration.getTimeUnit())) {
-			if (expiration.isUnixTimestamp()) {
-				return hpExpireAt(key, expiration.getExpirationTimeInMilliseconds(), options.getCondition(), fields);
-			}
+        if (ObjectUtils.nullSafeEquals(TimeUnit.MILLISECONDS, expiration.getTimeUnit())) {
+            if (expiration.isUnixTimestamp()) {
+                return hpExpireAt(
+                        key, expiration.getExpirationTimeInMilliseconds(), options.getCondition(), fields);
+            }
 
-			return hpExpire(key, expiration.getExpirationTimeInMilliseconds(), options.getCondition(), fields);
-		}
+            return hpExpire(
+                    key, expiration.getExpirationTimeInMilliseconds(), options.getCondition(), fields);
+        }
 
-		if (expiration.isUnixTimestamp()) {
-			return hExpireAt(key, expiration.getExpirationTimeInSeconds(), options.getCondition(), fields);
-		}
+        if (expiration.isUnixTimestamp()) {
+            return hExpireAt(
+                    key, expiration.getExpirationTimeInSeconds(), options.getCondition(), fields);
+        }
 
-		return hExpire(key, expiration.getExpirationTimeInSeconds(), options.getCondition(), fields);
-	}
+        return hExpire(key, expiration.getExpirationTimeInSeconds(), options.getCondition(), fields);
+    }
 
-	/**
-	 * Set time to live for given {@code fields} in seconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param seconds the amount of time after which the fields will be expired in seconds, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is 0; {@code 1} indicating expiration time
-	 *         is set/updated; {@code 0} indicating the expiration time is not set; {@code -2} indicating there is no such
-	 *         field; {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	default List<Long> hExpire(byte[] key, long seconds, byte[]... fields) {
-		return hExpire(key, seconds, ExpirationOptions.Condition.ALWAYS, fields);
-	}
+    /**
+     * Set time to live for given {@code fields} in seconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param seconds the amount of time after which the fields will be expired in seconds, must not
+     *     be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is 0;
+     *     {@code 1} indicating expiration time is set/updated; {@code 0} indicating the expiration
+     *     time is not set; {@code -2} indicating there is no such field; {@literal null} when used in
+     *     pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation:
+     *     HEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    default List<Long> hExpire(byte[] key, long seconds, byte[]... fields) {
+        return hExpire(key, seconds, ExpirationOptions.Condition.ALWAYS, fields);
+    }
 
-	/**
-	 * Set time to live for given {@code fields}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param ttl the amount of time after which the fields will be expired in {@link Duration#toSeconds() seconds}
-	 *          precision, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is 0; {@code 1} indicating expiration time
-	 *         is set/updated; {@code 0} indicating the expiration time is not set; {@code -2} indicating there is no such
-	 *         field; {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	default List<Long> hExpire(byte[] key, Duration ttl, byte[]... fields) {
-		return hExpire(key, ttl.toSeconds(), fields);
-	}
+    /**
+     * Set time to live for given {@code fields}.
+     *
+     * @param key must not be {@literal null}.
+     * @param ttl the amount of time after which the fields will be expired in {@link
+     *     Duration#toSeconds() seconds} precision, must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is 0;
+     *     {@code 1} indicating expiration time is set/updated; {@code 0} indicating the expiration
+     *     time is not set; {@code -2} indicating there is no such field; {@literal null} when used in
+     *     pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation:
+     *     HEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    default List<Long> hExpire(byte[] key, Duration ttl, byte[]... fields) {
+        return hExpire(key, ttl.toSeconds(), fields);
+    }
 
-	/**
-	 * Set time to live for given {@code fields} in seconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param seconds the amount of time after which the fields will be expired in seconds, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @param condition the condition for expiration, must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is 0; {@code 1} indicating expiration time
-	 *         is set/updated; {@code 0} indicating the expiration time is not set (a provided NX | XX | GT | LT condition
-	 *         is not met); {@code -2} indicating there is no such field; {@literal null} when used in pipeline /
-	 *         transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	List<Long> hExpire(byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields);
+    /**
+     * Set time to live for given {@code fields} in seconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param seconds the amount of time after which the fields will be expired in seconds, must not
+     *     be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @param condition the condition for expiration, must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is 0;
+     *     {@code 1} indicating expiration time is set/updated; {@code 0} indicating the expiration
+     *     time is not set (a provided NX | XX | GT | LT condition is not met); {@code -2} indicating
+     *     there is no such field; {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation:
+     *     HEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    List<Long> hExpire(
+            byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields);
 
-	/**
-	 * Set time to live for given {@code fields} in milliseconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param millis the amount of time after which the fields will be expired in milliseconds, must not be
-	 *          {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is 0; {@code 1} indicating expiration time
-	 *         is set/updated; {@code 0} indicating the expiration time is not set ; {@code -2} indicating there is no
-	 *         such field; {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation: HPEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	default List<Long> hpExpire(byte[] key, long millis, byte[]... fields) {
-		return hpExpire(key, millis, ExpirationOptions.Condition.ALWAYS, fields);
-	}
+    /**
+     * Set time to live for given {@code fields} in milliseconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param millis the amount of time after which the fields will be expired in milliseconds, must
+     *     not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is 0;
+     *     {@code 1} indicating expiration time is set/updated; {@code 0} indicating the expiration
+     *     time is not set ; {@code -2} indicating there is no such field; {@literal null} when used
+     *     in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation:
+     *     HPEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    default List<Long> hpExpire(byte[] key, long millis, byte[]... fields) {
+        return hpExpire(key, millis, ExpirationOptions.Condition.ALWAYS, fields);
+    }
 
-	/**
-	 * Set time to live for given {@code fields} in milliseconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param ttl the amount of time after which the fields will be expired in {@link Duration#toMillis() milliseconds}
-	 *          precision, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is 0; {@code 1} indicating expiration time
-	 *         is set/updated; {@code 0} indicating the expiration time is not set; {@code -2} indicating there is no such
-	 *         field; {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation: HPEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	default List<Long> hpExpire(byte[] key, Duration ttl, byte[]... fields) {
-		return hpExpire(key, ttl.toMillis(), fields);
-	}
+    /**
+     * Set time to live for given {@code fields} in milliseconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param ttl the amount of time after which the fields will be expired in {@link
+     *     Duration#toMillis() milliseconds} precision, must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is 0;
+     *     {@code 1} indicating expiration time is set/updated; {@code 0} indicating the expiration
+     *     time is not set; {@code -2} indicating there is no such field; {@literal null} when used in
+     *     pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation:
+     *     HPEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    default List<Long> hpExpire(byte[] key, Duration ttl, byte[]... fields) {
+        return hpExpire(key, ttl.toMillis(), fields);
+    }
 
-	/**
-	 * Set time to live for given {@code fields} in milliseconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param millis the amount of time after which the fields will be expired in milliseconds, must not be
-	 *          {@literal null}.
-	 * @param condition the condition for expiration, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is 0; {@code 1} indicating expiration time
-	 *         is set/updated; {@code 0} indicating the expiration time is not set (a provided NX | XX | GT | LT condition
-	 *         is not met); {@code -2} indicating there is no such field; {@literal null} when used in pipeline /
-	 *         transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation: HPEXPIRE</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	List<Long> hpExpire(byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields);
+    /**
+     * Set time to live for given {@code fields} in milliseconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param millis the amount of time after which the fields will be expired in milliseconds, must
+     *     not be {@literal null}.
+     * @param condition the condition for expiration, must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is 0;
+     *     {@code 1} indicating expiration time is set/updated; {@code 0} indicating the expiration
+     *     time is not set (a provided NX | XX | GT | LT condition is not met); {@code -2} indicating
+     *     there is no such field; {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation:
+     *     HPEXPIRE</a>
+     * @since 3.5
+     */
+    @Nullable
+    List<Long> hpExpire(
+            byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields);
 
-	/**
-	 * Set the expiration for given {@code field} as a {@literal UNIX} timestamp.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param unixTime the moment in time in which the field expires, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is in the past; {@code 1} indicating
-	 *         expiration time is set/updated; {@code 0} indicating the expiration time is not set; {@code -2} indicating
-	 *         there is no such field; {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation: HEXPIREAT</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	default List<Long> hExpireAt(byte[] key, long unixTime, byte[]... fields) {
-		return hExpireAt(key, unixTime, ExpirationOptions.Condition.ALWAYS, fields);
-	}
+    /**
+     * Set the expiration for given {@code field} as a {@literal UNIX} timestamp.
+     *
+     * @param key must not be {@literal null}.
+     * @param unixTime the moment in time in which the field expires, must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is in the
+     *     past; {@code 1} indicating expiration time is set/updated; {@code 0} indicating the
+     *     expiration time is not set; {@code -2} indicating there is no such field; {@literal null}
+     *     when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation:
+     *     HEXPIREAT</a>
+     * @since 3.5
+     */
+    @Nullable
+    default List<Long> hExpireAt(byte[] key, long unixTime, byte[]... fields) {
+        return hExpireAt(key, unixTime, ExpirationOptions.Condition.ALWAYS, fields);
+    }
 
-	/**
-	 * Set the expiration for given {@code field} as a {@literal UNIX} timestamp.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param unixTime the moment in time in which the field expires, must not be {@literal null}.
-	 * @param condition the condition for expiration, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is in the past; {@code 1} indicating
-	 *         expiration time is set/updated; {@code 0} indicating the expiration time is not set (a provided NX | XX |
-	 *         GT | LT condition is not met); {@code -2} indicating there is no such field; {@literal null} when used in
-	 *         pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation: HEXPIREAT</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields);
+    /**
+     * Set the expiration for given {@code field} as a {@literal UNIX} timestamp.
+     *
+     * @param key must not be {@literal null}.
+     * @param unixTime the moment in time in which the field expires, must not be {@literal null}.
+     * @param condition the condition for expiration, must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is in the
+     *     past; {@code 1} indicating expiration time is set/updated; {@code 0} indicating the
+     *     expiration time is not set (a provided NX | XX | GT | LT condition is not met); {@code -2}
+     *     indicating there is no such field; {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation:
+     *     HEXPIREAT</a>
+     * @since 3.5
+     */
+    @Nullable
+    List<Long> hExpireAt(
+            byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields);
 
-	/**
-	 * Set the expiration for given {@code field} as a {@literal UNIX} timestamp in milliseconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param unixTimeInMillis the moment in time in which the field expires in milliseconds, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is in the past; {@code 1} indicating
-	 *         expiration time is set/updated; {@code 0} indicating the expiration time is not set; {@code -2} indicating
-	 *         there is no such field; {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpireat/">Valkey Documentation: HPEXPIREAT</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	default List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, byte[]... fields) {
-		return hpExpireAt(key, unixTimeInMillis, ExpirationOptions.Condition.ALWAYS, fields);
-	}
+    /**
+     * Set the expiration for given {@code field} as a {@literal UNIX} timestamp in milliseconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param unixTimeInMillis the moment in time in which the field expires in milliseconds, must not
+     *     be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is in the
+     *     past; {@code 1} indicating expiration time is set/updated; {@code 0} indicating the
+     *     expiration time is not set; {@code -2} indicating there is no such field; {@literal null}
+     *     when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hpexpireat/">Valkey Documentation:
+     *     HPEXPIREAT</a>
+     * @since 3.5
+     */
+    @Nullable
+    default List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, byte[]... fields) {
+        return hpExpireAt(key, unixTimeInMillis, ExpirationOptions.Condition.ALWAYS, fields);
+    }
 
-	/**
-	 * Set the expiration for given {@code field} as a {@literal UNIX} timestamp in milliseconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param unixTimeInMillis the moment in time in which the field expires in milliseconds, must not be {@literal null}.
-	 * @param condition the condition for expiration, must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the specific field is
-	 *         deleted already due to expiration, or provided expiry interval is in the past; {@code 1} indicating
-	 *         expiration time is set/updated; {@code 0} indicating the expiration time is not set (a provided NX | XX |
-	 *         GT | LT condition is not met); {@code -2} indicating there is no such field; {@literal null} when used in
-	 *         pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpireat/">Valkey Documentation: HPEXPIREAT</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition,
-			byte[]... fields);
+    /**
+     * Set the expiration for given {@code field} as a {@literal UNIX} timestamp in milliseconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param unixTimeInMillis the moment in time in which the field expires in milliseconds, must not
+     *     be {@literal null}.
+     * @param condition the condition for expiration, must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 2} indicating the
+     *     specific field is deleted already due to expiration, or provided expiry interval is in the
+     *     past; {@code 1} indicating expiration time is set/updated; {@code 0} indicating the
+     *     expiration time is not set (a provided NX | XX | GT | LT condition is not met); {@code -2}
+     *     indicating there is no such field; {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hpexpireat/">Valkey Documentation:
+     *     HPEXPIREAT</a>
+     * @since 3.5
+     */
+    @Nullable
+    List<Long> hpExpireAt(
+            byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition, byte[]... fields);
 
-	/**
-	 * Remove the expiration from given {@code field}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: {@code 1} indicating expiration time is
-	 *         removed; {@code -1} field has no expiration time to be removed; {@code -2} indicating there is no such
-	 *         field; {@literal null} when used in pipeline / transaction.{@literal null} when used in pipeline /
-	 *         transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation: HPERSIST</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	List<Long> hPersist(byte[] key, byte[]... fields);
+    /**
+     * Remove the expiration from given {@code field}.
+     *
+     * @param key must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: {@code 1} indicating
+     *     expiration time is removed; {@code -1} field has no expiration time to be removed; {@code
+     *     -2} indicating there is no such field; {@literal null} when used in pipeline /
+     *     transaction.{@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation:
+     *     HPERSIST</a>
+     * @since 3.5
+     */
+    @Nullable
+    List<Long> hPersist(byte[] key, byte[]... fields);
 
-	/**
-	 * Get the time to live for {@code fields} in seconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: the time to live in seconds; or a negative
-	 *         value to signal an error. The command returns {@code -1} if the field exists but has no associated
-	 *         expiration time. The command returns {@code -2} if the field does not exist; {@literal null} when used in
-	 *         pipeline / transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	List<Long> hTtl(byte[] key, byte[]... fields);
+    /**
+     * Get the time to live for {@code fields} in seconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: the time to live in
+     *     seconds; or a negative value to signal an error. The command returns {@code -1} if the
+     *     field exists but has no associated expiration time. The command returns {@code -2} if the
+     *     field does not exist; {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
+     * @since 3.5
+     */
+    @Nullable
+    List<Long> hTtl(byte[] key, byte[]... fields);
 
-	/**
-	 * Get the time to live for {@code fields} in and convert it to the given {@link TimeUnit}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param timeUnit must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return for each of the fields supplied - the time to live in the {@link TimeUnit} provided; or a negative value to
-	 *         signal an error. The command returns {@code -1} if the key exists but has no associated expiration time.
-	 *         The command returns {@code -2} if the key does not exist; {@literal null} when used in pipeline /
-	 *         transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	List<Long> hTtl(byte[] key, TimeUnit timeUnit, byte[]... fields);
+    /**
+     * Get the time to live for {@code fields} in and convert it to the given {@link TimeUnit}.
+     *
+     * @param key must not be {@literal null}.
+     * @param timeUnit must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return for each of the fields supplied - the time to live in the {@link TimeUnit} provided; or
+     *     a negative value to signal an error. The command returns {@code -1} if the key exists but
+     *     has no associated expiration time. The command returns {@code -2} if the key does not
+     *     exist; {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
+     * @since 3.5
+     */
+    @Nullable
+    List<Long> hTtl(byte[] key, TimeUnit timeUnit, byte[]... fields);
 
-	/**
-	 * Get the time to live for {@code fields} in milliseconds.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param fields must not be {@literal null}.
-	 * @return a list of {@link Long} values for each of the fields provided: the time to live in seconds; or a negative
-	 *         value to signal an error. The command returns {@code -1} if the key exists but has no associated expiration
-	 *         time. The command returns {@code -2} if the key does not exist; {@literal null} when used in pipeline /
-	 *         transaction.
-	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
-	 * @since 3.5
-	 */
-	@Nullable
-	List<Long> hpTtl(byte[] key, byte[]... fields);
+    /**
+     * Get the time to live for {@code fields} in milliseconds.
+     *
+     * @param key must not be {@literal null}.
+     * @param fields must not be {@literal null}.
+     * @return a list of {@link Long} values for each of the fields provided: the time to live in
+     *     seconds; or a negative value to signal an error. The command returns {@code -1} if the key
+     *     exists but has no associated expiration time. The command returns {@code -2} if the key
+     *     does not exist; {@literal null} when used in pipeline / transaction.
+     * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
+     * @since 3.5
+     */
+    @Nullable
+    List<Long> hpTtl(byte[] key, byte[]... fields);
 }

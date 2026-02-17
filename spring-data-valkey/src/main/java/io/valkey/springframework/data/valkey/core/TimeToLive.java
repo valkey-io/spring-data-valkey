@@ -21,12 +21,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.concurrent.TimeUnit;
-
 import org.springframework.data.annotation.ReadOnlyProperty;
 
 /**
- * {@link TimeToLive} marks a single numeric property on aggregate root to be used for setting expirations in Valkey. The
- * annotated property supersedes any other timeout configuration.
+ * {@link TimeToLive} marks a single numeric property on aggregate root to be used for setting
+ * expirations in Valkey. The annotated property supersedes any other timeout configuration.
  *
  * <pre>
  * <code>
@@ -44,14 +43,14 @@ import org.springframework.data.annotation.ReadOnlyProperty;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@Target(value = { ElementType.FIELD, ElementType.METHOD })
+@Target(value = {ElementType.FIELD, ElementType.METHOD})
 @ReadOnlyProperty
 public @interface TimeToLive {
 
-	/**
-	 * {@link TimeUnit} unit to use.
-	 *
-	 * @return {@link TimeUnit#SECONDS} by default.
-	 */
-	TimeUnit unit() default TimeUnit.SECONDS;
+    /**
+     * {@link TimeUnit} unit to use.
+     *
+     * @return {@link TimeUnit#SECONDS} by default.
+     */
+    TimeUnit unit() default TimeUnit.SECONDS;
 }

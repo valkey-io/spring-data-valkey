@@ -20,6 +20,4 @@ package io.valkey.springframework.data.valkey.repository.cdi;
  * @author Mark Paluch
  */
 @PersonDB
-public interface QualifiedPersonRepository extends PersonRepository {
-
-}
+public interface QualifiedPersonRepository extends PersonRepository {}

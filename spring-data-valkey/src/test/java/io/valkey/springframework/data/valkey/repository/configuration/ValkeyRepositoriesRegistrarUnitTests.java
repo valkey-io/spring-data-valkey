@@ -17,9 +17,9 @@ package io.valkey.springframework.data.valkey.repository.configuration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.valkey.springframework.data.valkey.core.ValkeyHash;
 import java.util.Arrays;
 import java.util.stream.Stream;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -31,7 +31,6 @@ import org.springframework.context.annotation.AnnotationBeanNameGenerator;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.DefaultResourceLoader;
 import org.springframework.core.type.AnnotationMetadata;
-import io.valkey.springframework.data.valkey.core.ValkeyHash;
 import org.springframework.data.repository.CrudRepository;
 
 /**
@@ -39,57 +38,57 @@ import org.springframework.data.repository.CrudRepository;
  */
 class ValkeyRepositoriesRegistrarUnitTests {
 
-	private BeanDefinitionRegistry registry;
+    private BeanDefinitionRegistry registry;
 
-	@BeforeEach
-	void setUp() {
-		registry = new DefaultListableBeanFactory();
-	}
+    @BeforeEach
+    void setUp() {
+        registry = new DefaultListableBeanFactory();
+    }
 
-	@ParameterizedTest // GH-499, GH-3440
-	@MethodSource(value = { "args" })
-	void configuresRepositoriesCorrectly(AnnotationMetadata metadata, String[] beanNames) {
+    @ParameterizedTest // GH-499, GH-3440
+    @MethodSource(value = {"args"})
+    void configuresRepositoriesCorrectly(AnnotationMetadata metadata, String[] beanNames) {
 
-		ValkeyRepositoriesRegistrar registrar = new ValkeyRepositoriesRegistrar();
-		registrar.setResourceLoader(new DefaultResourceLoader());
-		registrar.setEnvironment(new StandardEnvironment());
-		registrar.registerBeanDefinitions(metadata, registry);
+        ValkeyRepositoriesRegistrar registrar = new ValkeyRepositoriesRegistrar();
+        registrar.setResourceLoader(new DefaultResourceLoader());
+        registrar.setEnvironment(new StandardEnvironment());
+        registrar.registerBeanDefinitions(metadata, registry);
 
-		Iterable<String> names = Arrays.asList(registry.getBeanDefinitionNames());
-		assertThat(names).contains(beanNames);
-	}
+        Iterable<String> names = Arrays.asList(registry.getBeanDefinitionNames());
+        assertThat(names).contains(beanNames);
+    }
 
-	static Stream<Arguments> args() {
-		return Stream.of(
-				Arguments.of(AnnotationMetadata.introspect(Config.class),
-						new String[] { "valkeyRepositoriesRegistrarUnitTests.PersonRepository" }),
-				Arguments.of(AnnotationMetadata.introspect(ConfigWithBeanNameGenerator.class),
-						new String[] { "valkeyRepositoriesRegistrarUnitTests.PersonREPO" }));
-	}
+    static Stream<Arguments> args() {
+        return Stream.of(
+                Arguments.of(
+                        AnnotationMetadata.introspect(Config.class),
+                        new String[] {"valkeyRepositoriesRegistrarUnitTests.PersonRepository"}),
+                Arguments.of(
+                        AnnotationMetadata.introspect(ConfigWithBeanNameGenerator.class),
+                        new String[] {"valkeyRepositoriesRegistrarUnitTests.PersonREPO"}));
+    }
 
-	@EnableValkeyRepositories(basePackageClasses = PersonRepository.class, considerNestedRepositories = true)
-	private class Config {
+    @EnableValkeyRepositories(
+            basePackageClasses = PersonRepository.class,
+            considerNestedRepositories = true)
+    private class Config {}
 
-	}
+    @EnableValkeyRepositories(
+            basePackageClasses = PersonRepository.class,
+            nameGenerator = MyBeanNameGenerator.class,
+            considerNestedRepositories = true)
+    private class ConfigWithBeanNameGenerator {}
 
-	@EnableValkeyRepositories(basePackageClasses = PersonRepository.class, nameGenerator = MyBeanNameGenerator.class,
-			considerNestedRepositories = true)
-	private class ConfigWithBeanNameGenerator {
+    static class MyBeanNameGenerator extends AnnotationBeanNameGenerator {
 
-	}
+        @Override
+        public String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry) {
+            return super.generateBeanName(definition, registry).replaceAll("Repository", "REPO");
+        }
+    }
 
-	static class MyBeanNameGenerator extends AnnotationBeanNameGenerator {
+    interface PersonRepository extends CrudRepository<Person, String> {}
 
-		@Override
-		public String generateBeanName(BeanDefinition definition, BeanDefinitionRegistry registry) {
-			return super.generateBeanName(definition, registry).replaceAll("Repository", "REPO");
-		}
-	}
-
-	interface PersonRepository extends CrudRepository<Person, String> {
-
-	}
-
-	@ValkeyHash
-	static class Person {}
+    @ValkeyHash
+    static class Person {}
 }

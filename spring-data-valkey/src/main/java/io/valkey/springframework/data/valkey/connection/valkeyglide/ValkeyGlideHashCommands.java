@@ -15,28 +15,20 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAccumulator;
-
-import javax.xml.transform.Result;
-
-import org.springframework.dao.InvalidDataAccessApiUsageException;
+import glide.api.models.GlideString;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-
-import glide.api.models.GlideString;
 
 /**
  * Implementation of {@link ValkeyHashCommands} for Valkey-Glide.
@@ -64,13 +56,14 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         Assert.notNull(value, "Value must not be null");
-        
+
         try {
-            return connection.execute("HSET",
-                (Number glideResult) -> glideResult != null ? glideResult.longValue() > 0 : null,
-                key,
-                field,
-                value);
+            return connection.execute(
+                    "HSET",
+                    (Number glideResult) -> glideResult != null ? glideResult.longValue() > 0 : null,
+                    key,
+                    field,
+                    value);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -82,13 +75,9 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         Assert.notNull(value, "Value must not be null");
-        
+
         try {
-            return connection.execute("HSETNX",
-                (Boolean glideResult) -> glideResult,
-                key,
-                field,
-                value);
+            return connection.execute("HSETNX", (Boolean glideResult) -> glideResult, key, field, value);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -99,12 +88,13 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     public byte[] hGet(byte[] key, byte[] field) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
-        
+
         try {
-            return connection.execute("HGET",
-                (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
-                key,
-                field);
+            return connection.execute(
+                    "HGET",
+                    (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
+                    key,
+                    field);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -116,14 +106,13 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             Object[] args = new Object[1 + fields.length];
             args[0] = key;
             System.arraycopy(fields, 0, args, 1, fields.length);
-            return connection.execute("HMGET",
-                (Object[] glideResult) -> ValkeyGlideConverters.toBytesList(glideResult),
-                args);
+            return connection.execute(
+                    "HMGET", (Object[] glideResult) -> ValkeyGlideConverters.toBytesList(glideResult), args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -134,7 +123,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(hashes, "Hashes must not be null");
         Assert.notEmpty(hashes, "Hashes must not be empty");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
@@ -142,10 +131,11 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
                 args.add(entry.getKey());
                 args.add(entry.getValue());
             }
-            connection.execute("HMSET",
-                // Valkey returns simple OK string for HMSET
-                (String glideResult) -> glideResult,
-                args.toArray());
+            connection.execute(
+                    "HMSET",
+                    // Valkey returns simple OK string for HMSET
+                    (String glideResult) -> glideResult,
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -156,13 +146,9 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     public Long hIncrBy(byte[] key, byte[] field, long delta) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
-        
+
         try {
-            return connection.execute("HINCRBY",
-                (Long glideResult) -> glideResult,
-                key,
-                field,
-                delta);
+            return connection.execute("HINCRBY", (Long glideResult) -> glideResult, key, field, delta);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -173,13 +159,10 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     public Double hIncrBy(byte[] key, byte[] field, double delta) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
-        
+
         try {
-            return connection.execute("HINCRBYFLOAT",
-                (Double glideResult) -> glideResult,
-                key,
-                field,
-                delta);
+            return connection.execute(
+                    "HINCRBYFLOAT", (Double glideResult) -> glideResult, key, field, delta);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -190,11 +173,9 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     public Boolean hExists(byte[] key, byte[] field) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
-        
+
         try {
-            return connection.execute("HEXISTS",
-                (Boolean glideResult) -> glideResult,
-                key, field);
+            return connection.execute("HEXISTS", (Boolean glideResult) -> glideResult, key, field);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -206,15 +187,13 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             Object[] args = new Object[1 + fields.length];
             args[0] = key;
             System.arraycopy(fields, 0, args, 1, fields.length);
 
-            return connection.execute("HDEL",
-                (Long glideResult) -> glideResult,
-                args);
+            return connection.execute("HDEL", (Long glideResult) -> glideResult, args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -224,11 +203,9 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     @Nullable
     public Long hLen(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("HLEN",
-                (Long glideResult) -> glideResult,
-                key);
+            return connection.execute("HLEN", (Long glideResult) -> glideResult, key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -238,11 +215,10 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     @Nullable
     public Set<byte[]> hKeys(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("HKEYS",
-                (Object[] glideResult) -> ValkeyGlideConverters.toBytesSet(glideResult),
-                key);
+            return connection.execute(
+                    "HKEYS", (Object[] glideResult) -> ValkeyGlideConverters.toBytesSet(glideResult), key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -252,11 +228,10 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     @Nullable
     public List<byte[]> hVals(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("HVALS",
-                (Object[] glideResult) -> ValkeyGlideConverters.toBytesList(glideResult),
-                key);
+            return connection.execute(
+                    "HVALS", (Object[] glideResult) -> ValkeyGlideConverters.toBytesList(glideResult), key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -266,12 +241,14 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     @Nullable
     public Map<byte[], byte[]> hGetAll(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("HGETALL",
-                //(Map<GlideString, GlideString> glideResult) -> ValkeyGlideConverters.toBytesMap(glideResult),
-                glideResult -> ValkeyGlideConverters.toBytesMap(glideResult),
-                key);
+            return connection.execute(
+                    "HGETALL",
+                    // (Map<GlideString, GlideString> glideResult) ->
+                    // ValkeyGlideConverters.toBytesMap(glideResult),
+                    glideResult -> ValkeyGlideConverters.toBytesMap(glideResult),
+                    key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -281,11 +258,12 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     @Nullable
     public byte[] hRandField(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("HRANDFIELD",
-                (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
-                key);
+            return connection.execute(
+                    "HRANDFIELD",
+                    (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
+                    key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -295,13 +273,14 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     @Nullable
     public Map.Entry<byte[], byte[]> hRandFieldWithValues(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("HRANDFIELD",
-                glideResult -> ValkeyGlideConverters.toBytesMapEntry(glideResult),
-                key,
-                1,
-                "WITHVALUES");
+            return connection.execute(
+                    "HRANDFIELD",
+                    glideResult -> ValkeyGlideConverters.toBytesMapEntry(glideResult),
+                    key,
+                    1,
+                    "WITHVALUES");
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -311,12 +290,13 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     @Nullable
     public List<byte[]> hRandField(byte[] key, long count) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("HRANDFIELD",
-                (Object[] glideResult) -> ValkeyGlideConverters.toBytesList(glideResult),
-                key,
-                count);
+            return connection.execute(
+                    "HRANDFIELD",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toBytesList(glideResult),
+                    key,
+                    count);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -328,11 +308,12 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
 
         try {
-            return connection.execute("HRANDFIELD",
-                glideResult -> ValkeyGlideConverters.toMapEntriesList(glideResult),
-                key,
-                count,
-                "WITHVALUES");
+            return connection.execute(
+                    "HRANDFIELD",
+                    glideResult -> ValkeyGlideConverters.toMapEntriesList(glideResult),
+                    key,
+                    count,
+                    "WITHVALUES");
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -342,15 +323,13 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     public Cursor<Map.Entry<byte[], byte[]>> hScan(byte[] key, ScanOptions options) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(options, "ScanOptions must not be null");
-        
+
         return new ValkeyGlideHashScanCursor(key, options, connection);
     }
-    
-    /**
-     * Simple implementation of Cursor for HSCAN operation.
-     */
+
+    /** Simple implementation of Cursor for HSCAN operation. */
     private static class ValkeyGlideHashScanCursor implements Cursor<Map.Entry<byte[], byte[]>> {
-        
+
         private final byte[] key;
         private final ScanOptions options;
         private final ValkeyGlideConnection connection;
@@ -358,14 +337,15 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         private List<Map.Entry<byte[], byte[]>> entries = new ArrayList<>();
         private int currentIndex = 0;
         private boolean finished = false;
-        
-        public ValkeyGlideHashScanCursor(byte[] key, ScanOptions options, ValkeyGlideConnection connection) {
+
+        public ValkeyGlideHashScanCursor(
+                byte[] key, ScanOptions options, ValkeyGlideConnection connection) {
             this.key = key;
             this.options = options;
             this.connection = connection;
             scanNext();
         }
-        
+
         @Override
         public boolean hasNext() {
             if (currentIndex < entries.size()) {
@@ -377,7 +357,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
             scanNext();
             return currentIndex < entries.size();
         }
-        
+
         @Override
         public Map.Entry<byte[], byte[]> next() {
             if (!hasNext()) {
@@ -388,77 +368,80 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 
         private void scanNext() {
             if (connection.isQueueing() || connection.isPipelined()) {
-                throw new InvalidDataAccessApiUsageException("'HSCAN' cannot be called in pipeline / transaction mode");
+                throw new InvalidDataAccessApiUsageException(
+                        "'HSCAN' cannot be called in pipeline / transaction mode");
             }
 
             try {
                 List<Object> args = new ArrayList<>();
                 args.add(key);
                 args.add(String.valueOf(cursor));
-                
+
                 if (options.getCount() != null) {
                     args.add("COUNT");
                     args.add(options.getCount());
                 }
-                
+
                 if (options.getPattern() != null) {
                     args.add("MATCH");
                     args.add(options.getPattern());
                 }
-                
-                connection.execute("HSCAN", (Object[] glideResult) -> {
-                    if (glideResult == null) {
-                        return null;
-                    }
-                    
-                    // First element is the new cursor and is byte[], need to convert to String first
-                    GlideString cursorStr = (GlideString) glideResult[0];
-                    cursor = Long.parseLong(cursorStr.getString());
-                    if (cursor == 0) {
-                        finished = true;
-                    }
-                        
-                    // Second element is the array of field-value pairs
-                    Object[] fieldValuePairs = (Object[]) glideResult[1];
-                        
-                    // Reset entries for this batch
-                    entries.clear();
-                    currentIndex = 0;
-                    for (int i = 0; i < fieldValuePairs.length; i += 2) {
-                        GlideString field = (GlideString) fieldValuePairs[i];
-                        GlideString value = (GlideString) fieldValuePairs[i + 1];
-                        entries.add(new HashMap.SimpleEntry<>(field.getBytes(), value.getBytes()));
-                    }
 
-                    return null; // We don't need to return anything from this mapper
-                },
-                args.toArray());
+                connection.execute(
+                        "HSCAN",
+                        (Object[] glideResult) -> {
+                            if (glideResult == null) {
+                                return null;
+                            }
+
+                            // First element is the new cursor and is byte[], need to convert to String first
+                            GlideString cursorStr = (GlideString) glideResult[0];
+                            cursor = Long.parseLong(cursorStr.getString());
+                            if (cursor == 0) {
+                                finished = true;
+                            }
+
+                            // Second element is the array of field-value pairs
+                            Object[] fieldValuePairs = (Object[]) glideResult[1];
+
+                            // Reset entries for this batch
+                            entries.clear();
+                            currentIndex = 0;
+                            for (int i = 0; i < fieldValuePairs.length; i += 2) {
+                                GlideString field = (GlideString) fieldValuePairs[i];
+                                GlideString value = (GlideString) fieldValuePairs[i + 1];
+                                entries.add(new HashMap.SimpleEntry<>(field.getBytes(), value.getBytes()));
+                            }
+
+                            return null; // We don't need to return anything from this mapper
+                        },
+                        args.toArray());
 
             } catch (Exception ex) {
                 throw new ValkeyGlideExceptionConverter().convert(ex);
             }
         }
-        
+
         @Override
         public void close() {
             // No resources to close for this implementation
         }
-        
+
         @Override
         public boolean isClosed() {
             return finished && currentIndex >= entries.size();
         }
-        
+
         @Override
         public long getCursorId() {
             return cursor;
         }
-        
+
         @Override
         public long getPosition() {
             return currentIndex;
         }
-        
+
         @Override
         public CursorId getId() {
             return CursorId.of(cursor);
@@ -470,12 +453,9 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     public Long hStrLen(byte[] key, byte[] field) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
-        
+
         try {
-            return connection.execute("HSTRLEN",
-            (Long glideResult) -> glideResult,
-            key,
-            field);
+            return connection.execute("HSTRLEN", (Long glideResult) -> glideResult, key, field);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -483,33 +463,35 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 
     @Override
     @Nullable
-    public List<Long> hExpire(byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields) {
+    public List<Long> hExpire(
+            byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
             args.add(seconds);
-            
+
             // Add condition if not ALWAYS
             if (condition != ExpirationOptions.Condition.ALWAYS) {
                 args.add(condition.name());
             }
-            
+
             // Add FIELDS keyword and numfields
             args.add("FIELDS");
             args.add(fields.length);
-            
+
             // Add fields
             for (byte[] field : fields) {
                 args.add(field);
             }
-            
-            return connection.execute("HEXPIRE",
-                (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
-                args.toArray());
+
+            return connection.execute(
+                    "HEXPIRE",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -517,33 +499,35 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 
     @Override
     @Nullable
-    public List<Long> hpExpire(byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields) {
+    public List<Long> hpExpire(
+            byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
             args.add(millis);
-            
+
             // Add condition if not ALWAYS
             if (condition != ExpirationOptions.Condition.ALWAYS) {
                 args.add(condition.name());
             }
-            
+
             // Add FIELDS keyword and numfields
             args.add("FIELDS");
             args.add(fields.length);
-            
+
             // Add fields
             for (byte[] field : fields) {
                 args.add(field);
             }
-            
-            return connection.execute("HPEXPIRE",
-                (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
-                args.toArray());
+
+            return connection.execute(
+                    "HPEXPIRE",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -551,33 +535,35 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 
     @Override
     @Nullable
-    public List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields) {
+    public List<Long> hExpireAt(
+            byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
             args.add(unixTime);
-            
+
             // Add condition if not ALWAYS
             if (condition != ExpirationOptions.Condition.ALWAYS) {
                 args.add(condition.name());
             }
-            
+
             // Add FIELDS keyword and numfields
             args.add("FIELDS");
             args.add(fields.length);
-            
+
             // Add fields
             for (byte[] field : fields) {
                 args.add(field);
             }
-            
-            return connection.execute("HEXPIREAT",
-                (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
-                args.toArray());
+
+            return connection.execute(
+                    "HEXPIREAT",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -585,33 +571,35 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 
     @Override
     @Nullable
-    public List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition, byte[]... fields) {
+    public List<Long> hpExpireAt(
+            byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
             args.add(unixTimeInMillis);
-            
+
             // Add condition if not ALWAYS
             if (condition != ExpirationOptions.Condition.ALWAYS) {
                 args.add(condition.name());
             }
-            
+
             // Add FIELDS keyword and numfields
             args.add("FIELDS");
             args.add(fields.length);
-            
+
             // Add fields
             for (byte[] field : fields) {
                 args.add(field);
             }
-            
-            return connection.execute("HPEXPIREAT",
-                (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
-                args.toArray());
+
+            return connection.execute(
+                    "HPEXPIREAT",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -623,7 +611,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
@@ -632,10 +620,11 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
             for (byte[] field : fields) {
                 args.add(field);
             }
-            
-            return connection.execute("HTTL",
-                (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
-                args.toArray());
+
+            return connection.execute(
+                    "HTTL",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -648,7 +637,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         if (ttls == null) {
             return null;
         }
-       
+
         List<Long> converted = new ArrayList<>(ttls.size());
         for (Long ttl : ttls) {
             if (ttl < 0) {
@@ -666,7 +655,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
@@ -675,10 +664,11 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
             for (byte[] field : fields) {
                 args.add(field);
             }
-            
-            return connection.execute("HPTTL",
-                (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
-                args.toArray());
+
+            return connection.execute(
+                    "HPTTL",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -690,7 +680,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
@@ -699,10 +689,11 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
             for (byte[] field : fields) {
                 args.add(field);
             }
-            
-            return connection.execute("HPERSIST",
-                (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
-                args.toArray());
+
+            return connection.execute(
+                    "HPERSIST",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toLongsList(glideResult),
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }

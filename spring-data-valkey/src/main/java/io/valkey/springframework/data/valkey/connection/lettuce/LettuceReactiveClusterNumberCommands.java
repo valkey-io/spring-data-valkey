@@ -23,14 +23,14 @@ import io.valkey.springframework.data.valkey.connection.ReactiveClusterNumberCom
  * @since 2.0
  */
 class LettuceReactiveClusterNumberCommands extends LettuceReactiveNumberCommands
-		implements ReactiveClusterNumberCommands {
+        implements ReactiveClusterNumberCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveClusterNumberCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterNumberCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveClusterNumberCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterNumberCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 }

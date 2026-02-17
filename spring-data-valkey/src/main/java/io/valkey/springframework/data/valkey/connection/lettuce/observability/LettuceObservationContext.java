@@ -20,7 +20,6 @@ import io.lettuce.core.tracing.Tracing.Endpoint;
 import io.micrometer.observation.Observation;
 import io.micrometer.observation.transport.Kind;
 import io.micrometer.observation.transport.SenderContext;
-
 import org.springframework.lang.Nullable;
 
 /**
@@ -28,48 +27,50 @@ import org.springframework.lang.Nullable;
  *
  * @author Mark Paluch
  * @since 3.0
- * @deprecated since 3.4 for removal with the next major revision. Use Lettuce's Micrometer integration through
- *             {@link io.lettuce.core.tracing.MicrometerTracing}.
+ * @deprecated since 3.4 for removal with the next major revision. Use Lettuce's Micrometer
+ *     integration through {@link io.lettuce.core.tracing.MicrometerTracing}.
  */
 @Deprecated(since = "3.4", forRemoval = true)
 public class LettuceObservationContext extends SenderContext<Object> {
 
-	private volatile @Nullable RedisCommand<?, ?, ?> command;
+    private volatile @Nullable RedisCommand<?, ?, ?> command;
 
-	private volatile @Nullable Endpoint endpoint;
+    private volatile @Nullable Endpoint endpoint;
 
-	public LettuceObservationContext(String serviceName) {
-		super((carrier, key, value) -> {}, Kind.CLIENT);
-		setRemoteServiceName(serviceName);
-	}
+    public LettuceObservationContext(String serviceName) {
+        super((carrier, key, value) -> {}, Kind.CLIENT);
+        setRemoteServiceName(serviceName);
+    }
 
-	public RedisCommand<?, ?, ?> getRequiredCommand() {
+    public RedisCommand<?, ?, ?> getRequiredCommand() {
 
-		RedisCommand<?, ?, ?> local = command;
+        RedisCommand<?, ?, ?> local = command;
 
-		if (local == null) {
-			throw new IllegalArgumentException("LettuceObservationContext is not associated with a Command");
-		}
+        if (local == null) {
+            throw new IllegalArgumentException(
+                    "LettuceObservationContext is not associated with a Command");
+        }
 
-		return local;
-	}
+        return local;
+    }
 
-	public void setCommand(RedisCommand<?, ?, ?> command) {
-		this.command = command;
-	}
+    public void setCommand(RedisCommand<?, ?, ?> command) {
+        this.command = command;
+    }
 
-	public Endpoint getRequiredEndpoint() {
+    public Endpoint getRequiredEndpoint() {
 
-		Endpoint local = endpoint;
+        Endpoint local = endpoint;
 
-		if (local == null) {
-			throw new IllegalArgumentException("LettuceObservationContext is not associated with a Endpoint");
-		}
+        if (local == null) {
+            throw new IllegalArgumentException(
+                    "LettuceObservationContext is not associated with a Endpoint");
+        }
 
-		return local;
-	}
+        return local;
+    }
 
-	public void setEndpoint(Endpoint endpoint) {
-		this.endpoint = endpoint;
-	}
+    public void setEndpoint(Endpoint endpoint) {
+        this.endpoint = endpoint;
+    }
 }

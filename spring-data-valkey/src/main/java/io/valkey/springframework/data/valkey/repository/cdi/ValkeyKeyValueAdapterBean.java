@@ -16,18 +16,16 @@
 
 package io.valkey.springframework.data.valkey.repository.cdi;
 
+import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
+import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import jakarta.enterprise.context.spi.CreationalContext;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanManager;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Set;
-
 import org.springframework.beans.factory.DisposableBean;
-import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
-import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import org.springframework.util.Assert;
 
 /**
@@ -38,60 +36,63 @@ import org.springframework.util.Assert;
  */
 public class ValkeyKeyValueAdapterBean extends CdiBean<ValkeyKeyValueAdapter> {
 
-	private final Bean<ValkeyOperations<?, ?>> valkeyOperations;
+    private final Bean<ValkeyOperations<?, ?>> valkeyOperations;
 
-	/**
-	 * Creates a new {@link ValkeyKeyValueAdapterBean}.
-	 *
-	 * @param valkeyOperations must not be {@literal null}.
-	 * @param qualifiers must not be {@literal null}.
-	 * @param beanManager must not be {@literal null}.
-	 */
-	public ValkeyKeyValueAdapterBean(Bean<ValkeyOperations<?, ?>> valkeyOperations, Set<Annotation> qualifiers,
-			BeanManager beanManager) {
+    /**
+     * Creates a new {@link ValkeyKeyValueAdapterBean}.
+     *
+     * @param valkeyOperations must not be {@literal null}.
+     * @param qualifiers must not be {@literal null}.
+     * @param beanManager must not be {@literal null}.
+     */
+    public ValkeyKeyValueAdapterBean(
+            Bean<ValkeyOperations<?, ?>> valkeyOperations,
+            Set<Annotation> qualifiers,
+            BeanManager beanManager) {
 
-		super(qualifiers, ValkeyKeyValueAdapter.class, beanManager);
-		Assert.notNull(valkeyOperations, "ValkeyOperations Bean must not be null");
-		this.valkeyOperations = valkeyOperations;
-	}
+        super(qualifiers, ValkeyKeyValueAdapter.class, beanManager);
+        Assert.notNull(valkeyOperations, "ValkeyOperations Bean must not be null");
+        this.valkeyOperations = valkeyOperations;
+    }
 
-	@Override
-	public ValkeyKeyValueAdapter create(CreationalContext<ValkeyKeyValueAdapter> creationalContext) {
+    @Override
+    public ValkeyKeyValueAdapter create(CreationalContext<ValkeyKeyValueAdapter> creationalContext) {
 
-		Type beanType = getBeanType();
+        Type beanType = getBeanType();
 
-		return new ValkeyKeyValueAdapter(getDependencyInstance(this.valkeyOperations, beanType));
-	}
+        return new ValkeyKeyValueAdapter(getDependencyInstance(this.valkeyOperations, beanType));
+    }
 
-	private Type getBeanType() {
+    private Type getBeanType() {
 
-		for (Type type : this.valkeyOperations.getTypes()) {
-			if (type instanceof Class<?> && ValkeyOperations.class.isAssignableFrom((Class<?>) type)) {
-				return type;
-			}
+        for (Type type : this.valkeyOperations.getTypes()) {
+            if (type instanceof Class<?> && ValkeyOperations.class.isAssignableFrom((Class<?>) type)) {
+                return type;
+            }
 
-			if (type instanceof ParameterizedType parameterizedType) {
-				if (parameterizedType.getRawType() instanceof Class<?>
-						&& ValkeyOperations.class.isAssignableFrom((Class<?>) parameterizedType.getRawType())) {
-					return type;
-				}
-			}
-		}
-		throw new IllegalStateException("Cannot resolve bean type for class " + ValkeyOperations.class.getName());
-	}
+            if (type instanceof ParameterizedType parameterizedType) {
+                if (parameterizedType.getRawType() instanceof Class<?>
+                        && ValkeyOperations.class.isAssignableFrom((Class<?>) parameterizedType.getRawType())) {
+                    return type;
+                }
+            }
+        }
+        throw new IllegalStateException(
+                "Cannot resolve bean type for class " + ValkeyOperations.class.getName());
+    }
 
-	@Override
-	public void destroy(ValkeyKeyValueAdapter instance, CreationalContext<ValkeyKeyValueAdapter> creationalContext) {
+    @Override
+    public void destroy(
+            ValkeyKeyValueAdapter instance, CreationalContext<ValkeyKeyValueAdapter> creationalContext) {
 
-		if (instance instanceof DisposableBean) {
-			try {
-				instance.destroy();
-			} catch (Exception ex) {
-				throw new IllegalStateException(ex);
-			}
-		}
+        if (instance instanceof DisposableBean) {
+            try {
+                instance.destroy();
+            } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+            }
+        }
 
-		super.destroy(instance, creationalContext);
-	}
-
+        super.destroy(instance, creationalContext);
+    }
 }

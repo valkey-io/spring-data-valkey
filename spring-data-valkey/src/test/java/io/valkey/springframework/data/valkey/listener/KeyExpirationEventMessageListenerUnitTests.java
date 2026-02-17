@@ -18,18 +18,17 @@ package io.valkey.springframework.data.valkey.listener;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.connection.DefaultMessage;
+import io.valkey.springframework.data.valkey.connection.Message;
+import io.valkey.springframework.data.valkey.core.ValkeyKeyExpiredEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
-import io.valkey.springframework.data.valkey.connection.DefaultMessage;
-import io.valkey.springframework.data.valkey.connection.Message;
-import io.valkey.springframework.data.valkey.core.ValkeyKeyExpiredEvent;
 
 /**
  * @author Christoph Strobl
@@ -37,38 +36,39 @@ import io.valkey.springframework.data.valkey.core.ValkeyKeyExpiredEvent;
 @ExtendWith(MockitoExtension.class)
 class KeyExpirationEventMessageListenerUnitTests {
 
-	private static final String MESSAGE_CHANNEL = "channel";
-	private static final String MESSAGE_BODY = "body";
-	private static final Message MESSAGE = new DefaultMessage(MESSAGE_CHANNEL.getBytes(), MESSAGE_BODY.getBytes());
+    private static final String MESSAGE_CHANNEL = "channel";
+    private static final String MESSAGE_BODY = "body";
+    private static final Message MESSAGE =
+            new DefaultMessage(MESSAGE_CHANNEL.getBytes(), MESSAGE_BODY.getBytes());
 
-	@Mock ValkeyMessageListenerContainer containerMock;
-	@Mock ApplicationEventPublisher publisherMock;
-	KeyExpirationEventMessageListener listener;
+    @Mock ValkeyMessageListenerContainer containerMock;
+    @Mock ApplicationEventPublisher publisherMock;
+    KeyExpirationEventMessageListener listener;
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		listener = new KeyExpirationEventMessageListener(containerMock);
-		listener.setApplicationEventPublisher(publisherMock);
-	}
+        listener = new KeyExpirationEventMessageListener(containerMock);
+        listener.setApplicationEventPublisher(publisherMock);
+    }
 
-	@Test // DATAREDIS-425
-	void handleMessageShouldPublishKeyExpiredEvent() {
+    @Test // DATAREDIS-425
+    void handleMessageShouldPublishKeyExpiredEvent() {
 
-		listener.onMessage(MESSAGE, "*".getBytes());
+        listener.onMessage(MESSAGE, "*".getBytes());
 
-		ArgumentCaptor<ApplicationEvent> captor = ArgumentCaptor.forClass(ApplicationEvent.class);
+        ArgumentCaptor<ApplicationEvent> captor = ArgumentCaptor.forClass(ApplicationEvent.class);
 
-		verify(publisherMock, times(1)).publishEvent(captor.capture());
-		assertThat(captor.getValue()).isInstanceOf(ValkeyKeyExpiredEvent.class);
-		assertThat((byte[]) captor.getValue().getSource()).isEqualTo(MESSAGE_BODY.getBytes());
-	}
+        verify(publisherMock, times(1)).publishEvent(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(ValkeyKeyExpiredEvent.class);
+        assertThat((byte[]) captor.getValue().getSource()).isEqualTo(MESSAGE_BODY.getBytes());
+    }
 
-	@Test // DATAREDIS-425, DATAREDIS-692
-	void handleMessageShouldNotRespondToEmptyMessage() {
+    @Test // DATAREDIS-425, DATAREDIS-692
+    void handleMessageShouldNotRespondToEmptyMessage() {
 
-		listener.onMessage(new DefaultMessage(new byte[] {}, new byte[] {}), "*".getBytes());
+        listener.onMessage(new DefaultMessage(new byte[] {}, new byte[] {}), "*".getBytes());
 
-		verifyNoInteractions(publisherMock);
-	}
+        verifyNoInteractions(publisherMock);
+    }
 }

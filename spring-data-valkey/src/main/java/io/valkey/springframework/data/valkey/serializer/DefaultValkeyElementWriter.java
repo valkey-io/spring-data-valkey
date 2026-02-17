@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.serializer;
 
 import java.nio.ByteBuffer;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
@@ -29,29 +28,32 @@ import org.springframework.util.ObjectUtils;
  */
 class DefaultValkeyElementWriter<T> implements ValkeyElementWriter<T> {
 
-	private final @Nullable ValkeySerializer<T> serializer;
+    private final @Nullable ValkeySerializer<T> serializer;
 
-	DefaultValkeyElementWriter(ValkeySerializer<T> serializer) {
-		this.serializer = serializer;
-	}
+    DefaultValkeyElementWriter(ValkeySerializer<T> serializer) {
+        this.serializer = serializer;
+    }
 
-	@Override
-	public ByteBuffer write(@Nullable T value) {
+    @Override
+    public ByteBuffer write(@Nullable T value) {
 
-		if (serializer != null && (value == null || serializer.canSerialize(value.getClass()))) {
-			byte[] serializedValue = serializer.serialize(value);
-			return serializedValue != null ? ByteBuffer.wrap(serializedValue) : ByteBuffer.wrap(new byte[0]);
-		}
+        if (serializer != null && (value == null || serializer.canSerialize(value.getClass()))) {
+            byte[] serializedValue = serializer.serialize(value);
+            return serializedValue != null
+                    ? ByteBuffer.wrap(serializedValue)
+                    : ByteBuffer.wrap(new byte[0]);
+        }
 
-		if (value instanceof byte[]) {
-			return ByteBuffer.wrap((byte[]) value);
-		}
+        if (value instanceof byte[]) {
+            return ByteBuffer.wrap((byte[]) value);
+        }
 
-		if (value instanceof ByteBuffer) {
-			return (ByteBuffer) value;
-		}
+        if (value instanceof ByteBuffer) {
+            return (ByteBuffer) value;
+        }
 
-		throw new IllegalStateException(
-				"Cannot serialize value of type %s without a serializer".formatted(ObjectUtils.nullSafeClassName(value)));
-	}
+        throw new IllegalStateException(
+                "Cannot serialize value of type %s without a serializer"
+                        .formatted(ObjectUtils.nullSafeClassName(value)));
+    }
 }

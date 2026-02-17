@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.serializer;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.factory.BeanFactory;
@@ -28,10 +27,11 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Generic String to byte[] (and back) serializer. Relies on the Spring {@link ConversionService} to transform objects
- * into String and vice versa. The Strings are convert into bytes and vice-versa using the specified charset (by default
- * UTF-8). <b>Note:</b> The conversion service initialization happens automatically if the class is defined as a Spring
- * bean. <b>Note:</b> Does not handle nulls in any special way delegating everything to the container.
+ * Generic String to byte[] (and back) serializer. Relies on the Spring {@link ConversionService} to
+ * transform objects into String and vice versa. The Strings are convert into bytes and vice-versa
+ * using the specified charset (by default UTF-8). <b>Note:</b> The conversion service
+ * initialization happens automatically if the class is defined as a Spring bean. <b>Note:</b> Does
+ * not handle nulls in any special way delegating everything to the container.
  *
  * @author Costin Leau
  * @author Christoph Strobl
@@ -39,95 +39,96 @@ import org.springframework.util.Assert;
  */
 public class GenericToStringSerializer<T> implements ValkeySerializer<T>, BeanFactoryAware {
 
-	private final Class<T> type;
-	private final Charset charset;
-	private Converter converter;
+    private final Class<T> type;
+    private final Charset charset;
+    private Converter converter;
 
-	public GenericToStringSerializer(Class<T> type) {
-		this(type, StandardCharsets.UTF_8);
-	}
+    public GenericToStringSerializer(Class<T> type) {
+        this(type, StandardCharsets.UTF_8);
+    }
 
-	public GenericToStringSerializer(Class<T> type, Charset charset) {
+    public GenericToStringSerializer(Class<T> type, Charset charset) {
 
-		Assert.notNull(type, "Type must not be null");
+        Assert.notNull(type, "Type must not be null");
 
-		this.type = type;
-		this.charset = charset;
-		this.converter = new Converter(DefaultConversionService.getSharedInstance());
-	}
+        this.type = type;
+        this.charset = charset;
+        this.converter = new Converter(DefaultConversionService.getSharedInstance());
+    }
 
-	/**
-	 * Set the {@link ConversionService} to be used.
-	 *
-	 * @param conversionService the conversion service to be used, must not be {@literal null}.
-	 */
-	public void setConversionService(ConversionService conversionService) {
+    /**
+     * Set the {@link ConversionService} to be used.
+     *
+     * @param conversionService the conversion service to be used, must not be {@literal null}.
+     */
+    public void setConversionService(ConversionService conversionService) {
 
-		Assert.notNull(conversionService, "ConversionService must not be null");
+        Assert.notNull(conversionService, "ConversionService must not be null");
 
-		converter = new Converter(conversionService);
-	}
+        converter = new Converter(conversionService);
+    }
 
-	/**
-	 * Set the {@link TypeConverter} to be used.
-	 *
-	 * @param typeConverter the conversion service to be used, must not be {@literal null}.
-	 */
-	public void setTypeConverter(TypeConverter typeConverter) {
+    /**
+     * Set the {@link TypeConverter} to be used.
+     *
+     * @param typeConverter the conversion service to be used, must not be {@literal null}.
+     */
+    public void setTypeConverter(TypeConverter typeConverter) {
 
-		Assert.notNull(typeConverter, "TypeConverter must not be null");
+        Assert.notNull(typeConverter, "TypeConverter must not be null");
 
-		converter = new Converter(typeConverter);
-	}
+        converter = new Converter(typeConverter);
+    }
 
-	@Override
-	public byte[] serialize(@Nullable T value) {
+    @Override
+    public byte[] serialize(@Nullable T value) {
 
-		if (value == null) {
-			return null;
-		}
+        if (value == null) {
+            return null;
+        }
 
-		String string = converter.convert(value, String.class);
-		return string.getBytes(charset);
-	}
+        String string = converter.convert(value, String.class);
+        return string.getBytes(charset);
+    }
 
-	@Override
-	@Nullable
-	public T deserialize(@Nullable byte[] bytes) {
+    @Override
+    @Nullable
+    public T deserialize(@Nullable byte[] bytes) {
 
-		if (bytes == null) {
-			return null;
-		}
+        if (bytes == null) {
+            return null;
+        }
 
-		String string = new String(bytes, charset);
-		return converter.convert(string, type);
-	}
+        String string = new String(bytes, charset);
+        return converter.convert(string, type);
+    }
 
-	@Override
-	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-		// no-op
-	}
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        // no-op
+    }
 
-	private final static class Converter {
+    private static final class Converter {
 
-		private final @Nullable ConversionService conversionService;
-		private final @Nullable TypeConverter typeConverter;
+        private final @Nullable ConversionService conversionService;
+        private final @Nullable TypeConverter typeConverter;
 
-		public Converter(ConversionService conversionService) {
-			this.conversionService = conversionService;
-			this.typeConverter = null;
-		}
+        public Converter(ConversionService conversionService) {
+            this.conversionService = conversionService;
+            this.typeConverter = null;
+        }
 
-		public Converter(TypeConverter typeConverter) {
-			this.conversionService = null;
-			this.typeConverter = typeConverter;
-		}
+        public Converter(TypeConverter typeConverter) {
+            this.conversionService = null;
+            this.typeConverter = typeConverter;
+        }
 
-		@Nullable
-		<E> E convert(Object value, Class<E> targetType) {
+        @Nullable
+        <E> E convert(Object value, Class<E> targetType) {
 
-			return conversionService != null ? conversionService.convert(value, targetType)
-					: typeConverter.convertIfNecessary(value, targetType);
-		}
-	}
+            return conversionService != null
+                    ? conversionService.convert(value, targetType)
+                    : typeConverter.convertIfNecessary(value, targetType);
+        }
+    }
 }

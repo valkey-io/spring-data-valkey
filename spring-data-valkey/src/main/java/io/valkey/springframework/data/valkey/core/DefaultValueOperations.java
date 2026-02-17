@@ -15,6 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
+import io.valkey.springframework.data.valkey.connection.DefaultedValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
@@ -22,12 +27,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
-import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
-import io.valkey.springframework.data.valkey.connection.DefaultedValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
-import io.valkey.springframework.data.valkey.core.types.Expiration;
 import org.springframework.lang.Nullable;
 
 /**
@@ -39,274 +38,293 @@ import org.springframework.lang.Nullable;
  * @author Jiahe Cai
  * @author Ehsan Alemzadeh
  */
-class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements ValueOperations<K, V> {
-
-	DefaultValueOperations(ValkeyTemplate<K, V> template) {
-		super(template);
-	}
-
-	@Override
-	public V get(Object key) {
-		return execute(valueCallbackFor(key, DefaultedValkeyConnection::get));
-	}
-
-	@Nullable
-	@Override
-	public V getAndDelete(K key) {
-		return execute(valueCallbackFor(key, DefaultedValkeyConnection::getDel));
-	}
+class DefaultValueOperations<K, V> extends AbstractOperations<K, V>
+        implements ValueOperations<K, V> {
+
+    DefaultValueOperations(ValkeyTemplate<K, V> template) {
+        super(template);
+    }
+
+    @Override
+    public V get(Object key) {
+        return execute(valueCallbackFor(key, DefaultedValkeyConnection::get));
+    }
+
+    @Nullable
+    @Override
+    public V getAndDelete(K key) {
+        return execute(valueCallbackFor(key, DefaultedValkeyConnection::getDel));
+    }
+
+    @Nullable
+    @Override
+    public V getAndExpire(K key, long timeout, TimeUnit unit) {
+        return execute(
+                valueCallbackFor(
+                        key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.from(timeout, unit))));
+    }
+
+    @Nullable
+    @Override
+    public V getAndExpire(K key, Duration timeout) {
+        return execute(
+                valueCallbackFor(
+                        key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.from(timeout))));
+    }
+
+    @Nullable
+    @Override
+    public V getAndPersist(K key) {
+        return execute(
+                valueCallbackFor(
+                        key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.persistent())));
+    }
+
+    @Override
+    public V getAndSet(K key, V newValue) {
+
+        byte[] rawValue = rawValue(newValue);
+        return execute(
+                valueCallbackFor(key, (connection, rawKey) -> connection.getSet(rawKey, rawValue)));
+    }
+
+    @Override
+    public Long increment(K key) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.incr(rawKey));
+    }
+
+    @Override
+    public Long increment(K key, long delta) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.incrBy(rawKey, delta));
+    }
+
+    @Override
+    public Double increment(K key, double delta) {
+
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.incrBy(rawKey, delta));
+    }
 
-	@Nullable
-	@Override
-	public V getAndExpire(K key, long timeout, TimeUnit unit) {
-		return execute(
-				valueCallbackFor(key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.from(timeout, unit))));
-	}
+    @Override
+    public Long decrement(K key) {
 
-	@Nullable
-	@Override
-	public V getAndExpire(K key, Duration timeout) {
-		return execute(valueCallbackFor(key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.from(timeout))));
-	}
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.decr(rawKey));
+    }
 
-	@Nullable
-	@Override
-	public V getAndPersist(K key) {
-		return execute(valueCallbackFor(key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.persistent())));
-	}
+    @Override
+    public Long decrement(K key, long delta) {
 
-	@Override
-	public V getAndSet(K key, V newValue) {
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.decrBy(rawKey, delta));
+    }
 
-		byte[] rawValue = rawValue(newValue);
-		return execute(valueCallbackFor(key, (connection, rawKey) -> connection.getSet(rawKey, rawValue)));
-	}
+    @Override
+    public Integer append(K key, String value) {
 
-	@Override
-	public Long increment(K key) {
+        byte[] rawKey = rawKey(key);
+        byte[] rawString = rawString(value);
+
+        return execute(
+                connection -> {
+                    Long result = connection.append(rawKey, rawString);
+                    return (result != null) ? result.intValue() : null;
+                });
+    }
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.incr(rawKey));
-	}
+    @Override
+    public String get(K key, long start, long end) {
+        byte[] rawKey = rawKey(key);
+        byte[] rawReturn = execute(connection -> connection.getRange(rawKey, start, end));
 
-	@Override
-	public Long increment(K key, long delta) {
+        return deserializeString(rawReturn);
+    }
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.incrBy(rawKey, delta));
-	}
+    @Override
+    public List<V> multiGet(Collection<K> keys) {
 
-	@Override
-	public Double increment(K key, double delta) {
+        if (keys.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.incrBy(rawKey, delta));
-	}
+        byte[][] rawKeys = new byte[keys.size()][];
 
-	@Override
-	public Long decrement(K key) {
+        int counter = 0;
+        for (K hashKey : keys) {
+            rawKeys[counter++] = rawKey(hashKey);
+        }
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.decr(rawKey));
-	}
+        List<byte[]> rawValues = execute(connection -> connection.mGet(rawKeys));
 
-	@Override
-	public Long decrement(K key, long delta) {
+        return deserializeValues(rawValues);
+    }
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.decrBy(rawKey, delta));
-	}
+    @Override
+    public void multiSet(Map<? extends K, ? extends V> m) {
 
-	@Override
-	public Integer append(K key, String value) {
+        if (m.isEmpty()) {
+            return;
+        }
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawString = rawString(value);
+        Map<byte[], byte[]> rawKeys = new LinkedHashMap<>(m.size());
 
-		return execute(connection -> {
-			Long result = connection.append(rawKey, rawString);
-			return (result != null) ? result.intValue() : null;
-		});
-	}
+        for (Map.Entry<? extends K, ? extends V> entry : m.entrySet()) {
+            rawKeys.put(rawKey(entry.getKey()), rawValue(entry.getValue()));
+        }
 
-	@Override
-	public String get(K key, long start, long end) {
-		byte[] rawKey = rawKey(key);
-		byte[] rawReturn = execute(connection -> connection.getRange(rawKey, start, end));
+        execute(
+                connection -> {
+                    connection.mSet(rawKeys);
+                    return null;
+                });
+    }
 
-		return deserializeString(rawReturn);
-	}
+    @Override
+    public Boolean multiSetIfAbsent(Map<? extends K, ? extends V> m) {
 
-	@Override
-	public List<V> multiGet(Collection<K> keys) {
+        if (m.isEmpty()) {
+            return true;
+        }
 
-		if (keys.isEmpty()) {
-			return Collections.emptyList();
-		}
+        Map<byte[], byte[]> rawKeys = new LinkedHashMap<>(m.size());
 
-		byte[][] rawKeys = new byte[keys.size()][];
+        for (Map.Entry<? extends K, ? extends V> entry : m.entrySet()) {
+            rawKeys.put(rawKey(entry.getKey()), rawValue(entry.getValue()));
+        }
 
-		int counter = 0;
-		for (K hashKey : keys) {
-			rawKeys[counter++] = rawKey(hashKey);
-		}
+        return execute(connection -> connection.mSetNX(rawKeys));
+    }
 
-		List<byte[]> rawValues = execute(connection -> connection.mGet(rawKeys));
+    @Override
+    public void set(K key, V value) {
 
-		return deserializeValues(rawValues);
-	}
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
 
-	@Override
-	public void multiSet(Map<? extends K, ? extends V> m) {
+        execute(connection -> connection.set(rawKey, rawValue));
+    }
 
-		if (m.isEmpty()) {
-			return;
-		}
+    @Override
+    public void set(K key, V value, long timeout, TimeUnit unit) {
 
-		Map<byte[], byte[]> rawKeys = new LinkedHashMap<>(m.size());
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
 
-		for (Map.Entry<? extends K, ? extends V> entry : m.entrySet()) {
-			rawKeys.put(rawKey(entry.getKey()), rawValue(entry.getValue()));
-		}
+        execute(
+                connection ->
+                        connection.set(rawKey, rawValue, Expiration.from(timeout, unit), SetOption.upsert()));
+    }
 
-		execute(connection -> {
-			connection.mSet(rawKeys);
-			return null;
-		});
-	}
+    @Override
+    public V setGet(K key, V value, long timeout, TimeUnit unit) {
+        return doSetGet(key, value, Expiration.from(timeout, unit));
+    }
 
-	@Override
-	public Boolean multiSetIfAbsent(Map<? extends K, ? extends V> m) {
+    @Override
+    public V setGet(K key, V value, Duration duration) {
+        return doSetGet(key, value, Expiration.from(duration));
+    }
 
-		if (m.isEmpty()) {
-			return true;
-		}
+    private V doSetGet(K key, V value, Expiration duration) {
 
-		Map<byte[], byte[]> rawKeys = new LinkedHashMap<>(m.size());
+        byte[] rawValue = rawValue(value);
+        return execute(
+                new ValueDeserializingValkeyCallback(key) {
 
-		for (Map.Entry<? extends K, ? extends V> entry : m.entrySet()) {
-			rawKeys.put(rawKey(entry.getKey()), rawValue(entry.getValue()));
-		}
+                    @Override
+                    protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+                        return connection.stringCommands().setGet(rawKey, rawValue, duration, SetOption.UPSERT);
+                    }
+                });
+    }
 
-		return execute(connection -> connection.mSetNX(rawKeys));
-	}
+    @Override
+    public Boolean setIfAbsent(K key, V value) {
 
-	@Override
-	public void set(K key, V value) {
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
+        return execute(
+                connection ->
+                        connection.set(rawKey, rawValue, Expiration.persistent(), SetOption.ifAbsent()));
+    }
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
+    @Override
+    public Boolean setIfAbsent(K key, V value, long timeout, TimeUnit unit) {
 
-		execute(connection -> connection.set(rawKey, rawValue));
-	}
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
 
-	@Override
-	public void set(K key, V value, long timeout, TimeUnit unit) {
+        Expiration expiration = Expiration.from(timeout, unit);
+        return execute(
+                connection -> connection.set(rawKey, rawValue, expiration, SetOption.ifAbsent()));
+    }
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
+    @Nullable
+    @Override
+    public Boolean setIfPresent(K key, V value) {
 
-		execute(connection -> connection.set(rawKey, rawValue, Expiration.from(timeout, unit), SetOption.upsert()));
-	}
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
 
-	@Override
-	public V setGet(K key, V value, long timeout, TimeUnit unit) {
-		return doSetGet(key, value, Expiration.from(timeout, unit));
-	}
+        return execute(
+                connection ->
+                        connection.set(rawKey, rawValue, Expiration.persistent(), SetOption.ifPresent()));
+    }
 
-	@Override
-	public V setGet(K key, V value, Duration duration) {
-		return doSetGet(key, value, Expiration.from(duration));
-	}
+    @Nullable
+    @Override
+    public Boolean setIfPresent(K key, V value, long timeout, TimeUnit unit) {
 
-	private V doSetGet(K key, V value, Expiration duration) {
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
 
-		byte[] rawValue = rawValue(value);
-		return execute(new ValueDeserializingValkeyCallback(key) {
+        Expiration expiration = Expiration.from(timeout, unit);
+        return execute(
+                connection -> connection.set(rawKey, rawValue, expiration, SetOption.ifPresent()));
+    }
 
-			@Override
-			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				return connection.stringCommands().setGet(rawKey, rawValue, duration, SetOption.UPSERT);
-			}
-		});
-	}
+    @Override
+    public void set(K key, V value, long offset) {
 
-	@Override
-	public Boolean setIfAbsent(K key, V value) {
+        byte[] rawKey = rawKey(key);
+        byte[] rawValue = rawValue(value);
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.set(rawKey, rawValue, Expiration.persistent(), SetOption.ifAbsent()));
-	}
+        execute(
+                connection -> {
+                    connection.setRange(rawKey, rawValue, offset);
+                    return null;
+                });
+    }
 
-	@Override
-	public Boolean setIfAbsent(K key, V value, long timeout, TimeUnit unit) {
+    @Override
+    public Long size(K key) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.strLen(rawKey));
+    }
 
-		Expiration expiration = Expiration.from(timeout, unit);
-		return execute(connection -> connection.set(rawKey, rawValue, expiration, SetOption.ifAbsent()));
-	}
+    @Override
+    public Boolean setBit(K key, long offset, boolean value) {
 
-	@Nullable
-	@Override
-	public Boolean setIfPresent(K key, V value) {
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.setBit(rawKey, offset, value));
+    }
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
+    @Override
+    public Boolean getBit(K key, long offset) {
 
-		return execute(connection -> connection.set(rawKey, rawValue, Expiration.persistent(), SetOption.ifPresent()));
-	}
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.getBit(rawKey, offset));
+    }
 
-	@Nullable
-	@Override
-	public Boolean setIfPresent(K key, V value, long timeout, TimeUnit unit) {
+    @Override
+    public List<Long> bitField(K key, final BitFieldSubCommands subCommands) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-
-		Expiration expiration = Expiration.from(timeout, unit);
-		return execute(connection -> connection.set(rawKey, rawValue, expiration, SetOption.ifPresent()));
-	}
-
-	@Override
-	public void set(K key, V value, long offset) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-
-		execute(connection -> {
-			connection.setRange(rawKey, rawValue, offset);
-			return null;
-		});
-	}
-
-	@Override
-	public Long size(K key) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.strLen(rawKey));
-	}
-
-	@Override
-	public Boolean setBit(K key, long offset, boolean value) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.setBit(rawKey, offset, value));
-	}
-
-	@Override
-	public Boolean getBit(K key, long offset) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.getBit(rawKey, offset));
-	}
-
-	@Override
-	public List<Long> bitField(K key, final BitFieldSubCommands subCommands) {
-
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.bitField(rawKey, subCommands));
-	}
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.bitField(rawKey, subCommands));
+    }
 }

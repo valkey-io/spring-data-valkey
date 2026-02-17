@@ -15,11 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import org.springframework.dao.DataAccessException;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.ValkeyHyperLogLogCommands;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.util.Assert;
 
 /**
@@ -29,65 +29,66 @@ import org.springframework.util.Assert;
  */
 class JedisClusterHyperLogLogCommands implements ValkeyHyperLogLogCommands {
 
-	private final JedisClusterConnection connection;
+    private final JedisClusterConnection connection;
 
-	JedisClusterHyperLogLogCommands(JedisClusterConnection connection) {
-		this.connection = connection;
-	}
+    JedisClusterHyperLogLogCommands(JedisClusterConnection connection) {
+        this.connection = connection;
+    }
 
-	@Override
-	public Long pfAdd(byte[] key, byte[]... values) {
+    @Override
+    public Long pfAdd(byte[] key, byte[]... values) {
 
-		Assert.notEmpty(values, "PFADD requires at least one non 'null' value");
-		Assert.noNullElements(values, "Values for PFADD must not contain 'null'");
+        Assert.notEmpty(values, "PFADD requires at least one non 'null' value");
+        Assert.noNullElements(values, "Values for PFADD must not contain 'null'");
 
-		try {
-			return connection.getCluster().pfadd(key, values);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
+        try {
+            return connection.getCluster().pfadd(key, values);
+        } catch (Exception ex) {
+            throw convertJedisAccessException(ex);
+        }
+    }
 
-	@Override
-	public Long pfCount(byte[]... keys) {
+    @Override
+    public Long pfCount(byte[]... keys) {
 
-		Assert.notEmpty(keys, "PFCOUNT requires at least one non 'null' key");
-		Assert.noNullElements(keys, "Keys for PFCOUNT must not contain 'null'");
+        Assert.notEmpty(keys, "PFCOUNT requires at least one non 'null' key");
+        Assert.noNullElements(keys, "Keys for PFCOUNT must not contain 'null'");
 
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
 
-			try {
-				return connection.getCluster().pfcount(keys);
-			} catch (Exception ex) {
-				throw convertJedisAccessException(ex);
-			}
+            try {
+                return connection.getCluster().pfcount(keys);
+            } catch (Exception ex) {
+                throw convertJedisAccessException(ex);
+            }
+        }
+        throw new InvalidDataAccessApiUsageException(
+                "All keys must map to same slot for pfcount in cluster mode");
+    }
 
-		}
-		throw new InvalidDataAccessApiUsageException("All keys must map to same slot for pfcount in cluster mode");
-	}
+    @Override
+    public void pfMerge(byte[] destinationKey, byte[]... sourceKeys) {
 
-	@Override
-	public void pfMerge(byte[] destinationKey, byte[]... sourceKeys) {
+        Assert.notNull(destinationKey, "Destination key must not be null");
+        Assert.notNull(sourceKeys, "Source keys must not be null");
+        Assert.noNullElements(sourceKeys, "Keys for PFMERGE must not contain 'null'");
 
-		Assert.notNull(destinationKey, "Destination key must not be null");
-		Assert.notNull(sourceKeys, "Source keys must not be null");
-		Assert.noNullElements(sourceKeys, "Keys for PFMERGE must not contain 'null'");
+        byte[][] allKeys = ByteUtils.mergeArrays(destinationKey, sourceKeys);
 
-		byte[][] allKeys = ByteUtils.mergeArrays(destinationKey, sourceKeys);
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(allKeys)) {
+            try {
+                connection.getCluster().pfmerge(destinationKey, sourceKeys);
+                return;
+            } catch (Exception ex) {
+                throw convertJedisAccessException(ex);
+            }
+        }
 
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(allKeys)) {
-			try {
-				connection.getCluster().pfmerge(destinationKey, sourceKeys);
-				return;
-			} catch (Exception ex) {
-				throw convertJedisAccessException(ex);
-			}
-		}
+        throw new InvalidDataAccessApiUsageException(
+                "All keys must map to same slot for pfmerge in cluster mode");
+    }
 
-		throw new InvalidDataAccessApiUsageException("All keys must map to same slot for pfmerge in cluster mode");
-	}
-
-	private DataAccessException convertJedisAccessException(Exception ex) {
-		return connection.convertJedisAccessException(ex);
-	}
+    private DataAccessException convertJedisAccessException(Exception ex) {
+        return connection.convertJedisAccessException(ex);
+    }
 }

@@ -15,17 +15,21 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
+import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.*;
 
+import io.valkey.springframework.data.valkey.core.index.GeoIndexed;
+import io.valkey.springframework.data.valkey.core.index.IndexConfiguration;
+import io.valkey.springframework.data.valkey.core.index.Indexed;
+import io.valkey.springframework.data.valkey.core.index.SimpleIndexDefinition;
+import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import java.lang.annotation.Annotation;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -33,14 +37,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-
 import org.springframework.data.geo.Point;
 import org.springframework.data.mapping.PersistentProperty;
-import io.valkey.springframework.data.valkey.core.index.GeoIndexed;
-import io.valkey.springframework.data.valkey.core.index.IndexConfiguration;
-import io.valkey.springframework.data.valkey.core.index.Indexed;
-import io.valkey.springframework.data.valkey.core.index.SimpleIndexDefinition;
-import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import org.springframework.data.util.TypeInformation;
 
 /**
@@ -51,480 +49,530 @@ import org.springframework.data.util.TypeInformation;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PathIndexResolverUnitTests {
 
-	private IndexConfiguration indexConfig;
-	private PathIndexResolver indexResolver;
+    private IndexConfiguration indexConfig;
+    private PathIndexResolver indexResolver;
 
-	@Mock PersistentProperty<?> propertyMock;
+    @Mock PersistentProperty<?> propertyMock;
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		indexConfig = new IndexConfiguration();
-		this.indexResolver = new PathIndexResolver(
-				new ValkeyMappingContext(new MappingConfiguration(indexConfig, new KeyspaceConfiguration())));
-	}
+        indexConfig = new IndexConfiguration();
+        this.indexResolver =
+                new PathIndexResolver(
+                        new ValkeyMappingContext(
+                                new MappingConfiguration(indexConfig, new KeyspaceConfiguration())));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldThrowExceptionOnNullMappingContext() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new PathIndexResolver(null));
-	}
+    @Test // DATAREDIS-425
+    void shouldThrowExceptionOnNullMappingContext() {
+        assertThatIllegalArgumentException().isThrownBy(() -> new PathIndexResolver(null));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldResolveAnnotatedIndexOnRootWhenValueIsNotNull() {
+    @Test // DATAREDIS-425
+    void shouldResolveAnnotatedIndexOnRootWhenValueIsNotNull() {
 
-		Address address = new Address();
-		address.country = "andor";
+        Address address = new Address();
+        address.country = "andor";
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(Address.class), address);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(Address.class), address);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes).contains(new SimpleIndexedPropertyValue(Address.class.getName(), "country", "andor"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(new SimpleIndexedPropertyValue(Address.class.getName(), "country", "andor"));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldNotResolveAnnotatedIndexOnRootWhenValueIsNull() {
+    @Test // DATAREDIS-425
+    void shouldNotResolveAnnotatedIndexOnRootWhenValueIsNull() {
 
-		Address address = new Address();
-		address.country = null;
+        Address address = new Address();
+        address.country = null;
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(Address.class), address);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(Address.class), address);
 
-		assertThat(indexes).isEmpty();
-	}
+        assertThat(indexes).isEmpty();
+    }
 
-	@Test // DATAREDIS-425
-	void shouldResolveAnnotatedIndexOnNestedObjectWhenValueIsNotNull() {
+    @Test // DATAREDIS-425
+    void shouldResolveAnnotatedIndexOnNestedObjectWhenValueIsNotNull() {
 
-		Person person = new Person();
-		person.address = new Address();
-		person.address.country = "andor";
+        Person person = new Person();
+        person.address = new Address();
+        person.address.country = "andor";
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(Person.class), person);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(Person.class), person);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes).contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "address.country", "andor"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "address.country", "andor"));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldResolveMultipleAnnotatedIndexesInLists() {
+    @Test // DATAREDIS-425
+    void shouldResolveMultipleAnnotatedIndexesInLists() {
 
-		TheWheelOfTime twot = new TheWheelOfTime();
-		twot.mainCharacters = new ArrayList<>();
+        TheWheelOfTime twot = new TheWheelOfTime();
+        twot.mainCharacters = new ArrayList<>();
 
-		Person rand = new Person();
-		rand.address = new Address();
-		rand.address.country = "andor";
+        Person rand = new Person();
+        rand.address = new Address();
+        rand.address.country = "andor";
 
-		Person zarine = new Person();
-		zarine.address = new Address();
-		zarine.address.country = "saldaea";
+        Person zarine = new Person();
+        zarine.address = new Address();
+        zarine.address.country = "saldaea";
 
-		twot.mainCharacters.add(rand);
-		twot.mainCharacters.add(zarine);
+        twot.mainCharacters.add(rand);
+        twot.mainCharacters.add(zarine);
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(TheWheelOfTime.class), twot);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(TheWheelOfTime.class), twot);
 
-		assertThat(indexes).hasSize(2);
-		assertThat(indexes).contains(
-				new SimpleIndexedPropertyValue(KEYSPACE_TWOT, "mainCharacters.address.country", "andor"),
-				new SimpleIndexedPropertyValue(KEYSPACE_TWOT, "mainCharacters.address.country", "saldaea"));
-	}
+        assertThat(indexes).hasSize(2);
+        assertThat(indexes)
+                .contains(
+                        new SimpleIndexedPropertyValue(
+                                KEYSPACE_TWOT, "mainCharacters.address.country", "andor"),
+                        new SimpleIndexedPropertyValue(
+                                KEYSPACE_TWOT, "mainCharacters.address.country", "saldaea"));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldResolveAnnotatedIndexesInMap() {
+    @Test // DATAREDIS-425
+    void shouldResolveAnnotatedIndexesInMap() {
 
-		TheWheelOfTime twot = new TheWheelOfTime();
-		twot.places = new LinkedHashMap<>();
+        TheWheelOfTime twot = new TheWheelOfTime();
+        twot.places = new LinkedHashMap<>();
 
-		Location stoneOfTear = new Location();
-		stoneOfTear.name = "Stone of Tear";
-		stoneOfTear.address = new Address();
-		stoneOfTear.address.city = "tear";
-		stoneOfTear.address.country = "illian";
+        Location stoneOfTear = new Location();
+        stoneOfTear.name = "Stone of Tear";
+        stoneOfTear.address = new Address();
+        stoneOfTear.address.city = "tear";
+        stoneOfTear.address.country = "illian";
 
-		twot.places.put("stone-of-tear", stoneOfTear);
+        twot.places.put("stone-of-tear", stoneOfTear);
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(TheWheelOfTime.class), twot);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(TheWheelOfTime.class), twot);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes)
-				.contains(new SimpleIndexedPropertyValue(KEYSPACE_TWOT, "places.stone-of-tear.address.country", "illian"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(
+                        new SimpleIndexedPropertyValue(
+                                KEYSPACE_TWOT, "places.stone-of-tear.address.country", "illian"));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldResolveConfiguredIndexesInMapOfSimpleTypes() {
+    @Test // DATAREDIS-425
+    void shouldResolveConfiguredIndexesInMapOfSimpleTypes() {
 
-		indexConfig.addIndexDefinition(new SimpleIndexDefinition(KEYSPACE_PERSON, "physicalAttributes.eye-color"));
+        indexConfig.addIndexDefinition(
+                new SimpleIndexDefinition(KEYSPACE_PERSON, "physicalAttributes.eye-color"));
 
-		Person rand = new Person();
-		rand.physicalAttributes = new LinkedHashMap<>();
-		rand.physicalAttributes.put("eye-color", "grey");
+        Person rand = new Person();
+        rand.physicalAttributes = new LinkedHashMap<>();
+        rand.physicalAttributes.put("eye-color", "grey");
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(Person.class), rand);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(Person.class), rand);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes)
-				.contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "physicalAttributes.eye-color", "grey"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(
+                        new SimpleIndexedPropertyValue(
+                                KEYSPACE_PERSON, "physicalAttributes.eye-color", "grey"));
+    }
 
-	@Test // DATAREDIS-425
-	void shouldResolveConfiguredIndexesInMapOfComplexTypes() {
+    @Test // DATAREDIS-425
+    void shouldResolveConfiguredIndexesInMapOfComplexTypes() {
 
-		indexConfig.addIndexDefinition(new SimpleIndexDefinition(KEYSPACE_PERSON, "relatives.father.firstname"));
+        indexConfig.addIndexDefinition(
+                new SimpleIndexDefinition(KEYSPACE_PERSON, "relatives.father.firstname"));
 
-		Person rand = new Person();
-		rand.relatives = new LinkedHashMap<>();
+        Person rand = new Person();
+        rand.relatives = new LinkedHashMap<>();
 
-		Person janduin = new Person();
-		janduin.firstname = "janduin";
+        Person janduin = new Person();
+        janduin.firstname = "janduin";
 
-		rand.relatives.put("father", janduin);
+        rand.relatives.put("father", janduin);
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(Person.class), rand);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(Person.class), rand);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes)
-				.contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "relatives.father.firstname", "janduin"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(
+                        new SimpleIndexedPropertyValue(
+                                KEYSPACE_PERSON, "relatives.father.firstname", "janduin"));
+    }
 
-	@Test // DATAREDIS-425, DATAREDIS-471
-	void shouldIgnoreConfiguredIndexesInMapWhenValueIsNull() {
+    @Test // DATAREDIS-425, DATAREDIS-471
+    void shouldIgnoreConfiguredIndexesInMapWhenValueIsNull() {
 
-		indexConfig.addIndexDefinition(new SimpleIndexDefinition(KEYSPACE_PERSON, "physicalAttributes.eye-color"));
+        indexConfig.addIndexDefinition(
+                new SimpleIndexDefinition(KEYSPACE_PERSON, "physicalAttributes.eye-color"));
 
-		Person rand = new Person();
-		rand.physicalAttributes = new LinkedHashMap<>();
-		rand.physicalAttributes.put("eye-color", null);
+        Person rand = new Person();
+        rand.physicalAttributes = new LinkedHashMap<>();
+        rand.physicalAttributes.put("eye-color", null);
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(Person.class), rand);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(Person.class), rand);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes.iterator().next()).isInstanceOf(RemoveIndexedData.class);
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes.iterator().next()).isInstanceOf(RemoveIndexedData.class);
+    }
 
-	@Test // DATAREDIS-425
-	void shouldNotResolveIndexOnReferencedEntity() {
+    @Test // DATAREDIS-425
+    void shouldNotResolveIndexOnReferencedEntity() {
 
-		PersonWithAddressReference rand = new PersonWithAddressReference();
-		rand.addressRef = new AddressWithId();
-		rand.addressRef.id = "emond_s_field";
-		rand.addressRef.country = "andor";
+        PersonWithAddressReference rand = new PersonWithAddressReference();
+        rand.addressRef = new AddressWithId();
+        rand.addressRef.id = "emond_s_field";
+        rand.addressRef.country = "andor";
 
-		Set<IndexedData> indexes = indexResolver
-				.resolveIndexesFor(TypeInformation.of(PersonWithAddressReference.class), rand);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(PersonWithAddressReference.class), rand);
 
-		assertThat(indexes).isEmpty();
-	}
+        assertThat(indexes).isEmpty();
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldReturnNullWhenNoIndexConfigured() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldReturnNullWhenNoIndexConfigured() {
 
-		when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(false);
-		assertThat(resolve("foo", "rand")).isNull();
-	}
+        when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(false);
+        assertThat(resolve("foo", "rand")).isNull();
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldReturnDataWhenIndexConfigured() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldReturnDataWhenIndexConfigured() {
 
-		when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(false);
-		indexConfig.addIndexDefinition(new SimpleIndexDefinition(KEYSPACE_PERSON, "foo"));
+        when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(false);
+        indexConfig.addIndexDefinition(new SimpleIndexDefinition(KEYSPACE_PERSON, "foo"));
 
-		assertThat(resolve("foo", "rand")).isNotNull();
-	}
+        assertThat(resolve("foo", "rand")).isNotNull();
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldReturnDataWhenNoIndexConfiguredButPropertyAnnotated() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldReturnDataWhenNoIndexConfiguredButPropertyAnnotated() {
 
-		when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(true);
-		when(propertyMock.findAnnotation(eq(Indexed.class))).thenReturn(createIndexedInstance());
+        when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(true);
+        when(propertyMock.findAnnotation(eq(Indexed.class))).thenReturn(createIndexedInstance());
 
-		assertThat(resolve("foo", "rand")).isNotNull();
-	}
+        assertThat(resolve("foo", "rand")).isNotNull();
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldRemovePositionIndicatorForValuesInLists() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldRemovePositionIndicatorForValuesInLists() {
 
-		when(propertyMock.isCollectionLike()).thenReturn(true);
-		when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(true);
-		when(propertyMock.findAnnotation(eq(Indexed.class))).thenReturn(createIndexedInstance());
+        when(propertyMock.isCollectionLike()).thenReturn(true);
+        when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(true);
+        when(propertyMock.findAnnotation(eq(Indexed.class))).thenReturn(createIndexedInstance());
 
-		IndexedData index = resolve("list.[0].name", "rand");
+        IndexedData index = resolve("list.[0].name", "rand");
 
-		assertThat(index.getIndexName()).isEqualTo("list.name");
-	}
+        assertThat(index.getIndexName()).isEqualTo("list.name");
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldRemoveKeyIndicatorForValuesInMap() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldRemoveKeyIndicatorForValuesInMap() {
 
-		when(propertyMock.isMap()).thenReturn(true);
-		when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(true);
-		when(propertyMock.findAnnotation(eq(Indexed.class))).thenReturn(createIndexedInstance());
+        when(propertyMock.isMap()).thenReturn(true);
+        when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(true);
+        when(propertyMock.findAnnotation(eq(Indexed.class))).thenReturn(createIndexedInstance());
 
-		IndexedData index = resolve("map.[foo].name", "rand");
+        IndexedData index = resolve("map.[foo].name", "rand");
 
-		assertThat(index.getIndexName()).isEqualTo("map.foo.name");
-	}
+        assertThat(index.getIndexName()).isEqualTo("map.foo.name");
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldKeepNumericalKeyForValuesInMap() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldKeepNumericalKeyForValuesInMap() {
 
-		when(propertyMock.isMap()).thenReturn(true);
-		when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(true);
-		when(propertyMock.findAnnotation(eq(Indexed.class))).thenReturn(createIndexedInstance());
+        when(propertyMock.isMap()).thenReturn(true);
+        when(propertyMock.isAnnotationPresent(eq(Indexed.class))).thenReturn(true);
+        when(propertyMock.findAnnotation(eq(Indexed.class))).thenReturn(createIndexedInstance());
 
-		IndexedData index = resolve("map.[0].name", "rand");
+        IndexedData index = resolve("map.[0].name", "rand");
 
-		assertThat(index.getIndexName()).isEqualTo("map.0.name");
-	}
+        assertThat(index.getIndexName()).isEqualTo("map.0.name");
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldInspectObjectTypeProperties() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldInspectObjectTypeProperties() {
 
-		Item hat = new Item();
-		hat.type = "hat";
+        Item hat = new Item();
+        hat.type = "hat";
 
-		TaVeren mat = new TaVeren();
-		mat.feature = hat;
+        TaVeren mat = new TaVeren();
+        mat.feature = hat;
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes).contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "feature.type", "hat"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "feature.type", "hat"));
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldInspectObjectTypePropertiesButIgnoreNullValues() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldInspectObjectTypePropertiesButIgnoreNullValues() {
 
-		Item hat = new Item();
-		hat.description = "wide brimmed hat";
+        Item hat = new Item();
+        hat.description = "wide brimmed hat";
 
-		TaVeren mat = new TaVeren();
-		mat.feature = hat;
+        TaVeren mat = new TaVeren();
+        mat.feature = hat;
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
 
-		assertThat(indexes).isEmpty();
-	}
+        assertThat(indexes).isEmpty();
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldInspectObjectTypeValuesInMapProperties() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldInspectObjectTypeValuesInMapProperties() {
 
-		Item hat = new Item();
-		hat.type = "hat";
+        Item hat = new Item();
+        hat.type = "hat";
 
-		TaVeren mat = new TaVeren();
-		mat.characteristics = new LinkedHashMap<>(2);
-		mat.characteristics.put("clothing", hat);
-		mat.characteristics.put("gambling", "owns the dark one's luck");
+        TaVeren mat = new TaVeren();
+        mat.characteristics = new LinkedHashMap<>(2);
+        mat.characteristics.put("clothing", hat);
+        mat.characteristics.put("gambling", "owns the dark one's luck");
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes)
-				.contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "characteristics.clothing.type", "hat"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(
+                        new SimpleIndexedPropertyValue(
+                                KEYSPACE_PERSON, "characteristics.clothing.type", "hat"));
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexShouldInspectObjectTypeValuesInListProperties() {
+    @Test // DATAREDIS-425
+    void resolveIndexShouldInspectObjectTypeValuesInListProperties() {
 
-		Item hat = new Item();
-		hat.type = "hat";
+        Item hat = new Item();
+        hat.type = "hat";
 
-		TaVeren mat = new TaVeren();
-		mat.items = new ArrayList<>(2);
-		mat.items.add(hat);
-		mat.items.add("foxhead medallion");
+        TaVeren mat = new TaVeren();
+        mat.items = new ArrayList<>(2);
+        mat.items.add(hat);
+        mat.items.add("foxhead medallion");
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes).contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "items.type", "hat"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "items.type", "hat"));
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexAllowCustomIndexName() {
+    @Test // DATAREDIS-425
+    void resolveIndexAllowCustomIndexName() {
 
-		indexConfig.addIndexDefinition(new SimpleIndexDefinition(KEYSPACE_PERSON, "items.type", "itemsType"));
+        indexConfig.addIndexDefinition(
+                new SimpleIndexDefinition(KEYSPACE_PERSON, "items.type", "itemsType"));
 
-		Item hat = new Item();
-		hat.type = "hat";
+        Item hat = new Item();
+        hat.type = "hat";
 
-		TaVeren mat = new TaVeren();
-		mat.items = new ArrayList<>(2);
-		mat.items.add(hat);
-		mat.items.add("foxhead medallion");
+        TaVeren mat = new TaVeren();
+        mat.items = new ArrayList<>(2);
+        mat.items.add(hat);
+        mat.items.add("foxhead medallion");
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(TaVeren.class), mat);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes).contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "itemsType", "hat"));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "itemsType", "hat"));
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexForTypeThatHasNoIndexDefined() {
+    @Test // DATAREDIS-425
+    void resolveIndexForTypeThatHasNoIndexDefined() {
 
-		Size size = new Size();
-		size.height = 10;
-		size.length = 20;
-		size.width = 30;
+        Size size = new Size();
+        size.height = 10;
+        size.length = 20;
+        size.width = 30;
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(Size.class), size);
-		assertThat(indexes).isEmpty();
-	}
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(Size.class), size);
+        assertThat(indexes).isEmpty();
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexOnMapField() {
+    @Test // DATAREDIS-425
+    void resolveIndexOnMapField() {
 
-		IndexedOnMapField source = new IndexedOnMapField();
-		source.values = new LinkedHashMap<>();
+        IndexedOnMapField source = new IndexedOnMapField();
+        source.values = new LinkedHashMap<>();
 
-		source.values.put("jon", "snow");
-		source.values.put("arya", "stark");
+        source.values.put("jon", "snow");
+        source.values.put("arya", "stark");
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(IndexedOnMapField.class),
-				source);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(IndexedOnMapField.class), source);
 
-		assertThat(indexes).hasSize(2);
-		assertThat(indexes).contains(
-				new SimpleIndexedPropertyValue(IndexedOnMapField.class.getName(), "values.jon", "snow"),
-				new SimpleIndexedPropertyValue(IndexedOnMapField.class.getName(), "values.arya", "stark"));
-	}
+        assertThat(indexes).hasSize(2);
+        assertThat(indexes)
+                .contains(
+                        new SimpleIndexedPropertyValue(IndexedOnMapField.class.getName(), "values.jon", "snow"),
+                        new SimpleIndexedPropertyValue(
+                                IndexedOnMapField.class.getName(), "values.arya", "stark"));
+    }
 
-	@Test // DATAREDIS-425
-	void resolveIndexOnListField() {
+    @Test // DATAREDIS-425
+    void resolveIndexOnListField() {
 
-		IndexedOnListField source = new IndexedOnListField();
-		source.values = new ArrayList<>();
+        IndexedOnListField source = new IndexedOnListField();
+        source.values = new ArrayList<>();
 
-		source.values.add("jon");
-		source.values.add("arya");
+        source.values.add("jon");
+        source.values.add("arya");
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(IndexedOnListField.class),
-				source);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(IndexedOnListField.class), source);
 
-		assertThat(indexes).hasSize(2);
-		assertThat(indexes).contains(new SimpleIndexedPropertyValue(IndexedOnListField.class.getName(), "values", "jon"),
-				new SimpleIndexedPropertyValue(IndexedOnListField.class.getName(), "values", "arya"));
-	}
+        assertThat(indexes).hasSize(2);
+        assertThat(indexes)
+                .contains(
+                        new SimpleIndexedPropertyValue(IndexedOnListField.class.getName(), "values", "jon"),
+                        new SimpleIndexedPropertyValue(IndexedOnListField.class.getName(), "values", "arya"));
+    }
 
-	@Test // DATAREDIS-509
-	void resolveIndexOnPrimitiveArrayField() {
+    @Test // DATAREDIS-509
+    void resolveIndexOnPrimitiveArrayField() {
 
-		IndexedOnPrimitiveArrayField source = new IndexedOnPrimitiveArrayField();
-		source.values = new int[] { 1, 2, 3 };
+        IndexedOnPrimitiveArrayField source = new IndexedOnPrimitiveArrayField();
+        source.values = new int[] {1, 2, 3};
 
-		Set<IndexedData> indexes = indexResolver
-				.resolveIndexesFor(TypeInformation.of(IndexedOnPrimitiveArrayField.class), source);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(
+                        TypeInformation.of(IndexedOnPrimitiveArrayField.class), source);
 
-		assertThat(indexes).hasSize(3);
-		assertThat(indexes).contains(
-				new SimpleIndexedPropertyValue(IndexedOnPrimitiveArrayField.class.getName(), "values", 1),
-				new SimpleIndexedPropertyValue(IndexedOnPrimitiveArrayField.class.getName(), "values", 2),
-				new SimpleIndexedPropertyValue(IndexedOnPrimitiveArrayField.class.getName(), "values", 3));
-	}
+        assertThat(indexes).hasSize(3);
+        assertThat(indexes)
+                .contains(
+                        new SimpleIndexedPropertyValue(
+                                IndexedOnPrimitiveArrayField.class.getName(), "values", 1),
+                        new SimpleIndexedPropertyValue(
+                                IndexedOnPrimitiveArrayField.class.getName(), "values", 2),
+                        new SimpleIndexedPropertyValue(
+                                IndexedOnPrimitiveArrayField.class.getName(), "values", 3));
+    }
 
-	@Test // DATAREDIS-533
-	void resolveGeoIndexShouldMapNameCorrectly() {
+    @Test // DATAREDIS-533
+    void resolveGeoIndexShouldMapNameCorrectly() {
 
-		when(propertyMock.isMap()).thenReturn(true);
-		when(propertyMock.isAnnotationPresent(eq(GeoIndexed.class))).thenReturn(true);
-		when(propertyMock.findAnnotation(eq(GeoIndexed.class))).thenReturn(createGeoIndexedInstance());
+        when(propertyMock.isMap()).thenReturn(true);
+        when(propertyMock.isAnnotationPresent(eq(GeoIndexed.class))).thenReturn(true);
+        when(propertyMock.findAnnotation(eq(GeoIndexed.class))).thenReturn(createGeoIndexedInstance());
 
-		IndexedData index = resolve("location", new Point(1D, 2D));
+        IndexedData index = resolve("location", new Point(1D, 2D));
 
-		assertThat(index.getIndexName()).isEqualTo("location");
-	}
+        assertThat(index.getIndexName()).isEqualTo("location");
+    }
 
-	@Test // DATAREDIS-533
-	void resolveGeoIndexShouldMapNameForNestedPropertyCorrectly() {
+    @Test // DATAREDIS-533
+    void resolveGeoIndexShouldMapNameForNestedPropertyCorrectly() {
 
-		when(propertyMock.isMap()).thenReturn(true);
-		when(propertyMock.isAnnotationPresent(eq(GeoIndexed.class))).thenReturn(true);
-		when(propertyMock.findAnnotation(eq(GeoIndexed.class))).thenReturn(createGeoIndexedInstance());
+        when(propertyMock.isMap()).thenReturn(true);
+        when(propertyMock.isAnnotationPresent(eq(GeoIndexed.class))).thenReturn(true);
+        when(propertyMock.findAnnotation(eq(GeoIndexed.class))).thenReturn(createGeoIndexedInstance());
 
-		IndexedData index = resolve("property.location", new Point(1D, 2D));
+        IndexedData index = resolve("property.location", new Point(1D, 2D));
 
-		assertThat(index.getIndexName()).isEqualTo("property:location");
-	}
+        assertThat(index.getIndexName()).isEqualTo("property:location");
+    }
 
-	@Test // DATAREDIS-533
-	void resolveGeoIndexOnPointField() {
+    @Test // DATAREDIS-533
+    void resolveGeoIndexOnPointField() {
 
-		GeoIndexedOnPoint source = new GeoIndexedOnPoint();
-		source.location = new Point(1D, 2D);
+        GeoIndexedOnPoint source = new GeoIndexedOnPoint();
+        source.location = new Point(1D, 2D);
 
-		Set<IndexedData> indexes = indexResolver.resolveIndexesFor(TypeInformation.of(GeoIndexedOnPoint.class),
-				source);
+        Set<IndexedData> indexes =
+                indexResolver.resolveIndexesFor(TypeInformation.of(GeoIndexedOnPoint.class), source);
 
-		assertThat(indexes).hasSize(1);
-		assertThat(indexes)
-				.contains(new GeoIndexedPropertyValue(GeoIndexedOnPoint.class.getName(), "location", source.location));
-	}
+        assertThat(indexes).hasSize(1);
+        assertThat(indexes)
+                .contains(
+                        new GeoIndexedPropertyValue(
+                                GeoIndexedOnPoint.class.getName(), "location", source.location));
+    }
 
-	@Test // DATAREDIS-533
-	void resolveGeoIndexOnArrayFieldThrowsError() {
+    @Test // DATAREDIS-533
+    void resolveGeoIndexOnArrayFieldThrowsError() {
 
-		GeoIndexedOnArray source = new GeoIndexedOnArray();
-		source.location = new double[] { 10D, 20D };
+        GeoIndexedOnArray source = new GeoIndexedOnArray();
+        source.location = new double[] {10D, 20D};
 
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> indexResolver.resolveIndexesFor(TypeInformation.of(GeoIndexedOnArray.class), source))
-				.withMessageContaining("GeoIndexed property needs to be of type Point or GeoLocation");
-	}
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                indexResolver.resolveIndexesFor(
+                                        TypeInformation.of(GeoIndexedOnArray.class), source))
+                .withMessageContaining("GeoIndexed property needs to be of type Point or GeoLocation");
+    }
 
-	private IndexedData resolve(String path, Object value) {
+    private IndexedData resolve(String path, Object value) {
 
-		Set<IndexedData> data = indexResolver.resolveIndex(KEYSPACE_PERSON, path, propertyMock, value);
+        Set<IndexedData> data = indexResolver.resolveIndex(KEYSPACE_PERSON, path, propertyMock, value);
 
-		if (data.isEmpty()) {
-			return null;
-		}
+        if (data.isEmpty()) {
+            return null;
+        }
 
-		assertThat(data).hasSize(1);
-		return data.iterator().next();
-	}
+        assertThat(data).hasSize(1);
+        return data.iterator().next();
+    }
 
-	private Indexed createIndexedInstance() {
+    private Indexed createIndexedInstance() {
 
-		return new Indexed() {
+        return new Indexed() {
 
-			@Override
-			public Class<? extends Annotation> annotationType() {
-				return Indexed.class;
-			}
-		};
-	}
+            @Override
+            public Class<? extends Annotation> annotationType() {
+                return Indexed.class;
+            }
+        };
+    }
 
-	private GeoIndexed createGeoIndexedInstance() {
+    private GeoIndexed createGeoIndexedInstance() {
 
-		return new GeoIndexed() {
-			@Override
-			public Class<? extends Annotation> annotationType() {
-				return GeoIndexed.class;
-			}
-		};
-	}
+        return new GeoIndexed() {
+            @Override
+            public Class<? extends Annotation> annotationType() {
+                return GeoIndexed.class;
+            }
+        };
+    }
 
-	static class IndexedOnListField {
+    static class IndexedOnListField {
 
-		@Indexed List<String> values;
-	}
+        @Indexed List<String> values;
+    }
 
-	static class IndexedOnPrimitiveArrayField {
+    static class IndexedOnPrimitiveArrayField {
 
-		@Indexed int[] values;
-	}
+        @Indexed int[] values;
+    }
 
-	static class IndexedOnMapField {
+    static class IndexedOnMapField {
 
-		@Indexed Map<String, String> values;
-	}
+        @Indexed Map<String, String> values;
+    }
 
-	static class GeoIndexedOnPoint {
-		@GeoIndexed Point location;
-	}
+    static class GeoIndexedOnPoint {
+        @GeoIndexed Point location;
+    }
 
-	static class GeoIndexedOnArray {
-		@GeoIndexed double[] location;
-	}
+    static class GeoIndexedOnArray {
+        @GeoIndexed double[] location;
+    }
 }

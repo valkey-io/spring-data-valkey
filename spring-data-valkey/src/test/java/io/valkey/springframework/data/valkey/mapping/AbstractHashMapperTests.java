@@ -17,13 +17,11 @@ package io.valkey.springframework.data.valkey.mapping;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.Address;
 import io.valkey.springframework.data.valkey.Person;
 import io.valkey.springframework.data.valkey.hash.HashMapper;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Costin Leau
@@ -31,34 +29,35 @@ import io.valkey.springframework.data.valkey.hash.HashMapper;
  */
 public abstract class AbstractHashMapperTests {
 
-	@SuppressWarnings("rawtypes")
-	protected abstract <T> HashMapper mapperFor(Class<T> t);
+    @SuppressWarnings("rawtypes")
+    protected abstract <T> HashMapper mapperFor(Class<T> t);
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	protected void assertBackAndForwardMapping(Object o) {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    protected void assertBackAndForwardMapping(Object o) {
 
-		HashMapper mapper = mapperFor(o.getClass());
-		Map hash = mapper.toHash(o);
-		assertThat(mapper.fromHash(hash)).isEqualTo(o);
-	}
+        HashMapper mapper = mapperFor(o.getClass());
+        Map hash = mapper.toHash(o);
+        assertThat(mapper.fromHash(hash)).isEqualTo(o);
+    }
 
-	@Test
-	public void testSimpleBean() {
-		assertBackAndForwardMapping(new Address("Broadway", 1));
-	}
+    @Test
+    public void testSimpleBean() {
+        assertBackAndForwardMapping(new Address("Broadway", 1));
+    }
 
-	@Test
-	public void testNestedBean() {
-		assertBackAndForwardMapping(new Person("George", "Enescu", 74, new Address("liveni", 19)));
-	}
+    @Test
+    public void testNestedBean() {
+        assertBackAndForwardMapping(new Person("George", "Enescu", 74, new Address("liveni", 19)));
+    }
 
-	@Test // DATAREDIS-421
-	public void toHashShouldTreatNullValuesCorrectly() {
+    @Test // DATAREDIS-421
+    public void toHashShouldTreatNullValuesCorrectly() {
 
-		Person source = new Person("rand", null, 19);
+        Person source = new Person("rand", null, 19);
 
-		assertBackAndForwardMapping(source);
+        assertBackAndForwardMapping(source);
 
-		assertThat((Iterable<Object>) mapperFor(Person.class).toHash(source).values()).doesNotContainNull();
-	}
+        assertThat((Iterable<Object>) mapperFor(Person.class).toHash(source).values())
+                .doesNotContainNull();
+    }
 }

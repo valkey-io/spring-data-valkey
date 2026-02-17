@@ -22,7 +22,7 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
  */
 class LettuceClusterHashCommands extends LettuceHashCommands {
 
-	LettuceClusterHashCommands(LettuceClusterConnection connection) {
-		super(connection);
-	}
+    LettuceClusterHashCommands(LettuceClusterConnection connection) {
+        super(connection);
+    }
 }

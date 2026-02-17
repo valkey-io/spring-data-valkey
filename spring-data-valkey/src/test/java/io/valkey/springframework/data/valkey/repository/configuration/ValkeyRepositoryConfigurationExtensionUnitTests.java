@@ -17,10 +17,10 @@ package io.valkey.springframework.data.valkey.repository.configuration;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.core.ValkeyHash;
+import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter.EnableKeyspaceEvents;
 import java.util.Collection;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.beans.factory.support.SimpleBeanDefinitionRegistry;
@@ -31,8 +31,6 @@ import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 import org.springframework.core.type.StandardAnnotationMetadata;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.keyvalue.repository.KeyValueRepository;
-import io.valkey.springframework.data.valkey.core.ValkeyHash;
-import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter.EnableKeyspaceEvents;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.config.AnnotationRepositoryConfigurationSource;
 import org.springframework.data.repository.config.RepositoryConfiguration;
@@ -46,156 +44,182 @@ import org.springframework.data.repository.config.RepositoryConfigurationSource;
  */
 class ValkeyRepositoryConfigurationExtensionUnitTests {
 
-	private StandardAnnotationMetadata metadata = new StandardAnnotationMetadata(Config.class, true);
-	private ResourceLoader loader = new PathMatchingResourcePatternResolver();
-	private Environment environment = new StandardEnvironment();
-	private BeanDefinitionRegistry registry = new DefaultListableBeanFactory();
-	private RepositoryConfigurationSource configurationSource = new AnnotationRepositoryConfigurationSource(metadata,
-			EnableValkeyRepositories.class, loader, environment, registry);
+    private StandardAnnotationMetadata metadata = new StandardAnnotationMetadata(Config.class, true);
+    private ResourceLoader loader = new PathMatchingResourcePatternResolver();
+    private Environment environment = new StandardEnvironment();
+    private BeanDefinitionRegistry registry = new DefaultListableBeanFactory();
+    private RepositoryConfigurationSource configurationSource =
+            new AnnotationRepositoryConfigurationSource(
+                    metadata, EnableValkeyRepositories.class, loader, environment, registry);
 
-	private ValkeyRepositoryConfigurationExtension extension = new ValkeyRepositoryConfigurationExtension();
+    private ValkeyRepositoryConfigurationExtension extension =
+            new ValkeyRepositoryConfigurationExtension();
 
-	@Test // DATAREDIS-425
-	void isStrictMatchIfDomainTypeIsAnnotatedWithDocument() {
-		assertHasRepo(SampleRepository.class, extension.getRepositoryConfigurations(configurationSource, loader, true));
-	}
+    @Test // DATAREDIS-425
+    void isStrictMatchIfDomainTypeIsAnnotatedWithDocument() {
+        assertHasRepo(
+                SampleRepository.class,
+                extension.getRepositoryConfigurations(configurationSource, loader, true));
+    }
 
-	@Test // DATAREDIS-425
-	void isStrictMatchIfRepositoryExtendsStoreSpecificBase() {
-		assertHasRepo(StoreRepository.class, extension.getRepositoryConfigurations(configurationSource, loader, true));
-	}
+    @Test // DATAREDIS-425
+    void isStrictMatchIfRepositoryExtendsStoreSpecificBase() {
+        assertHasRepo(
+                StoreRepository.class,
+                extension.getRepositoryConfigurations(configurationSource, loader, true));
+    }
 
-	@Test // DATAREDIS-425
-	void isNotStrictMatchIfDomainTypeIsNotAnnotatedWithDocument() {
+    @Test // DATAREDIS-425
+    void isNotStrictMatchIfDomainTypeIsNotAnnotatedWithDocument() {
 
-		assertDoesNotHaveRepo(UnannotatedRepository.class,
-				extension.getRepositoryConfigurations(configurationSource, loader, true));
-	}
+        assertDoesNotHaveRepo(
+                UnannotatedRepository.class,
+                extension.getRepositoryConfigurations(configurationSource, loader, true));
+    }
 
-	@Test // DATAREDIS-491
-	void picksUpEnableKeyspaceEventsOnStartupCorrectly() {
+    @Test // DATAREDIS-491
+    void picksUpEnableKeyspaceEventsOnStartupCorrectly() {
 
-		metadata = new StandardAnnotationMetadata(Config.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+        metadata = new StandardAnnotationMetadata(Config.class, true);
+        BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
 
-		assertThat(getEnableKeyspaceEvents(beanDefintionRegistry)).isEqualTo((Object) EnableKeyspaceEvents.ON_STARTUP);
-	}
+        assertThat(getEnableKeyspaceEvents(beanDefintionRegistry))
+                .isEqualTo((Object) EnableKeyspaceEvents.ON_STARTUP);
+    }
 
-	@Test // DATAREDIS-491
-	void picksUpEnableKeyspaceEventsDefaultCorrectly() {
+    @Test // DATAREDIS-491
+    void picksUpEnableKeyspaceEventsDefaultCorrectly() {
 
-		metadata = new StandardAnnotationMetadata(ConfigWithKeyspaceEventsDisabled.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+        metadata = new StandardAnnotationMetadata(ConfigWithKeyspaceEventsDisabled.class, true);
+        BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
 
-		assertThat(getEnableKeyspaceEvents(beanDefintionRegistry)).isEqualTo((Object) EnableKeyspaceEvents.OFF);
-	}
+        assertThat(getEnableKeyspaceEvents(beanDefintionRegistry))
+                .isEqualTo((Object) EnableKeyspaceEvents.OFF);
+    }
 
-	@Test // DATAREDIS-505
-	void picksUpDefaultKeyspaceNotificationsConfigParameterCorrectly() {
+    @Test // DATAREDIS-505
+    void picksUpDefaultKeyspaceNotificationsConfigParameterCorrectly() {
 
-		metadata = new StandardAnnotationMetadata(Config.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+        metadata = new StandardAnnotationMetadata(Config.class, true);
+        BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
 
-		assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry)).isEqualTo((Object) "Ex");
-	}
+        assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry))
+                .isEqualTo((Object) "Ex");
+    }
 
-	@Test // DATAREDIS-505
-	void picksUpCustomKeyspaceNotificationsConfigParameterCorrectly() {
+    @Test // DATAREDIS-505
+    void picksUpCustomKeyspaceNotificationsConfigParameterCorrectly() {
 
-		metadata = new StandardAnnotationMetadata(ConfigWithKeyspaceEventsEnabledAndCustomEventConfig.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+        metadata =
+                new StandardAnnotationMetadata(
+                        ConfigWithKeyspaceEventsEnabledAndCustomEventConfig.class, true);
+        BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
 
-		assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry)).isEqualTo((Object) "KEA");
-	}
+        assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry))
+                .isEqualTo((Object) "KEA");
+    }
 
-	@Test // DATAREDIS-1049
-	void explicitlyEmptyKeyspaceNotificationsConfigParameterShouldBeCapturedCorrectly() {
+    @Test // DATAREDIS-1049
+    void explicitlyEmptyKeyspaceNotificationsConfigParameterShouldBeCapturedCorrectly() {
 
-		metadata = new StandardAnnotationMetadata(ConfigWithEmptyConfigParameter.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+        metadata = new StandardAnnotationMetadata(ConfigWithEmptyConfigParameter.class, true);
+        BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
 
-		assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry)).isEqualTo("");
-	}
+        assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry)).isEqualTo("");
+    }
 
-	private static void assertDoesNotHaveRepo(Class<?> repositoryInterface,
-			Collection<RepositoryConfiguration<RepositoryConfigurationSource>> configs) {
+    private static void assertDoesNotHaveRepo(
+            Class<?> repositoryInterface,
+            Collection<RepositoryConfiguration<RepositoryConfigurationSource>> configs) {
 
-		try {
+        try {
 
-			assertHasRepo(repositoryInterface, configs);
-			fail("Expected not to find config for repository interface ".concat(repositoryInterface.getName()));
-		} catch (AssertionError error) {
-			// repo not there. we're fine.
-		}
-	}
+            assertHasRepo(repositoryInterface, configs);
+            fail(
+                    "Expected not to find config for repository interface "
+                            .concat(repositoryInterface.getName()));
+        } catch (AssertionError error) {
+            // repo not there. we're fine.
+        }
+    }
 
-	private static void assertHasRepo(Class<?> repositoryInterface,
-			Collection<RepositoryConfiguration<RepositoryConfigurationSource>> configs) {
+    private static void assertHasRepo(
+            Class<?> repositoryInterface,
+            Collection<RepositoryConfiguration<RepositoryConfigurationSource>> configs) {
 
-		for (RepositoryConfiguration<?> config : configs) {
-			if (config.getRepositoryInterface().equals(repositoryInterface.getName())) {
-				return;
-			}
-		}
+        for (RepositoryConfiguration<?> config : configs) {
+            if (config.getRepositoryInterface().equals(repositoryInterface.getName())) {
+                return;
+            }
+        }
 
-		fail("Expected to find config for repository interface ".concat(repositoryInterface.getName()).concat(" but got ")
-				.concat(configs.toString()));
-	}
+        fail(
+                "Expected to find config for repository interface "
+                        .concat(repositoryInterface.getName())
+                        .concat(" but got ")
+                        .concat(configs.toString()));
+    }
 
-	private BeanDefinitionRegistry getBeanDefinitionRegistry() {
+    private BeanDefinitionRegistry getBeanDefinitionRegistry() {
 
-		BeanDefinitionRegistry registry = new SimpleBeanDefinitionRegistry();
+        BeanDefinitionRegistry registry = new SimpleBeanDefinitionRegistry();
 
-		RepositoryConfigurationSource configurationSource = new AnnotationRepositoryConfigurationSource(metadata,
-				EnableValkeyRepositories.class, loader, environment, registry);
+        RepositoryConfigurationSource configurationSource =
+                new AnnotationRepositoryConfigurationSource(
+                        metadata, EnableValkeyRepositories.class, loader, environment, registry);
 
-		ValkeyRepositoryConfigurationExtension extension = new ValkeyRepositoryConfigurationExtension();
+        ValkeyRepositoryConfigurationExtension extension = new ValkeyRepositoryConfigurationExtension();
 
-		extension.registerBeansForRoot(registry, configurationSource);
+        extension.registerBeansForRoot(registry, configurationSource);
 
-		return registry;
-	}
+        return registry;
+    }
 
-	private Object getEnableKeyspaceEvents(BeanDefinitionRegistry beanDefintionRegistry) {
-		return beanDefintionRegistry.getBeanDefinition("valkeyKeyValueAdapter").getPropertyValues()
-				.getPropertyValue("enableKeyspaceEvents").getValue();
-	}
+    private Object getEnableKeyspaceEvents(BeanDefinitionRegistry beanDefintionRegistry) {
+        return beanDefintionRegistry
+                .getBeanDefinition("valkeyKeyValueAdapter")
+                .getPropertyValues()
+                .getPropertyValue("enableKeyspaceEvents")
+                .getValue();
+    }
 
-	private Object getKeyspaceNotificationsConfigParameter(BeanDefinitionRegistry beanDefintionRegistry) {
-		return beanDefintionRegistry.getBeanDefinition("valkeyKeyValueAdapter").getPropertyValues()
-				.getPropertyValue("keyspaceNotificationsConfigParameter").getValue();
-	}
+    private Object getKeyspaceNotificationsConfigParameter(
+            BeanDefinitionRegistry beanDefintionRegistry) {
+        return beanDefintionRegistry
+                .getBeanDefinition("valkeyKeyValueAdapter")
+                .getPropertyValues()
+                .getPropertyValue("keyspaceNotificationsConfigParameter")
+                .getValue();
+    }
 
-	@EnableValkeyRepositories(considerNestedRepositories = true, enableKeyspaceEvents = EnableKeyspaceEvents.ON_STARTUP)
-	private static class Config {
+    @EnableValkeyRepositories(
+            considerNestedRepositories = true,
+            enableKeyspaceEvents = EnableKeyspaceEvents.ON_STARTUP)
+    private static class Config {}
 
-	}
+    @EnableValkeyRepositories(considerNestedRepositories = true)
+    private static class ConfigWithKeyspaceEventsDisabled {}
 
-	@EnableValkeyRepositories(considerNestedRepositories = true)
-	private static class ConfigWithKeyspaceEventsDisabled {
+    @EnableValkeyRepositories(
+            considerNestedRepositories = true,
+            enableKeyspaceEvents = EnableKeyspaceEvents.ON_STARTUP,
+            keyspaceNotificationsConfigParameter = "KEA")
+    private static class ConfigWithKeyspaceEventsEnabledAndCustomEventConfig {}
 
-	}
+    @EnableValkeyRepositories(
+            considerNestedRepositories = true,
+            enableKeyspaceEvents = EnableKeyspaceEvents.ON_STARTUP,
+            keyspaceNotificationsConfigParameter = "")
+    private static class ConfigWithEmptyConfigParameter {}
 
-	@EnableValkeyRepositories(considerNestedRepositories = true, enableKeyspaceEvents = EnableKeyspaceEvents.ON_STARTUP,
-			keyspaceNotificationsConfigParameter = "KEA")
-	private static class ConfigWithKeyspaceEventsEnabledAndCustomEventConfig {
+    @ValkeyHash
+    static class Sample {
+        @Id String id;
+    }
 
-	}
+    interface SampleRepository extends Repository<Sample, Long> {}
 
-	@EnableValkeyRepositories(considerNestedRepositories = true, enableKeyspaceEvents = EnableKeyspaceEvents.ON_STARTUP,
-			keyspaceNotificationsConfigParameter = "")
-	private static class ConfigWithEmptyConfigParameter {
+    interface UnannotatedRepository extends Repository<Object, Long> {}
 
-	}
-
-	@ValkeyHash
-	static class Sample {
-		@Id String id;
-	}
-
-	interface SampleRepository extends Repository<Sample, Long> {}
-
-	interface UnannotatedRepository extends Repository<Object, Long> {}
-
-	interface StoreRepository extends KeyValueRepository<Object, Long> {}
+    interface StoreRepository extends KeyValueRepository<Object, Long> {}
 }

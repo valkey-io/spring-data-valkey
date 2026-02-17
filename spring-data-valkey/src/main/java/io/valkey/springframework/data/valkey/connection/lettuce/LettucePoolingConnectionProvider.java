@@ -23,35 +23,35 @@ import io.lettuce.core.support.AsyncPool;
 import io.lettuce.core.support.BoundedPoolConfig;
 import io.lettuce.core.support.CommonsPool2ConfigConverter;
 import io.lettuce.core.support.ConnectionPoolSupport;
-
+import io.valkey.springframework.data.valkey.connection.PoolException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.springframework.beans.factory.DisposableBean;
-import io.valkey.springframework.data.valkey.connection.PoolException;
 import org.springframework.util.Assert;
 
 /**
- * {@link LettuceConnectionProvider} with connection pooling support. This connection provider holds multiple pools (one
- * per connection type and allocation type (synchronous/asynchronous)) for contextualized connection allocation.
- * <p>
- * Each allocated connection is tracked and to be returned into the pool which created the connection. Instances of this
- * class require {@link #destroy() disposal} to de-allocate lingering connections that were not returned to the pool and
- * to close the pools.
- * <p>
- * This provider maintains separate pools due to the allocation nature (synchronous/asynchronous). Asynchronous
- * connection pooling requires a non-blocking allocation API. Connections requested asynchronously can be returned
- * synchronously and vice versa. A connection obtained synchronously is returned to the synchronous pool even if
- * {@link #releaseAsync(StatefulConnection) released asynchronously}. This is an undesired case as the synchronous pool
- * will block the asynchronous flow for the time of release.
+ * {@link LettuceConnectionProvider} with connection pooling support. This connection provider holds
+ * multiple pools (one per connection type and allocation type (synchronous/asynchronous)) for
+ * contextualized connection allocation.
+ *
+ * <p>Each allocated connection is tracked and to be returned into the pool which created the
+ * connection. Instances of this class require {@link #destroy() disposal} to de-allocate lingering
+ * connections that were not returned to the pool and to close the pools.
+ *
+ * <p>This provider maintains separate pools due to the allocation nature
+ * (synchronous/asynchronous). Asynchronous connection pooling requires a non-blocking allocation
+ * API. Connections requested asynchronously can be returned synchronously and vice versa. A
+ * connection obtained synchronously is returned to the synchronous pool even if {@link
+ * #releaseAsync(StatefulConnection) released asynchronously}. This is an undesired case as the
+ * synchronous pool will block the asynchronous flow for the time of release.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -59,195 +59,225 @@ import org.springframework.util.Assert;
  * @since 2.0
  * @see #getConnection(Class)
  */
-class LettucePoolingConnectionProvider implements LettuceConnectionProvider, ValkeyClientProvider, DisposableBean {
+class LettucePoolingConnectionProvider
+        implements LettuceConnectionProvider, ValkeyClientProvider, DisposableBean {
 
-	private static final Log log = LogFactory.getLog(LettucePoolingConnectionProvider.class);
+    private static final Log log = LogFactory.getLog(LettucePoolingConnectionProvider.class);
 
-	private final LettuceConnectionProvider connectionProvider;
-	private final GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig;
-	private final Map<StatefulConnection<?, ?>, GenericObjectPool<StatefulConnection<?, ?>>> poolRef = new ConcurrentHashMap<>(
-			32);
+    private final LettuceConnectionProvider connectionProvider;
+    private final GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig;
+    private final Map<StatefulConnection<?, ?>, GenericObjectPool<StatefulConnection<?, ?>>> poolRef =
+            new ConcurrentHashMap<>(32);
 
-	private final Map<StatefulConnection<?, ?>, AsyncPool<StatefulConnection<?, ?>>> asyncPoolRef = new ConcurrentHashMap<>(
-			32);
-	private final Map<CompletableFuture<StatefulConnection<?, ?>>, AsyncPool<StatefulConnection<?, ?>>> inProgressAsyncPoolRef = new ConcurrentHashMap<>(
-			32);
-	private final Map<Class<?>, GenericObjectPool<StatefulConnection<?, ?>>> pools = new ConcurrentHashMap<>(32);
-	private final Map<Class<?>, AsyncPool<StatefulConnection<?, ?>>> asyncPools = new ConcurrentHashMap<>(32);
-	private final BoundedPoolConfig asyncPoolConfig;
+    private final Map<StatefulConnection<?, ?>, AsyncPool<StatefulConnection<?, ?>>> asyncPoolRef =
+            new ConcurrentHashMap<>(32);
+    private final Map<
+                    CompletableFuture<StatefulConnection<?, ?>>, AsyncPool<StatefulConnection<?, ?>>>
+            inProgressAsyncPoolRef = new ConcurrentHashMap<>(32);
+    private final Map<Class<?>, GenericObjectPool<StatefulConnection<?, ?>>> pools =
+            new ConcurrentHashMap<>(32);
+    private final Map<Class<?>, AsyncPool<StatefulConnection<?, ?>>> asyncPools =
+            new ConcurrentHashMap<>(32);
+    private final BoundedPoolConfig asyncPoolConfig;
 
-	LettucePoolingConnectionProvider(LettuceConnectionProvider connectionProvider,
-			LettucePoolingClientConfiguration clientConfiguration) {
+    LettucePoolingConnectionProvider(
+            LettuceConnectionProvider connectionProvider,
+            LettucePoolingClientConfiguration clientConfiguration) {
 
-		Assert.notNull(connectionProvider, "ConnectionProvider must not be null");
-		Assert.notNull(clientConfiguration, "ClientConfiguration must not be null");
+        Assert.notNull(connectionProvider, "ConnectionProvider must not be null");
+        Assert.notNull(clientConfiguration, "ClientConfiguration must not be null");
 
-		this.connectionProvider = connectionProvider;
-		this.poolConfig = clientConfiguration.getPoolConfig();
-		this.asyncPoolConfig = CommonsPool2ConfigConverter.bounded(this.poolConfig);
-	}
+        this.connectionProvider = connectionProvider;
+        this.poolConfig = clientConfiguration.getPoolConfig();
+        this.asyncPoolConfig = CommonsPool2ConfigConverter.bounded(this.poolConfig);
+    }
 
-	@Override
-	public <T extends StatefulConnection<?, ?>> T getConnection(Class<T> connectionType) {
+    @Override
+    public <T extends StatefulConnection<?, ?>> T getConnection(Class<T> connectionType) {
 
-		GenericObjectPool<StatefulConnection<?, ?>> pool = pools.computeIfAbsent(connectionType, poolType -> {
+        GenericObjectPool<StatefulConnection<?, ?>> pool =
+                pools.computeIfAbsent(
+                        connectionType,
+                        poolType -> {
+                            GenericObjectPool<StatefulConnection<?, ?>> newPool =
+                                    ConnectionPoolSupport.createGenericObjectPool(
+                                            () -> connectionProvider.getConnection(connectionType), poolConfig, false);
 
-			GenericObjectPool<StatefulConnection<?, ?>> newPool = ConnectionPoolSupport
-					.createGenericObjectPool(() -> connectionProvider.getConnection(connectionType), poolConfig, false);
+                            try {
+                                newPool.preparePool();
+                            } catch (Exception ex) {
+                                throw new PoolException("Could not prepare the pool", ex);
+                            }
 
-			try {
-				newPool.preparePool();
-			} catch (Exception ex) {
-				throw new PoolException("Could not prepare the pool", ex);
-			}
+                            return newPool;
+                        });
 
-			return newPool;
-		});
+        try {
 
-		try {
+            StatefulConnection<?, ?> connection = pool.borrowObject();
 
-			StatefulConnection<?, ?> connection = pool.borrowObject();
+            poolRef.put(connection, pool);
+            return connectionType.cast(connection);
+        } catch (Exception ex) {
+            throw new PoolException("Could not get a resource from the pool", ex);
+        }
+    }
 
-			poolRef.put(connection, pool);
-			return connectionType.cast(connection);
-		} catch (Exception ex) {
-			throw new PoolException("Could not get a resource from the pool", ex);
-		}
-	}
+    @Override
+    public <T extends StatefulConnection<?, ?>> CompletionStage<T> getConnectionAsync(
+            Class<T> connectionType) {
 
-	@Override
-	public <T extends StatefulConnection<?, ?>> CompletionStage<T> getConnectionAsync(Class<T> connectionType) {
+        AsyncPool<StatefulConnection<?, ?>> pool =
+                asyncPools.computeIfAbsent(
+                        connectionType,
+                        poolType -> {
+                            return AsyncConnectionPoolSupport.createBoundedObjectPool(
+                                    () ->
+                                            connectionProvider
+                                                    .getConnectionAsync(connectionType)
+                                                    .thenApply(connectionType::cast),
+                                    asyncPoolConfig,
+                                    false);
+                        });
 
-		AsyncPool<StatefulConnection<?, ?>> pool = asyncPools.computeIfAbsent(connectionType, poolType -> {
+        CompletableFuture<StatefulConnection<?, ?>> acquire = pool.acquire();
 
-			return AsyncConnectionPoolSupport.createBoundedObjectPool(
-					() -> connectionProvider.getConnectionAsync(connectionType).thenApply(connectionType::cast), asyncPoolConfig,
-					false);
-		});
+        inProgressAsyncPoolRef.put(acquire, pool);
+        return acquire
+                .whenComplete(
+                        (connection, e) -> {
+                            inProgressAsyncPoolRef.remove(acquire);
 
-		CompletableFuture<StatefulConnection<?, ?>> acquire = pool.acquire();
+                            if (connection != null) {
+                                asyncPoolRef.put(connection, pool);
+                            }
+                        })
+                .thenApply(connectionType::cast);
+    }
 
-		inProgressAsyncPoolRef.put(acquire, pool);
-		return acquire.whenComplete((connection, e) -> {
+    @Override
+    public AbstractRedisClient getValkeyClient() {
 
-			inProgressAsyncPoolRef.remove(acquire);
+        if (connectionProvider instanceof ValkeyClientProvider) {
+            return ((ValkeyClientProvider) connectionProvider).getValkeyClient();
+        }
 
-			if (connection != null) {
-				asyncPoolRef.put(connection, pool);
-			}
-		}).thenApply(connectionType::cast);
-	}
+        throw new IllegalStateException(
+                "Underlying connection provider %s does not implement ValkeyClientProvider"
+                        .formatted(connectionProvider.getClass().getName()));
+    }
 
-	@Override
-	public AbstractRedisClient getValkeyClient() {
+    @Override
+    public void release(StatefulConnection<?, ?> connection) {
 
-		if (connectionProvider instanceof ValkeyClientProvider) {
-			return ((ValkeyClientProvider) connectionProvider).getValkeyClient();
-		}
+        GenericObjectPool<StatefulConnection<?, ?>> pool = poolRef.remove(connection);
 
-		throw new IllegalStateException("Underlying connection provider %s does not implement ValkeyClientProvider"
-				.formatted(connectionProvider.getClass().getName()));
-	}
+        if (pool == null) {
 
-	@Override
-	public void release(StatefulConnection<?, ?> connection) {
+            AsyncPool<StatefulConnection<?, ?>> asyncPool = asyncPoolRef.remove(connection);
 
-		GenericObjectPool<StatefulConnection<?, ?>> pool = poolRef.remove(connection);
+            if (asyncPool == null) {
+                throw new PoolException(
+                        "Returned connection "
+                                + connection
+                                + " was either previously returned or does not belong to this connection provider");
+            }
 
-		if (pool == null) {
+            discardIfNecessary(connection);
+            asyncPool.release(connection).join();
+            return;
+        }
 
-			AsyncPool<StatefulConnection<?, ?>> asyncPool = asyncPoolRef.remove(connection);
+        discardIfNecessary(connection);
+        pool.returnObject(connection);
+    }
 
-			if (asyncPool == null) {
-				throw new PoolException("Returned connection " + connection
-						+ " was either previously returned or does not belong to this connection provider");
-			}
+    private void discardIfNecessary(StatefulConnection<?, ?> connection) {
 
-			discardIfNecessary(connection);
-			asyncPool.release(connection).join();
-			return;
-		}
+        if (connection instanceof StatefulRedisConnection<?, ?> valkeyConnection) {
 
-		discardIfNecessary(connection);
-		pool.returnObject(connection);
-	}
+            if (valkeyConnection.isMulti()) {
+                valkeyConnection.async().discard();
+            }
+        }
+    }
 
-	private void discardIfNecessary(StatefulConnection<?, ?> connection) {
+    @Override
+    public CompletableFuture<Void> releaseAsync(StatefulConnection<?, ?> connection) {
 
-		if (connection instanceof StatefulRedisConnection<?, ?> valkeyConnection) {
+        GenericObjectPool<StatefulConnection<?, ?>> blockingPool = poolRef.remove(connection);
 
-			if (valkeyConnection.isMulti()) {
-				valkeyConnection.async().discard();
-			}
-		}
-	}
+        if (blockingPool != null) {
 
-	@Override
-	public CompletableFuture<Void> releaseAsync(StatefulConnection<?, ?> connection) {
+            log.warn("Releasing asynchronously a connection that was obtained from a non-blocking pool");
+            blockingPool.returnObject(connection);
+            return CompletableFuture.completedFuture(null);
+        }
 
-		GenericObjectPool<StatefulConnection<?, ?>> blockingPool = poolRef.remove(connection);
+        AsyncPool<StatefulConnection<?, ?>> pool = asyncPoolRef.remove(connection);
 
-		if (blockingPool != null) {
+        if (pool == null) {
+            return LettuceFutureUtils.failed(
+                    new PoolException(
+                            "Returned connection "
+                                    + connection
+                                    + " was either previously returned or does not belong to this connection"
+                                    + " provider"));
+        }
 
-			log.warn("Releasing asynchronously a connection that was obtained from a non-blocking pool");
-			blockingPool.returnObject(connection);
-			return CompletableFuture.completedFuture(null);
-		}
+        return pool.release(connection);
+    }
 
-		AsyncPool<StatefulConnection<?, ?>> pool = asyncPoolRef.remove(connection);
+    @Override
+    public void destroy() throws Exception {
 
-		if (pool == null) {
-			return LettuceFutureUtils.failed(new PoolException("Returned connection " + connection
-					+ " was either previously returned or does not belong to this connection provider"));
-		}
+        List<CompletableFuture<?>> futures = new ArrayList<>();
+        if (!poolRef.isEmpty() || !asyncPoolRef.isEmpty()) {
+            log.warn("LettucePoolingConnectionProvider contains unreleased connections");
+        }
 
-		return pool.release(connection);
-	}
+        if (!inProgressAsyncPoolRef.isEmpty()) {
 
-	@Override
-	public void destroy() throws Exception {
+            log.warn("LettucePoolingConnectionProvider has active connection retrievals");
+            inProgressAsyncPoolRef.forEach(
+                    (k, v) -> futures.add(k.thenApply(StatefulConnection::closeAsync)));
+        }
 
-		List<CompletableFuture<?>> futures = new ArrayList<>();
-		if (!poolRef.isEmpty() || !asyncPoolRef.isEmpty()) {
-			log.warn("LettucePoolingConnectionProvider contains unreleased connections");
-		}
+        if (!poolRef.isEmpty()) {
 
-		if (!inProgressAsyncPoolRef.isEmpty()) {
+            poolRef.forEach((connection, pool) -> pool.returnObject(connection));
+            poolRef.clear();
+        }
 
-			log.warn("LettucePoolingConnectionProvider has active connection retrievals");
-			inProgressAsyncPoolRef.forEach((k, v) -> futures.add(k.thenApply(StatefulConnection::closeAsync)));
-		}
+        if (!asyncPoolRef.isEmpty()) {
 
-		if (!poolRef.isEmpty()) {
+            asyncPoolRef.forEach((connection, pool) -> futures.add(pool.release(connection)));
+            asyncPoolRef.clear();
+        }
 
-			poolRef.forEach((connection, pool) -> pool.returnObject(connection));
-			poolRef.clear();
-		}
+        pools.forEach((type, pool) -> pool.close());
 
-		if (!asyncPoolRef.isEmpty()) {
+        CompletableFuture.allOf(
+                        futures.stream()
+                                .map(it -> it.exceptionally(LettuceFutureUtils.ignoreErrors()))
+                                .toArray(CompletableFuture[]::new)) //
+                .thenCompose(
+                        ignored -> {
+                            CompletableFuture[] poolClose =
+                                    asyncPools.values().stream()
+                                            .map(AsyncPool::closeAsync)
+                                            .map(it -> it.exceptionally(LettuceFutureUtils.ignoreErrors()))
+                                            .toArray(CompletableFuture[]::new);
 
-			asyncPoolRef.forEach((connection, pool) -> futures.add(pool.release(connection)));
-			asyncPoolRef.clear();
-		}
+                            return CompletableFuture.allOf(poolClose);
+                        }) //
+                .thenRun(
+                        () -> {
+                            asyncPoolRef.clear();
+                            inProgressAsyncPoolRef.clear();
+                        }) //
+                .join();
 
-		pools.forEach((type, pool) -> pool.close());
-
-		CompletableFuture
-				.allOf(futures.stream().map(it -> it.exceptionally(LettuceFutureUtils.ignoreErrors()))
-						.toArray(CompletableFuture[]::new)) //
-				.thenCompose(ignored -> {
-
-					CompletableFuture[] poolClose = asyncPools.values().stream().map(AsyncPool::closeAsync)
-							.map(it -> it.exceptionally(LettuceFutureUtils.ignoreErrors())).toArray(CompletableFuture[]::new);
-
-					return CompletableFuture.allOf(poolClose);
-				}) //
-				.thenRun(() -> {
-					asyncPoolRef.clear();
-					inProgressAsyncPoolRef.clear();
-				}) //
-				.join();
-
-		pools.clear();
-	}
+        pools.clear();
+    }
 }

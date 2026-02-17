@@ -17,18 +17,16 @@ package io.valkey.springframework.data.valkey.core.convert;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration.KeyspaceSettings;
 import io.valkey.springframework.data.valkey.core.index.IndexConfiguration;
 import io.valkey.springframework.data.valkey.core.index.SpelIndexDefinition;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.expression.spel.SpelEvaluationException;
 
@@ -38,167 +36,173 @@ import org.springframework.expression.spel.SpelEvaluationException;
  */
 public class SpelIndexResolverUnitTests {
 
-	private String keyspace;
+    private String keyspace;
 
-	private String indexName;
+    private String indexName;
 
-	private String username;
+    private String username;
 
-	private SpelIndexResolver resolver;
+    private SpelIndexResolver resolver;
 
-	private Session session;
+    private Session session;
 
-	private TypeInformation<?> typeInformation;
+    private TypeInformation<?> typeInformation;
 
-	private String securityContextAttrName;
+    private String securityContextAttrName;
 
-	private ValkeyMappingContext mappingContext;
+    private ValkeyMappingContext mappingContext;
 
-	ValkeyPersistentEntity<?> entity;
+    ValkeyPersistentEntity<?> entity;
 
-	@BeforeEach
-	void setup() {
+    @BeforeEach
+    void setup() {
 
-		username = "rob";
-		keyspace = "spring:session:sessions";
-		indexName = "principalName";
-		securityContextAttrName = "SPRING_SECURITY_CONTEXT";
+        username = "rob";
+        keyspace = "spring:session:sessions";
+        indexName = "principalName";
+        securityContextAttrName = "SPRING_SECURITY_CONTEXT";
 
-		typeInformation = TypeInformation.of(Session.class);
-		session = createSession();
+        typeInformation = TypeInformation.of(Session.class);
+        session = createSession();
 
-		resolver = createWithExpression("getAttribute('" + securityContextAttrName + "')?.authentication?.name");
-	}
+        resolver =
+                createWithExpression(
+                        "getAttribute('" + securityContextAttrName + "')?.authentication?.name");
+    }
 
-	@Test // DATAREDIS-425
-	void constructorNullValkeyMappingContext() {
+    @Test // DATAREDIS-425
+    void constructorNullValkeyMappingContext() {
 
-		mappingContext = null;
-		assertThatIllegalArgumentException().isThrownBy(() -> new SpelIndexResolver(mappingContext));
-	}
+        mappingContext = null;
+        assertThatIllegalArgumentException().isThrownBy(() -> new SpelIndexResolver(mappingContext));
+    }
 
-	@Test // DATAREDIS-425
-	void constructorNullSpelExpressionParser() {
-		assertThatIllegalArgumentException().isThrownBy(() -> new SpelIndexResolver(mappingContext, null));
-	}
+    @Test // DATAREDIS-425
+    void constructorNullSpelExpressionParser() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new SpelIndexResolver(mappingContext, null));
+    }
 
-	@Test // DATAREDIS-425
-	void nullValue() {
+    @Test // DATAREDIS-425
+    void nullValue() {
 
-		Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, null);
+        Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, null);
 
-		assertThat(indexes.size()).isEqualTo(0);
-	}
+        assertThat(indexes.size()).isEqualTo(0);
+    }
 
-	@Test // DATAREDIS-425
-	void wrongKeyspace() {
+    @Test // DATAREDIS-425
+    void wrongKeyspace() {
 
-		typeInformation = TypeInformation.of(String.class);
-		Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, "");
+        typeInformation = TypeInformation.of(String.class);
+        Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, "");
 
-		assertThat(indexes.size()).isEqualTo(0);
-	}
+        assertThat(indexes.size()).isEqualTo(0);
+    }
 
-	@Test // DATAREDIS-425
-	void sessionAttributeNull() {
+    @Test // DATAREDIS-425
+    void sessionAttributeNull() {
 
-		session = new Session();
-		Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, session);
+        session = new Session();
+        Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, session);
 
-		assertThat(indexes.size()).isEqualTo(0);
-	}
+        assertThat(indexes.size()).isEqualTo(0);
+    }
 
-	@Test // DATAREDIS-425
-	void resolvePrincipalName() {
+    @Test // DATAREDIS-425
+    void resolvePrincipalName() {
 
-		Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, session);
+        Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, session);
 
-		assertThat(indexes).contains(new SimpleIndexedPropertyValue(keyspace, indexName, username));
-	}
+        assertThat(indexes).contains(new SimpleIndexedPropertyValue(keyspace, indexName, username));
+    }
 
-	@Test // DATAREDIS-425
-	void spelError() {
+    @Test // DATAREDIS-425
+    void spelError() {
 
-		session.setAttribute(securityContextAttrName, "");
+        session.setAttribute(securityContextAttrName, "");
 
-		assertThatExceptionOfType(SpelEvaluationException.class)
-				.isThrownBy(() -> resolver.resolveIndexesFor(typeInformation, session));
-	}
+        assertThatExceptionOfType(SpelEvaluationException.class)
+                .isThrownBy(() -> resolver.resolveIndexesFor(typeInformation, session));
+    }
 
-	@Test // DATAREDIS-425
-	void withBeanAndThis() {
+    @Test // DATAREDIS-425
+    void withBeanAndThis() {
 
-		this.resolver = createWithExpression("@bean.run(#this)");
-		this.resolver.setBeanResolver((context, beanName) -> new Object() {
-			@SuppressWarnings("unused")
-			public Object run(Object arg) {
-				return arg;
-			}
-		});
+        this.resolver = createWithExpression("@bean.run(#this)");
+        this.resolver.setBeanResolver(
+                (context, beanName) ->
+                        new Object() {
+                            @SuppressWarnings("unused")
+                            public Object run(Object arg) {
+                                return arg;
+                            }
+                        });
 
-		Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, session);
+        Set<IndexedData> indexes = resolver.resolveIndexesFor(typeInformation, session);
 
-		assertThat(indexes).contains(new SimpleIndexedPropertyValue(keyspace, indexName, session));
-	}
+        assertThat(indexes).contains(new SimpleIndexedPropertyValue(keyspace, indexName, session));
+    }
 
-	private SpelIndexResolver createWithExpression(String expression) {
+    private SpelIndexResolver createWithExpression(String expression) {
 
-		SpelIndexDefinition principalIndex = new SpelIndexDefinition(keyspace, expression, indexName);
-		IndexConfiguration configuration = new IndexConfiguration();
-		configuration.addIndexDefinition(principalIndex);
+        SpelIndexDefinition principalIndex = new SpelIndexDefinition(keyspace, expression, indexName);
+        IndexConfiguration configuration = new IndexConfiguration();
+        configuration.addIndexDefinition(principalIndex);
 
-		KeyspaceSettings keyspaceSettings = new KeyspaceSettings(Session.class, keyspace);
-		KeyspaceConfiguration keyspaceConfiguration = new KeyspaceConfiguration();
-		keyspaceConfiguration.addKeyspaceSettings(keyspaceSettings);
+        KeyspaceSettings keyspaceSettings = new KeyspaceSettings(Session.class, keyspace);
+        KeyspaceConfiguration keyspaceConfiguration = new KeyspaceConfiguration();
+        keyspaceConfiguration.addKeyspaceSettings(keyspaceSettings);
 
-		MappingConfiguration mapping = new MappingConfiguration(configuration, keyspaceConfiguration);
+        MappingConfiguration mapping = new MappingConfiguration(configuration, keyspaceConfiguration);
 
-		mappingContext = new ValkeyMappingContext(mapping);
+        mappingContext = new ValkeyMappingContext(mapping);
 
-		return new SpelIndexResolver(mappingContext);
-	}
+        return new SpelIndexResolver(mappingContext);
+    }
 
-	private Session createSession() {
+    private Session createSession() {
 
-		Session session = new Session();
-		session.setAttribute(securityContextAttrName, new SecurityContextImpl(new Authentication(username)));
-		return session;
-	}
+        Session session = new Session();
+        session.setAttribute(
+                securityContextAttrName, new SecurityContextImpl(new Authentication(username)));
+        return session;
+    }
 
-	static class Session {
+    static class Session {
 
-		private Map<String, Object> sessionAttrs = new HashMap<>();
+        private Map<String, Object> sessionAttrs = new HashMap<>();
 
-		void setAttribute(String attrName, Object attrValue) {
-			this.sessionAttrs.put(attrName, attrValue);
-		}
+        void setAttribute(String attrName, Object attrValue) {
+            this.sessionAttrs.put(attrName, attrValue);
+        }
 
-		public Object getAttribute(String attributeName) {
-			return sessionAttrs.get(attributeName);
-		}
-	}
+        public Object getAttribute(String attributeName) {
+            return sessionAttrs.get(attributeName);
+        }
+    }
 
-	static class SecurityContextImpl {
-		private final Authentication authentication;
+    static class SecurityContextImpl {
+        private final Authentication authentication;
 
-		SecurityContextImpl(Authentication authentication) {
-			this.authentication = authentication;
-		}
+        SecurityContextImpl(Authentication authentication) {
+            this.authentication = authentication;
+        }
 
-		public Authentication getAuthentication() {
-			return authentication;
-		}
-	}
+        public Authentication getAuthentication() {
+            return authentication;
+        }
+    }
 
-	public static class Authentication {
-		private final String principalName;
+    public static class Authentication {
+        private final String principalName;
 
-		Authentication(String principalName) {
-			this.principalName = principalName;
-		}
+        Authentication(String principalName) {
+            this.principalName = principalName;
+        }
 
-		public String getName() {
-			return principalName;
-		}
-	}
+        public String getName() {
+            return principalName;
+        }
+    }
 }

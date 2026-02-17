@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import java.nio.charset.StandardCharsets;
-
 import io.valkey.springframework.data.valkey.connection.StringValkeyConnection.StringTuple;
 import io.valkey.springframework.data.valkey.connection.zset.DefaultTuple;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
+import java.nio.charset.StandardCharsets;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
@@ -32,70 +31,66 @@ import org.springframework.util.ObjectUtils;
  */
 public class DefaultStringTuple extends DefaultTuple implements StringTuple {
 
-	private final String valueAsString;
+    private final String valueAsString;
 
-	/**
-	 * Constructs a new <code>DefaultStringTuple</code> instance.
-	 *
-	 * @param value
-	 * @param score
-	 */
-	public DefaultStringTuple(byte[] value, String valueAsString, Double score) {
+    /**
+     * Constructs a new <code>DefaultStringTuple</code> instance.
+     *
+     * @param value
+     * @param score
+     */
+    public DefaultStringTuple(byte[] value, String valueAsString, Double score) {
 
-		super(value, score);
-		this.valueAsString = valueAsString;
+        super(value, score);
+        this.valueAsString = valueAsString;
+    }
 
-	}
+    /**
+     * Constructs a new <code>DefaultStringTuple</code> instance.
+     *
+     * @param valueAsString must not be {@literal null}.
+     * @param score
+     * @since 2.6
+     */
+    public DefaultStringTuple(String valueAsString, double score) {
+        this(valueAsString.getBytes(StandardCharsets.UTF_8), valueAsString, score);
+    }
 
-	/**
-	 * Constructs a new <code>DefaultStringTuple</code> instance.
-	 *
-	 * @param valueAsString must not be {@literal null}.
-	 * @param score
-	 * @since 2.6
-	 */
-	public DefaultStringTuple(String valueAsString, double score) {
-		this(valueAsString.getBytes(StandardCharsets.UTF_8), valueAsString, score);
-	}
+    /**
+     * Constructs a new <code>DefaultStringTuple</code> instance.
+     *
+     * @param tuple
+     * @param valueAsString
+     */
+    public DefaultStringTuple(Tuple tuple, String valueAsString) {
 
-	/**
-	 * Constructs a new <code>DefaultStringTuple</code> instance.
-	 *
-	 * @param tuple
-	 * @param valueAsString
-	 */
-	public DefaultStringTuple(Tuple tuple, String valueAsString) {
+        super(tuple.getValue(), tuple.getScore());
+        this.valueAsString = valueAsString;
+    }
 
-		super(tuple.getValue(), tuple.getScore());
-		this.valueAsString = valueAsString;
-	}
+    public String getValueAsString() {
+        return valueAsString;
+    }
 
-	public String getValueAsString() {
-		return valueAsString;
-	}
+    public String toString() {
+        return "DefaultStringTuple[value=" + getValueAsString() + ", score=" + getScore() + "]";
+    }
 
-	public String toString() {
-		return "DefaultStringTuple[value=" + getValueAsString() + ", score=" + getScore() + "]";
-	}
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        if (!super.equals(o)) return false;
 
-	@Override
-	public boolean equals(@Nullable Object o) {
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
-		if (!super.equals(o))
-			return false;
+        DefaultStringTuple that = (DefaultStringTuple) o;
 
-		DefaultStringTuple that = (DefaultStringTuple) o;
+        return ObjectUtils.nullSafeEquals(valueAsString, that.valueAsString);
+    }
 
-		return ObjectUtils.nullSafeEquals(valueAsString, that.valueAsString);
-	}
-
-	@Override
-	public int hashCode() {
-		int result = super.hashCode();
-		result = 31 * result + ObjectUtils.nullSafeHashCode(valueAsString);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = super.hashCode();
+        result = 31 * result + ObjectUtils.nullSafeHashCode(valueAsString);
+        return result;
+    }
 }

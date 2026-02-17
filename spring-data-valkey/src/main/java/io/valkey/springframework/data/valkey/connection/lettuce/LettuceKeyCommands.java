@@ -24,22 +24,20 @@ import io.lettuce.core.ScanCursor;
 import io.lettuce.core.SortArgs;
 import io.lettuce.core.api.async.RedisKeyAsyncCommands;
 import io.lettuce.core.protocol.CommandArgs;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
-import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
 import io.valkey.springframework.data.valkey.connection.SortParameters;
+import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
 import io.valkey.springframework.data.valkey.connection.ValueEncoding;
 import io.valkey.springframework.data.valkey.connection.ValueEncoding.ValkeyValueEncoding;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
+import java.time.Duration;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
@@ -52,308 +50,337 @@ import org.springframework.util.ObjectUtils;
  */
 class LettuceKeyCommands implements ValkeyKeyCommands {
 
-	private final LettuceConnection connection;
+    private final LettuceConnection connection;
 
-	LettuceKeyCommands(LettuceConnection connection) {
-		this.connection = connection;
-	}
+    LettuceKeyCommands(LettuceConnection connection) {
+        this.connection = connection;
+    }
 
-	@Override
-	public Boolean copy(byte[] sourceKey, byte[] targetKey, boolean replace) {
+    @Override
+    public Boolean copy(byte[] sourceKey, byte[] targetKey, boolean replace) {
 
-		Assert.notNull(sourceKey, "source key must not be null");
-		Assert.notNull(targetKey, "target key must not be null");
+        Assert.notNull(sourceKey, "source key must not be null");
+        Assert.notNull(targetKey, "target key must not be null");
 
-		return connection.invoke().just(RedisKeyAsyncCommands::copy, sourceKey, targetKey,
-				CopyArgs.Builder.replace(replace));
-	}
+        return connection
+                .invoke()
+                .just(RedisKeyAsyncCommands::copy, sourceKey, targetKey, CopyArgs.Builder.replace(replace));
+    }
 
-	@Override
-	public Boolean exists(byte[] key) {
+    @Override
+    public Boolean exists(byte[] key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().from(RedisKeyAsyncCommands::exists, key).get(LettuceConverters.longToBooleanConverter());
-	}
+        return connection
+                .invoke()
+                .from(RedisKeyAsyncCommands::exists, key)
+                .get(LettuceConverters.longToBooleanConverter());
+    }
 
-	@Nullable
-	@Override
-	public Long exists(byte[]... keys) {
+    @Nullable
+    @Override
+    public Long exists(byte[]... keys) {
 
-		Assert.notNull(keys, "Keys must not be null");
-		Assert.noNullElements(keys, "Keys must not contain null elements");
+        Assert.notNull(keys, "Keys must not be null");
+        Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		return connection.invoke().just(RedisKeyAsyncCommands::exists, keys);
-	}
+        return connection.invoke().just(RedisKeyAsyncCommands::exists, keys);
+    }
 
-	@Override
-	public Long del(byte[]... keys) {
+    @Override
+    public Long del(byte[]... keys) {
 
-		Assert.notNull(keys, "Keys must not be null");
-		Assert.noNullElements(keys, "Keys must not contain null elements");
+        Assert.notNull(keys, "Keys must not be null");
+        Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		return connection.invoke().just(RedisKeyAsyncCommands::del, keys);
-	}
+        return connection.invoke().just(RedisKeyAsyncCommands::del, keys);
+    }
 
+    @Override
+    public Long unlink(byte[]... keys) {
 
-	@Override
-	public Long unlink(byte[]... keys) {
+        Assert.notNull(keys, "Keys must not be null");
 
-		Assert.notNull(keys, "Keys must not be null");
+        return connection.invoke().just(RedisKeyAsyncCommands::unlink, keys);
+    }
 
-		return connection.invoke().just(RedisKeyAsyncCommands::unlink, keys);
-	}
+    @Override
+    public DataType type(byte[] key) {
 
-	@Override
-	public DataType type(byte[] key) {
+        Assert.notNull(key, "Key must not be null");
 
-		Assert.notNull(key, "Key must not be null");
+        return connection
+                .invoke()
+                .from(RedisKeyAsyncCommands::type, key)
+                .get(LettuceConverters.stringToDataType());
+    }
 
-		return connection.invoke().from(RedisKeyAsyncCommands::type, key).get(LettuceConverters.stringToDataType());
-	}
+    @Override
+    public Long touch(byte[]... keys) {
 
-	@Override
-	public Long touch(byte[]... keys) {
+        Assert.notNull(keys, "Keys must not be null");
 
-		Assert.notNull(keys, "Keys must not be null");
+        return connection.invoke().just(RedisKeyAsyncCommands::touch, keys);
+    }
 
-		return connection.invoke().just(RedisKeyAsyncCommands::touch, keys);
-	}
+    @Override
+    public Set<byte[]> keys(byte[] pattern) {
 
-	@Override
-	public Set<byte[]> keys(byte[] pattern) {
+        Assert.notNull(pattern, "Pattern must not be null");
 
-		Assert.notNull(pattern, "Pattern must not be null");
+        return connection.invoke().fromMany(RedisKeyAsyncCommands::keys, pattern).toSet();
+    }
 
-		return connection.invoke().fromMany(RedisKeyAsyncCommands::keys, pattern).toSet();
-	}
+    /**
+     * @since 1.4
+     * @return
+     */
+    public Cursor<byte[]> scan() {
+        return scan(ScanOptions.NONE);
+    }
 
-	/**
-	 * @since 1.4
-	 * @return
-	 */
-	public Cursor<byte[]> scan() {
-		return scan(ScanOptions.NONE);
-	}
+    @Override
+    public Cursor<byte[]> scan(ScanOptions options) {
+        return doScan(options != null ? options : ScanOptions.NONE);
+    }
 
-	@Override
-	public Cursor<byte[]> scan(ScanOptions options) {
-		return doScan(options != null ? options : ScanOptions.NONE);
-	}
+    /**
+     * @since 1.4
+     * @param options
+     * @return
+     */
+    private Cursor<byte[]> doScan(ScanOptions options) {
 
-	/**
-	 * @since 1.4
-	 * @param options
-	 * @return
-	 */
-	private Cursor<byte[]> doScan(ScanOptions options) {
+        return new LettuceScanCursor<byte[]>(options) {
 
-		return new LettuceScanCursor<byte[]>(options) {
+            @Override
+            protected LettuceScanIteration<byte[]> doScan(ScanCursor cursor, ScanOptions options) {
 
-			@Override
-			protected LettuceScanIteration<byte[]> doScan(ScanCursor cursor, ScanOptions options) {
+                if (connection.isQueueing() || connection.isPipelined()) {
+                    throw new InvalidDataAccessApiUsageException(
+                            "'SCAN' cannot be called in pipeline / transaction mode");
+                }
 
-				if (connection.isQueueing() || connection.isPipelined()) {
-					throw new InvalidDataAccessApiUsageException("'SCAN' cannot be called in pipeline / transaction mode");
-				}
+                ScanArgs scanArgs = LettuceConverters.toScanArgs(options);
+                KeyScanCursor<byte[]> keyScanCursor =
+                        connection.invoke().just(RedisKeyAsyncCommands::scan, cursor, scanArgs);
+                List<byte[]> keys = keyScanCursor.getKeys();
 
-				ScanArgs scanArgs = LettuceConverters.toScanArgs(options);
-				KeyScanCursor<byte[]> keyScanCursor = connection.invoke().just(RedisKeyAsyncCommands::scan, cursor, scanArgs);
-				List<byte[]> keys = keyScanCursor.getKeys();
+                return new LettuceScanIteration<>(keyScanCursor, keys);
+            }
 
-				return new LettuceScanIteration<>(keyScanCursor, keys);
-			}
+            @Override
+            protected void doClose() {
+                LettuceKeyCommands.this.connection.close();
+            }
+        }.open();
+    }
 
-			@Override
-			protected void doClose() {
-				LettuceKeyCommands.this.connection.close();
-			}
+    @Override
+    public byte[] randomKey() {
+        return connection.invoke().just(RedisKeyAsyncCommands::randomkey);
+    }
 
-		}.open();
-	}
+    @Override
+    public void rename(byte[] oldKey, byte[] newKey) {
 
-	@Override
-	public byte[] randomKey() {
-		return connection.invoke().just(RedisKeyAsyncCommands::randomkey);
-	}
+        Assert.notNull(oldKey, "Old key must not be null");
+        Assert.notNull(newKey, "New key must not be null");
 
-	@Override
-	public void rename(byte[] oldKey, byte[] newKey) {
+        connection.invokeStatus().just(RedisKeyAsyncCommands::rename, oldKey, newKey);
+    }
 
-		Assert.notNull(oldKey, "Old key must not be null");
-		Assert.notNull(newKey, "New key must not be null");
+    @Override
+    public Boolean renameNX(byte[] sourceKey, byte[] targetKey) {
 
-		connection.invokeStatus().just(RedisKeyAsyncCommands::rename, oldKey, newKey);
-	}
+        Assert.notNull(sourceKey, "Source key must not be null");
+        Assert.notNull(targetKey, "Target key must not be null");
 
-	@Override
-	public Boolean renameNX(byte[] sourceKey, byte[] targetKey) {
+        return connection.invoke().just(RedisKeyAsyncCommands::renamenx, sourceKey, targetKey);
+    }
 
-		Assert.notNull(sourceKey, "Source key must not be null");
-		Assert.notNull(targetKey, "Target key must not be null");
+    @Override
+    public Boolean expire(byte[] key, long seconds, ExpirationOptions.Condition condition) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::renamenx, sourceKey, targetKey);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Boolean expire(byte[] key, long seconds, ExpirationOptions.Condition condition) {
+        return connection
+                .invoke()
+                .just(RedisKeyAsyncCommands::expire, key, seconds, getExpireArgs(condition));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Boolean pExpire(byte[] key, long millis, ExpirationOptions.Condition condition) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::expire, key, seconds, getExpireArgs(condition));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Boolean pExpire(byte[] key, long millis, ExpirationOptions.Condition condition) {
+        return connection
+                .invoke()
+                .just(RedisKeyAsyncCommands::pexpire, key, millis, getExpireArgs(condition));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Boolean expireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::pexpire, key, millis, getExpireArgs(condition));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Boolean expireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition) {
+        return connection
+                .invoke()
+                .just(RedisKeyAsyncCommands::expireat, key, unixTime, getExpireArgs(condition));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Boolean pExpireAt(
+            byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::expireat, key, unixTime, getExpireArgs(condition));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Boolean pExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition) {
+        return connection
+                .invoke()
+                .just(RedisKeyAsyncCommands::pexpireat, key, unixTimeInMillis, getExpireArgs(condition));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Boolean persist(byte[] key) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::pexpireat, key, unixTimeInMillis, getExpireArgs(condition));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Boolean persist(byte[] key) {
+        return connection.invoke().just(RedisKeyAsyncCommands::persist, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Boolean move(byte[] key, int dbIndex) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::persist, key);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Boolean move(byte[] key, int dbIndex) {
+        return connection.invoke().just(RedisKeyAsyncCommands::move, key, dbIndex);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long ttl(byte[] key) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::move, key, dbIndex);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long ttl(byte[] key) {
+        return connection.invoke().just(RedisKeyAsyncCommands::ttl, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long ttl(byte[] key, TimeUnit timeUnit) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::ttl, key);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long ttl(byte[] key, TimeUnit timeUnit) {
+        return connection
+                .invoke()
+                .from(RedisKeyAsyncCommands::ttl, key)
+                .get(Converters.secondsToTimeUnit(timeUnit));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long pTtl(byte[] key) {
 
-		return connection.invoke().from(RedisKeyAsyncCommands::ttl, key).get(Converters.secondsToTimeUnit(timeUnit));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long pTtl(byte[] key) {
+        return connection.invoke().just(RedisKeyAsyncCommands::pttl, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long pTtl(byte[] key, TimeUnit timeUnit) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::pttl, key);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long pTtl(byte[] key, TimeUnit timeUnit) {
+        return connection
+                .invoke()
+                .from(RedisKeyAsyncCommands::pttl, key)
+                .get(Converters.millisecondsToTimeUnit(timeUnit));
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public List<byte[]> sort(byte[] key, SortParameters params) {
 
-		return connection.invoke().from(RedisKeyAsyncCommands::pttl, key).get(Converters.millisecondsToTimeUnit(timeUnit));
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public List<byte[]> sort(byte[] key, SortParameters params) {
+        SortArgs args = LettuceConverters.toSortArgs(params);
 
-		Assert.notNull(key, "Key must not be null");
+        return connection.invoke().just(RedisKeyAsyncCommands::sort, key, args);
+    }
 
-		SortArgs args = LettuceConverters.toSortArgs(params);
+    @Override
+    public Long sort(byte[] key, SortParameters params, byte[] sortKey) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::sort, key, args);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long sort(byte[] key, SortParameters params, byte[] sortKey) {
+        SortArgs args = LettuceConverters.toSortArgs(params);
 
-		Assert.notNull(key, "Key must not be null");
+        return connection.invoke().just(RedisKeyAsyncCommands::sortStore, key, args, sortKey);
+    }
 
-		SortArgs args = LettuceConverters.toSortArgs(params);
+    @Override
+    public byte[] dump(byte[] key) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::sortStore, key, args, sortKey);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public byte[] dump(byte[] key) {
+        return connection.invoke().just(RedisKeyAsyncCommands::dump, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public void restore(byte[] key, long ttlInMillis, byte[] serializedValue, boolean replace) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::dump, key);
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(serializedValue, "Serialized value must not be null");
 
-	@Override
-	public void restore(byte[] key, long ttlInMillis, byte[] serializedValue, boolean replace) {
+        RestoreArgs restoreArgs = RestoreArgs.Builder.ttl(ttlInMillis).replace(replace);
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(serializedValue, "Serialized value must not be null");
+        connection
+                .invokeStatus()
+                .just(RedisKeyAsyncCommands::restore, key, serializedValue, restoreArgs);
+    }
 
-		RestoreArgs restoreArgs = RestoreArgs.Builder.ttl(ttlInMillis).replace(replace);
+    @Nullable
+    @Override
+    public ValueEncoding encodingOf(byte[] key) {
 
-		connection.invokeStatus().just(RedisKeyAsyncCommands::restore, key, serializedValue, restoreArgs);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Nullable
-	@Override
-	public ValueEncoding encodingOf(byte[] key) {
+        return connection
+                .invoke()
+                .from(RedisKeyAsyncCommands::objectEncoding, key)
+                .orElse(ValueEncoding::of, ValkeyValueEncoding.VACANT);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Nullable
+    @Override
+    public Duration idletime(byte[] key) {
 
-		return connection.invoke().from(RedisKeyAsyncCommands::objectEncoding, key).orElse(ValueEncoding::of,
-				ValkeyValueEncoding.VACANT);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Nullable
-	@Override
-	public Duration idletime(byte[] key) {
+        return connection
+                .invoke()
+                .from(RedisKeyAsyncCommands::objectIdletime, key)
+                .get(Converters::secondsToDuration);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Nullable
+    @Override
+    public Long refcount(byte[] key) {
 
-		return connection.invoke().from(RedisKeyAsyncCommands::objectIdletime, key).get(Converters::secondsToDuration);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Nullable
-	@Override
-	public Long refcount(byte[] key) {
+        return connection.invoke().just(RedisKeyAsyncCommands::objectRefcount, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    private static ExpireArgs getExpireArgs(ExpirationOptions.Condition condition) {
 
-		return connection.invoke().just(RedisKeyAsyncCommands::objectRefcount, key);
-	}
+        return new ExpireArgs() {
+            @Override
+            public <K, V> void build(CommandArgs<K, V> args) {
 
-	private static ExpireArgs getExpireArgs(ExpirationOptions.Condition condition) {
+                if (ObjectUtils.nullSafeEquals(condition, ExpirationOptions.Condition.ALWAYS)) {
+                    return;
+                }
 
-		return new ExpireArgs() {
-			@Override
-			public <K, V> void build(CommandArgs<K, V> args) {
-
-				if (ObjectUtils.nullSafeEquals(condition, ExpirationOptions.Condition.ALWAYS)) {
-					return;
-				}
-
-				args.add(condition.name());
-			}
-		};
-	}
+                args.add(condition.name());
+            }
+        };
+    }
 }

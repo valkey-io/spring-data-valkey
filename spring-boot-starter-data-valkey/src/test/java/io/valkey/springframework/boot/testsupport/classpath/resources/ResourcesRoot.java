@@ -24,18 +24,16 @@ import java.lang.annotation.Target;
 import java.nio.file.Path;
 
 /**
- * Annotation that indicates that the resources root should be injected. Supported on
- * parameters of type:
+ * Annotation that indicates that the resources root should be injected. Supported on parameters of
+ * type:
  *
  * <ul>
- * <li>{@link File}</li>
- * <li>{@link Path}</li>
+ *   <li>{@link File}
+ *   <li>{@link Path}
  * </ul>
  *
  * @author Andy Wilkinson
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.PARAMETER)
-public @interface ResourcesRoot {
-
-}
+public @interface ResourcesRoot {}

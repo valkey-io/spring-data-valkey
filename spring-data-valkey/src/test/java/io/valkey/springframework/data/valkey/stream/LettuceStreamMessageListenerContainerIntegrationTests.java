@@ -15,12 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.stream;
 
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.ExtendWith;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * Integration tests for {@link StreamMessageListenerContainer} using Lettuce.
@@ -32,10 +31,10 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 @EnabledOnCommand("XREAD")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class LettuceStreamMessageListenerContainerIntegrationTests
-		extends AbstractStreamMessageListenerContainerIntegrationTests {
+        extends AbstractStreamMessageListenerContainerIntegrationTests {
 
-	public LettuceStreamMessageListenerContainerIntegrationTests(ValkeyConnectionFactory connectionFactory) {
-		super(connectionFactory);
-	}
-
+    public LettuceStreamMessageListenerContainerIntegrationTests(
+            ValkeyConnectionFactory connectionFactory) {
+        super(connectionFactory);
+    }
 }

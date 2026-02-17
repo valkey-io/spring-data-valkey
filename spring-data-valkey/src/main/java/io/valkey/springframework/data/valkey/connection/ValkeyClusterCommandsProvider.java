@@ -23,20 +23,19 @@ package io.valkey.springframework.data.valkey.connection;
  */
 public interface ValkeyClusterCommandsProvider extends ValkeyCommandsProvider {
 
-	/**
-	 * Get {@link ValkeyGeoCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyClusterCommands clusterCommands();
+    /**
+     * Get {@link ValkeyGeoCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyClusterCommands clusterCommands();
 
-	/**
-	 * Get {@link ValkeyServerCommands}.
-	 *
-	 * @return never {@literal null}.
-	 * @since 2.0
-	 */
-	ValkeyClusterServerCommands serverCommands();
-
+    /**
+     * Get {@link ValkeyServerCommands}.
+     *
+     * @return never {@literal null}.
+     * @since 2.0
+     */
+    ValkeyClusterServerCommands serverCommands();
 }

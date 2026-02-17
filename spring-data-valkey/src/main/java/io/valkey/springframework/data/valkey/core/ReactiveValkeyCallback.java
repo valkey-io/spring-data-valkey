@@ -15,16 +15,17 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
 import org.reactivestreams.Publisher;
 import org.springframework.dao.DataAccessException;
-import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
 
 /**
- * Generic callback interface for code that operates on a low-level {@link ReactiveValkeyConnection}. Allows to execute
- * any number of operations on a single {@link ReactiveValkeyConnection}, using any type and number of commands.
- * <p>
- * This is particularly useful for delegating to existing data access code that expects a
- * {@link ReactiveValkeyConnection} to work on. For newly written code, it is strongly recommended to use
+ * Generic callback interface for code that operates on a low-level {@link
+ * ReactiveValkeyConnection}. Allows to execute any number of operations on a single {@link
+ * ReactiveValkeyConnection}, using any type and number of commands.
+ *
+ * <p>This is particularly useful for delegating to existing data access code that expects a {@link
+ * ReactiveValkeyConnection} to work on. For newly written code, it is strongly recommended to use
  * {@link ReactiveValkeyOperations}'s more specific operations.
  *
  * @param <T>
@@ -34,16 +35,17 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
  */
 public interface ReactiveValkeyCallback<T> {
 
-	/**
-	 * Gets called by {@link ReactiveValkeyTemplate#execute(ReactiveValkeyCallback)} with an active Valkey connection. Does
-	 * not need to care about activating or closing the {@link ReactiveValkeyConnection}.
-	 * <p>
-	 * Allows for returning a result object created within the callback, i.e. a domain object or a collection of domain
-	 * objects.
-	 *
-	 * @param connection active Valkey connection.
-	 * @return a result object publisher
-	 * @throws DataAccessException in case of custom exceptions
-	 */
-	Publisher<T> doInValkey(ReactiveValkeyConnection connection) throws DataAccessException;
+    /**
+     * Gets called by {@link ReactiveValkeyTemplate#execute(ReactiveValkeyCallback)} with an active
+     * Valkey connection. Does not need to care about activating or closing the {@link
+     * ReactiveValkeyConnection}.
+     *
+     * <p>Allows for returning a result object created within the callback, i.e. a domain object or a
+     * collection of domain objects.
+     *
+     * @param connection active Valkey connection.
+     * @return a result object publisher
+     * @throws DataAccessException in case of custom exceptions
+     */
+    Publisher<T> doInValkey(ReactiveValkeyConnection connection) throws DataAccessException;
 }

@@ -61,6 +61,10 @@
 		<maven-resolver-provider.version>3.9.10</maven-resolver-provider.version>
 		<maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
 		<maven-javadoc-plugin.version>3.10.1</maven-javadoc-plugin.version>
+
+		<!-- Lint plugin versions -->
+		<spotless-maven-plugin.version>2.43.0</spotless-maven-plugin.version>
+		<spotless-google-java-format.version>1.22.0</spotless-google-java-format.version>
 	</properties>
 
 	<dependencyManagement>
@@ -253,31 +257,41 @@
 					<artifactId>maven-javadoc-plugin</artifactId>
 					<version>${maven-javadoc-plugin.version}</version>
 				</plugin>
-				<!-- Flatten plugin for Maven Central deployment -->
 				<plugin>
-					<groupId>org.codehaus.mojo</groupId>
-					<artifactId>flatten-maven-plugin</artifactId>
-					<version>1.6.0</version>
+					<groupId>com.diffplug.spotless</groupId>
+					<artifactId>spotless-maven-plugin</artifactId>
+					<version>${spotless-maven-plugin.version}</version>
 					<configuration>
-						<updatePomFile>true</updatePomFile>
-						<flattenMode>oss</flattenMode>
+						<java>
+						<includes>
+							<include>**/*.java</include>
+						</includes>
+						<excludes>
+							<exclude>**/build/**</exclude>
+							<exclude>**/build-*/**</exclude>
+							<exclude>**/protobuf/**</exclude>
+							<exclude>**/target/**</exclude>
+						</excludes>
+						<importOrder/>
+						<removeUnusedImports/>
+						<trimTrailingWhitespace/>
+						<endWithNewline/>
+						<lineEndings>PLATFORM_NATIVE</lineEndings>
+						<googleJavaFormat>
+							<version>${spotless-google-java-format.version}</version>
+							<reflowLongStrings>true</reflowLongStrings>
+							<groupArtifact>com.google.googlejavaformat:google-java-format</groupArtifact>
+						</googleJavaFormat>
+						<indent>
+							<tabs>true</tabs>
+							<spacesPerTab>2</spacesPerTab>
+						</indent>
+						<indent>
+							<spaces>true</spaces>
+							<spacesPerTab>4</spacesPerTab>
+						</indent>
+						</java>
 					</configuration>
-					<executions>
-						<execution>
-							<id>flatten</id>
-							<phase>process-resources</phase>
-							<goals>
-								<goal>flatten</goal>
-							</goals>
-						</execution>
-						<execution>
-							<id>flatten.clean</id>
-							<phase>clean</phase>
-							<goals>
-								<goal>clean</goal>
-							</goals>
-						</execution>
-					</executions>
 				</plugin>
 			</plugins>
 		</pluginManagement>
@@ -287,6 +301,10 @@
 				<groupId>org.codehaus.mojo</groupId>
 				<artifactId>versions-maven-plugin</artifactId>
 				<version>2.16.2</version>
+			</plugin>
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
 			</plugin>
 		</plugins>
 	</build>

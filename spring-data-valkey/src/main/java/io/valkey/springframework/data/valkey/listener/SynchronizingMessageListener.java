@@ -15,6 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.listener;
 
+import io.valkey.springframework.data.valkey.connection.Message;
+import io.valkey.springframework.data.valkey.connection.MessageListener;
+import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
+import io.valkey.springframework.data.valkey.connection.util.ByteArrayWrapper;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -24,161 +28,161 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
-
-import io.valkey.springframework.data.valkey.connection.Message;
-import io.valkey.springframework.data.valkey.connection.MessageListener;
-import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
-import io.valkey.springframework.data.valkey.connection.util.ByteArrayWrapper;
 import org.springframework.lang.Nullable;
 
 /**
- * Synchronizing {@link MessageListener} and {@link SubscriptionListener} that allows notifying a {@link Runnable}
- * (through {@link SubscriptionSynchronization}) upon completing subscriptions to channels or patterns.
+ * Synchronizing {@link MessageListener} and {@link SubscriptionListener} that allows notifying a
+ * {@link Runnable} (through {@link SubscriptionSynchronization}) upon completing subscriptions to
+ * channels or patterns.
  *
  * @author Mark Paluch
  * @since 3.0
  */
 class SynchronizingMessageListener implements MessageListener, SubscriptionListener {
 
-	private final MessageListener messageListener;
-	private final SubscriptionListener subscriptionListener;
-	private final List<SubscriptionSynchronization> synchronizations = new CopyOnWriteArrayList<>();
+    private final MessageListener messageListener;
+    private final SubscriptionListener subscriptionListener;
+    private final List<SubscriptionSynchronization> synchronizations = new CopyOnWriteArrayList<>();
 
-	public SynchronizingMessageListener(MessageListener messageListener, SubscriptionListener subscriptionListener) {
-		this.messageListener = messageListener;
-		this.subscriptionListener = subscriptionListener;
-	}
+    public SynchronizingMessageListener(
+            MessageListener messageListener, SubscriptionListener subscriptionListener) {
+        this.messageListener = messageListener;
+        this.subscriptionListener = subscriptionListener;
+    }
 
-	/**
-	 * Register a {@link SubscriptionSynchronization}.
-	 *
-	 * @param synchronization must not be {@literal null}.
-	 */
-	public void addSynchronization(SubscriptionSynchronization synchronization) {
-		this.synchronizations.add(synchronization);
-	}
+    /**
+     * Register a {@link SubscriptionSynchronization}.
+     *
+     * @param synchronization must not be {@literal null}.
+     */
+    public void addSynchronization(SubscriptionSynchronization synchronization) {
+        this.synchronizations.add(synchronization);
+    }
 
-	@Override
-	public void onMessage(Message message, @Nullable byte[] pattern) {
-		messageListener.onMessage(message, pattern);
-	}
+    @Override
+    public void onMessage(Message message, @Nullable byte[] pattern) {
+        messageListener.onMessage(message, pattern);
+    }
 
-	@Override
-	public void onChannelSubscribed(byte[] channel, long count) {
+    @Override
+    public void onChannelSubscribed(byte[] channel, long count) {
 
-		subscriptionListener.onChannelSubscribed(channel, count);
-		handleSubscription(channel, SubscriptionSynchronization::onChannelSubscribed);
-	}
+        subscriptionListener.onChannelSubscribed(channel, count);
+        handleSubscription(channel, SubscriptionSynchronization::onChannelSubscribed);
+    }
 
-	@Override
-	public void onChannelUnsubscribed(byte[] channel, long count) {
-		subscriptionListener.onChannelUnsubscribed(channel, count);
-	}
+    @Override
+    public void onChannelUnsubscribed(byte[] channel, long count) {
+        subscriptionListener.onChannelUnsubscribed(channel, count);
+    }
 
-	@Override
-	public void onPatternSubscribed(byte[] pattern, long count) {
+    @Override
+    public void onPatternSubscribed(byte[] pattern, long count) {
 
-		subscriptionListener.onPatternSubscribed(pattern, count);
-		handleSubscription(pattern, SubscriptionSynchronization::onPatternSubscribed);
-	}
+        subscriptionListener.onPatternSubscribed(pattern, count);
+        handleSubscription(pattern, SubscriptionSynchronization::onPatternSubscribed);
+    }
 
-	@Override
-	public void onPatternUnsubscribed(byte[] pattern, long count) {
-		subscriptionListener.onPatternUnsubscribed(pattern, count);
-	}
+    @Override
+    public void onPatternUnsubscribed(byte[] pattern, long count) {
+        subscriptionListener.onPatternUnsubscribed(pattern, count);
+    }
 
-	void handleSubscription(byte[] topic,
-			BiFunction<SubscriptionSynchronization, ByteArrayWrapper, Boolean> synchronizerCallback) {
+    void handleSubscription(
+            byte[] topic,
+            BiFunction<SubscriptionSynchronization, ByteArrayWrapper, Boolean> synchronizerCallback) {
 
-		if (synchronizations.isEmpty()) {
-			return;
-		}
+        if (synchronizations.isEmpty()) {
+            return;
+        }
 
-		ByteArrayWrapper binaryChannel = new ByteArrayWrapper(topic);
-		List<SubscriptionSynchronization> finalized = new ArrayList<>(synchronizations.size());
+        ByteArrayWrapper binaryChannel = new ByteArrayWrapper(topic);
+        List<SubscriptionSynchronization> finalized = new ArrayList<>(synchronizations.size());
 
-		for (SubscriptionSynchronization synchronizer : synchronizations) {
+        for (SubscriptionSynchronization synchronizer : synchronizations) {
 
-			if (synchronizerCallback.apply(synchronizer, binaryChannel)) {
-				finalized.add(synchronizer);
-			}
-		}
+            if (synchronizerCallback.apply(synchronizer, binaryChannel)) {
+                finalized.add(synchronizer);
+            }
+        }
 
-		synchronizations.removeAll(finalized);
-	}
+        synchronizations.removeAll(finalized);
+    }
 
-	/**
-	 * Synchronization to await subscriptions for channels and patterns.
-	 */
-	static class SubscriptionSynchronization {
+    /** Synchronization to await subscriptions for channels and patterns. */
+    static class SubscriptionSynchronization {
 
-		private static final AtomicIntegerFieldUpdater<SubscriptionSynchronization> DONE = AtomicIntegerFieldUpdater
-				.newUpdater(SubscriptionSynchronization.class, "done");
+        private static final AtomicIntegerFieldUpdater<SubscriptionSynchronization> DONE =
+                AtomicIntegerFieldUpdater.newUpdater(SubscriptionSynchronization.class, "done");
 
-		private static final int NOT_DONE = 0;
-		private static final int DONE_DONE = 0;
+        private static final int NOT_DONE = 0;
+        private static final int DONE_DONE = 0;
 
-		private volatile int done = NOT_DONE;
+        private volatile int done = NOT_DONE;
 
-		private final Runnable doneCallback;
+        private final Runnable doneCallback;
 
-		private final Set<ByteArrayWrapper> remainingPatterns;
-		private final Set<ByteArrayWrapper> remainingChannels;
+        private final Set<ByteArrayWrapper> remainingPatterns;
+        private final Set<ByteArrayWrapper> remainingChannels;
 
-		public SubscriptionSynchronization(Collection<byte[]> remainingPatterns, Collection<byte[]> remainingChannels,
-				Runnable doneCallback) {
+        public SubscriptionSynchronization(
+                Collection<byte[]> remainingPatterns,
+                Collection<byte[]> remainingChannels,
+                Runnable doneCallback) {
 
-			if (remainingPatterns.isEmpty()) {
-				this.remainingPatterns = Collections.emptySet();
-			} else {
-				this.remainingPatterns = ConcurrentHashMap.newKeySet(remainingPatterns.size());
-				this.remainingPatterns
-						.addAll(remainingPatterns.stream().map(ByteArrayWrapper::new).toList());
-			}
+            if (remainingPatterns.isEmpty()) {
+                this.remainingPatterns = Collections.emptySet();
+            } else {
+                this.remainingPatterns = ConcurrentHashMap.newKeySet(remainingPatterns.size());
+                this.remainingPatterns.addAll(
+                        remainingPatterns.stream().map(ByteArrayWrapper::new).toList());
+            }
 
-			if (remainingChannels.isEmpty()) {
-				this.remainingChannels = Collections.emptySet();
-			} else {
-				this.remainingChannels = ConcurrentHashMap.newKeySet(remainingChannels.size());
-				this.remainingChannels
-						.addAll(remainingChannels.stream().map(ByteArrayWrapper::new).toList());
-			}
+            if (remainingChannels.isEmpty()) {
+                this.remainingChannels = Collections.emptySet();
+            } else {
+                this.remainingChannels = ConcurrentHashMap.newKeySet(remainingChannels.size());
+                this.remainingChannels.addAll(
+                        remainingChannels.stream().map(ByteArrayWrapper::new).toList());
+            }
 
-			this.doneCallback = doneCallback;
-		}
+            this.doneCallback = doneCallback;
+        }
 
-		boolean onChannelSubscribed(ByteArrayWrapper channel) {
+        boolean onChannelSubscribed(ByteArrayWrapper channel) {
 
-			if (DONE.get(this) == NOT_DONE) {
-				remainingChannels.remove(channel);
-				return postSubscribe();
-			}
+            if (DONE.get(this) == NOT_DONE) {
+                remainingChannels.remove(channel);
+                return postSubscribe();
+            }
 
-			return false;
-		}
+            return false;
+        }
 
-		boolean onPatternSubscribed(ByteArrayWrapper pattern) {
+        boolean onPatternSubscribed(ByteArrayWrapper pattern) {
 
-			if (DONE.get(this) == NOT_DONE) {
-				remainingPatterns.remove(pattern);
-				return postSubscribe();
-			}
+            if (DONE.get(this) == NOT_DONE) {
+                remainingPatterns.remove(pattern);
+                return postSubscribe();
+            }
 
-			return false;
-		}
+            return false;
+        }
 
-		/**
-		 * @return whether the synchronization is finished and can be removed.
-		 */
-		private boolean postSubscribe() {
+        /**
+         * @return whether the synchronization is finished and can be removed.
+         */
+        private boolean postSubscribe() {
 
-			if (remainingChannels.isEmpty() && remainingPatterns.isEmpty() && DONE.compareAndSet(this, NOT_DONE, DONE_DONE)) {
-				this.doneCallback.run();
+            if (remainingChannels.isEmpty()
+                    && remainingPatterns.isEmpty()
+                    && DONE.compareAndSet(this, NOT_DONE, DONE_DONE)) {
+                this.doneCallback.run();
 
-				return true;
-			}
+                return true;
+            }
 
-			return false;
-		}
-	}
+            return false;
+        }
+    }
 }

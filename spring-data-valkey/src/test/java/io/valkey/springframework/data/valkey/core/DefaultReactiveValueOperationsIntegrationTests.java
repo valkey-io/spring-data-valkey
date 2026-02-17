@@ -15,36 +15,32 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import static org.assertj.core.api.Assertions.*;
-import static org.junit.Assume.*;
-import static org.junit.jupiter.api.condition.OS.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldIncrBy.Overflow.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldType.*;
 import static io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.Offset.offset;
+import static org.assertj.core.api.Assertions.*;
+import static org.junit.Assume.*;
+import static org.junit.jupiter.api.condition.OS.*;
 
-import org.junit.jupiter.api.condition.DisabledOnOs;
-import reactor.test.StepVerifier;
-
-import java.nio.ByteBuffer;
+import io.valkey.springframework.data.valkey.ObjectFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.core.ReactiveOperationsTestParams.Fixture;
+import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
+import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import org.junit.jupiter.api.BeforeEach;
-
-import io.valkey.springframework.data.valkey.ObjectFactory;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.core.ReactiveOperationsTestParams.Fixture;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import reactor.test.StepVerifier;
 
 /**
  * Integration tests for {@link DefaultReactiveValueOperations}.
@@ -57,435 +53,550 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @SuppressWarnings("unchecked")
 public class DefaultReactiveValueOperationsIntegrationTests<K, V> {
 
-	private final ReactiveValkeyTemplate<K, V> valkeyTemplate;
-	private final ReactiveValueOperations<K, V> valueOperations;
+    private final ReactiveValkeyTemplate<K, V> valkeyTemplate;
+    private final ReactiveValueOperations<K, V> valueOperations;
+
+    private final ObjectFactory<K> keyFactory;
+    private final ObjectFactory<V> valueFactory;
+
+    private final ValkeySerializer<?> serializer;
+
+    public static Collection<Fixture<?, ?>> testParams() {
+        return ReactiveOperationsTestParams.testParams();
+    }
+
+    public DefaultReactiveValueOperationsIntegrationTests(Fixture<K, V> fixture) {
+
+        this.valkeyTemplate = fixture.getTemplate();
+        this.valueOperations = valkeyTemplate.opsForValue();
+        this.keyFactory = fixture.getKeyFactory();
+        this.valueFactory = fixture.getValueFactory();
+        this.serializer = fixture.getSerializer();
+    }
+
+    @BeforeEach
+    void before() {
+
+        ValkeyConnectionFactory connectionFactory =
+                (ValkeyConnectionFactory) valkeyTemplate.getConnectionFactory();
+        ValkeyConnection connection = connectionFactory.getConnection();
+        connection.flushAll();
+        connection.close();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void set() {
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+        valueOperations.get(key).as(StepVerifier::create).expectNext(value).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void setWithExpiry() {
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations
+                .set(key, value, Duration.ofSeconds(10))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .expectComplete()
+                .verify();
+
+        valueOperations.get(key).as(StepVerifier::create).expectNext(value).verifyComplete();
+
+        valkeyTemplate
+                .getExpire(key)
+                .as(StepVerifier::create) //
+                .consumeNextWith(actual -> assertThat(actual).isGreaterThan(Duration.ofSeconds(8))) //
+                .expectComplete() //
+                .verify();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-779
+    void setIfAbsent() {
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations
+                .setIfAbsent(key, value)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        valueOperations
+                .setIfAbsent(key, value)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-782
+    void setIfAbsentWithExpiry() {
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations
+                .setIfAbsent(key, value, Duration.ofSeconds(5))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .expectComplete()
+                .verify();
+
+        valueOperations
+                .setIfAbsent(key, value)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+        valueOperations
+                .setIfAbsent(key, value, Duration.ofSeconds(5))
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+
+        valkeyTemplate
+                .getExpire(key)
+                .as(StepVerifier::create) //
+                .assertNext(
+                        actual -> {
+                            assertThat(actual).isBetween(Duration.ofMillis(1), Duration.ofSeconds(5));
+                        })
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-779
+    void setIfPresent() {
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+        V laterValue = valueFactory.instance();
+
+        valueOperations
+                .setIfPresent(key, value)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+        valueOperations
+                .setIfPresent(key, laterValue)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        valueOperations.get(key).as(StepVerifier::create).expectNext(laterValue).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-782
+    void setIfPresentWithExpiry() {
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+        V laterValue = valueFactory.instance();
+
+        valueOperations
+                .setIfPresent(key, value, Duration.ofSeconds(5))
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+
+        valueOperations
+                .set(key, value, Duration.ofSeconds(5))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        valueOperations
+                .setIfPresent(key, laterValue, Duration.ofSeconds(5))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        valueOperations.get(key).as(StepVerifier::create).expectNext(laterValue).verifyComplete();
+
+        valkeyTemplate
+                .getExpire(key)
+                .as(StepVerifier::create) //
+                .assertNext(
+                        actual -> {
+                            assertThat(actual).isBetween(Duration.ofMillis(1), Duration.ofSeconds(5));
+                        })
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void multiSet() {
+
+        K key1 = keyFactory.instance();
+        K key2 = keyFactory.instance();
+        V value1 = valueFactory.instance();
+        V value2 = valueFactory.instance();
+
+        Map<K, V> map = new LinkedHashMap<>();
+        map.put(key1, value1);
+        map.put(key2, value2);
+
+        valueOperations.multiSet(map).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+        valueOperations.get(key1).as(StepVerifier::create).expectNext(value1).verifyComplete();
+        valueOperations.get(key2).as(StepVerifier::create).expectNext(value2).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void multiSetIfAbsent() {
+
+        K key1 = keyFactory.instance();
+        K key2 = keyFactory.instance();
+        V value1 = valueFactory.instance();
+        V value2 = valueFactory.instance();
+
+        Map<K, V> map = new LinkedHashMap<>();
+
+        map.put(key1, value1);
+
+        valueOperations
+                .multiSetIfAbsent(map)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        map.put(key2, value2);
+        valueOperations
+                .multiSetIfAbsent(map)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+
+        valueOperations.get(key1).as(StepVerifier::create).expectNext(value1).verifyComplete();
+        valueOperations.get(key2).as(StepVerifier::create).expectNextCount(0).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void get() {
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations.get(key).as(StepVerifier::create).verifyComplete();
+
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+        valueOperations.get(key).as(StepVerifier::create).expectNext(value).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // GH-2050
+    @EnabledOnCommand("GETEX")
+    void getAndExpire() {
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+        valueOperations
+                .getAndExpire(key, Duration.ofSeconds(10))
+                .as(StepVerifier::create)
+                .expectNext(value)
+                .verifyComplete();
+
+        valkeyTemplate
+                .getExpire(key)
+                .as(StepVerifier::create)
+                .assertNext(actual -> assertThat(actual).isGreaterThan(Duration.ZERO))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // GH-2050
+    @EnabledOnCommand("GETDEL")
+    void getAndDelete() {
 
-	private final ObjectFactory<K> keyFactory;
-	private final ObjectFactory<V> valueFactory;
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
 
-	private final ValkeySerializer<?> serializer;
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
 
-	public static Collection<Fixture<?, ?>> testParams() {
-		return ReactiveOperationsTestParams.testParams();
-	}
+        valueOperations.getAndDelete(key).as(StepVerifier::create).expectNext(value).verifyComplete();
 
-	public DefaultReactiveValueOperationsIntegrationTests(Fixture<K, V> fixture) {
+        valkeyTemplate.hasKey(key).as(StepVerifier::create).expectNext(false).verifyComplete();
+    }
 
-		this.valkeyTemplate = fixture.getTemplate();
-		this.valueOperations = valkeyTemplate.opsForValue();
-		this.keyFactory = fixture.getKeyFactory();
-		this.valueFactory = fixture.getValueFactory();
-		this.serializer = fixture.getSerializer();
-	}
+    @ParameterizedValkeyTest // GH-2050
+    @EnabledOnCommand("GETEX")
+    void getAndPersist() {
 
-	@BeforeEach
-	void before() {
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
 
-		ValkeyConnectionFactory connectionFactory = (ValkeyConnectionFactory) valkeyTemplate.getConnectionFactory();
-		ValkeyConnection connection = connectionFactory.getConnection();
-		connection.flushAll();
-		connection.close();
-	}
+        valueOperations
+                .set(key, value, Duration.ofSeconds(10))
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
 
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void set() {
+        valueOperations.getAndPersist(key).as(StepVerifier::create).expectNext(value).verifyComplete();
 
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
+        valkeyTemplate
+                .getExpire(key)
+                .as(StepVerifier::create)
+                .expectNext(Duration.ZERO)
+                .verifyComplete();
+    }
 
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void getAndSet() {
 
-		valueOperations.get(key).as(StepVerifier::create).expectNext(value).verifyComplete();
-	}
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+        V nextValue = valueFactory.instance();
 
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void setWithExpiry() {
+        valueOperations.getAndSet(key, nextValue).as(StepVerifier::create).verifyComplete();
 
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
 
-		valueOperations.set(key, value, Duration.ofSeconds(10)).as(StepVerifier::create).expectNext(true).expectComplete()
-				.verify();
+        valueOperations
+                .getAndSet(key, nextValue)
+                .as(StepVerifier::create)
+                .expectNext(value)
+                .verifyComplete();
 
-		valueOperations.get(key).as(StepVerifier::create).expectNext(value).verifyComplete();
+        valueOperations.get(key).as(StepVerifier::create).expectNext(nextValue).verifyComplete();
+    }
 
-		valkeyTemplate.getExpire(key).as(StepVerifier::create) //
-				.consumeNextWith(actual -> assertThat(actual).isGreaterThan(Duration.ofSeconds(8))) //
-				.expectComplete() //
-				.verify();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void multiGet() {
 
-	@ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-779
-	void setIfAbsent() {
+        K key1 = keyFactory.instance();
+        K key2 = keyFactory.instance();
+        K absent = keyFactory.instance();
+        V value1 = valueFactory.instance();
+        V value2 = valueFactory.instance();
+        V absentValue = null;
 
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
+        Map<K, V> map = new LinkedHashMap<>();
+        map.put(key1, value1);
+        map.put(key2, value2);
+
+        valueOperations.multiSet(map).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+        valueOperations
+                .multiGet(Arrays.asList(key2, key1, absent))
+                .as(StepVerifier::create)
+                .expectNext(Arrays.asList(value2, value1, absentValue))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void append() {
+
+        assumeTrue(serializer instanceof StringValkeySerializer);
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+        valueOperations.append(key, "foo").as(StepVerifier::create).expectNextCount(1).verifyComplete();
+
+        valueOperations
+                .get(key)
+                .as(StepVerifier::create)
+                .expectNext((V) (value + "foo"))
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void getRange() {
+
+        assumeTrue(serializer instanceof StringValkeySerializer);
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+        String substring = value.toString().substring(1, 5);
+
+        valueOperations.get(key, 1, 4).as(StepVerifier::create).expectNext(substring).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void setRange() {
+
+        assumeTrue(serializer instanceof StringValkeySerializer);
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+        valueOperations
+                .set(key, (V) "boo", 2)
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
+
+        valueOperations
+                .get(key)
+                .as(StepVerifier::create)
+                .consumeNextWith(
+                        actual -> {
+                            String string = (String) actual;
+                            String prefix = value.toString().substring(0, 2);
+
+                            assertThat(string).startsWith(prefix + "boo");
+                        })
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void size() {
+
+        assumeTrue(serializer instanceof StringValkeySerializer);
+
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
+
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+        valueOperations
+                .size(key)
+                .as(StepVerifier::create)
+                .expectNext((long) value.toString().length())
+                .expectComplete()
+                .verify();
+    }
 
-		valueOperations.setIfAbsent(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void setBit() {
 
-		valueOperations.setIfAbsent(key, value).as(StepVerifier::create).expectNext(false).verifyComplete();
-	}
+        K key = keyFactory.instance();
 
-	@ParameterizedValkeyTest // DATAREDIS-782
-	void setIfAbsentWithExpiry() {
+        valueOperations
+                .setBit(key, 0, true)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .expectComplete();
+        valueOperations
+                .setBit(key, 2, true)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .expectComplete();
+    }
 
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void getBit() {
 
-		valueOperations.setIfAbsent(key, value, Duration.ofSeconds(5)).as(StepVerifier::create).expectNext(true)
-				.expectComplete().verify();
+        K key = keyFactory.instance();
 
-		valueOperations.setIfAbsent(key, value).as(StepVerifier::create).expectNext(false).verifyComplete();
-		valueOperations.setIfAbsent(key, value, Duration.ofSeconds(5)).as(StepVerifier::create).expectNext(false)
-				.verifyComplete();
+        valueOperations
+                .setBit(key, 0, true)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .expectComplete();
+        valueOperations.getBit(key, 0).as(StepVerifier::create).expectNext(true).expectComplete();
+        valueOperations.getBit(key, 1).as(StepVerifier::create).expectNext(false).expectComplete();
+    }
 
-		valkeyTemplate.getExpire(key).as(StepVerifier::create) //
-				.assertNext(actual -> {
+    @ParameterizedValkeyTest // DATAREDIS-562
+    void bitField() {
 
-					assertThat(actual).isBetween(Duration.ofMillis(1), Duration.ofSeconds(5));
-				}).verifyComplete();
-	}
+        K key = keyFactory.instance();
 
-	@ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-779
-	void setIfPresent() {
+        valueOperations
+                .bitField(key, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(1L))
+                .verifyComplete();
+        valueOperations
+                .bitField(key, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(2L))
+                .verifyComplete();
+        valueOperations
+                .bitField(key, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(3L))
+                .verifyComplete();
+        valueOperations
+                .bitField(key, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
+                .as(StepVerifier::create)
+                .expectNext(Collections.singletonList(null))
+                .verifyComplete();
+    }
 
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-		V laterValue = valueFactory.instance();
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void delete() {
 
-		valueOperations.setIfPresent(key, value).as(StepVerifier::create).expectNext(false).verifyComplete();
+        K key = keyFactory.instance();
+        V value = valueFactory.instance();
 
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+        valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
 
-		valueOperations.setIfPresent(key, laterValue).as(StepVerifier::create).expectNext(true).verifyComplete();
+        valueOperations.delete(key).as(StepVerifier::create).expectNext(true).verifyComplete();
 
-		valueOperations.get(key).as(StepVerifier::create).expectNext(laterValue).verifyComplete();
-	}
+        valueOperations.size(key).as(StepVerifier::create).expectNext(0L).verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-782
-	void setIfPresentWithExpiry() {
+    @ParameterizedValkeyTest // DATAREDIS-784
+    void increment() {
 
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-		V laterValue = valueFactory.instance();
+        K key = keyFactory.instance();
 
-		valueOperations.setIfPresent(key, value, Duration.ofSeconds(5)).as(StepVerifier::create).expectNext(false)
-				.verifyComplete();
+        valueOperations.increment(key).as(StepVerifier::create).expectNext(1L).verifyComplete();
 
-		valueOperations.set(key, value, Duration.ofSeconds(5)).as(StepVerifier::create).expectNext(true).verifyComplete();
+        valueOperations.increment(key).as(StepVerifier::create).expectNext(2L).verifyComplete();
+    }
 
-		valueOperations.setIfPresent(key, laterValue, Duration.ofSeconds(5)).as(StepVerifier::create).expectNext(true)
-				.verifyComplete();
+    @ParameterizedValkeyTest // DATAREDIS-784
+    void incrementByLongDelta() {
 
-		valueOperations.get(key).as(StepVerifier::create).expectNext(laterValue).verifyComplete();
+        K key = keyFactory.instance();
 
-		valkeyTemplate.getExpire(key).as(StepVerifier::create) //
-				.assertNext(actual -> {
+        valueOperations.increment(key, 2L).as(StepVerifier::create).expectNext(2L).verifyComplete();
 
-					assertThat(actual).isBetween(Duration.ofMillis(1), Duration.ofSeconds(5));
-				}).verifyComplete();
-	}
+        valueOperations.increment(key, -3L).as(StepVerifier::create).expectNext(-1L).verifyComplete();
 
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void multiSet() {
+        valueOperations.increment(key, 1L).as(StepVerifier::create).expectNext(0L).verifyComplete();
+    }
 
-		K key1 = keyFactory.instance();
-		K key2 = keyFactory.instance();
-		V value1 = valueFactory.instance();
-		V value2 = valueFactory.instance();
+    @ParameterizedValkeyTest // DATAREDIS-784
+    @DisabledOnOs(value = MAC, architectures = "aarch64")
+    void incrementByFloatDelta() {
 
-		Map<K, V> map = new LinkedHashMap<>();
-		map.put(key1, value1);
-		map.put(key2, value2);
+        K key = keyFactory.instance();
 
-		valueOperations.multiSet(map).as(StepVerifier::create).expectNext(true).verifyComplete();
+        valueOperations.increment(key, 0.1).as(StepVerifier::create).expectNext(0.1).verifyComplete();
 
-		valueOperations.get(key1).as(StepVerifier::create).expectNext(value1).verifyComplete();
-		valueOperations.get(key2).as(StepVerifier::create).expectNext(value2).verifyComplete();
-	}
+        valueOperations.increment(key, -0.3).as(StepVerifier::create).expectNext(-0.2).verifyComplete();
 
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void multiSetIfAbsent() {
+        valueOperations.increment(key, 0.2).as(StepVerifier::create).expectNext(0.0).verifyComplete();
+    }
 
-		K key1 = keyFactory.instance();
-		K key2 = keyFactory.instance();
-		V value1 = valueFactory.instance();
-		V value2 = valueFactory.instance();
+    @ParameterizedValkeyTest // DATAREDIS-784
+    void decrement() {
 
-		Map<K, V> map = new LinkedHashMap<>();
+        K key = keyFactory.instance();
 
-		map.put(key1, value1);
+        valueOperations.decrement(key).as(StepVerifier::create).expectNext(-1L).verifyComplete();
 
-		valueOperations.multiSetIfAbsent(map).as(StepVerifier::create).expectNext(true).verifyComplete();
+        valueOperations.decrement(key).as(StepVerifier::create).expectNext(-2L).verifyComplete();
+    }
 
-		map.put(key2, value2);
-		valueOperations.multiSetIfAbsent(map).as(StepVerifier::create).expectNext(false).verifyComplete();
+    @ParameterizedValkeyTest // DATAREDIS-784
+    void decrementByLongDelta() {
 
-		valueOperations.get(key1).as(StepVerifier::create).expectNext(value1).verifyComplete();
-		valueOperations.get(key2).as(StepVerifier::create).expectNextCount(0).verifyComplete();
-	}
+        K key = keyFactory.instance();
 
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void get() {
+        valueOperations.decrement(key, 2L).as(StepVerifier::create).expectNext(-2L).verifyComplete();
 
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
+        valueOperations.decrement(key, -3L).as(StepVerifier::create).expectNext(1L).verifyComplete();
 
-		valueOperations.get(key).as(StepVerifier::create).verifyComplete();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.get(key).as(StepVerifier::create).expectNext(value).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // GH-2050
-	@EnabledOnCommand("GETEX")
-	void getAndExpire() {
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.getAndExpire(key, Duration.ofSeconds(10)).as(StepVerifier::create).expectNext(value)
-				.verifyComplete();
-
-		valkeyTemplate.getExpire(key).as(StepVerifier::create)
-				.assertNext(actual -> assertThat(actual).isGreaterThan(Duration.ZERO)).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // GH-2050
-	@EnabledOnCommand("GETDEL")
-	void getAndDelete() {
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.getAndDelete(key).as(StepVerifier::create).expectNext(value).verifyComplete();
-
-		valkeyTemplate.hasKey(key).as(StepVerifier::create).expectNext(false).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // GH-2050
-	@EnabledOnCommand("GETEX")
-	void getAndPersist() {
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-
-		valueOperations.set(key, value, Duration.ofSeconds(10)).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.getAndPersist(key).as(StepVerifier::create).expectNext(value).verifyComplete();
-
-		valkeyTemplate.getExpire(key).as(StepVerifier::create).expectNext(Duration.ZERO).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void getAndSet() {
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-		V nextValue = valueFactory.instance();
-
-		valueOperations.getAndSet(key, nextValue).as(StepVerifier::create).verifyComplete();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.getAndSet(key, nextValue).as(StepVerifier::create).expectNext(value).verifyComplete();
-
-		valueOperations.get(key).as(StepVerifier::create).expectNext(nextValue).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void multiGet() {
-
-		K key1 = keyFactory.instance();
-		K key2 = keyFactory.instance();
-		K absent = keyFactory.instance();
-		V value1 = valueFactory.instance();
-		V value2 = valueFactory.instance();
-		V absentValue = null;
-
-		Map<K, V> map = new LinkedHashMap<>();
-		map.put(key1, value1);
-		map.put(key2, value2);
-
-		valueOperations.multiSet(map).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.multiGet(Arrays.asList(key2, key1, absent)).as(StepVerifier::create)
-				.expectNext(Arrays.asList(value2, value1, absentValue)).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void append() {
-
-		assumeTrue(serializer instanceof StringValkeySerializer);
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.append(key, "foo").as(StepVerifier::create).expectNextCount(1).verifyComplete();
-
-		valueOperations.get(key).as(StepVerifier::create).expectNext((V) (value + "foo")).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void getRange() {
-
-		assumeTrue(serializer instanceof StringValkeySerializer);
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		String substring = value.toString().substring(1, 5);
-
-		valueOperations.get(key, 1, 4).as(StepVerifier::create).expectNext(substring).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void setRange() {
-
-		assumeTrue(serializer instanceof StringValkeySerializer);
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-		valueOperations.set(key, (V) "boo", 2).as(StepVerifier::create).expectNextCount(1).verifyComplete();
-
-		valueOperations.get(key).as(StepVerifier::create).consumeNextWith(actual -> {
-
-			String string = (String) actual;
-			String prefix = value.toString().substring(0, 2);
-
-			assertThat(string).startsWith(prefix + "boo");
-		}).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void size() {
-
-		assumeTrue(serializer instanceof StringValkeySerializer);
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-		valueOperations.size(key).as(StepVerifier::create).expectNext((long) value.toString().length()).expectComplete()
-				.verify();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void setBit() {
-
-		K key = keyFactory.instance();
-
-		valueOperations.setBit(key, 0, true).as(StepVerifier::create).expectNext(false).expectComplete();
-		valueOperations.setBit(key, 2, true).as(StepVerifier::create).expectNext(false).expectComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void getBit() {
-
-		K key = keyFactory.instance();
-
-		valueOperations.setBit(key, 0, true).as(StepVerifier::create).expectNext(false).expectComplete();
-		valueOperations.getBit(key, 0).as(StepVerifier::create).expectNext(true).expectComplete();
-		valueOperations.getBit(key, 1).as(StepVerifier::create).expectNext(false).expectComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-562
-	void bitField() {
-
-		K key = keyFactory.instance();
-
-		valueOperations.bitField(key, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(1L)).verifyComplete();
-		valueOperations.bitField(key, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(2L)).verifyComplete();
-		valueOperations.bitField(key, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(3L)).verifyComplete();
-		valueOperations.bitField(key, create().incr(unsigned(2)).valueAt(offset(102L)).overflow(FAIL).by(1L))
-				.as(StepVerifier::create)
-				.expectNext(Collections.singletonList(null)).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void delete() {
-
-		K key = keyFactory.instance();
-		V value = valueFactory.instance();
-
-		valueOperations.set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.delete(key).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		valueOperations.size(key).as(StepVerifier::create).expectNext(0L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-784
-	void increment() {
-
-		K key = keyFactory.instance();
-
-		valueOperations.increment(key).as(StepVerifier::create).expectNext(1L).verifyComplete();
-
-		valueOperations.increment(key).as(StepVerifier::create).expectNext(2L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-784
-	void incrementByLongDelta() {
-
-		K key = keyFactory.instance();
-
-		valueOperations.increment(key, 2L).as(StepVerifier::create).expectNext(2L).verifyComplete();
-
-		valueOperations.increment(key, -3L).as(StepVerifier::create).expectNext(-1L).verifyComplete();
-
-		valueOperations.increment(key, 1L).as(StepVerifier::create).expectNext(0L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-784
-	@DisabledOnOs(value = MAC, architectures = "aarch64")
-	void incrementByFloatDelta() {
-
-		K key = keyFactory.instance();
-
-		valueOperations.increment(key, 0.1).as(StepVerifier::create).expectNext(0.1).verifyComplete();
-
-		valueOperations.increment(key, -0.3).as(StepVerifier::create).expectNext(-0.2).verifyComplete();
-
-		valueOperations.increment(key, 0.2).as(StepVerifier::create).expectNext(0.0).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-784
-	void decrement() {
-
-		K key = keyFactory.instance();
-
-		valueOperations.decrement(key).as(StepVerifier::create).expectNext(-1L).verifyComplete();
-
-		valueOperations.decrement(key).as(StepVerifier::create).expectNext(-2L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-784
-	void decrementByLongDelta() {
-
-		K key = keyFactory.instance();
-
-		valueOperations.decrement(key, 2L).as(StepVerifier::create).expectNext(-2L).verifyComplete();
-
-		valueOperations.decrement(key, -3L).as(StepVerifier::create).expectNext(1L).verifyComplete();
-
-		valueOperations.decrement(key, 1L).as(StepVerifier::create).expectNext(0L).verifyComplete();
-	}
+        valueOperations.decrement(key, 1L).as(StepVerifier::create).expectNext(0L).verifyComplete();
+    }
 }

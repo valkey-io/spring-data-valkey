@@ -22,40 +22,65 @@ import org.springframework.data.annotation.Id;
 @ValkeyHash("persons")
 public class Person {
 
-	@Id
-	private String id;
+    @Id private String id;
 
-	@Indexed
-	private String firstname;
+    @Indexed private String firstname;
 
-	@Indexed
-	private String lastname;
+    @Indexed private String lastname;
 
-	private int age;
+    private int age;
 
-	public Person() {}
+    public Person() {}
 
-	public Person(String id, String firstname, String lastname, int age) {
-		this.id = id;
-		this.firstname = firstname;
-		this.lastname = lastname;
-		this.age = age;
-	}
+    public Person(String id, String firstname, String lastname, int age) {
+        this.id = id;
+        this.firstname = firstname;
+        this.lastname = lastname;
+        this.age = age;
+    }
 
-	public String getId() { return id; }
-	public void setId(String id) { this.id = id; }
+    public String getId() {
+        return id;
+    }
 
-	public String getFirstname() { return firstname; }
-	public void setFirstname(String firstname) { this.firstname = firstname; }
+    public void setId(String id) {
+        this.id = id;
+    }
 
-	public String getLastname() { return lastname; }
-	public void setLastname(String lastname) { this.lastname = lastname; }
+    public String getFirstname() {
+        return firstname;
+    }
 
-	public int getAge() { return age; }
-	public void setAge(int age) { this.age = age; }
+    public void setFirstname(String firstname) {
+        this.firstname = firstname;
+    }
 
-	@Override
-	public String toString() {
-		return "Person{id='" + id + "', firstname='" + firstname + "', lastname='" + lastname + "', age=" + age + "}";
-	}
+    public String getLastname() {
+        return lastname;
+    }
+
+    public void setLastname(String lastname) {
+        this.lastname = lastname;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "Person{id='"
+                + id
+                + "', firstname='"
+                + firstname
+                + "', lastname='"
+                + lastname
+                + "', age="
+                + age
+                + "}";
+    }
 }

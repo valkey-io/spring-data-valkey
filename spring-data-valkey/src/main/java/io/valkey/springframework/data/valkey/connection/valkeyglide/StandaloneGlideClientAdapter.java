@@ -15,13 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import java.util.concurrent.ExecutionException;
-import glide.api.models.GlideString;
 import glide.api.GlideClient;
 import glide.api.models.Batch;
+import glide.api.models.GlideString;
+import java.util.concurrent.ExecutionException;
 
 /**
- * 
  * @author Ilia Kolominsky
  * @since 2.0
  */
@@ -86,5 +85,4 @@ class StandaloneGlideClientAdapter implements UnifiedGlideClient {
         currentBatch = null;
         batchStatus = BatchStatus.None;
     }
-
 }

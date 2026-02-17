@@ -15,15 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import reactor.core.publisher.Flux;
-
-import java.nio.ByteBuffer;
-
-import org.reactivestreams.Publisher;
 import io.valkey.springframework.data.valkey.connection.ReactiveHyperLogLogCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
+import java.nio.ByteBuffer;
+import org.reactivestreams.Publisher;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
 
 /**
  * @author Christoph Strobl
@@ -32,59 +30,74 @@ import org.springframework.util.Assert;
  */
 class LettuceReactiveHyperLogLogCommands implements ReactiveHyperLogLogCommands {
 
-	private final LettuceReactiveValkeyConnection connection;
+    private final LettuceReactiveValkeyConnection connection;
 
-	/**
-	 * Create new {@link LettuceReactiveHyperLogLogCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveHyperLogLogCommands(LettuceReactiveValkeyConnection connection) {
+    /**
+     * Create new {@link LettuceReactiveHyperLogLogCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveHyperLogLogCommands(LettuceReactiveValkeyConnection connection) {
 
-		Assert.notNull(connection, "Connection must not be null");
+        Assert.notNull(connection, "Connection must not be null");
 
-		this.connection = connection;
-	}
+        this.connection = connection;
+    }
 
-	@Override
-	public Flux<NumericResponse<PfAddCommand, Long>> pfAdd(Publisher<PfAddCommand> commands) {
+    @Override
+    public Flux<NumericResponse<PfAddCommand, Long>> pfAdd(Publisher<PfAddCommand> commands) {
 
-		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+        return connection.execute(
+                cmd ->
+                        Flux.from(commands)
+                                .concatMap(
+                                        command -> {
+                                            Assert.notNull(command.getKey(), "key must not be null");
 
-			Assert.notNull(command.getKey(), "key must not be null");
+                                            return cmd.pfadd(
+                                                            command.getKey(),
+                                                            command.getValues().stream().toArray(ByteBuffer[]::new))
+                                                    .map(value -> new NumericResponse<>(command, value));
+                                        }));
+    }
 
-			return cmd.pfadd(command.getKey(), command.getValues().stream().toArray(ByteBuffer[]::new))
-					.map(value -> new NumericResponse<>(command, value));
+    @Override
+    public Flux<NumericResponse<PfCountCommand, Long>> pfCount(Publisher<PfCountCommand> commands) {
 
-		}));
-	}
+        return connection.execute(
+                cmd ->
+                        Flux.from(commands)
+                                .concatMap(
+                                        command -> {
+                                            Assert.notEmpty(command.getKeys(), "Keys must not be empty for PFCOUNT.");
 
-	@Override
-	public Flux<NumericResponse<PfCountCommand, Long>> pfCount(Publisher<PfCountCommand> commands) {
+                                            return cmd.pfcount(command.getKeys().stream().toArray(ByteBuffer[]::new))
+                                                    .map(value -> new NumericResponse<>(command, value));
+                                        }));
+    }
 
-		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+    @Override
+    public Flux<BooleanResponse<PfMergeCommand>> pfMerge(Publisher<PfMergeCommand> commands) {
 
-			Assert.notEmpty(command.getKeys(), "Keys must not be empty for PFCOUNT.");
+        return connection.execute(
+                cmd ->
+                        Flux.from(commands)
+                                .concatMap(
+                                        command -> {
+                                            Assert.notNull(
+                                                    command.getKey(), "Destination key must not be null for PFMERGE.");
+                                            Assert.notEmpty(
+                                                    command.getSourceKeys(), "Source keys must not be null for PFMERGE.");
 
-			return cmd.pfcount(command.getKeys().stream().toArray(ByteBuffer[]::new))
-					.map(value -> new NumericResponse<>(command, value));
-		}));
-	}
+                                            return cmd.pfmerge(
+                                                            command.getKey(),
+                                                            command.getSourceKeys().stream().toArray(ByteBuffer[]::new))
+                                                    .map(LettuceConverters::stringToBoolean)
+                                                    .map(value -> new BooleanResponse<>(command, value));
+                                        }));
+    }
 
-	@Override
-	public Flux<BooleanResponse<PfMergeCommand>> pfMerge(Publisher<PfMergeCommand> commands) {
-
-		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
-
-			Assert.notNull(command.getKey(), "Destination key must not be null for PFMERGE.");
-			Assert.notEmpty(command.getSourceKeys(), "Source keys must not be null for PFMERGE.");
-
-			return cmd.pfmerge(command.getKey(), command.getSourceKeys().stream().toArray(ByteBuffer[]::new))
-					.map(LettuceConverters::stringToBoolean).map(value -> new BooleanResponse<>(command, value));
-		}));
-	}
-
-	protected LettuceReactiveValkeyConnection getConnection() {
-		return connection;
-	}
+    protected LettuceReactiveValkeyConnection getConnection() {
+        return connection;
+    }
 }

@@ -24,10 +24,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DoubleObjectFactory implements ObjectFactory<Double> {
 
-	private AtomicLong counter = new AtomicLong();
+    private AtomicLong counter = new AtomicLong();
 
-	public Double instance() {
-		return Double.valueOf(counter.getAndIncrement());
-	}
-
+    public Double instance() {
+        return Double.valueOf(counter.getAndIncrement());
+    }
 }

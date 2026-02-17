@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -32,162 +31,183 @@ import org.junit.jupiter.api.Test;
  */
 class ValkeySerializationContextUnitTests {
 
-	@Test // DATAREDIS-602
-	void shouldRejectBuildIfKeySerializerIsNotSet() {
+    @Test // DATAREDIS-602
+    void shouldRejectBuildIfKeySerializerIsNotSet() {
 
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> ValkeySerializationContext.<String, String> newSerializationContext() //
-				.value(StringValkeySerializer.UTF_8) //
-				.hashKey(StringValkeySerializer.UTF_8) //
-				.hashValue(StringValkeySerializer.UTF_8) //
-						.build());
-	}
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                ValkeySerializationContext.<String, String>newSerializationContext() //
+                                        .value(StringValkeySerializer.UTF_8) //
+                                        .hashKey(StringValkeySerializer.UTF_8) //
+                                        .hashValue(StringValkeySerializer.UTF_8) //
+                                        .build());
+    }
 
-	@Test // DATAREDIS-602
-	void shouldRejectBuildIfValueSerializerIsNotSet() {
+    @Test // DATAREDIS-602
+    void shouldRejectBuildIfValueSerializerIsNotSet() {
 
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> ValkeySerializationContext.<String, String> newSerializationContext() //
-				.key(StringValkeySerializer.UTF_8) //
-				.hashKey(StringValkeySerializer.UTF_8) //
-				.hashValue(StringValkeySerializer.UTF_8) //
-						.build());
-	}
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                ValkeySerializationContext.<String, String>newSerializationContext() //
+                                        .key(StringValkeySerializer.UTF_8) //
+                                        .hashKey(StringValkeySerializer.UTF_8) //
+                                        .hashValue(StringValkeySerializer.UTF_8) //
+                                        .build());
+    }
 
-	@Test // DATAREDIS-602
-	void shouldRejectBuildIfHashKeySerializerIsNotSet() {
+    @Test // DATAREDIS-602
+    void shouldRejectBuildIfHashKeySerializerIsNotSet() {
 
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> ValkeySerializationContext.<String, String> newSerializationContext() //
-				.key(StringValkeySerializer.UTF_8) //
-				.value(StringValkeySerializer.UTF_8) //
-				.hashValue(StringValkeySerializer.UTF_8) //
-						.build());
-	}
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                ValkeySerializationContext.<String, String>newSerializationContext() //
+                                        .key(StringValkeySerializer.UTF_8) //
+                                        .value(StringValkeySerializer.UTF_8) //
+                                        .hashValue(StringValkeySerializer.UTF_8) //
+                                        .build());
+    }
 
-	@Test // DATAREDIS-602
-	void shouldRejectBuildIfHashValueSerializerIsNotSet() {
+    @Test // DATAREDIS-602
+    void shouldRejectBuildIfHashValueSerializerIsNotSet() {
 
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> ValkeySerializationContext.<String, String> newSerializationContext() //
-				.key(StringValkeySerializer.UTF_8) //
-				.value(StringValkeySerializer.UTF_8) //
-				.hashKey(StringValkeySerializer.UTF_8) //
-						.build());
-	}
+        assertThatIllegalArgumentException()
+                .isThrownBy(
+                        () ->
+                                ValkeySerializationContext.<String, String>newSerializationContext() //
+                                        .key(StringValkeySerializer.UTF_8) //
+                                        .value(StringValkeySerializer.UTF_8) //
+                                        .hashKey(StringValkeySerializer.UTF_8) //
+                                        .build());
+    }
 
-	@Test // DATAREDIS-602
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	void shouldUseDefaultIfSet() {
+    @Test // DATAREDIS-602
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    void shouldUseDefaultIfSet() {
 
-		ValkeySerializationContext.<String, String>newSerializationContext(StringValkeySerializer.UTF_8)
-				.key(new GenericToStringSerializer(Long.class)) //
-				.build();
-	}
+        ValkeySerializationContext.<String, String>newSerializationContext(StringValkeySerializer.UTF_8)
+                .key(new GenericToStringSerializer(Long.class)) //
+                .build();
+    }
 
-	@Test // DATAREDIS-602
-	void shouldBuildSerializationContext() {
+    @Test // DATAREDIS-602
+    void shouldBuildSerializationContext() {
 
-		ValkeySerializationContext<String, Long> serializationContext = createSerializationContext();
+        ValkeySerializationContext<String, Long> serializationContext = createSerializationContext();
 
-		assertThat(serializationContext.getKeySerializationPair()).isNotNull();
-		assertThat(serializationContext.getValueSerializationPair()).isNotNull();
-		assertThat(serializationContext.getHashKeySerializationPair()).isNotNull();
-		assertThat(serializationContext.getHashValueSerializationPair()).isNotNull();
-		assertThat(serializationContext.getStringSerializationPair()).isNotNull();
-	}
+        assertThat(serializationContext.getKeySerializationPair()).isNotNull();
+        assertThat(serializationContext.getValueSerializationPair()).isNotNull();
+        assertThat(serializationContext.getHashKeySerializationPair()).isNotNull();
+        assertThat(serializationContext.getHashValueSerializationPair()).isNotNull();
+        assertThat(serializationContext.getStringSerializationPair()).isNotNull();
+    }
 
-	@Test // DATAREDIS-602
-	void shouldEncodeAndDecodeKey() {
+    @Test // DATAREDIS-602
+    void shouldEncodeAndDecodeKey() {
 
-		ValkeySerializationContext<String, Long> serializationContext = createSerializationContext();
+        ValkeySerializationContext<String, Long> serializationContext = createSerializationContext();
 
-		String deserialized = serializationContext.getKeySerializationPair()
-				.read(serializationContext.getKeySerializationPair().write("foo"));
+        String deserialized =
+                serializationContext
+                        .getKeySerializationPair()
+                        .read(serializationContext.getKeySerializationPair().write("foo"));
 
-		assertThat(deserialized).isEqualTo("foo");
-	}
+        assertThat(deserialized).isEqualTo("foo");
+    }
 
-	@Test // DATAREDIS-602
-	void shouldEncodeAndDecodeValue() {
+    @Test // DATAREDIS-602
+    void shouldEncodeAndDecodeValue() {
 
-		ValkeySerializationContext<String, Long> serializationContext = createSerializationContext();
+        ValkeySerializationContext<String, Long> serializationContext = createSerializationContext();
 
-		long deserialized = serializationContext.getValueSerializationPair()
-				.read(serializationContext.getValueSerializationPair().write(42L));
+        long deserialized =
+                serializationContext
+                        .getValueSerializationPair()
+                        .read(serializationContext.getValueSerializationPair().write(42L));
 
-		assertThat(deserialized).isEqualTo(42);
-	}
+        assertThat(deserialized).isEqualTo(42);
+    }
 
-	@Test // DATAREDIS-1000
-	void shouldEncodeAndDecodeRawByteBufferValue() {
+    @Test // DATAREDIS-1000
+    void shouldEncodeAndDecodeRawByteBufferValue() {
 
-		ValkeySerializationContext<ByteBuffer, ByteBuffer> serializationContext = ValkeySerializationContext.byteBuffer();
+        ValkeySerializationContext<ByteBuffer, ByteBuffer> serializationContext =
+                ValkeySerializationContext.byteBuffer();
 
-		ByteBuffer deserialized = serializationContext.getValueSerializationPair()
-				.read(serializationContext.getValueSerializationPair()
-						.write(ByteBuffer.wrap("hello".getBytes())));
+        ByteBuffer deserialized =
+                serializationContext
+                        .getValueSerializationPair()
+                        .read(
+                                serializationContext
+                                        .getValueSerializationPair()
+                                        .write(ByteBuffer.wrap("hello".getBytes())));
 
-		assertThat(deserialized).isEqualTo(ByteBuffer.wrap("hello".getBytes()));
-	}
+        assertThat(deserialized).isEqualTo(ByteBuffer.wrap("hello".getBytes()));
+    }
 
-	@Test // DATAREDIS-1000
-	void shouldEncodeAndDecodeByteArrayValue() {
+    @Test // DATAREDIS-1000
+    void shouldEncodeAndDecodeByteArrayValue() {
 
-		ValkeySerializationContext<byte[], byte[]> serializationContext = ValkeySerializationContext.byteArray();
+        ValkeySerializationContext<byte[], byte[]> serializationContext =
+                ValkeySerializationContext.byteArray();
 
-		byte[] deserialized = serializationContext.getValueSerializationPair()
-				.read(serializationContext.getValueSerializationPair()
-						.write("hello".getBytes()));
+        byte[] deserialized =
+                serializationContext
+                        .getValueSerializationPair()
+                        .read(serializationContext.getValueSerializationPair().write("hello".getBytes()));
 
-		assertThat(deserialized).isEqualTo("hello".getBytes());
-	}
+        assertThat(deserialized).isEqualTo("hello".getBytes());
+    }
 
-	@Test // GH-2651
-	void shouldEncodeAndDecodeUtf8StringValue() {
+    @Test // GH-2651
+    void shouldEncodeAndDecodeUtf8StringValue() {
 
-		ValkeySerializationContext.SerializationPair<String> serializationPair =
-				buildStringSerializationContext(StringValkeySerializer.UTF_8).getStringSerializationPair();
+        ValkeySerializationContext.SerializationPair<String> serializationPair =
+                buildStringSerializationContext(StringValkeySerializer.UTF_8).getStringSerializationPair();
 
-		assertThat(serializationPair.write("üßØ")).isEqualTo(StandardCharsets.UTF_8.encode("üßØ"));
-		assertThat(serializationPair.read(StandardCharsets.UTF_8.encode("üßØ"))).isEqualTo("üßØ");
-	}
+        assertThat(serializationPair.write("üßØ")).isEqualTo(StandardCharsets.UTF_8.encode("üßØ"));
+        assertThat(serializationPair.read(StandardCharsets.UTF_8.encode("üßØ"))).isEqualTo("üßØ");
+    }
 
-	@Test // GH-2651
-	void shouldEncodeAndDecodeAsciiStringValue() {
+    @Test // GH-2651
+    void shouldEncodeAndDecodeAsciiStringValue() {
 
-		ValkeySerializationContext.SerializationPair<String> serializationPair =
-				buildStringSerializationContext(StringValkeySerializer.US_ASCII).getStringSerializationPair();
+        ValkeySerializationContext.SerializationPair<String> serializationPair =
+                buildStringSerializationContext(StringValkeySerializer.US_ASCII)
+                        .getStringSerializationPair();
 
-		assertThat(serializationPair.write("üßØ")).isEqualTo(StandardCharsets.US_ASCII.encode("???"));
-		assertThat(serializationPair.read(StandardCharsets.US_ASCII.encode("üßØ"))).isEqualTo("???");
-	}
+        assertThat(serializationPair.write("üßØ")).isEqualTo(StandardCharsets.US_ASCII.encode("???"));
+        assertThat(serializationPair.read(StandardCharsets.US_ASCII.encode("üßØ"))).isEqualTo("???");
+    }
 
-	@Test  // GH-2651
-	void shouldEncodeAndDecodeIso88591StringValue() {
+    @Test // GH-2651
+    void shouldEncodeAndDecodeIso88591StringValue() {
 
-		ValkeySerializationContext.SerializationPair<String> serializationPair =
-				buildStringSerializationContext(StringValkeySerializer.ISO_8859_1).getStringSerializationPair();
+        ValkeySerializationContext.SerializationPair<String> serializationPair =
+                buildStringSerializationContext(StringValkeySerializer.ISO_8859_1)
+                        .getStringSerializationPair();
 
-		assertThat(serializationPair.write("üßØ")).isEqualTo(StandardCharsets.ISO_8859_1.encode("üßØ"));
-		assertThat(serializationPair.read(StandardCharsets.ISO_8859_1.encode("üßØ"))).isEqualTo("üßØ");
-	}
+        assertThat(serializationPair.write("üßØ")).isEqualTo(StandardCharsets.ISO_8859_1.encode("üßØ"));
+        assertThat(serializationPair.read(StandardCharsets.ISO_8859_1.encode("üßØ"))).isEqualTo("üßØ");
+    }
 
-	private ValkeySerializationContext<String, Long> createSerializationContext() {
+    private ValkeySerializationContext<String, Long> createSerializationContext() {
 
-		return ValkeySerializationContext.<String, Long> newSerializationContext() //
-				.key(StringValkeySerializer.UTF_8) //
-				.value(ByteBuffer::getLong, value -> ByteBuffer.allocate(8).putLong(value).flip()) //
-				.hashKey(StringValkeySerializer.UTF_8) //
-				.hashValue(StringValkeySerializer.UTF_8) //
-				.build();
-	}
+        return ValkeySerializationContext.<String, Long>newSerializationContext() //
+                .key(StringValkeySerializer.UTF_8) //
+                .value(ByteBuffer::getLong, value -> ByteBuffer.allocate(8).putLong(value).flip()) //
+                .hashKey(StringValkeySerializer.UTF_8) //
+                .hashValue(StringValkeySerializer.UTF_8) //
+                .build();
+    }
 
-	private ValkeySerializationContext<String, String> buildStringSerializationContext(
-			ValkeySerializer<String> stringSerializer) {
+    private ValkeySerializationContext<String, String> buildStringSerializationContext(
+            ValkeySerializer<String> stringSerializer) {
 
-		return ValkeySerializationContext.<String, String>newSerializationContext(stringSerializer)
-				.string(stringSerializer)
-				.build();
-	}
+        return ValkeySerializationContext.<String, String>newSerializationContext(stringSerializer)
+                .string(stringSerializer)
+                .build();
+    }
 }

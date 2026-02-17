@@ -15,15 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.test.condition;
 
-import redis.clients.jedis.HostAndPort;
-import redis.clients.jedis.JedisCluster;
-
+import io.valkey.springframework.data.valkey.SettingsUtils;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-
-import io.valkey.springframework.data.valkey.SettingsUtils;
 import org.springframework.data.util.Lazy;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.JedisCluster;
 
 /**
  * Utility to detect Valkey operation modes.
@@ -32,30 +30,32 @@ import org.springframework.data.util.Lazy;
  */
 public class ValkeyDetector {
 
-	private static final Lazy<Boolean> CLUSTER_AVAILABLE = Lazy.of(() -> {
+    private static final Lazy<Boolean> CLUSTER_AVAILABLE =
+            Lazy.of(
+                    () -> {
+                        try (JedisCluster cluster =
+                                new JedisCluster(
+                                        new HostAndPort(SettingsUtils.getHost(), SettingsUtils.getClusterPort()))) {
+                            cluster.getConnectionFromSlot(1).close();
 
-		try (JedisCluster cluster = new JedisCluster(
-				new HostAndPort(SettingsUtils.getHost(), SettingsUtils.getClusterPort()))) {
-			cluster.getConnectionFromSlot(1).close();
+                            return true;
+                        } catch (Exception ignore) {
+                            return false;
+                        }
+                    });
 
-			return true;
-		} catch (Exception ignore) {
-			return false;
-		}
-	});
+    public static boolean isClusterAvailable() {
+        return CLUSTER_AVAILABLE.get();
+    }
 
-	public static boolean isClusterAvailable() {
-		return CLUSTER_AVAILABLE.get();
-	}
+    public static boolean canConnectToPort(int port) {
 
-	public static boolean canConnectToPort(int port) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(SettingsUtils.getHost(), port), 100);
 
-		try (Socket socket = new Socket()) {
-			socket.connect(new InetSocketAddress(SettingsUtils.getHost(), port), 100);
-
-			return true;
-		} catch (IOException ignore) {
-			return false;
-		}
-	}
+            return true;
+        } catch (IOException ignore) {
+            return false;
+        }
+    }
 }

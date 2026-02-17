@@ -17,15 +17,13 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.BitFieldArgs;
 import io.lettuce.core.api.async.RedisStringAsyncCommands;
-
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
+import java.util.List;
+import java.util.Map;
+import org.springframework.data.domain.Range;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -41,311 +39,356 @@ import org.springframework.util.Assert;
  */
 class LettuceStringCommands implements ValkeyStringCommands {
 
-	private final LettuceConnection connection;
+    private final LettuceConnection connection;
+
+    LettuceStringCommands(LettuceConnection connection) {
+        this.connection = connection;
+    }
+
+    @Override
+    public byte[] get(byte[] key) {
 
-	LettuceStringCommands(LettuceConnection connection) {
-		this.connection = connection;
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public byte[] get(byte[] key) {
+        return connection.invoke().just(RedisStringAsyncCommands::get, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Nullable
+    @Override
+    public byte[] getDel(byte[] key) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::get, key);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Nullable
-	@Override
-	public byte[] getDel(byte[] key) {
+        return connection.invoke().just(RedisStringAsyncCommands::getdel, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Nullable
+    @Override
+    public byte[] getEx(byte[] key, Expiration expiration) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::getdel, key);
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(expiration, "Expiration must not be null");
 
-	@Nullable
-	@Override
-	public byte[] getEx(byte[] key, Expiration expiration) {
+        return connection
+                .invoke()
+                .just(RedisStringAsyncCommands::getex, key, LettuceConverters.toGetExArgs(expiration));
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(expiration, "Expiration must not be null");
+    @Override
+    public byte[] getSet(byte[] key, byte[] value) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::getex, key, LettuceConverters.toGetExArgs(expiration));
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public byte[] getSet(byte[] key, byte[] value) {
+        return connection.invoke().just(RedisStringAsyncCommands::getset, key, value);
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public List<byte[]> mGet(byte[]... keys) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::getset, key, value);
-	}
+        Assert.notNull(keys, "Keys must not be null");
+        Assert.noNullElements(keys, "Keys must not contain null elements");
 
-	@Override
-	public List<byte[]> mGet(byte[]... keys) {
+        return connection
+                .invoke()
+                .fromMany(RedisStringAsyncCommands::mget, keys)
+                .toList(source -> source.getValueOrElse(null));
+    }
 
-		Assert.notNull(keys, "Keys must not be null");
-		Assert.noNullElements(keys, "Keys must not contain null elements");
+    @Override
+    public Boolean set(byte[] key, byte[] value) {
 
-		return connection.invoke().fromMany(RedisStringAsyncCommands::mget, keys)
-				.toList(source -> source.getValueOrElse(null));
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public Boolean set(byte[] key, byte[] value) {
+        return connection
+                .invoke()
+                .from(RedisStringAsyncCommands::set, key, value)
+                .get(Converters.stringToBooleanConverter());
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public Boolean set(byte[] key, byte[] value, Expiration expiration, SetOption option) {
 
-		return connection.invoke().from(RedisStringAsyncCommands::set, key, value)
-				.get(Converters.stringToBooleanConverter());
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
+        Assert.notNull(expiration, "Expiration must not be null");
+        Assert.notNull(option, "Option must not be null");
 
-	@Override
-	public Boolean set(byte[] key, byte[] value, Expiration expiration, SetOption option) {
+        return connection
+                .invoke()
+                .from(
+                        RedisStringAsyncCommands::set,
+                        key,
+                        value,
+                        LettuceConverters.toSetArgs(expiration, option))
+                .orElse(LettuceConverters.stringToBooleanConverter(), false);
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
-		Assert.notNull(expiration, "Expiration must not be null");
-		Assert.notNull(option, "Option must not be null");
+    @Override
+    @Nullable
+    public byte[] setGet(byte[] key, byte[] value, Expiration expiration, SetOption option) {
 
-		return connection.invoke()
-				.from(RedisStringAsyncCommands::set, key, value, LettuceConverters.toSetArgs(expiration, option))
-				.orElse(LettuceConverters.stringToBooleanConverter(), false);
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
+        Assert.notNull(expiration, "Expiration must not be null");
+        Assert.notNull(option, "Option must not be null");
 
-	@Override
-	@Nullable
-	public byte[] setGet(byte[] key, byte[] value, Expiration expiration, SetOption option) {
+        return connection
+                .invoke()
+                .just(
+                        RedisStringAsyncCommands::setGet,
+                        key,
+                        value,
+                        LettuceConverters.toSetArgs(expiration, option));
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
-		Assert.notNull(expiration, "Expiration must not be null");
-		Assert.notNull(option, "Option must not be null");
+    @Override
+    public Boolean setNX(byte[] key, byte[] value) {
 
-		return connection.invoke()
-				.just(RedisStringAsyncCommands::setGet, key, value, LettuceConverters.toSetArgs(expiration, option));
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public Boolean setNX(byte[] key, byte[] value) {
+        return connection.invoke().just(RedisStringAsyncCommands::setnx, key, value);
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public Boolean setEx(byte[] key, long seconds, byte[] value) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::setnx, key, value);
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public Boolean setEx(byte[] key, long seconds, byte[] value) {
+        return connection
+                .invoke()
+                .from(RedisStringAsyncCommands::setex, key, seconds, value)
+                .get(Converters.stringToBooleanConverter());
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public Boolean pSetEx(byte[] key, long milliseconds, byte[] value) {
 
-		return connection.invoke().from(RedisStringAsyncCommands::setex, key, seconds, value)
-				.get(Converters.stringToBooleanConverter());
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public Boolean pSetEx(byte[] key, long milliseconds, byte[] value) {
+        return connection
+                .invoke()
+                .from(RedisStringAsyncCommands::psetex, key, milliseconds, value)
+                .get(Converters.stringToBooleanConverter());
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public Boolean mSet(Map<byte[], byte[]> tuples) {
 
-		return connection.invoke().from(RedisStringAsyncCommands::psetex, key, milliseconds, value)
-				.get(Converters.stringToBooleanConverter());
-	}
+        Assert.notNull(tuples, "Tuples must not be null");
 
-	@Override
-	public Boolean mSet(Map<byte[], byte[]> tuples) {
+        return connection
+                .invoke()
+                .from(RedisStringAsyncCommands::mset, tuples)
+                .get(Converters.stringToBooleanConverter());
+    }
 
-		Assert.notNull(tuples, "Tuples must not be null");
+    @Override
+    public Boolean mSetNX(Map<byte[], byte[]> tuples) {
 
-		return connection.invoke().from(RedisStringAsyncCommands::mset, tuples).get(Converters.stringToBooleanConverter());
-	}
+        Assert.notNull(tuples, "Tuples must not be null");
 
-	@Override
-	public Boolean mSetNX(Map<byte[], byte[]> tuples) {
+        return connection.invoke().just(RedisStringAsyncCommands::msetnx, tuples);
+    }
 
-		Assert.notNull(tuples, "Tuples must not be null");
+    @Override
+    public Long incr(byte[] key) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::msetnx, tuples);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long incr(byte[] key) {
+        return connection.invoke().just(RedisStringAsyncCommands::incr, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long incrBy(byte[] key, long value) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::incr, key);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long incrBy(byte[] key, long value) {
+        return connection.invoke().just(RedisStringAsyncCommands::incrby, key, value);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Double incrBy(byte[] key, double value) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::incrby, key, value);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Double incrBy(byte[] key, double value) {
+        return connection.invoke().just(RedisStringAsyncCommands::incrbyfloat, key, value);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long decr(byte[] key) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::incrbyfloat, key, value);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long decr(byte[] key) {
+        return connection.invoke().just(RedisStringAsyncCommands::decr, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long decrBy(byte[] key, long value) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::decr, key);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long decrBy(byte[] key, long value) {
+        return connection.invoke().just(RedisStringAsyncCommands::decrby, key, value);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long append(byte[] key, byte[] value) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::decrby, key, value);
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public Long append(byte[] key, byte[] value) {
+        return connection.invoke().just(RedisStringAsyncCommands::append, key, value);
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public byte[] getRange(byte[] key, long start, long end) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::append, key, value);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public byte[] getRange(byte[] key, long start, long end) {
+        return connection.invoke().just(RedisStringAsyncCommands::getrange, key, start, end);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public void setRange(byte[] key, byte[] value, long offset) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::getrange, key, start, end);
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public void setRange(byte[] key, byte[] value, long offset) {
+        connection.invokeStatus().just(RedisStringAsyncCommands::setrange, key, offset, value);
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public Boolean getBit(byte[] key, long offset) {
 
-		connection.invokeStatus().just(RedisStringAsyncCommands::setrange, key, offset, value);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Boolean getBit(byte[] key, long offset) {
+        return connection
+                .invoke()
+                .from(RedisStringAsyncCommands::getbit, key, offset)
+                .get(LettuceConverters.longToBoolean());
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Boolean setBit(byte[] key, long offset, boolean value) {
 
-		return connection.invoke().from(RedisStringAsyncCommands::getbit, key, offset)
-				.get(LettuceConverters.longToBoolean());
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Boolean setBit(byte[] key, long offset, boolean value) {
+        return connection
+                .invoke()
+                .from(RedisStringAsyncCommands::setbit, key, offset, LettuceConverters.toInt(value))
+                .get(LettuceConverters.longToBoolean());
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long bitCount(byte[] key) {
 
-		return connection.invoke().from(RedisStringAsyncCommands::setbit, key, offset, LettuceConverters.toInt(value))
-				.get(LettuceConverters.longToBoolean());
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long bitCount(byte[] key) {
+        return connection.invoke().just(RedisStringAsyncCommands::bitcount, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public Long bitCount(byte[] key, long start, long end) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::bitcount, key);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long bitCount(byte[] key, long start, long end) {
+        return connection.invoke().just(RedisStringAsyncCommands::bitcount, key, start, end);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    @Override
+    public List<Long> bitField(byte[] key, BitFieldSubCommands subCommands) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::bitcount, key, start, end);
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(subCommands, "Command must not be null");
 
-	@Override
-	public List<Long> bitField(byte[] key, BitFieldSubCommands subCommands) {
+        BitFieldArgs args = LettuceConverters.toBitFieldArgs(subCommands);
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(subCommands, "Command must not be null");
+        return connection.invoke().just(RedisStringAsyncCommands::bitfield, key, args);
+    }
 
-		BitFieldArgs args = LettuceConverters.toBitFieldArgs(subCommands);
+    @Override
+    public Long bitOp(BitOperation op, byte[] destination, byte[]... keys) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::bitfield, key, args);
-	}
+        Assert.notNull(op, "BitOperation must not be null");
+        Assert.notNull(destination, "Destination key must not be null");
 
-	@Override
-	public Long bitOp(BitOperation op, byte[] destination, byte[]... keys) {
+        if (op == BitOperation.NOT && keys.length > 1) {
+            throw new IllegalArgumentException("Bitop NOT should only be performed against one key");
+        }
 
-		Assert.notNull(op, "BitOperation must not be null");
-		Assert.notNull(destination, "Destination key must not be null");
+        return connection
+                .invoke()
+                .just(
+                        it ->
+                                switch (op) {
+                                    case AND -> it.bitopAnd(destination, keys);
+                                    case OR -> it.bitopOr(destination, keys);
+                                    case XOR -> it.bitopXor(destination, keys);
+                                    case NOT -> {
+                                        if (keys.length != 1) {
+                                            throw new IllegalArgumentException(
+                                                    "Bitop NOT should only be performed against one key");
+                                        }
+                                        yield it.bitopNot(destination, keys[0]);
+                                    }
+                                });
+    }
 
-		if (op == BitOperation.NOT && keys.length > 1) {
-			throw new IllegalArgumentException("Bitop NOT should only be performed against one key");
-		}
+    @Nullable
+    @Override
+    public Long bitPos(byte[] key, boolean bit, Range<Long> range) {
 
-		return connection.invoke().just(it ->
-			switch (op) {
-				case AND -> it.bitopAnd(destination, keys);
-				case OR -> it.bitopOr(destination, keys);
-				case XOR -> it.bitopXor(destination, keys);
-				case NOT -> {
-					if (keys.length != 1) {
-						throw new IllegalArgumentException("Bitop NOT should only be performed against one key");
-					}
-					yield it.bitopNot(destination, keys[0]);
-				}
-      		});
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(range, "Range must not be null Use Range.unbounded() instead");
 
-	@Nullable
-	@Override
-	public Long bitPos(byte[] key, boolean bit, Range<Long> range) {
+        if (range.getLowerBound().isBounded()) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(range, "Range must not be null Use Range.unbounded() instead");
+            if (range.getUpperBound().isBounded()) {
+                return connection
+                        .invoke()
+                        .just(
+                                RedisStringAsyncCommands::bitpos,
+                                key,
+                                bit,
+                                getLowerValue(range),
+                                getUpperValue(range));
+            }
 
-		if (range.getLowerBound().isBounded()) {
+            return connection
+                    .invoke()
+                    .just(RedisStringAsyncCommands::bitpos, key, bit, getLowerValue(range));
+        }
 
-			if (range.getUpperBound().isBounded()) {
-				return connection.invoke().just(RedisStringAsyncCommands::bitpos, key, bit, getLowerValue(range),
-						getUpperValue(range));
-			}
+        return connection.invoke().just(RedisStringAsyncCommands::bitpos, key, bit);
+    }
 
-			return connection.invoke().just(RedisStringAsyncCommands::bitpos, key, bit, getLowerValue(range));
-		}
+    @Override
+    public Long strLen(byte[] key) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::bitpos, key, bit);
-	}
+        Assert.notNull(key, "Key must not be null");
 
-	@Override
-	public Long strLen(byte[] key) {
+        return connection.invoke().just(RedisStringAsyncCommands::strlen, key);
+    }
 
-		Assert.notNull(key, "Key must not be null");
+    private static <T extends Comparable<T>> T getUpperValue(Range<T> range) {
 
-		return connection.invoke().just(RedisStringAsyncCommands::strlen, key);
-	}
+        return range
+                .getUpperBound()
+                .getValue()
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Range does not contain upper bound value"));
+    }
 
-	private static <T extends Comparable<T>> T getUpperValue(Range<T> range) {
+    private static <T extends Comparable<T>> T getLowerValue(Range<T> range) {
 
-		return range.getUpperBound().getValue()
-				.orElseThrow(() -> new IllegalArgumentException("Range does not contain upper bound value"));
-	}
-
-	private static <T extends Comparable<T>> T getLowerValue(Range<T> range) {
-
-		return range.getLowerBound().getValue()
-				.orElseThrow(() -> new IllegalArgumentException("Range does not contain lower bound value"));
-	}
+        return range
+                .getLowerBound()
+                .getValue()
+                .orElseThrow(
+                        () -> new IllegalArgumentException("Range does not contain lower bound value"));
+    }
 }

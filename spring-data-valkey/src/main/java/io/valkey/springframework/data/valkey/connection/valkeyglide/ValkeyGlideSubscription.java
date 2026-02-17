@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import glide.api.models.GlideString;
-
 import io.valkey.springframework.data.valkey.connection.MessageListener;
 import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 import io.valkey.springframework.data.valkey.connection.util.AbstractSubscription;
@@ -33,18 +32,21 @@ class ValkeyGlideSubscription extends AbstractSubscription {
     private final DelegatingPubSubListener pubSubListener;
     private final SubscriptionListener subscriptionListener;
 
-    ValkeyGlideSubscription(MessageListener listener, UnifiedGlideClient client,
+    ValkeyGlideSubscription(
+            MessageListener listener,
+            UnifiedGlideClient client,
             DelegatingPubSubListener pubSubListener) {
         super(listener);
-        
+
         Assert.notNull(client, "UnifiedGlideClient must not be null");
         Assert.notNull(pubSubListener, "DelegatingPubSubListener must not be null");
-        
+
         this.client = client;
         this.pubSubListener = pubSubListener;
-        this.subscriptionListener = listener instanceof SubscriptionListener
-            ? (SubscriptionListener) listener
-            : SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER;
+        this.subscriptionListener =
+                listener instanceof SubscriptionListener
+                        ? (SubscriptionListener) listener
+                        : SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER;
     }
 
     @Override
@@ -68,7 +70,7 @@ class ValkeyGlideSubscription extends AbstractSubscription {
     @Override
     protected void doUnsubscribe(boolean all, byte[]... channels) {
         byte[][] toNotify;
-        
+
         if (all) {
             toNotify = getChannels().toArray(new byte[0][]);
             sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
@@ -85,7 +87,7 @@ class ValkeyGlideSubscription extends AbstractSubscription {
     @Override
     protected void doPUnsubscribe(boolean all, byte[]... patterns) {
         byte[][] toNotify;
-        
+
         if (all) {
             toNotify = getPatterns().toArray(new byte[0][]);
             sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
@@ -103,20 +105,20 @@ class ValkeyGlideSubscription extends AbstractSubscription {
     protected void doClose() {
         // Clear listener first to prevent stale messages
         pubSubListener.clearListener();
-        
+
         // Capture channels/patterns BEFORE unsubscribing (they get cleared by parent)
         byte[][] channelsToNotify = getChannels().toArray(new byte[0][]);
         byte[][] patternsToNotify = getPatterns().toArray(new byte[0][]);
-        
+
         // Unsubscribe from SPECIFIC channels we subscribed to, not ALL
         if (channelsToNotify.length > 0) {
             sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
         }
-        
+
         if (patternsToNotify.length > 0) {
             sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
         }
-        
+
         // Notify subscription callbacks
         for (byte[] channel : channelsToNotify) {
             subscriptionListener.onChannelUnsubscribed(channel, 0);
@@ -126,9 +128,7 @@ class ValkeyGlideSubscription extends AbstractSubscription {
         }
     }
 
-    /**
-     * Send a pub/sub command directly to the client using GlideString.
-     */
+    /** Send a pub/sub command directly to the client using GlideString. */
     private void sendPubsubCommand(String command, byte[]... channels) {
         GlideString[] cmd = new GlideString[channels.length + 2];
 

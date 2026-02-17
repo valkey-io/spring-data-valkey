@@ -15,10 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core.query;
 
-import java.util.List;
-
 import io.valkey.springframework.data.valkey.connection.SortParameters.Order;
 import io.valkey.springframework.data.valkey.connection.SortParameters.Range;
+import java.util.List;
 import org.springframework.lang.Nullable;
 
 /**
@@ -29,63 +28,75 @@ import org.springframework.lang.Nullable;
  */
 class DefaultSortQuery<K> implements SortQuery<K> {
 
-	private final K key;
-	private final @Nullable Order order;
-	private final @Nullable Boolean alpha;
-	private final @Nullable Range limit;
-	private final @Nullable String by;
-	private final List<String> getPattern;
+    private final K key;
+    private final @Nullable Order order;
+    private final @Nullable Boolean alpha;
+    private final @Nullable Range limit;
+    private final @Nullable String by;
+    private final List<String> getPattern;
 
-	DefaultSortQuery(K key, Order order, Boolean alpha, Range limit, String by, List<String> getPattern) {
-		this.key = key;
-		this.order = order;
-		this.alpha = alpha;
-		this.limit = limit;
-		this.by = by;
-		this.getPattern = getPattern;
-	}
+    DefaultSortQuery(
+            K key, Order order, Boolean alpha, Range limit, String by, List<String> getPattern) {
+        this.key = key;
+        this.order = order;
+        this.alpha = alpha;
+        this.limit = limit;
+        this.by = by;
+        this.getPattern = getPattern;
+    }
 
-	@Override
-	public Boolean isAlphabetic() {
-		return alpha;
-	}
+    @Override
+    public Boolean isAlphabetic() {
+        return alpha;
+    }
 
-	@Override
-	public K getKey() {
-		return this.key;
-	}
+    @Override
+    public K getKey() {
+        return this.key;
+    }
 
-	@Nullable
-	@Override
-	public Order getOrder() {
-		return this.order;
-	}
+    @Nullable
+    @Override
+    public Order getOrder() {
+        return this.order;
+    }
 
-	@Nullable
-	public Boolean getAlpha() {
-		return this.alpha;
-	}
+    @Nullable
+    public Boolean getAlpha() {
+        return this.alpha;
+    }
 
-	@Nullable
-	@Override
-	public Range getLimit() {
-		return this.limit;
-	}
+    @Nullable
+    @Override
+    public Range getLimit() {
+        return this.limit;
+    }
 
-	@Nullable
-	@Override
-	public String getBy() {
-		return this.by;
-	}
+    @Nullable
+    @Override
+    public String getBy() {
+        return this.by;
+    }
 
-	@Override
-	public List<String> getGetPattern() {
-		return this.getPattern;
-	}
+    @Override
+    public List<String> getGetPattern() {
+        return this.getPattern;
+    }
 
-	@Override
-	public String toString() {
-		return "DefaultSortQuery [alpha=" + alpha + ", by=" + by + ", gets=" + getPattern + ", key=" + key + ", limit="
-				+ limit + ", order=" + order + "]";
-	}
+    @Override
+    public String toString() {
+        return "DefaultSortQuery [alpha="
+                + alpha
+                + ", by="
+                + by
+                + ", gets="
+                + getPattern
+                + ", key="
+                + key
+                + ", limit="
+                + limit
+                + ", order="
+                + order
+                + "]";
+    }
 }

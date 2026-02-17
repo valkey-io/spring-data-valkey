@@ -19,18 +19,18 @@ import org.springframework.dao.UncategorizedDataAccessException;
 import org.springframework.lang.Nullable;
 
 /**
- * Exception thrown when we can't classify a Valkey exception into one of Spring generic data access exceptions.
+ * Exception thrown when we can't classify a Valkey exception into one of Spring generic data access
+ * exceptions.
  *
  * @author Costin Leau
  */
 public class ValkeySystemException extends UncategorizedDataAccessException {
 
-	/**
-	 * @param msg the detail message.
-	 * @param cause the root cause from the data access API in use.
-	 */
-	public ValkeySystemException(String msg, @Nullable Throwable cause) {
-		super(msg, cause);
-	}
-
+    /**
+     * @param msg the detail message.
+     * @param cause the root cause from the data access API in use.
+     */
+    public ValkeySystemException(String msg, @Nullable Throwable cause) {
+        super(msg, cause);
+    }
 }

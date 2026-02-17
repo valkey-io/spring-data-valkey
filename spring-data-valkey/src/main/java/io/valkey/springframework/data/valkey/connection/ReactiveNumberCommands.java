@@ -15,16 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-
-import org.reactivestreams.Publisher;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
+import java.nio.ByteBuffer;
+import org.reactivestreams.Publisher;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * Valkey numeric commands executed using reactive infrastructure.
@@ -35,307 +33,314 @@ import org.springframework.util.Assert;
  */
 public interface ReactiveNumberCommands {
 
-	/**
-	 * Increment value of {@literal key} by 1.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/incr">Valkey Documentation: INCR</a>
-	 */
-	default Mono<Long> incr(ByteBuffer key) {
+    /**
+     * Increment value of {@literal key} by 1.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/incr">Valkey Documentation: INCR</a>
+     */
+    default Mono<Long> incr(ByteBuffer key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return incr(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
-	}
+        return incr(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
+    }
 
-	/**
-	 * Increment value of {@literal key} by 1.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/incr">Valkey Documentation: INCR</a>
-	 */
-	Flux<NumericResponse<KeyCommand, Long>> incr(Publisher<KeyCommand> keys);
+    /**
+     * Increment value of {@literal key} by 1.
+     *
+     * @param keys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/incr">Valkey Documentation: INCR</a>
+     */
+    Flux<NumericResponse<KeyCommand, Long>> incr(Publisher<KeyCommand> keys);
 
-	/**
-	 * {@code INCRBY} command parameters.
-	 *
-	 * @author Christoph Strobl
-	 * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
-	 */
-	class IncrByCommand<T extends Number> extends KeyCommand {
+    /**
+     * {@code INCRBY} command parameters.
+     *
+     * @author Christoph Strobl
+     * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
+     */
+    class IncrByCommand<T extends Number> extends KeyCommand {
 
-		private @Nullable T value;
+        private @Nullable T value;
 
-		private IncrByCommand(ByteBuffer key, @Nullable T value) {
+        private IncrByCommand(ByteBuffer key, @Nullable T value) {
 
-			super(key);
-			this.value = value;
-		}
+            super(key);
+            this.value = value;
+        }
 
-		/**
-		 * Creates a new {@link IncrByCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link IncrByCommand} for {@link ByteBuffer key}.
-		 */
-		public static <T extends Number> IncrByCommand<T> incr(ByteBuffer key) {
+        /**
+         * Creates a new {@link IncrByCommand} given a {@link ByteBuffer key}.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link IncrByCommand} for {@link ByteBuffer key}.
+         */
+        public static <T extends Number> IncrByCommand<T> incr(ByteBuffer key) {
 
-			Assert.notNull(key, "Key must not be null");
+            Assert.notNull(key, "Key must not be null");
 
-			return new IncrByCommand<>(key, null);
-		}
+            return new IncrByCommand<>(key, null);
+        }
 
-		/**
-		 * Applies the numeric {@literal value}. Constructs a new command instance with all previously configured
-		 * properties.
-		 *
-		 * @param value must not be {@literal null}.
-		 * @return a new {@link IncrByCommand} with {@literal value} applied.
-		 */
-		public IncrByCommand<T> by(T value) {
+        /**
+         * Applies the numeric {@literal value}. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param value must not be {@literal null}.
+         * @return a new {@link IncrByCommand} with {@literal value} applied.
+         */
+        public IncrByCommand<T> by(T value) {
 
-			Assert.notNull(value, "Value must not be null");
+            Assert.notNull(value, "Value must not be null");
 
-			return new IncrByCommand<>(getKey(), value);
-		}
+            return new IncrByCommand<>(getKey(), value);
+        }
 
-		/**
-		 * @return can be {@literal null}.
-		 */
-		@Nullable
-		public T getValue() {
-			return value;
-		}
-	}
+        /**
+         * @return can be {@literal null}.
+         */
+        @Nullable
+        public T getValue() {
+            return value;
+        }
+    }
 
-	/**
-	 * Increment value of {@literal key} by {@literal value}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
-	 * @see <a href="https://valkey.io/commands/incrbyfloat">Valkey Documentation: INCRBYFLOAT</a>
-	 */
-	default <T extends Number> Mono<T> incrBy(ByteBuffer key, T value) {
+    /**
+     * Increment value of {@literal key} by {@literal value}.
+     *
+     * @param key must not be {@literal null}.
+     * @param value must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
+     * @see <a href="https://valkey.io/commands/incrbyfloat">Valkey Documentation: INCRBYFLOAT</a>
+     */
+    default <T extends Number> Mono<T> incrBy(ByteBuffer key, T value) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-		return incrBy(Mono.just(IncrByCommand.<T> incr(key).by(value))).next().map(NumericResponse::getOutput);
-	}
+        return incrBy(Mono.just(IncrByCommand.<T>incr(key).by(value)))
+                .next()
+                .map(NumericResponse::getOutput);
+    }
 
-	/**
-	 * Increment value of {@literal key} by {@literal value}.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
-	 * @see <a href="https://valkey.io/commands/incrbyfloat">Valkey Documentation: INCRBYFLOAT</a>
-	 */
-	<T extends Number> Flux<NumericResponse<ReactiveNumberCommands.IncrByCommand<T>, T>> incrBy(
-			Publisher<ReactiveNumberCommands.IncrByCommand<T>> commands);
+    /**
+     * Increment value of {@literal key} by {@literal value}.
+     *
+     * @param commands must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
+     * @see <a href="https://valkey.io/commands/incrbyfloat">Valkey Documentation: INCRBYFLOAT</a>
+     */
+    <T extends Number> Flux<NumericResponse<ReactiveNumberCommands.IncrByCommand<T>, T>> incrBy(
+            Publisher<ReactiveNumberCommands.IncrByCommand<T>> commands);
 
-	/**
-	 * {@code DECRBY} command parameters.
-	 *
-	 * @author Christoph Strobl
-	 * @see <a href="https://valkey.io/commands/decrby">Valkey Documentation: DECRBY</a>
-	 */
-	class DecrByCommand<T extends Number> extends KeyCommand {
+    /**
+     * {@code DECRBY} command parameters.
+     *
+     * @author Christoph Strobl
+     * @see <a href="https://valkey.io/commands/decrby">Valkey Documentation: DECRBY</a>
+     */
+    class DecrByCommand<T extends Number> extends KeyCommand {
 
-		private @Nullable T value;
+        private @Nullable T value;
 
-		private DecrByCommand(ByteBuffer key, @Nullable T value) {
-			super(key);
-			this.value = value;
-		}
+        private DecrByCommand(ByteBuffer key, @Nullable T value) {
+            super(key);
+            this.value = value;
+        }
 
-		/**
-		 * Creates a new {@link DecrByCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link DecrByCommand} for {@link ByteBuffer key}.
-		 */
-		public static <T extends Number> DecrByCommand<T> decr(ByteBuffer key) {
+        /**
+         * Creates a new {@link DecrByCommand} given a {@link ByteBuffer key}.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link DecrByCommand} for {@link ByteBuffer key}.
+         */
+        public static <T extends Number> DecrByCommand<T> decr(ByteBuffer key) {
 
-			Assert.notNull(key, "Key must not be null");
+            Assert.notNull(key, "Key must not be null");
 
-			return new DecrByCommand<>(key, null);
-		}
+            return new DecrByCommand<>(key, null);
+        }
 
-		/**
-		 * Applies the numeric {@literal value}. Constructs a new command instance with all previously configured
-		 * properties.
-		 *
-		 * @param value must not be {@literal null}.
-		 * @return a new {@link DecrByCommand} with {@literal value} applied.
-		 */
-		public DecrByCommand<T> by(T value) {
+        /**
+         * Applies the numeric {@literal value}. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param value must not be {@literal null}.
+         * @return a new {@link DecrByCommand} with {@literal value} applied.
+         */
+        public DecrByCommand<T> by(T value) {
 
-			Assert.notNull(value, "Value must not be null");
+            Assert.notNull(value, "Value must not be null");
 
-			return new DecrByCommand<>(getKey(), value);
-		}
+            return new DecrByCommand<>(getKey(), value);
+        }
 
-		/**
-		 * @return can be {@literal null}.
-		 */
-		@Nullable
-		public T getValue() {
-			return value;
-		}
-	}
+        /**
+         * @return can be {@literal null}.
+         */
+        @Nullable
+        public T getValue() {
+            return value;
+        }
+    }
 
-	/**
-	 * Decrement value of {@literal key} by 1.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/decr">Valkey Documentation: DECR</a>
-	 */
-	default Mono<Long> decr(ByteBuffer key) {
+    /**
+     * Decrement value of {@literal key} by 1.
+     *
+     * @param key must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/decr">Valkey Documentation: DECR</a>
+     */
+    default Mono<Long> decr(ByteBuffer key) {
 
-		Assert.notNull(key, "Key must not be null");
+        Assert.notNull(key, "Key must not be null");
 
-		return decr(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
-	}
+        return decr(Mono.just(new KeyCommand(key))).next().map(NumericResponse::getOutput);
+    }
 
-	/**
-	 * Decrement value of {@literal key} by 1.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/decr">Valkey Documentation: DECR</a>
-	 */
-	Flux<NumericResponse<KeyCommand, Long>> decr(Publisher<KeyCommand> keys);
+    /**
+     * Decrement value of {@literal key} by 1.
+     *
+     * @param keys must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/decr">Valkey Documentation: DECR</a>
+     */
+    Flux<NumericResponse<KeyCommand, Long>> decr(Publisher<KeyCommand> keys);
 
-	/**
-	 * Decrement value of {@literal key} by {@literal value}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/decrby">Valkey Documentation: DECRBY</a>
-	 */
-	default <T extends Number> Mono<T> decrBy(ByteBuffer key, T value) {
+    /**
+     * Decrement value of {@literal key} by {@literal value}.
+     *
+     * @param key must not be {@literal null}.
+     * @param value must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/decrby">Valkey Documentation: DECRBY</a>
+     */
+    default <T extends Number> Mono<T> decrBy(ByteBuffer key, T value) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-		return decrBy(Mono.just(DecrByCommand.<T> decr(key).by(value))).next().map(NumericResponse::getOutput);
-	}
+        return decrBy(Mono.just(DecrByCommand.<T>decr(key).by(value)))
+                .next()
+                .map(NumericResponse::getOutput);
+    }
 
-	/**
-	 * Decrement value of {@literal key} by {@literal value}.
-	 *
-	 * @param commands must not be {@literal null}.
-	 * @return
-	 */
-	<T extends Number> Flux<NumericResponse<DecrByCommand<T>, T>> decrBy(Publisher<DecrByCommand<T>> commands);
+    /**
+     * Decrement value of {@literal key} by {@literal value}.
+     *
+     * @param commands must not be {@literal null}.
+     * @return
+     */
+    <T extends Number> Flux<NumericResponse<DecrByCommand<T>, T>> decrBy(
+            Publisher<DecrByCommand<T>> commands);
 
-	/**
-	 * {@code HINCRBY} command parameters.
-	 *
-	 * @author Christoph Strobl
-	 * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
-	 */
-	class HIncrByCommand<T extends Number> extends KeyCommand {
+    /**
+     * {@code HINCRBY} command parameters.
+     *
+     * @author Christoph Strobl
+     * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
+     */
+    class HIncrByCommand<T extends Number> extends KeyCommand {
 
-		private final ByteBuffer field;
-		private final @Nullable T value;
+        private final ByteBuffer field;
+        private final @Nullable T value;
 
-		private HIncrByCommand(@Nullable ByteBuffer key, ByteBuffer field, @Nullable T value) {
+        private HIncrByCommand(@Nullable ByteBuffer key, ByteBuffer field, @Nullable T value) {
 
-			super(key);
+            super(key);
 
-			this.field = field;
-			this.value = value;
-		}
+            this.field = field;
+            this.value = value;
+        }
 
-		/**
-		 * Creates a new {@link HIncrByCommand} given a {@link ByteBuffer key}.
-		 *
-		 * @param field must not be {@literal null}.
-		 * @return a new {@link HIncrByCommand} for {@link ByteBuffer key}.
-		 */
-		public static <T extends Number> HIncrByCommand<T> incr(ByteBuffer field) {
+        /**
+         * Creates a new {@link HIncrByCommand} given a {@link ByteBuffer key}.
+         *
+         * @param field must not be {@literal null}.
+         * @return a new {@link HIncrByCommand} for {@link ByteBuffer key}.
+         */
+        public static <T extends Number> HIncrByCommand<T> incr(ByteBuffer field) {
 
-			Assert.notNull(field, "Field must not be null");
+            Assert.notNull(field, "Field must not be null");
 
-			return new HIncrByCommand<>(null, field, null);
-		}
+            return new HIncrByCommand<>(null, field, null);
+        }
 
-		/**
-		 * Applies the numeric {@literal value}. Constructs a new command instance with all previously configured
-		 * properties.
-		 *
-		 * @param value must not be {@literal null}.
-		 * @return a new {@link HIncrByCommand} with {@literal value} applied.
-		 */
-		public HIncrByCommand<T> by(T value) {
+        /**
+         * Applies the numeric {@literal value}. Constructs a new command instance with all previously
+         * configured properties.
+         *
+         * @param value must not be {@literal null}.
+         * @return a new {@link HIncrByCommand} with {@literal value} applied.
+         */
+        public HIncrByCommand<T> by(T value) {
 
-			Assert.notNull(value, "Value must not be null");
+            Assert.notNull(value, "Value must not be null");
 
-			return new HIncrByCommand<>(getKey(), field, value);
-		}
+            return new HIncrByCommand<>(getKey(), field, value);
+        }
 
-		/**
-		 * Applies the {@literal key}. Constructs a new command instance with all previously configured properties.
-		 *
-		 * @param key must not be {@literal null}.
-		 * @return a new {@link HIncrByCommand} with {@literal key} applied.
-		 */
-		public HIncrByCommand<T> forKey(ByteBuffer key) {
+        /**
+         * Applies the {@literal key}. Constructs a new command instance with all previously configured
+         * properties.
+         *
+         * @param key must not be {@literal null}.
+         * @return a new {@link HIncrByCommand} with {@literal key} applied.
+         */
+        public HIncrByCommand<T> forKey(ByteBuffer key) {
 
-			Assert.notNull(key, "Key must not be null");
+            Assert.notNull(key, "Key must not be null");
 
-			return new HIncrByCommand<>(key, field, value);
-		}
+            return new HIncrByCommand<>(key, field, value);
+        }
 
-		/**
-		 * @return can be {@literal null}.
-		 */
-		@Nullable
-		public T getValue() {
-			return value;
-		}
+        /**
+         * @return can be {@literal null}.
+         */
+        @Nullable
+        public T getValue() {
+            return value;
+        }
 
-		/**
-		 * @return never {@literal null}.
-		 */
-		public ByteBuffer getField() {
-			return field;
-		}
-	}
+        /**
+         * @return never {@literal null}.
+         */
+        public ByteBuffer getField() {
+            return field;
+        }
+    }
 
-	/**
-	 * Increment {@literal value} of a hash {@literal field} by the given {@literal value}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param field must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @return
-	 * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
-	 */
-	default <T extends Number> Mono<T> hIncrBy(ByteBuffer key, ByteBuffer field, T value) {
+    /**
+     * Increment {@literal value} of a hash {@literal field} by the given {@literal value}.
+     *
+     * @param key must not be {@literal null}.
+     * @param field must not be {@literal null}.
+     * @param value must not be {@literal null}.
+     * @return
+     * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
+     */
+    default <T extends Number> Mono<T> hIncrBy(ByteBuffer key, ByteBuffer field, T value) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(field, "Field must not be null");
-		Assert.notNull(value, "Value must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(field, "Field must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-		return hIncrBy(Mono.just(HIncrByCommand.<T> incr(field).by(value).forKey(key))).next()
-				.map(NumericResponse::getOutput);
-	}
+        return hIncrBy(Mono.just(HIncrByCommand.<T>incr(field).by(value).forKey(key)))
+                .next()
+                .map(NumericResponse::getOutput);
+    }
 
-	/**
-	 * Increment {@literal value} of a hash {@literal field} by the given {@literal value}.
-	 *
-	 * @return
-	 * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
-	 */
-	<T extends Number> Flux<NumericResponse<HIncrByCommand<T>, T>> hIncrBy(Publisher<HIncrByCommand<T>> commands);
-
+    /**
+     * Increment {@literal value} of a hash {@literal field} by the given {@literal value}.
+     *
+     * @return
+     * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
+     */
+    <T extends Number> Flux<NumericResponse<HIncrByCommand<T>, T>> hIncrBy(
+            Publisher<HIncrByCommand<T>> commands);
 }

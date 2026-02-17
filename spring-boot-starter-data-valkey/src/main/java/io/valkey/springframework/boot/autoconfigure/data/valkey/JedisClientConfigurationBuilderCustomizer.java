@@ -20,8 +20,8 @@ import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfigu
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration.JedisClientConfigurationBuilder;
 
 /**
- * Callback interface that can be implemented by beans wishing to customize the
- * {@link JedisClientConfiguration} through a {@link JedisClientConfigurationBuilder
+ * Callback interface that can be implemented by beans wishing to customize the {@link
+ * JedisClientConfiguration} through a {@link JedisClientConfigurationBuilder
  * JedisClientConfiguration.JedisClientConfigurationBuilder} whilst retaining default
  * auto-configuration.
  *
@@ -31,10 +31,10 @@ import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfigu
 @FunctionalInterface
 public interface JedisClientConfigurationBuilderCustomizer {
 
-	/**
-	 * Customize the {@link JedisClientConfigurationBuilder}.
-	 * @param clientConfigurationBuilder the builder to customize
-	 */
-	void customize(JedisClientConfigurationBuilder clientConfigurationBuilder);
-
+    /**
+     * Customize the {@link JedisClientConfigurationBuilder}.
+     *
+     * @param clientConfigurationBuilder the builder to customize
+     */
+    void customize(JedisClientConfigurationBuilder clientConfigurationBuilder);
 }

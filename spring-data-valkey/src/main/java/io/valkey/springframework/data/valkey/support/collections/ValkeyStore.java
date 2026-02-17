@@ -19,17 +19,17 @@ import io.valkey.springframework.data.valkey.core.BoundKeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 
 /**
- * Basic interface for Valkey-based collections. Offers access to the {@link ValkeyOperations} entity used for executing
- * commands against the backing store.
+ * Basic interface for Valkey-based collections. Offers access to the {@link ValkeyOperations}
+ * entity used for executing commands against the backing store.
  *
  * @author Costin Leau
  */
 public interface ValkeyStore extends BoundKeyOperations<String> {
 
-	/**
-	 * Returns the underlying Valkey operations used by the backing implementation.
-	 *
-	 * @return operations never {@literal null}.
-	 */
-	ValkeyOperations<String, ?> getOperations();
+    /**
+     * Returns the underlying Valkey operations used by the backing implementation.
+     *
+     * @return operations never {@literal null}.
+     */
+    ValkeyOperations<String, ?> getOperations();
 }

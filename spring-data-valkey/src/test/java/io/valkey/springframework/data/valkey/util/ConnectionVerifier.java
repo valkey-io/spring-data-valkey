@@ -15,99 +15,99 @@
  */
 package io.valkey.springframework.data.valkey.util;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.dao.DataAccessResourceFailureException;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 
 /**
  * @author Christoph Strobl
  */
 public class ConnectionVerifier<T extends ValkeyConnectionFactory> {
 
-	private final T connectionFactory;
-	private final List<Consumer<ValkeyConnection>> steps = new ArrayList<>(3);
+    private final T connectionFactory;
+    private final List<Consumer<ValkeyConnection>> steps = new ArrayList<>(3);
 
-	private Consumer<T> initFactoryFunction = this::initializeFactoryIfRequired;
+    private Consumer<T> initFactoryFunction = this::initializeFactoryIfRequired;
 
-	ConnectionVerifier(T connectionFactory) {
-		this.connectionFactory = connectionFactory;
-	}
+    ConnectionVerifier(T connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
 
-	public static <V extends ValkeyConnectionFactory> ConnectionVerifier<V> create(V connectionFactory) {
-		return new ConnectionVerifier<>(connectionFactory);
-	}
+    public static <V extends ValkeyConnectionFactory> ConnectionVerifier<V> create(
+            V connectionFactory) {
+        return new ConnectionVerifier<>(connectionFactory);
+    }
 
-	public ConnectionVerifier<T> initializeFactory(Consumer<T> initFunction) {
+    public ConnectionVerifier<T> initializeFactory(Consumer<T> initFunction) {
 
-		this.initFactoryFunction = initFunction;
-		return this;
-	}
+        this.initFactoryFunction = initFunction;
+        return this;
+    }
 
-	public ConnectionVerifier<T> execute(Consumer<ValkeyConnection> connectionConsumer) {
-		this.steps.add(connectionConsumer);
-		return this;
-	}
+    public ConnectionVerifier<T> execute(Consumer<ValkeyConnection> connectionConsumer) {
+        this.steps.add(connectionConsumer);
+        return this;
+    }
 
-	public void verify() {
-		verifyAndRun(it -> {});
-	}
+    public void verify() {
+        verifyAndRun(it -> {});
+    }
 
-	public void verifyAndClose() {
-		verifyAndRun(this::disposeFactoryIfNeeded);
-	}
+    public void verifyAndClose() {
+        verifyAndRun(this::disposeFactoryIfNeeded);
+    }
 
-	public void verifyAndRun(Consumer<T> disposeFunction) {
+    public void verifyAndRun(Consumer<T> disposeFunction) {
 
-		initFactoryFunction.accept(connectionFactory);
+        initFactoryFunction.accept(connectionFactory);
 
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
-			steps.forEach(step -> step.accept(connection));
-		} finally {
-			disposeFunction.accept(connectionFactory);
-		}
-	}
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            steps.forEach(step -> step.accept(connection));
+        } finally {
+            disposeFunction.accept(connectionFactory);
+        }
+    }
 
-	private void initializeFactoryIfRequired(T factory) {
+    private void initializeFactoryIfRequired(T factory) {
 
-		if (factory instanceof InitializingBean initializingBean) {
-			try {
-				initializingBean.afterPropertiesSet();
-			} catch (Exception ex) {
-				throw new RuntimeException(ex);
-			}
-		}
-		if (factory instanceof SmartLifecycle smartLifecycle) {
-			if (smartLifecycle.isAutoStartup() && !smartLifecycle.isRunning()) {
-				smartLifecycle.start();
-			}
-		}
-	}
+        if (factory instanceof InitializingBean initializingBean) {
+            try {
+                initializingBean.afterPropertiesSet();
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
+        }
+        if (factory instanceof SmartLifecycle smartLifecycle) {
+            if (smartLifecycle.isAutoStartup() && !smartLifecycle.isRunning()) {
+                smartLifecycle.start();
+            }
+        }
+    }
 
-	private void disposeFactoryIfNeeded(T it) {
+    private void disposeFactoryIfNeeded(T it) {
 
-		if (it instanceof DisposableBean bean) {
-			try {
-				bean.destroy();
-			} catch (Exception ex) {
-				throw new DataAccessResourceFailureException("Cannot close resource", ex);
-			}
-		} else if (it instanceof Closeable closeable) {
-			try {
-				closeable.close();
-			} catch (IOException ex) {
-				throw new DataAccessResourceFailureException("Cannot close resource", ex);
-			}
-		} else if (it instanceof SmartLifecycle smartLifecycle && smartLifecycle.isRunning()) {
-			smartLifecycle.stop();
-		}
-	}
+        if (it instanceof DisposableBean bean) {
+            try {
+                bean.destroy();
+            } catch (Exception ex) {
+                throw new DataAccessResourceFailureException("Cannot close resource", ex);
+            }
+        } else if (it instanceof Closeable closeable) {
+            try {
+                closeable.close();
+            } catch (IOException ex) {
+                throw new DataAccessResourceFailureException("Cannot close resource", ex);
+            }
+        } else if (it instanceof SmartLifecycle smartLifecycle && smartLifecycle.isRunning()) {
+            smartLifecycle.stop();
+        }
+    }
 }

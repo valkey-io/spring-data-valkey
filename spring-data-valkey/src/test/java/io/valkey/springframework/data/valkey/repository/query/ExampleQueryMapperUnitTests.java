@@ -18,24 +18,22 @@ package io.valkey.springframework.data.valkey.repository.query;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.valkey.springframework.data.valkey.core.convert.PathIndexResolver;
+import io.valkey.springframework.data.valkey.core.index.Indexed;
+import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
+import io.valkey.springframework.data.valkey.repository.query.ValkeyOperationChain.PathAndValue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
 import org.junit.jupiter.api.Test;
-
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Reference;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher;
 import org.springframework.data.domain.ExampleMatcher.StringMatcher;
-import io.valkey.springframework.data.valkey.core.convert.PathIndexResolver;
-import io.valkey.springframework.data.valkey.core.index.Indexed;
-import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
-import io.valkey.springframework.data.valkey.repository.query.ValkeyOperationChain.PathAndValue;
 
 /**
  * Unit tests for {@link ExampleQueryMapper}.
@@ -46,274 +44,298 @@ import io.valkey.springframework.data.valkey.repository.query.ValkeyOperationCha
  */
 public class ExampleQueryMapperUnitTests {
 
-	private ValkeyMappingContext mappingContext = new ValkeyMappingContext();
-	private ExampleQueryMapper mapper = new ExampleQueryMapper(mappingContext, new PathIndexResolver(mappingContext));
+    private ValkeyMappingContext mappingContext = new ValkeyMappingContext();
+    private ExampleQueryMapper mapper =
+            new ExampleQueryMapper(mappingContext, new PathIndexResolver(mappingContext));
+
+    @Test // DATAREDIS-605
+    void shouldRejectCaseInsensitiveMatching() {
+
+        assertThatThrownBy(
+                        () -> {
+                            mapper.getMappedExample(
+                                    Example.of(new Person(), ExampleMatcher.matching().withIgnoreCase()));
+                        })
+                .isInstanceOf(InvalidDataAccessApiUsageException.class);
+    }
+
+    @Test // DATAREDIS-605
+    void shouldRejectUnsupportedStringMatchers() {
+
+        List<StringMatcher> unsupported =
+                Arrays.asList(
+                        StringMatcher.STARTING,
+                        StringMatcher.REGEX,
+                        StringMatcher.CONTAINING,
+                        StringMatcher.ENDING);
 
-	@Test // DATAREDIS-605
-	void shouldRejectCaseInsensitiveMatching() {
+        for (StringMatcher stringMatcher : unsupported) {
 
-		assertThatThrownBy(() -> {
-			mapper.getMappedExample(Example.of(new Person(), ExampleMatcher.matching().withIgnoreCase()));
-		}).isInstanceOf(InvalidDataAccessApiUsageException.class);
-	}
+            assertThatThrownBy(
+                            () -> {
+                                mapper.getMappedExample(
+                                        Example.of(
+                                                new Person(),
+                                                ExampleMatcher.matching().withStringMatcher(StringMatcher.STARTING)));
+                            }) //
+                    .hasMessageContaining("does not support") //
+                    .describedAs("Unsupported matcher " + stringMatcher) //
+                    .isInstanceOf(InvalidDataAccessApiUsageException.class);
+        }
+    }
 
-	@Test // DATAREDIS-605
-	void shouldRejectUnsupportedStringMatchers() {
+    @Test // DATAREDIS-605
+    void shouldMapSimpleExample() {
 
-		List<StringMatcher> unsupported = Arrays.asList(StringMatcher.STARTING, StringMatcher.REGEX,
-				StringMatcher.CONTAINING, StringMatcher.ENDING);
+        Person person = new Person();
+        person.setFirstname("Walter");
+        person.setGender(Gender.MALE);
+        person.setAge(50);
+
+        ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person));
+
+        assertThat(operationChain.getOrSismember()).isEmpty();
+        assertThat(operationChain.getSismember())
+                .contains(
+                        new PathAndValue("firstname", "Walter"),
+                        new PathAndValue("gender", Gender.MALE),
+                        new PathAndValue("age", 50));
+    }
+
+    @Test // DATAREDIS-605
+    void shouldIgnoreFieldsWithoutIndexWithAllMatch() {
 
-		for (StringMatcher stringMatcher : unsupported) {
+        Person person = new Person();
+        person.setLastname("Foo");
 
-			assertThatThrownBy(() -> {
-				mapper.getMappedExample(
-						Example.of(new Person(), ExampleMatcher.matching().withStringMatcher(StringMatcher.STARTING)));
-			}) //
-					.hasMessageContaining("does not support") //
-					.describedAs("Unsupported matcher " + stringMatcher) //
-					.isInstanceOf(InvalidDataAccessApiUsageException.class);
-		}
-	}
+        ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person));
 
-	@Test // DATAREDIS-605
-	void shouldMapSimpleExample() {
+        assertThat(operationChain.getOrSismember()).isEmpty();
+        assertThat(operationChain.getSismember()).isEmpty();
+    }
 
-		Person person = new Person();
-		person.setFirstname("Walter");
-		person.setGender(Gender.MALE);
-		person.setAge(50);
+    @Test // DATAREDIS-605
+    void shouldIncludeFieldsWithoutIndexWithAnyMatch() {
 
-		ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person));
+        Person person = new Person();
+        person.setLastname("Foo");
 
-		assertThat(operationChain.getOrSismember()).isEmpty();
-		assertThat(operationChain.getSismember()).contains(new PathAndValue("firstname", "Walter"),
-				new PathAndValue("gender", Gender.MALE), new PathAndValue("age", 50));
-	}
+        ValkeyOperationChain operationChain =
+                mapper.getMappedExample(Example.of(person, ExampleMatcher.matchingAny()));
 
-	@Test // DATAREDIS-605
-	void shouldIgnoreFieldsWithoutIndexWithAllMatch() {
+        assertThat(operationChain.getOrSismember()).containsOnly(new PathAndValue("lastname", "Foo"));
+        assertThat(operationChain.getSismember()).isEmpty();
+    }
 
-		Person person = new Person();
-		person.setLastname("Foo");
+    @Test // DATAREDIS-605
+    void shouldIgnorePaths() {
 
-		ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person));
+        Person person = new Person();
+        person.setFirstname("Walter");
+        person.setGender(Gender.MALE);
+        person.setAge(50);
 
-		assertThat(operationChain.getOrSismember()).isEmpty();
-		assertThat(operationChain.getSismember()).isEmpty();
-	}
+        ValkeyOperationChain operationChain =
+                mapper.getMappedExample(
+                        Example.of(person, ExampleMatcher.matching().withIgnorePaths("gender", "age")));
 
-	@Test // DATAREDIS-605
-	void shouldIncludeFieldsWithoutIndexWithAnyMatch() {
+        assertThat(operationChain.getOrSismember()).isEmpty();
+        assertThat(operationChain.getSismember()).containsOnly(new PathAndValue("firstname", "Walter"));
+    }
 
-		Person person = new Person();
-		person.setLastname("Foo");
+    @Test // DATAREDIS-605
+    void shouldMapNestedExample() {
 
-		ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person, ExampleMatcher.matchingAny()));
+        Person person = new Person();
 
-		assertThat(operationChain.getOrSismember()).containsOnly(new PathAndValue("lastname", "Foo"));
-		assertThat(operationChain.getSismember()).isEmpty();
-	}
+        Species species = new Species();
+        species.name = "Homo Coquus Caeruleus Methiticus";
 
-	@Test // DATAREDIS-605
-	void shouldIgnorePaths() {
+        person.setSpecies(species);
 
-		Person person = new Person();
-		person.setFirstname("Walter");
-		person.setGender(Gender.MALE);
-		person.setAge(50);
+        ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person));
 
-		ValkeyOperationChain operationChain = mapper
-				.getMappedExample(Example.of(person, ExampleMatcher.matching().withIgnorePaths("gender", "age")));
+        assertThat(operationChain.getOrSismember()).isEmpty();
+        assertThat(operationChain.getSismember())
+                .containsOnly(new PathAndValue("species.name", "Homo Coquus Caeruleus Methiticus"));
+    }
 
-		assertThat(operationChain.getOrSismember()).isEmpty();
-		assertThat(operationChain.getSismember()).containsOnly(new PathAndValue("firstname", "Walter"));
-	}
+    @Test // DATAREDIS-605
+    void shouldIgnoreMapsAndCollections() {
 
-	@Test // DATAREDIS-605
-	void shouldMapNestedExample() {
+        Person person = new Person();
+        person.setNicknames(Arrays.asList("Heisenberg"));
+        person.setPhysicalAttributes(Collections.singletonMap("healthy", "no"));
 
-		Person person = new Person();
+        ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person));
 
-		Species species = new Species();
-		species.name = "Homo Coquus Caeruleus Methiticus";
+        assertThat(operationChain.getOrSismember()).isEmpty();
+        assertThat(operationChain.getSismember()).isEmpty();
+    }
 
-		person.setSpecies(species);
+    @Test // DATAREDIS-605
+    void shouldMapMatchingAny() {
 
-		ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person));
+        Person person = new Person();
+        person.setFirstname("Walter");
+        person.setGender(Gender.MALE);
+        person.setAge(50);
 
-		assertThat(operationChain.getOrSismember()).isEmpty();
-		assertThat(operationChain.getSismember())
-				.containsOnly(new PathAndValue("species.name", "Homo Coquus Caeruleus Methiticus"));
-	}
+        ValkeyOperationChain operationChain =
+                mapper.getMappedExample(Example.of(person, ExampleMatcher.matchingAny()));
 
-	@Test // DATAREDIS-605
-	void shouldIgnoreMapsAndCollections() {
+        assertThat(operationChain.getSismember()).isEmpty();
+        assertThat(operationChain.getOrSismember())
+                .contains(
+                        new PathAndValue("firstname", "Walter"),
+                        new PathAndValue("gender", Gender.MALE),
+                        new PathAndValue("age", 50));
+    }
 
-		Person person = new Person();
-		person.setNicknames(Arrays.asList("Heisenberg"));
-		person.setPhysicalAttributes(Collections.singletonMap("healthy", "no"));
+    @Test // DATAREDIS-605
+    void shouldApplyPropertyTransformation() {
 
-		ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person));
+        Person person = new Person();
+        person.setFirstname("Walter");
 
-		assertThat(operationChain.getOrSismember()).isEmpty();
-		assertThat(operationChain.getSismember()).isEmpty();
-	}
+        Example<Person> example =
+                Example.of(
+                        person,
+                        ExampleMatcher.matching()
+                                .withTransformer("firstname", v -> v.map(s -> s.toString().toUpperCase())));
 
-	@Test // DATAREDIS-605
-	void shouldMapMatchingAny() {
+        ValkeyOperationChain operationChain = mapper.getMappedExample(example);
 
-		Person person = new Person();
-		person.setFirstname("Walter");
-		person.setGender(Gender.MALE);
-		person.setAge(50);
+        assertThat(operationChain.getSismember()).contains(new PathAndValue("firstname", "WALTER"));
+    }
 
-		ValkeyOperationChain operationChain = mapper.getMappedExample(Example.of(person, ExampleMatcher.matchingAny()));
+    static class Person {
 
-		assertThat(operationChain.getSismember()).isEmpty();
-		assertThat(operationChain.getOrSismember()).contains(new PathAndValue("firstname", "Walter"),
-				new PathAndValue("gender", Gender.MALE), new PathAndValue("age", 50));
-	}
+        @Id String id;
 
-	@Test // DATAREDIS-605
-	void shouldApplyPropertyTransformation() {
+        @Indexed String firstname;
+        String lastname;
+        @Indexed Gender gender;
 
-		Person person = new Person();
-		person.setFirstname("Walter");
+        List<String> nicknames;
+        @Indexed Integer age;
 
-		Example<Person> example = Example.of(person,
-				ExampleMatcher.matching().withTransformer("firstname", v -> v.map(s -> s.toString().toUpperCase())));
+        Map<String, String> physicalAttributes;
 
-		ValkeyOperationChain operationChain = mapper.getMappedExample(example);
+        @Reference Person relative;
 
-		assertThat(operationChain.getSismember()).contains(new PathAndValue("firstname", "WALTER"));
-	}
+        Species species;
 
-	static class Person {
+        public String getId() {
+            return this.id;
+        }
 
-		@Id String id;
+        public void setId(String id) {
+            this.id = id;
+        }
 
-		@Indexed String firstname;
-		String lastname;
-		@Indexed Gender gender;
+        public String getFirstname() {
+            return this.firstname;
+        }
 
-		List<String> nicknames;
-		@Indexed Integer age;
+        public void setFirstname(String firstname) {
+            this.firstname = firstname;
+        }
 
-		Map<String, String> physicalAttributes;
+        public String getLastname() {
+            return this.lastname;
+        }
 
-		@Reference Person relative;
+        public void setLastname(String lastname) {
+            this.lastname = lastname;
+        }
 
-		Species species;
+        public List<String> getNicknames() {
+            return this.nicknames;
+        }
 
-		public String getId() {
-			return this.id;
-		}
+        public void setNicknames(List<String> nicknames) {
+            this.nicknames = nicknames;
+        }
 
-		public void setId(String id) {
-			this.id = id;
-		}
+        public Integer getAge() {
+            return this.age;
+        }
 
-		public String getFirstname() {
-			return this.firstname;
-		}
+        public void setAge(Integer age) {
+            this.age = age;
+        }
 
-		public void setFirstname(String firstname) {
-			this.firstname = firstname;
-		}
+        public Gender getGender() {
+            return this.gender;
+        }
 
-		public String getLastname() {
-			return this.lastname;
-		}
+        public void setGender(Gender gender) {
+            this.gender = gender;
+        }
 
-		public void setLastname(String lastname) {
-			this.lastname = lastname;
-		}
+        public Map<String, String> getPhysicalAttributes() {
+            return this.physicalAttributes;
+        }
 
-		public List<String> getNicknames() {
-			return this.nicknames;
-		}
+        public void setPhysicalAttributes(Map<String, String> physicalAttributes) {
+            this.physicalAttributes = physicalAttributes;
+        }
 
-		public void setNicknames(List<String> nicknames) {
-			this.nicknames = nicknames;
-		}
+        public Person getRelative() {
+            return this.relative;
+        }
 
-		public Integer getAge() {
-			return this.age;
-		}
+        public void setRelative(Person relative) {
+            this.relative = relative;
+        }
 
-		public void setAge(Integer age) {
-			this.age = age;
-		}
+        public Species getSpecies() {
+            return this.species;
+        }
 
-		public Gender getGender() {
-			return this.gender;
-		}
+        public void setSpecies(Species species) {
+            this.species = species;
+        }
 
-		public void setGender(Gender gender) {
-			this.gender = gender;
-		}
+        @Override
+        public boolean equals(Object obj) {
 
-		public Map<String, String> getPhysicalAttributes() {
-			return this.physicalAttributes;
-		}
+            if (this == obj) {
+                return true;
+            }
 
-		public void setPhysicalAttributes(Map<String, String> physicalAttributes) {
-			this.physicalAttributes = physicalAttributes;
-		}
+            if (!(obj instanceof Person that)) {
+                return false;
+            }
 
-		public Person getRelative() {
-			return this.relative;
-		}
+            return Objects.equals(this.getId(), that.getId())
+                    && Objects.equals(this.getFirstname(), that.getFirstname())
+                    && Objects.equals(this.getLastname(), that.getLastname())
+                    && Objects.equals(this.getAge(), that.getAge())
+                    && Objects.equals(this.getGender(), that.getGender())
+                    && Objects.equals(this.getSpecies(), that.getSpecies());
+        }
 
-		public void setRelative(Person relative) {
-			this.relative = relative;
-		}
+        @Override
+        public int hashCode() {
+            return Objects.hash(
+                    getId(), getFirstname(), getLastname(), getAge(), getGender(), getSpecies());
+        }
+    }
 
-		public Species getSpecies() {
-			return this.species;
-		}
+    enum Gender {
+        MALE,
+        FEMALE {
 
-		public void setSpecies(Species species) {
-			this.species = species;
-		}
+            @Override
+            public String toString() {
+                return "Superwoman";
+            }
+        }
+    }
 
-		@Override
-		public boolean equals(Object obj) {
-
-			if (this == obj) {
-				return true;
-			}
-
-			if (!(obj instanceof Person that)) {
-				return false;
-			}
-
-			return Objects.equals(this.getId(), that.getId())
-				&& Objects.equals(this.getFirstname(), that.getFirstname())
-				&& Objects.equals(this.getLastname(), that.getLastname())
-				&& Objects.equals(this.getAge(), that.getAge())
-				&& Objects.equals(this.getGender(), that.getGender())
-				&& Objects.equals(this.getSpecies(), that.getSpecies());
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(getId(), getFirstname(), getLastname(), getAge(), getGender(), getSpecies());
-		}
-	}
-
-	enum Gender {
-
-		MALE, FEMALE {
-
-			@Override
-			public String toString() {
-				return "Superwoman";
-			}
-		}
-	}
-
-	static class Species {
-		@Indexed String name;
-	}
+    static class Species {
+        @Indexed String name;
+    }
 }

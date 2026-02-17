@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.connection.convert;
 
 import java.util.ArrayList;
 import java.util.List;
-
 import org.springframework.core.convert.converter.Converter;
 
 /**
@@ -31,24 +30,24 @@ import org.springframework.core.convert.converter.Converter;
  */
 public class ListConverter<S, T> implements Converter<List<S>, List<T>> {
 
-	private Converter<S, T> itemConverter;
+    private Converter<S, T> itemConverter;
 
-	/**
-	 * @param itemConverter The {@link Converter} to use for converting individual List items
-	 */
-	public ListConverter(Converter<S, T> itemConverter) {
-		this.itemConverter = itemConverter;
-	}
+    /**
+     * @param itemConverter The {@link Converter} to use for converting individual List items
+     */
+    public ListConverter(Converter<S, T> itemConverter) {
+        this.itemConverter = itemConverter;
+    }
 
-	@Override
-	public List<T> convert(List<S> source) {
+    @Override
+    public List<T> convert(List<S> source) {
 
-		List<T> results = new ArrayList<>(source.size());
+        List<T> results = new ArrayList<>(source.size());
 
-		for (S result : source) {
-			results.add(itemConverter.convert(result));
-		}
+        for (S result : source) {
+            results.add(itemConverter.convert(result));
+        }
 
-		return results;
-	}
+        return results;
+    }
 }

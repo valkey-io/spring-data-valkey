@@ -25,11 +25,10 @@ import org.springframework.core.convert.converter.Converter;
  */
 public class LongToBooleanConverter implements Converter<Long, Boolean> {
 
-	public static final LongToBooleanConverter INSTANCE = new LongToBooleanConverter();
+    public static final LongToBooleanConverter INSTANCE = new LongToBooleanConverter();
 
-	@Override
-	public Boolean convert(Long result) {
-		return result == 1;
-	}
-
+    @Override
+    public Boolean convert(Long result) {
+        return result == 1;
+    }
 }

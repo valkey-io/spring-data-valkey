@@ -16,18 +16,16 @@
 
 package io.valkey.springframework.boot.actuate.autoconfigure.data.valkey;
 
-import org.junit.jupiter.api.Test;
-
-import org.springframework.boot.actuate.autoconfigure.health.HealthContributorAutoConfiguration;
-import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
 import io.valkey.springframework.boot.actuate.data.valkey.ValkeyReactiveHealthIndicator;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyReactiveAutoConfiguration;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.actuate.autoconfigure.health.HealthContributorAutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigurations;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 /**
  * Tests for {@link ValkeyReactiveHealthContributorAutoConfiguration}.
@@ -36,31 +34,46 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ValkeyReactiveHealthContributorAutoConfigurationTests {
 
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class,
-				ValkeyReactiveAutoConfiguration.class, ValkeyReactiveHealthContributorAutoConfiguration.class, 
-				HealthContributorAutoConfiguration.class))
-		.withPropertyValues("spring.data.valkey.client-type=lettuce"); // Force Lettuce for reactive support
+    private final ApplicationContextRunner contextRunner =
+            new ApplicationContextRunner()
+                    .withConfiguration(
+                            AutoConfigurations.of(
+                                    ValkeyAutoConfiguration.class,
+                                    ValkeyReactiveAutoConfiguration.class,
+                                    ValkeyReactiveHealthContributorAutoConfiguration.class,
+                                    HealthContributorAutoConfiguration.class))
+                    .withPropertyValues(
+                            "spring.data.valkey.client-type=lettuce"); // Force Lettuce for reactive support
 
-	@Test
-	void runShouldCreateIndicator() {
-		this.contextRunner.run((context) -> assertThat(context).hasSingleBean(ValkeyReactiveHealthIndicator.class)
-			.hasBean("valkeyHealthContributor"));
-	}
+    @Test
+    void runShouldCreateIndicator() {
+        this.contextRunner.run(
+                (context) ->
+                        assertThat(context)
+                                .hasSingleBean(ValkeyReactiveHealthIndicator.class)
+                                .hasBean("valkeyHealthContributor"));
+    }
 
-	@Test
-	void runWithRegularIndicatorShouldOnlyCreateReactiveIndicator() {
-		this.contextRunner.withConfiguration(AutoConfigurations.of(ValkeyHealthContributorAutoConfiguration.class))
-			.run((context) -> assertThat(context).hasSingleBean(ValkeyReactiveHealthIndicator.class)
-				.hasBean("valkeyHealthContributor")
-				.doesNotHaveBean(ValkeyHealthIndicator.class));
-	}
+    @Test
+    void runWithRegularIndicatorShouldOnlyCreateReactiveIndicator() {
+        this.contextRunner
+                .withConfiguration(AutoConfigurations.of(ValkeyHealthContributorAutoConfiguration.class))
+                .run(
+                        (context) ->
+                                assertThat(context)
+                                        .hasSingleBean(ValkeyReactiveHealthIndicator.class)
+                                        .hasBean("valkeyHealthContributor")
+                                        .doesNotHaveBean(ValkeyHealthIndicator.class));
+    }
 
-	@Test
-	void runWhenDisabledShouldNotCreateIndicator() {
-		this.contextRunner.withPropertyValues("management.health.valkey.enabled:false")
-			.run((context) -> assertThat(context).doesNotHaveBean(ValkeyReactiveHealthIndicator.class)
-				.doesNotHaveBean("valkeyHealthContributor"));
-	}
-
+    @Test
+    void runWhenDisabledShouldNotCreateIndicator() {
+        this.contextRunner
+                .withPropertyValues("management.health.valkey.enabled:false")
+                .run(
+                        (context) ->
+                                assertThat(context)
+                                        .doesNotHaveBean(ValkeyReactiveHealthIndicator.class)
+                                        .doesNotHaveBean("valkeyHealthContributor"));
+    }
 }
