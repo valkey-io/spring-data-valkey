@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "description": "Lettuce client - cluster mode",
+  "driver_id": "lettuce",
+  "mode": "cluster",
+  "specific_driver_config": {}
+}

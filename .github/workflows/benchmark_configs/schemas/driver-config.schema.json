@@ -1,0 +1,88 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/resp-bench/schemas/driver-config.schema.json",
+  "title": "Driver Configuration",
+  "description": "Configuration for a benchmark client driver in resp-bench",
+  "type": "object",
+  "required": ["schema_version", "driver_id", "mode"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Schema version for compatibility checking",
+      "enum": ["1.0"]
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of this driver configuration"
+    },
+    "driver_id": {
+      "type": "string",
+      "description": "Identifier for the client driver implementation",
+      "examples": [
+        "jedis",
+        "lettuce",
+        "valkey-glide",
+        "redisson",
+        "redis-py",
+        "aioredis"
+      ]
+    },
+    "mode": {
+      "type": "string",
+      "description": "Server topology mode",
+      "enum": ["standalone", "cluster", "sentinel"]
+    },
+    "tls": {
+      "type": "object",
+      "description": "TLS/SSL configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "cert_path": {
+          "type": "string",
+          "description": "Path to client certificate"
+        },
+        "key_path": {
+          "type": "string",
+          "description": "Path to client private key"
+        },
+        "ca_path": {
+          "type": "string",
+          "description": "Path to CA certificate"
+        },
+        "verify_hostname": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "description": "Authentication configuration",
+      "properties": {
+        "username": {
+          "type": "string",
+          "description": "Username for ACL authentication"
+        },
+        "password": {
+          "type": "string",
+          "description": "Password for authentication"
+        }
+      }
+    },
+    "specific_driver_config": {
+      "type": "object",
+      "description": "Driver-specific configuration options",
+      "properties": {
+        "secondary_driver_id": {
+          "type": "string",
+          "description": "For framework drivers (e.g., Spring Data), specifies the underlying client driver"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

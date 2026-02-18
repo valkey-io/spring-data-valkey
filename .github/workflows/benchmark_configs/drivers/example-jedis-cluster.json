@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "description": "Jedis client - cluster mode",
+  "driver_id": "jedis",
+  "mode": "cluster",
+  "specific_driver_config": {}
+}

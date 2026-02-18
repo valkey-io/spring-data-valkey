@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "description": "Spring Data Valkey with Valkey-Glide driver - cluster mode",
+  "driver_id": "spring-data-valkey",
+  "mode": "cluster",
+  "specific_driver_config": {
+    "secondary_driver_id": "valkey-glide"
+  }
+}

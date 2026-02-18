@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       primary_driver:
-        description: "Primary driver (for details, see resp-bench repo)"
+        description: "Primary driver"
         required: true
         type: choice
         options:
@@ -26,13 +26,21 @@ on:
           - none
         default: "valkey-glide"
       workload:
-        description: "Workload config (for details, see resp-bench repo)"
+        description: "Workload config"
         required: true
         type: choice
         options:
           - example-workload
           - example-workload-single-client
         default: "example-workload"
+      topology:
+        description: "Server topology"
+        required: true
+        type: choice
+        options:
+          - standalone
+          - cluster
+        default: "standalone"
       primary_version:
         description: "Primary driver version. Leave empty for spring-data-valkey (uses branch HEAD)."
         required: false
@@ -82,6 +90,7 @@ jobs:
           PRIMARY_DRIVER="${{ github.event.inputs.primary_driver }}"
           SECONDARY_DRIVER="${{ github.event.inputs.secondary_driver }}"
           WORKLOAD="${{ github.event.inputs.workload }}"
+          TOPOLOGY="${{ github.event.inputs.topology }}"
           PRIMARY_VERSION="${{ github.event.inputs.primary_version }}"
           SECONDARY_VERSION="${{ github.event.inputs.secondary_version }}"
           JOB_ID_PREFIX="${{ github.event.inputs.job_id_prefix }}"
@@ -89,6 +98,7 @@ jobs:
           echo "primary_driver=$PRIMARY_DRIVER" >> $GITHUB_OUTPUT
           echo "secondary_driver=$SECONDARY_DRIVER" >> $GITHUB_OUTPUT
           echo "workload=$WORKLOAD" >> $GITHUB_OUTPUT
+          echo "topology=$TOPOLOGY" >> $GITHUB_OUTPUT
           echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
           echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
           echo "job_id_prefix=$JOB_ID_PREFIX" >> $GITHUB_OUTPUT
@@ -97,6 +107,7 @@ jobs:
           echo "Primary driver:    $PRIMARY_DRIVER"
           echo "Secondary driver:  $SECONDARY_DRIVER"
           echo "Workload:          $WORKLOAD"
+          echo "Topology:          $TOPOLOGY"
           echo "Primary version:   '${PRIMARY_VERSION}'"
           echo "Secondary version: '${SECONDARY_VERSION}'"
           echo "Job ID prefix:     '${JOB_ID_PREFIX}'"
@@ -108,6 +119,9 @@ jobs:
           PRIMARY_DRIVER="${{ steps.inputs.outputs.primary_driver }}"
           SECONDARY_DRIVER="${{ steps.inputs.outputs.secondary_driver }}"
           WORKLOAD="${{ steps.inputs.outputs.workload }}"
+          TOPOLOGY="${{ steps.inputs.outputs.topology }}"
+
+          CONFIG_DIR=".github/workflows/benchmark_configs"
 
           # Resolve driver config filename based on primary and secondary driver
           if [[ "$PRIMARY_DRIVER" == spring-data-* ]]; then
@@ -126,22 +140,22 @@ jobs:
             if [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
               SECONDARY_IN_FILENAME="glide"
             fi
-            DRIVER="example-${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-standalone"
+            DRIVER="example-${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-${TOPOLOGY}"
           else
             # Standalone drivers (valkey-glide, jedis, lettuce, redisson)
-            DRIVER="example-${PRIMARY_DRIVER}-standalone"
+            DRIVER="example-${PRIMARY_DRIVER}-${TOPOLOGY}"
             if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
               echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
             fi
           fi
 
-          DRIVER_CONFIG="resp-bench/configs/drivers/${DRIVER}.json"
-          WORKLOAD_CONFIG="resp-bench/configs/workloads/${WORKLOAD}.json"
+          DRIVER_CONFIG="${CONFIG_DIR}/drivers/${DRIVER}.json"
+          WORKLOAD_CONFIG="${CONFIG_DIR}/workloads/${WORKLOAD}.json"
 
           if [ ! -f "$DRIVER_CONFIG" ]; then
             echo "ERROR: Driver config not found: $DRIVER_CONFIG"
             echo "Available driver configs:"
-            ls -la resp-bench/configs/drivers/
+            ls -la "${CONFIG_DIR}/drivers/"
             exit 1
           fi
           echo "✓ Driver config: $DRIVER_CONFIG"
@@ -149,7 +163,7 @@ jobs:
           if [ ! -f "$WORKLOAD_CONFIG" ]; then
             echo "ERROR: Workload config not found: $WORKLOAD_CONFIG"
             echo "Available workload configs:"
-            ls -la resp-bench/configs/workloads/
+            ls -la "${CONFIG_DIR}/workloads/"
             exit 1
           fi
           echo "✓ Workload config: $WORKLOAD_CONFIG"
@@ -167,7 +181,7 @@ jobs:
         run: |
           DRIVER="${{ steps.validate.outputs.driver }}"
           SECONDARY_VERSION="${{ steps.inputs.outputs.secondary_version }}"
-          DRIVER_CONFIG="resp-bench/configs/drivers/${DRIVER}.json"
+          DRIVER_CONFIG=".github/workflows/benchmark_configs/drivers/${DRIVER}.json"
 
           DRIVER_ID=$(jq -r '.driver_id' "$DRIVER_CONFIG")
           SECONDARY_DRIVER_ID=$(jq -r '.specific_driver_config.secondary_driver_id // empty' "$DRIVER_CONFIG")
@@ -392,8 +406,8 @@ jobs:
 
           python3 -u .github/workflows/benchmark_orchestrator.py \
             --output "benchmark_results_${DRIVER}_${WORKLOAD}.json" \
-            --workload-config "resp-bench/configs/workloads/${WORKLOAD}.json" \
-            --driver-config "resp-bench/configs/drivers/${DRIVER}.json" \
+            --workload-config ".github/workflows/benchmark_configs/workloads/${WORKLOAD}.json" \
+            --driver-config ".github/workflows/benchmark_configs/drivers/${DRIVER}.json" \
             --resp-bench-dir "${{ github.workspace }}/resp-bench" \
             --resp-bench-commit "${{ steps.resp-bench.outputs.commit }}" \
             --s3-bucket "${{ secrets.BENCHMARK_S3_BUCKET }}" \
