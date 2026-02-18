@@ -1,9 +1,0 @@
-{
-  "schema_version": "1.0",
-  "description": "Spring Data Redis with Jedis driver - cluster mode",
-  "driver_id": "spring-data-redis",
-  "mode": "cluster",
-  "specific_driver_config": {
-    "secondary_driver_id": "jedis"
-  }
-}

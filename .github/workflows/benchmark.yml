@@ -33,14 +33,6 @@ on:
           - reference-workload-10-client
           - reference-workload-1-client
         default: "reference-workload-10-client"
-      topology:
-        description: "Server topology"
-        required: true
-        type: choice
-        options:
-          - standalone
-          - cluster
-        default: "standalone"
       primary_version:
         description: "Primary driver version. Leave empty for spring-data-valkey (uses branch HEAD)."
         required: false
@@ -57,7 +49,7 @@ on:
         type: string
         default: ""
       custom_driver_config:
-        description: "Custom driver config JSON (overrides driver/topology selection)"
+        description: "Custom driver config JSON (overrides driver selection)"
         required: false
         type: string
         default: ""
@@ -100,7 +92,6 @@ jobs:
           PRIMARY_DRIVER="${{ github.event.inputs.primary_driver }}"
           SECONDARY_DRIVER="${{ github.event.inputs.secondary_driver }}"
           WORKLOAD="${{ github.event.inputs.workload }}"
-          TOPOLOGY="${{ github.event.inputs.topology }}"
           PRIMARY_VERSION="${{ github.event.inputs.primary_version }}"
           SECONDARY_VERSION="${{ github.event.inputs.secondary_version }}"
           JOB_ID_PREFIX="${{ github.event.inputs.job_id_prefix }}"
@@ -108,7 +99,6 @@ jobs:
           echo "primary_driver=$PRIMARY_DRIVER" >> $GITHUB_OUTPUT
           echo "secondary_driver=$SECONDARY_DRIVER" >> $GITHUB_OUTPUT
           echo "workload=$WORKLOAD" >> $GITHUB_OUTPUT
-          echo "topology=$TOPOLOGY" >> $GITHUB_OUTPUT
           echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
           echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
           echo "job_id_prefix=$JOB_ID_PREFIX" >> $GITHUB_OUTPUT
@@ -117,7 +107,6 @@ jobs:
           echo "Primary driver:    $PRIMARY_DRIVER"
           echo "Secondary driver:  $SECONDARY_DRIVER"
           echo "Workload:          $WORKLOAD"
-          echo "Topology:          $TOPOLOGY"
           echo "Primary version:   '${PRIMARY_VERSION}'"
           echo "Secondary version: '${SECONDARY_VERSION}'"
           echo "Job ID prefix:     '${JOB_ID_PREFIX}'"
@@ -129,7 +118,6 @@ jobs:
           PRIMARY_DRIVER="${{ steps.inputs.outputs.primary_driver }}"
           SECONDARY_DRIVER="${{ steps.inputs.outputs.secondary_driver }}"
           WORKLOAD="${{ steps.inputs.outputs.workload }}"
-          TOPOLOGY="${{ steps.inputs.outputs.topology }}"
           CONFIG_DIR=".github/workflows/benchmark_configs"
           CUSTOM_CONFIG_DIR="/tmp/custom_configs"
           mkdir -p "$CUSTOM_CONFIG_DIR"
@@ -167,10 +155,10 @@ jobs:
               if [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
                 SECONDARY_IN_FILENAME="glide"
               fi
-              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-${TOPOLOGY}"
+              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-standalone"
             else
               # Standalone drivers (valkey-glide, jedis, lettuce, redisson)
-              DRIVER="${PRIMARY_DRIVER}-${TOPOLOGY}"
+              DRIVER="${PRIMARY_DRIVER}-standalone"
               if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
                 echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
               fi
