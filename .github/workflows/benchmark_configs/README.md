@@ -69,11 +69,6 @@ When you provide `custom_driver_config` or `custom_workload_config`, the workflo
 
 This allows testing configurations not in the predefined set.
 
-For the full specification of config formats to use when constructing custom configs, see the JSON schema files:
-
-- **Driver config schema:** [schemas/driver-config.schema.json](schemas/driver-config.schema.json)
-- **Workload config schema:** [schemas/workload-config.schema.json](schemas/workload-config.schema.json)
-
 ### Key config rules:
 
 - `spring-data-valkey` and `spring-data-redis` require `secondary_driver_id`
