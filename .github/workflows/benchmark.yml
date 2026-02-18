@@ -30,9 +30,9 @@ on:
         required: true
         type: choice
         options:
-          - example-workload
-          - example-workload-single-client
-        default: "example-workload"
+          - reference-workload-10-client
+          - reference-workload-1-client
+        default: "reference-workload-10-client"
       topology:
         description: "Server topology"
         required: true
@@ -167,10 +167,10 @@ jobs:
               if [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
                 SECONDARY_IN_FILENAME="glide"
               fi
-              DRIVER="example-${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-${TOPOLOGY}"
+              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-${TOPOLOGY}"
             else
               # Standalone drivers (valkey-glide, jedis, lettuce, redisson)
-              DRIVER="example-${PRIMARY_DRIVER}-${TOPOLOGY}"
+              DRIVER="${PRIMARY_DRIVER}-${TOPOLOGY}"
               if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
                 echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
               fi

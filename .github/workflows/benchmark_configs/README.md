@@ -11,7 +11,7 @@ This directory contains configuration files for the benchmark CI workflow.
 | `primary_driver`   | Client library to benchmark          | `spring-data-valkey`, `spring-data-redis`, `valkey-glide`, `jedis`, `lettuce`, `redisson` |
 | `secondary_driver` | Underlying driver for spring-data-\* | `valkey-glide`, `jedis`, `lettuce`, `none`                                                |
 | `topology`         | Server topology                      | `standalone`, `cluster`                                                                   |
-| `workload`         | Test scenario                        | `example-workload`, `example-workload-single-client`                                      |
+| `workload`         | Test scenario                        | `reference-workload-10-client`, `reference-workload-1-client`                             |
 
 ### Custom Configs
 
@@ -38,26 +38,26 @@ The CI workflow maps your input selections to JSON config files using a naming c
 
 The workflow constructs the driver config filename from your inputs:
 
-| Primary Driver       | Secondary Driver | Topology     | Resolved File                                      |
-| -------------------- | ---------------- | ------------ | -------------------------------------------------- |
-| `valkey-glide`       | (ignored)        | `standalone` | `example-valkey-glide-standalone.json`             |
-| `valkey-glide`       | (ignored)        | `cluster`    | `example-valkey-glide-cluster.json`                |
-| `spring-data-valkey` | `valkey-glide`   | `standalone` | `example-spring-data-valkey-glide-standalone.json` |
-| `spring-data-valkey` | `valkey-glide`   | `cluster`    | `example-spring-data-valkey-glide-cluster.json`    |
-| `spring-data-valkey` | `jedis`          | `cluster`    | `example-spring-data-valkey-jedis-cluster.json`    |
+| Primary Driver       | Secondary Driver | Topology     | Resolved File                                |
+| -------------------- | ---------------- | ------------ | -------------------------------------------- |
+| `valkey-glide`       | (ignored)        | `standalone` | `valkey-glide-standalone.json`               |
+| `valkey-glide`       | (ignored)        | `cluster`    | `valkey-glide-cluster.json`                  |
+| `spring-data-valkey` | `valkey-glide`   | `standalone` | `spring-data-valkey-glide-standalone.json`   |
+| `spring-data-valkey` | `valkey-glide`   | `cluster`    | `spring-data-valkey-glide-cluster.json`      |
+| `spring-data-valkey` | `jedis`          | `cluster`    | `spring-data-valkey-jedis-cluster.json`      |
 
 **Pattern:**
 
-- Standalone drivers: `example-{primary_driver}-{topology}.json`
-- Spring-data drivers: `example-{primary_driver}-{secondary_driver}-{topology}.json`
+- Standalone drivers: `{primary_driver}-{topology}.json`
+- Spring-data drivers: `{primary_driver}-{secondary_driver}-{topology}.json`
   - Note: `valkey-glide` is shortened to `glide` in filenames
 
 ### Workload Config Resolution
 
 The `workload` input maps directly to a file:
 
-- `example-workload` → `workloads/example-workload.json`
-- `example-workload-single-client` → `workloads/example-workload-single-client.json`
+- `reference-workload-10-client` → `workloads/reference-workload-10-client.json`
+- `reference-workload-1-client` → `workloads/reference-workload-1-client.json`
 
 ### Custom Configs
 

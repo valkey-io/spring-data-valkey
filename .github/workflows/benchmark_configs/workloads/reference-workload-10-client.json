@@ -1,15 +1,15 @@
 {
   "schema_version": "1.0",
   "benchmark_profile": {
-    "name": "Example Benchmark",
-    "description": "Two-phase benchmark: warmup with SETs, then steady-state GET/SET workload with a single connection",
+    "name": "Reference Benchmark - 10 Clients",
+    "description": "Two-phase benchmark: warmup with SETs, then steady-state GET/SET workload with 10 connections",
     "version": "1.0.0"
   },
   "phases": [
     {
       "id": "WARMUP",
       "description": "Populate keys with sequential SET operations",
-      "connections": 1,
+      "connections": 10,
       "cps_limit": -1,
       "rps_limit": -1,
       "completion": {
@@ -33,7 +33,7 @@
     {
       "id": "STEADY",
       "description": "Steady-state workload with 80% GET, 20% SET",
-      "connections": 1,
+      "connections": 10,
       "cps_limit": -1,
       "rps_limit": -1,
       "completion": {
