@@ -349,13 +349,35 @@ class MetricsWatcher:
         self.watcher_thread: Optional[threading.Thread] = None
         self.phase_records: dict = {}
 
-    def start(self, timeout_seconds: int = 600):
+    def start(self, timeout_seconds: int = 600,
+              benchmark_proc: Optional[subprocess.Popen] = None):
         print(f"Waiting for metrics file: {self.metrics_path}")
         start_time = time.time()
         while not self.metrics_path.exists():
             if time.time() - start_time > timeout_seconds:
+                # Try to capture benchmark output if process provided
+                if benchmark_proc:
+                    benchmark_proc.terminate()
+                    try:
+                        stdout, stderr = benchmark_proc.communicate(timeout=5)
+                        print("=== Benchmark stdout ===")
+                        print(stdout.decode() if stdout else "(empty)")
+                        print("=== Benchmark stderr ===")
+                        print(stderr.decode() if stderr else "(empty)")
+                    except Exception as e:
+                        print(f"Could not capture benchmark output: {e}")
                 raise RuntimeError(
                     f"Timeout waiting for metrics file: {self.metrics_path}")
+            # Check if benchmark process died
+            if benchmark_proc and benchmark_proc.poll() is not None:
+                stdout, stderr = benchmark_proc.communicate()
+                print("=== Benchmark crashed! ===")
+                print("=== stdout ===")
+                print(stdout.decode() if stdout else "(empty)")
+                print("=== stderr ===")
+                print(stderr.decode() if stderr else "(empty)")
+                raise RuntimeError(
+                    f"Benchmark process died with exit code {benchmark_proc.returncode}")
             time.sleep(0.1)
 
         self.tail_process = subprocess.Popen(
@@ -1118,7 +1140,7 @@ class BenchmarkOrchestrator:
                 benchmark_proc = self.run_benchmark(benchmark_metrics)
 
                 metrics_watcher = MetricsWatcher(benchmark_metrics)
-                metrics_watcher.start()
+                metrics_watcher.start(benchmark_proc=benchmark_proc)
 
                 print("Waiting for WARMUP phase to complete...")
                 metrics_watcher.wait_for_warmup_done()
