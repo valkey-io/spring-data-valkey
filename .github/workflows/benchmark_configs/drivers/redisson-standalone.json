@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "description": "Redisson client - standalone mode",
+  "driver_id": "redisson",
+  "mode": "standalone",
+  "specific_driver_config": {}
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0",
+  "benchmark_profile": {
+    "name": "Reference Benchmark - 10 Clients",
+    "description": "Two-phase benchmark: warmup with SETs, then steady-state GET/SET workload with 10 connections",
+    "version": "1.0.0"
+  },
+  "phases": [
+    {
+      "id": "WARMUP",
+      "description": "Populate keys with sequential SET operations",
+      "connections": 10,
+      "cps_limit": -1,
+      "rps_limit": -1,
+      "completion": {
+        "type": "requests",
+        "requests": 1000000
+      },
+      "keyspace": {
+        "keys_count": 1000000,
+        "key_size_bytes": 16,
+        "key_prefix": "bench:",
+        "generation_alg": "sequential_int"
+      },
+      "commands": [
+        {
+          "command": "set",
+          "weight": 1.0,
+          "data_size_bytes": 512
+        }
+      ]
+    },
+    {
+      "id": "STEADY",
+      "description": "Steady-state workload with 80% GET, 20% SET",
+      "connections": 10,
+      "cps_limit": -1,
+      "rps_limit": -1,
+      "completion": {
+        "type": "requests",
+        "requests": 1000000
+      },
+      "keyspace": {
+        "keys_count": 1000000,
+        "key_size_bytes": 16,
+        "key_prefix": "bench:",
+        "generation_alg": "uniform_rand",
+        "seed": 12345
+      },
+      "commands": [
+        {
+          "command": "get",
+          "weight": 0.8
+        },
+        {
+          "command": "set",
+          "weight": 0.2,
+          "data_size_bytes": 512
+        }
+      ]
+    }
+  ]
+}

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       primary_driver:
-        description: "Primary driver (for details, see resp-bench repo)"
+        description: "Primary driver"
         required: true
         type: choice
         options:
@@ -26,13 +26,13 @@ on:
           - none
         default: "valkey-glide"
       workload:
-        description: "Workload config (for details, see resp-bench repo)"
+        description: "Workload config"
         required: true
         type: choice
         options:
-          - example-workload
-          - example-workload-single-client
-        default: "example-workload"
+          - reference-workload-10-client
+          - reference-workload-1-client
+        default: "reference-workload-10-client"
       primary_version:
         description: "Primary driver version. Leave empty for spring-data-valkey (uses branch HEAD)."
         required: false
@@ -48,6 +48,16 @@ on:
         required: false
         type: string
         default: ""
+      custom_driver_config:
+        description: "Custom driver config JSON (overrides driver selection)"
+        required: false
+        type: string
+        default: ""
+      custom_workload_config:
+        description: "Custom workload config JSON (overrides workload selection)"
+        required: false
+        type: string
+        default: ""
 
 env:
   RESP_BENCH_REPO: "https://github.com/ikolomi/resp-bench.git"
@@ -55,7 +65,7 @@ env:
 jobs:
   benchmark:
     runs-on: [self-hosted, Linux, x86, ephemeral, metal]
-    timeout-minutes: 120
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -108,53 +118,93 @@ jobs:
           PRIMARY_DRIVER="${{ steps.inputs.outputs.primary_driver }}"
           SECONDARY_DRIVER="${{ steps.inputs.outputs.secondary_driver }}"
           WORKLOAD="${{ steps.inputs.outputs.workload }}"
+          CONFIG_DIR=".github/workflows/benchmark_configs"
+          CUSTOM_CONFIG_DIR="/tmp/custom_configs"
+          mkdir -p "$CUSTOM_CONFIG_DIR"
 
-          # Resolve driver config filename based on primary and secondary driver
-          if [[ "$PRIMARY_DRIVER" == spring-data-* ]]; then
-            # spring-data-* drivers require a secondary driver
-            if [ "$SECONDARY_DRIVER" = "none" ] || [ -z "$SECONDARY_DRIVER" ]; then
-              echo "ERROR: $PRIMARY_DRIVER requires a secondary driver (valkey-glide, jedis, or lettuce)"
+          # Handle custom driver config
+          CUSTOM_DRIVER_CONFIG_INPUT='${{ github.event.inputs.custom_driver_config }}'
+          if [ -n "$CUSTOM_DRIVER_CONFIG_INPUT" ]; then
+            echo "Using custom driver config..."
+            DRIVER_CONFIG="$CUSTOM_CONFIG_DIR/custom-driver.json"
+            printf '%s\n' "$CUSTOM_DRIVER_CONFIG_INPUT" > "$DRIVER_CONFIG"
+            # Validate JSON
+            if ! jq . "$DRIVER_CONFIG" > /dev/null 2>&1; then
+              echo "ERROR: Custom driver config is not valid JSON"
+              echo "Content written:"
+              cat "$DRIVER_CONFIG"
               exit 1
             fi
-            # spring-data-redis cannot use valkey-glide
-            if [ "$PRIMARY_DRIVER" = "spring-data-redis" ] && [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
-              echo "ERROR: spring-data-redis does not support valkey-glide. Use jedis or lettuce instead."
-              exit 1
-            fi
-            # Map secondary driver name to filename convention (valkey-glide -> glide)
-            SECONDARY_IN_FILENAME="$SECONDARY_DRIVER"
-            if [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
-              SECONDARY_IN_FILENAME="glide"
-            fi
-            DRIVER="example-${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-standalone"
+            DRIVER="custom-driver"
+            echo "✓ Custom driver config validated"
           else
-            # Standalone drivers (valkey-glide, jedis, lettuce, redisson)
-            DRIVER="example-${PRIMARY_DRIVER}-standalone"
-            if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
-              echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
+            # Resolve driver config filename based on primary and secondary driver
+            if [[ "$PRIMARY_DRIVER" == spring-data-* ]]; then
+              # spring-data-* drivers require a secondary driver
+              if [ "$SECONDARY_DRIVER" = "none" ] || [ -z "$SECONDARY_DRIVER" ]; then
+                echo "ERROR: $PRIMARY_DRIVER requires a secondary driver (valkey-glide, jedis, or lettuce)"
+                exit 1
+              fi
+              # spring-data-redis cannot use valkey-glide
+              if [ "$PRIMARY_DRIVER" = "spring-data-redis" ] && [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
+                echo "ERROR: spring-data-redis does not support valkey-glide. Use jedis or lettuce instead."
+                exit 1
+              fi
+              # Map secondary driver name to filename convention (valkey-glide -> glide)
+              SECONDARY_IN_FILENAME="$SECONDARY_DRIVER"
+              if [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
+                SECONDARY_IN_FILENAME="glide"
+              fi
+              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-standalone"
+            else
+              # Standalone drivers (valkey-glide, jedis, lettuce, redisson)
+              DRIVER="${PRIMARY_DRIVER}-standalone"
+              if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
+                echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
+              fi
             fi
+            DRIVER_CONFIG="${CONFIG_DIR}/drivers/${DRIVER}.json"
+
+            if [ ! -f "$DRIVER_CONFIG" ]; then
+              echo "ERROR: Driver config not found: $DRIVER_CONFIG"
+              echo "Available driver configs:"
+              ls -la "${CONFIG_DIR}/drivers/"
+              exit 1
+            fi
+            echo "✓ Driver config: $DRIVER_CONFIG"
           fi
 
-          DRIVER_CONFIG="resp-bench/configs/drivers/${DRIVER}.json"
-          WORKLOAD_CONFIG="resp-bench/configs/workloads/${WORKLOAD}.json"
+          # Handle custom workload config
+          CUSTOM_WORKLOAD_CONFIG_INPUT='${{ github.event.inputs.custom_workload_config }}'
+          if [ -n "$CUSTOM_WORKLOAD_CONFIG_INPUT" ]; then
+            echo "Using custom workload config..."
+            WORKLOAD_CONFIG="$CUSTOM_CONFIG_DIR/custom-workload.json"
+            printf '%s\n' "$CUSTOM_WORKLOAD_CONFIG_INPUT" > "$WORKLOAD_CONFIG"
+            # Validate JSON
+            if ! jq . "$WORKLOAD_CONFIG" > /dev/null 2>&1; then
+              echo "ERROR: Custom workload config is not valid JSON"
+              echo "Content written:"
+              cat "$WORKLOAD_CONFIG"
+              exit 1
+            fi
+            WORKLOAD="custom-workload"
+            echo "✓ Custom workload config validated"
+          else
+            WORKLOAD_CONFIG="${CONFIG_DIR}/workloads/${WORKLOAD}.json"
 
-          if [ ! -f "$DRIVER_CONFIG" ]; then
-            echo "ERROR: Driver config not found: $DRIVER_CONFIG"
-            echo "Available driver configs:"
-            ls -la resp-bench/configs/drivers/
-            exit 1
+            if [ ! -f "$WORKLOAD_CONFIG" ]; then
+              echo "ERROR: Workload config not found: $WORKLOAD_CONFIG"
+              echo "Available workload configs:"
+              ls -la "${CONFIG_DIR}/workloads/"
+              exit 1
+            fi
+            echo "✓ Workload config: $WORKLOAD_CONFIG"
           fi
-          echo "✓ Driver config: $DRIVER_CONFIG"
-
-          if [ ! -f "$WORKLOAD_CONFIG" ]; then
-            echo "ERROR: Workload config not found: $WORKLOAD_CONFIG"
-            echo "Available workload configs:"
-            ls -la resp-bench/configs/workloads/
-            exit 1
-          fi
-          echo "✓ Workload config: $WORKLOAD_CONFIG"
 
           echo "driver=$DRIVER" >> $GITHUB_OUTPUT
+          echo "driver_config=$DRIVER_CONFIG" >> $GITHUB_OUTPUT
+          echo "workload=$WORKLOAD" >> $GITHUB_OUTPUT
+          echo "workload_config=$WORKLOAD_CONFIG" >> $GITHUB_OUTPUT
 
           echo "Driver config contents:"
           cat "$DRIVER_CONFIG" | jq .
@@ -167,7 +217,7 @@ jobs:
         run: |
           DRIVER="${{ steps.validate.outputs.driver }}"
           SECONDARY_VERSION="${{ steps.inputs.outputs.secondary_version }}"
-          DRIVER_CONFIG="resp-bench/configs/drivers/${DRIVER}.json"
+          DRIVER_CONFIG="${{ steps.validate.outputs.driver_config }}"
 
           DRIVER_ID=$(jq -r '.driver_id' "$DRIVER_CONFIG")
           SECONDARY_DRIVER_ID=$(jq -r '.specific_driver_config.secondary_driver_id // empty' "$DRIVER_CONFIG")
@@ -384,7 +434,9 @@ jobs:
       - name: Run benchmark and publish results to DB
         run: |
           DRIVER="${{ steps.validate.outputs.driver }}"
-          WORKLOAD="${{ steps.inputs.outputs.workload }}"
+          WORKLOAD="${{ steps.validate.outputs.workload }}"
+          DRIVER_CONFIG="${{ steps.validate.outputs.driver_config }}"
+          WORKLOAD_CONFIG="${{ steps.validate.outputs.workload_config }}"
           JOB_ID_PREFIX="${{ steps.inputs.outputs.job_id_prefix }}"
 
           PREFIX_ARG=""
@@ -392,8 +444,8 @@ jobs:
 
           python3 -u .github/workflows/benchmark_orchestrator.py \
             --output "benchmark_results_${DRIVER}_${WORKLOAD}.json" \
-            --workload-config "resp-bench/configs/workloads/${WORKLOAD}.json" \
-            --driver-config "resp-bench/configs/drivers/${DRIVER}.json" \
+            --workload-config "$WORKLOAD_CONFIG" \
+            --driver-config "$DRIVER_CONFIG" \
             --resp-bench-dir "${{ github.workspace }}/resp-bench" \
             --resp-bench-commit "${{ steps.resp-bench.outputs.commit }}" \
             --s3-bucket "${{ secrets.BENCHMARK_S3_BUCKET }}" \
@@ -405,7 +457,7 @@ jobs:
         if: always()
         run: |
           DRIVER="${{ steps.validate.outputs.driver }}"
-          WORKLOAD="${{ steps.inputs.outputs.workload }}"
+          WORKLOAD="${{ steps.validate.outputs.workload }}"
           RESULT_FILE="benchmark_results_${DRIVER}_${WORKLOAD}.json"
 
           if [ -f "$RESULT_FILE" ]; then
@@ -461,7 +513,7 @@ jobs:
         if: always()
         run: |
           DRIVER="${{ steps.validate.outputs.driver }}"
-          WORKLOAD="${{ steps.inputs.outputs.workload }}"
+          WORKLOAD="${{ steps.validate.outputs.workload }}"
           RESULT_FILE="benchmark_results_${DRIVER}_${WORKLOAD}.json"
 
           echo "# Benchmark Results" >> $GITHUB_STEP_SUMMARY
@@ -522,8 +574,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results-${{ steps.validate.outputs.driver }}-${{ steps.inputs.outputs.workload }}
+          name: benchmark-results-${{ steps.validate.outputs.driver }}-${{ steps.validate.outputs.workload }}
           path: |
-            benchmark_results_${{ steps.validate.outputs.driver }}_${{ steps.inputs.outputs.workload }}.json
-            benchmark_results_${{ steps.validate.outputs.driver }}_${{ steps.inputs.outputs.workload }}.ndjson
-            benchmark_results_${{ steps.validate.outputs.driver }}_${{ steps.inputs.outputs.workload }}_collapsed.txt
+            benchmark_results_${{ steps.validate.outputs.driver }}_${{ steps.validate.outputs.workload }}.json
+            benchmark_results_${{ steps.validate.outputs.driver }}_${{ steps.validate.outputs.workload }}.ndjson
+            benchmark_results_${{ steps.validate.outputs.driver }}_${{ steps.validate.outputs.workload }}_collapsed.txt

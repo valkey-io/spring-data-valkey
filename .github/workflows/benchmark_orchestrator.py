@@ -349,13 +349,25 @@ class MetricsWatcher:
         self.watcher_thread: Optional[threading.Thread] = None
         self.phase_records: dict = {}
 
-    def start(self, timeout_seconds: int = 600):
+    def start(self, benchmark_proc: Optional[subprocess.Popen] = None):
         print(f"Waiting for metrics file: {self.metrics_path}")
-        start_time = time.time()
+        last_status_time = time.time()
         while not self.metrics_path.exists():
-            if time.time() - start_time > timeout_seconds:
+            # Check if benchmark process died
+            if benchmark_proc and benchmark_proc.poll() is not None:
+                stdout, stderr = benchmark_proc.communicate()
+                print("=== Benchmark crashed! ===")
+                print("=== stdout ===")
+                print(stdout.decode() if stdout else "(empty)")
+                print("=== stderr ===")
+                print(stderr.decode() if stderr else "(empty)")
                 raise RuntimeError(
-                    f"Timeout waiting for metrics file: {self.metrics_path}")
+                    f"Benchmark process died with exit code {benchmark_proc.returncode}")
+            # Print status every 30 seconds
+            if time.time() - last_status_time > 30:
+                elapsed = int(time.time() - last_status_time)
+                print(f"Still waiting for metrics file... (benchmark process running)")
+                last_status_time = time.time()
             time.sleep(0.1)
 
         self.tail_process = subprocess.Popen(
@@ -1118,7 +1130,7 @@ class BenchmarkOrchestrator:
                 benchmark_proc = self.run_benchmark(benchmark_metrics)
 
                 metrics_watcher = MetricsWatcher(benchmark_metrics)
-                metrics_watcher.start()
+                metrics_watcher.start(benchmark_proc=benchmark_proc)
 
                 print("Waiting for WARMUP phase to complete...")
                 metrics_watcher.wait_for_warmup_done()

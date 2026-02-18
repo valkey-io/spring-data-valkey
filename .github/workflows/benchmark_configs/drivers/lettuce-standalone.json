@@ -1,0 +1,7 @@
+{
+  "schema_version": "1.0",
+  "description": "Lettuce client - standalone mode",
+  "driver_id": "lettuce",
+  "mode": "standalone",
+  "specific_driver_config": {}
+}

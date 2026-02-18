@@ -1,0 +1,9 @@
+{
+  "schema_version": "1.0",
+  "description": "Spring Data Redis with Lettuce driver - standalone mode",
+  "driver_id": "spring-data-redis",
+  "mode": "standalone",
+  "specific_driver_config": {
+    "secondary_driver_id": "lettuce"
+  }
+}
