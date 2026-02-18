@@ -16,10 +16,10 @@ This directory contains configuration files for the benchmark CI workflow.
 
 For custom use cases, you can provide custom JSON configs directly:
 
-| Input                    | Description                                              |
-| ------------------------ | -------------------------------------------------------- |
-| `custom_driver_config`   | Custom driver JSON (overrides driver selection) |
-| `custom_workload_config` | Custom workload JSON (overrides workload selection)      |
+| Input                    | Description                                         |
+| ------------------------ | --------------------------------------------------- |
+| `custom_driver_config`   | Custom driver JSON (overrides driver selection)     |
+| `custom_workload_config` | Custom workload JSON (overrides workload selection) |
 
 ### Version Inputs
 
@@ -37,12 +37,12 @@ The CI workflow maps your input selections to JSON config files using a naming c
 
 The workflow constructs the driver config filename from your inputs:
 
-| Primary Driver       | Secondary Driver | Resolved File                                |
-| -------------------- | ---------------- | -------------------------------------------- |
-| `valkey-glide`       | (ignored)        | `valkey-glide-standalone.json`               |
-| `jedis`              | (ignored)        | `jedis-standalone.json`                      |
-| `spring-data-valkey` | `valkey-glide`   | `spring-data-valkey-glide-standalone.json`   |
-| `spring-data-valkey` | `jedis`          | `spring-data-valkey-jedis-standalone.json`   |
+| Primary Driver       | Secondary Driver | Resolved File                              |
+| -------------------- | ---------------- | ------------------------------------------ |
+| `valkey-glide`       | (ignored)        | `valkey-glide-standalone.json`             |
+| `jedis`              | (ignored)        | `jedis-standalone.json`                    |
+| `spring-data-valkey` | `valkey-glide`   | `spring-data-valkey-glide-standalone.json` |
+| `spring-data-valkey` | `jedis`          | `spring-data-valkey-jedis-standalone.json` |
 
 **Pattern:**
 
