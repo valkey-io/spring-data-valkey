@@ -32,6 +32,7 @@ on:
         options:
           - reference-workload-10-client
           - reference-workload-1-client
+          - demo-workload
         default: "reference-workload-10-client"
       primary_version:
         description: "Primary driver version. Leave empty for spring-data-valkey (uses branch HEAD)."
