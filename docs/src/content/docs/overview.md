@@ -44,18 +44,6 @@ _Spring Data Valkey provides Valkey connectivity and repository support for the 
 </tbody>
 </table>
 
-## Authors
+## License
 
-*Original Spring Data Redis Authors:*  
-Costin Leau, Jennifer Hickey, Christoph Strobl, Thomas Darimont, Mark Paluch, Jay Bryant
-
-*Spring Data Valkey Contributors:*  
-Ilia Kolominsky, Jeremy Parr-Pearson, Lior Sventitzky
-
-## Copyright
-
-(C) 2008-2024 VMware, Inc.
-
-(C) 2025-2026 Valkey Contributors
-
-Copies of this document may be made for your own use and for distribution to others, provided that you do not charge any fee for such copies and further provided that each copy contains this Copyright Notice, whether distributed in print or electronically.
+Licensed under the Apache License, Version 2.0. See [LICENSE.txt](https://github.com/valkey-io/spring-data-valkey/blob/main/LICENSE.txt) and [NOTICE.txt](https://github.com/valkey-io/spring-data-valkey/blob/main/NOTICE.txt) for details.
