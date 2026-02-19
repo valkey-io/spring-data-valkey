@@ -1,4 +1,0 @@
-[[core.extensions.querydsl]]
-= Querydsl
-
-Spring Data Redis does not support Querydsl.
