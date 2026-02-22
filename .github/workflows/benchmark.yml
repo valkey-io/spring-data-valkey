@@ -416,7 +416,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get install -y sysstat python3-pip
+          sudo apt-get install -y sysstat python3-pip numactl
           sudo python3 -m pip install psycopg2-binary boto3 hdrhistogram
 
           # async-profiler for flame graphs

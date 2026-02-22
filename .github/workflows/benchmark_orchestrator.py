@@ -885,7 +885,6 @@ def parse_perf_stat(filepath: Path, hardware_available: bool) -> dict:
 class BenchmarkOrchestrator:
     """Main benchmark orchestration class"""
 
-    INFRA_CORES = "0-3"
     AWS_REGION = "us-east-1"
 
     def __init__(self, resp_bench_dir: Path, resp_bench_commit: str, output_file: Path,
@@ -919,19 +918,83 @@ class BenchmarkOrchestrator:
         self.variance_control = VarianceControl()
         self.variance_control.setup(network_delay_ms=network_delay_ms)
 
-        # Calculate core allocation after SMT is disabled
-        cpu_count = os.cpu_count() or 8
-        if cpu_count > 4:
-            self.benchmark_cores = f"4-{cpu_count - 1}"
-        else:
-            self.benchmark_cores = "0-3"
-            print(f"WARNING: Only {cpu_count} cores, benchmark shares "
-                  f"cores with server")
-        print(f"Core allocation: Server={self.INFRA_CORES}, "
-              f"Benchmark={self.benchmark_cores}")
+        # Detect NUMA topology and allocate cores accordingly
+        self._setup_numa_aware_cores()
 
         # Java JAR path - find the shaded JAR dynamically
         self.java_jar = self._find_java_jar()
+
+    def _get_numa_topology(self) -> dict:
+        """
+        Detect NUMA topology from /sys filesystem.
+        Returns dict: {node_id: [list of cpu cores]}
+        """
+        numa_nodes = {}
+        numa_base = Path("/sys/devices/system/node")
+
+        if not numa_base.exists():
+            print("  ⚠ NUMA topology not available, assuming single node")
+            cpu_count = os.cpu_count() or 8
+            return {0: list(range(cpu_count))}
+
+        for node_dir in sorted(numa_base.glob("node[0-9]*")):
+            node_id = int(node_dir.name.replace("node", ""))
+            cpulist_file = node_dir / "cpulist"
+            if cpulist_file.exists():
+                cpulist_str = cpulist_file.read_text().strip()
+                cores = self._parse_cpulist(cpulist_str)
+                numa_nodes[node_id] = cores
+
+        if not numa_nodes:
+            cpu_count = os.cpu_count() or 8
+            return {0: list(range(cpu_count))}
+
+        return numa_nodes
+
+    def _parse_cpulist(self, cpulist: str) -> list:
+        """Parse CPU list format like '0-3,8-11' into [0,1,2,3,8,9,10,11]"""
+        cores = []
+        for part in cpulist.split(","):
+            if "-" in part:
+                start, end = part.split("-")
+                cores.extend(range(int(start), int(end) + 1))
+            else:
+                cores.append(int(part))
+        return sorted(cores)
+
+    def _setup_numa_aware_cores(self):
+        """
+        Detect NUMA topology and allocate cores from a single NUMA node.
+        Uses the NUMA node with the most cores.
+        """
+        numa_topology = self._get_numa_topology()
+
+        print(f"NUMA topology detected: {len(numa_topology)} node(s)")
+        for node_id, cores in numa_topology.items():
+            print(f"  Node {node_id}: {len(cores)} cores ({min(cores)}-{max(cores)})")
+
+        # Pick the NUMA node with the most cores
+        best_node = max(numa_topology.keys(), key=lambda n: len(numa_topology[n]))
+        node_cores = numa_topology[best_node]
+
+        self.numa_node = best_node
+
+        # Allocate cores: first 4 for server, rest for benchmark
+        if len(node_cores) >= 8:
+            self.infra_cores = f"{node_cores[0]}-{node_cores[3]}"
+            self.benchmark_cores = f"{node_cores[4]}-{node_cores[-1]}"
+        elif len(node_cores) > 4:
+            self.infra_cores = f"{node_cores[0]}-{node_cores[3]}"
+            self.benchmark_cores = f"{node_cores[4]}-{node_cores[-1]}"
+        else:
+            # Not enough cores, share them
+            self.infra_cores = f"{node_cores[0]}-{node_cores[-1]}"
+            self.benchmark_cores = self.infra_cores
+            print(f"WARNING: Only {len(node_cores)} cores on NUMA node {best_node}, "
+                  f"benchmark shares cores with server")
+
+        print(f"NUMA node {best_node} selected")
+        print(f"Core allocation: Server={self.infra_cores}, Benchmark={self.benchmark_cores}")
 
     def _find_java_jar(self) -> Path:
         """Find the benchmark JAR file dynamically."""
@@ -991,7 +1054,7 @@ class BenchmarkOrchestrator:
             try:
                 pid = int(pid_file.read_text().strip())
                 result = subprocess.run(
-                    ["taskset", "-cp", self.INFRA_CORES, str(pid)],
+                    ["taskset", "-cp", self.infra_cores, str(pid)],
                     capture_output=True, text=True)
                 if result.returncode == 0:
                     pinned += 1
@@ -999,7 +1062,7 @@ class BenchmarkOrchestrator:
                     print(f"  Warning: Failed to pin PID {pid}: {result.stderr}")
             except (ValueError, FileNotFoundError) as e:
                 print(f"  Warning: Could not read PID from {pid_file}: {e}")
-        print(f"Pinned {pinned} server processes to cores {self.INFRA_CORES}")
+        print(f"Pinned {pinned} server processes to cores {self.infra_cores}")
 
     def start_infrastructure(self):
         if self.skip_infra:
@@ -1012,7 +1075,7 @@ class BenchmarkOrchestrator:
         stop_target = "server-cluster-stop" if is_cluster else "server-standalone-stop"
         port = self._get_server_port()
 
-        print(f"Starting Valkey {mode_name} infrastructure on cores {self.INFRA_CORES}...")
+        print(f"Starting Valkey {mode_name} infrastructure...")
         subprocess.run(["make", stop_target], cwd=self.resp_bench_dir,
                         capture_output=True)
         subprocess.run(["pkill", "-f", "valkey-server"], capture_output=True)
@@ -1023,7 +1086,7 @@ class BenchmarkOrchestrator:
             shutil.rmtree(work_dir)
 
         result = subprocess.run(
-            ["taskset", "-c", self.INFRA_CORES, "make", make_target],
+            ["make", make_target],
             cwd=self.resp_bench_dir, timeout=600)
         if result.returncode != 0:
             raise RuntimeError(
@@ -1060,9 +1123,14 @@ class BenchmarkOrchestrator:
         server = f"localhost:{port}"
 
         cmd = [
+            "numactl",
+            f"--cpunodebind={self.numa_node}",
+            f"--membind={self.numa_node}",
             "taskset", "-c", self.benchmark_cores,
             "java",
             "-XX:+EnableDynamicAgentLoading",  # Allow async-profiler to attach
+            "-Xms4g", "-Xmx4g",  # Fixed heap size to avoid resize pauses
+            "-XX:+AlwaysPreTouch",  # Pre-fault heap pages at startup
             "-jar", str(self.java_jar),
             "--server", server,
             "--driver", str(self.driver_config_path),
@@ -1074,7 +1142,7 @@ class BenchmarkOrchestrator:
         if self.resp_bench_commit:
             cmd.extend(["--commit-id", self.resp_bench_commit])
 
-        print(f"Starting Java benchmark on cores {self.benchmark_cores}")
+        print(f"Starting Java benchmark on NUMA node {self.numa_node}, cores {self.benchmark_cores}")
         print(f"  Server: {server}")
         print(f"  Driver: {self.driver_config_path}")
         print(f"  Workload: {self.workload_config_path}")
