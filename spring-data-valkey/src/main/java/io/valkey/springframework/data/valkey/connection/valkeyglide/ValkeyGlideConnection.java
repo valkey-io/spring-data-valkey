@@ -596,8 +596,8 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
             }
             
             // Immediate execution mode
-            // DEMO: Run command twice to simulate artificial latency
-            unifiedClient.customCommand(glideArgs);
+            // // DEMO: Run command twice to simulate artificial latency
+            // unifiedClient.customCommand(glideArgs);
             I result = (I) unifiedClient.customCommand(glideArgs);
             return mapper.map(result);
         } catch (Exception ex) {
