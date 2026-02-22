@@ -964,8 +964,8 @@ class BenchmarkOrchestrator:
 
     def _setup_numa_aware_cores(self):
         """
-        Detect NUMA topology and allocate cores from a single NUMA node.
-        Uses the NUMA node with the most cores.
+        Detect NUMA topology and allocate cores across NUMA nodes.
+        Server runs on node 0, benchmark runs on node 1 (if available).
         """
         numa_topology = self._get_numa_topology()
 
@@ -973,28 +973,39 @@ class BenchmarkOrchestrator:
         for node_id, cores in numa_topology.items():
             print(f"  Node {node_id}: {len(cores)} cores ({min(cores)}-{max(cores)})")
 
-        # Pick the NUMA node with the most cores
-        best_node = max(numa_topology.keys(), key=lambda n: len(numa_topology[n]))
-        node_cores = numa_topology[best_node]
+        if len(numa_topology) >= 2:
+            # Two or more NUMA nodes: server on node 0, benchmark on node 1
+            node0_cores = numa_topology[0]
+            node1_cores = numa_topology[1]
 
-        self.numa_node = best_node
+            self.infra_numa_node = 0
+            self.benchmark_numa_node = 1
 
-        # Allocate cores: first 4 for server, rest for benchmark
-        if len(node_cores) >= 8:
-            self.infra_cores = f"{node_cores[0]}-{node_cores[3]}"
-            self.benchmark_cores = f"{node_cores[4]}-{node_cores[-1]}"
-        elif len(node_cores) > 4:
-            self.infra_cores = f"{node_cores[0]}-{node_cores[3]}"
-            self.benchmark_cores = f"{node_cores[4]}-{node_cores[-1]}"
+            # Use all cores on each node
+            self.infra_cores = f"{node0_cores[0]}-{node0_cores[-1]}"
+            self.benchmark_cores = f"{node1_cores[0]}-{node1_cores[-1]}"
+
+            print(f"Split NUMA allocation:")
+            print(f"  Server: NUMA node {self.infra_numa_node}, cores {self.infra_cores}")
+            print(f"  Benchmark: NUMA node {self.benchmark_numa_node}, cores {self.benchmark_cores}")
         else:
-            # Not enough cores, share them
-            self.infra_cores = f"{node_cores[0]}-{node_cores[-1]}"
-            self.benchmark_cores = self.infra_cores
-            print(f"WARNING: Only {len(node_cores)} cores on NUMA node {best_node}, "
-                  f"benchmark shares cores with server")
+            # Single NUMA node: 1 core for server, rest for benchmark
+            node_cores = numa_topology[0]
+            self.infra_numa_node = 0
+            self.benchmark_numa_node = 0
 
-        print(f"NUMA node {best_node} selected")
-        print(f"Core allocation: Server={self.infra_cores}, Benchmark={self.benchmark_cores}")
+            if len(node_cores) >= 2:
+                self.infra_cores = str(node_cores[0])
+                self.benchmark_cores = f"{node_cores[1]}-{node_cores[-1]}"
+            else:
+                # Only 1 core, share it
+                self.infra_cores = str(node_cores[0])
+                self.benchmark_cores = self.infra_cores
+                print(f"WARNING: Only 1 core, benchmark shares core with server")
+
+            print(f"Single NUMA node {self.infra_numa_node}:")
+            print(f"  Server cores: {self.infra_cores}")
+            print(f"  Benchmark cores: {self.benchmark_cores}")
 
     def _find_java_jar(self) -> Path:
         """Find the benchmark JAR file dynamically."""
@@ -1047,12 +1058,13 @@ class BenchmarkOrchestrator:
         return 7379 if self._is_cluster_mode() else 6379
 
     def _pin_server_processes(self):
-        """Pin all running valkey-server processes to designated cores."""
+        """Pin all running valkey-server processes to designated cores and NUMA node."""
         work_dir = self.resp_bench_dir / "work"
         pinned = 0
         for pid_file in work_dir.glob("*.pid"):
             try:
                 pid = int(pid_file.read_text().strip())
+                # Pin CPU to infra cores
                 result = subprocess.run(
                     ["taskset", "-cp", self.infra_cores, str(pid)],
                     capture_output=True, text=True)
@@ -1060,9 +1072,13 @@ class BenchmarkOrchestrator:
                     pinned += 1
                 else:
                     print(f"  Warning: Failed to pin PID {pid}: {result.stderr}")
+                # Migrate memory to infra NUMA node
+                subprocess.run(
+                    ["migratepages", str(pid), "all", str(self.infra_numa_node)],
+                    capture_output=True, text=True)
             except (ValueError, FileNotFoundError) as e:
                 print(f"  Warning: Could not read PID from {pid_file}: {e}")
-        print(f"Pinned {pinned} server processes to cores {self.infra_cores}")
+        print(f"Pinned {pinned} server processes to NUMA node {self.infra_numa_node}, cores {self.infra_cores}")
 
     def start_infrastructure(self):
         if self.skip_infra:
@@ -1075,7 +1091,7 @@ class BenchmarkOrchestrator:
         stop_target = "server-cluster-stop" if is_cluster else "server-standalone-stop"
         port = self._get_server_port()
 
-        print(f"Starting Valkey {mode_name} infrastructure...")
+        print(f"Starting Valkey {mode_name} infrastructure on NUMA node {self.infra_numa_node}...")
         subprocess.run(["make", stop_target], cwd=self.resp_bench_dir,
                         capture_output=True)
         subprocess.run(["pkill", "-f", "valkey-server"], capture_output=True)
@@ -1086,7 +1102,8 @@ class BenchmarkOrchestrator:
             shutil.rmtree(work_dir)
 
         result = subprocess.run(
-            ["make", make_target],
+            ["numactl", f"--cpunodebind={self.infra_numa_node}",
+             f"--membind={self.infra_numa_node}", "make", make_target],
             cwd=self.resp_bench_dir, timeout=600)
         if result.returncode != 0:
             raise RuntimeError(
@@ -1124,8 +1141,8 @@ class BenchmarkOrchestrator:
 
         cmd = [
             "numactl",
-            f"--cpunodebind={self.numa_node}",
-            f"--membind={self.numa_node}",
+            f"--cpunodebind={self.benchmark_numa_node}",
+            f"--membind={self.benchmark_numa_node}",
             "taskset", "-c", self.benchmark_cores,
             "java",
             "-XX:+EnableDynamicAgentLoading",  # Allow async-profiler to attach
@@ -1140,7 +1157,7 @@ class BenchmarkOrchestrator:
         if self.resp_bench_commit:
             cmd.extend(["--commit-id", self.resp_bench_commit])
 
-        print(f"Starting Java benchmark on NUMA node {self.numa_node}, cores {self.benchmark_cores}")
+        print(f"Starting Java benchmark on NUMA node {self.benchmark_numa_node}, cores {self.benchmark_cores}")
         print(f"  Server: {server}")
         print(f"  Driver: {self.driver_config_path}")
         print(f"  Workload: {self.workload_config_path}")
