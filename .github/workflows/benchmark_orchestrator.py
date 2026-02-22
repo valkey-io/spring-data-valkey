@@ -1129,8 +1129,6 @@ class BenchmarkOrchestrator:
             "taskset", "-c", self.benchmark_cores,
             "java",
             "-XX:+EnableDynamicAgentLoading",  # Allow async-profiler to attach
-            "-Xms4g", "-Xmx4g",  # Fixed heap size to avoid resize pauses
-            "-XX:+AlwaysPreTouch",  # Pre-fault heap pages at startup
             "-jar", str(self.java_jar),
             "--server", server,
             "--driver", str(self.driver_config_path),
