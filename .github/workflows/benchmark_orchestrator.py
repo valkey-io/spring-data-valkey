@@ -989,23 +989,17 @@ class BenchmarkOrchestrator:
             print(f"  Server: NUMA node {self.infra_numa_node}, cores {self.infra_cores}")
             print(f"  Benchmark: NUMA node {self.benchmark_numa_node}, cores {self.benchmark_cores}")
         else:
-            # Single NUMA node: 1 core for server, rest for benchmark
+            # Single NUMA node: all cores shared by server and benchmark
             node_cores = numa_topology[0]
             self.infra_numa_node = 0
             self.benchmark_numa_node = 0
 
-            if len(node_cores) >= 2:
-                self.infra_cores = str(node_cores[0])
-                self.benchmark_cores = f"{node_cores[1]}-{node_cores[-1]}"
-            else:
-                # Only 1 core, share it
-                self.infra_cores = str(node_cores[0])
-                self.benchmark_cores = self.infra_cores
-                print(f"WARNING: Only 1 core, benchmark shares core with server")
+            all_cores = f"{node_cores[0]}-{node_cores[-1]}"
+            self.infra_cores = all_cores
+            self.benchmark_cores = all_cores
 
-            print(f"Single NUMA node {self.infra_numa_node}:")
-            print(f"  Server cores: {self.infra_cores}")
-            print(f"  Benchmark cores: {self.benchmark_cores}")
+            print(f"Single NUMA node {self.infra_numa_node}: all cores shared")
+            print(f"  Cores: {all_cores}")
 
     def _find_java_jar(self) -> Path:
         """Find the benchmark JAR file dynamically."""
