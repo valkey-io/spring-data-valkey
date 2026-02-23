@@ -54,10 +54,10 @@ public class ValkeyGlideStringCommands implements ValkeyStringCommands {
     public byte[] get(byte[] key) {
         Assert.notNull(key, "Key must not be null");
         
-        long endTime = System.nanoTime() + 200_000; // 200 microseconds = 200,000 nanoseconds
-        while (System.nanoTime() < endTime) {
-            // busy wait
-        }
+        // long endTime = System.nanoTime() + 200_000; // 200 microseconds = 200,000 nanoseconds
+        // while (System.nanoTime() < endTime) {
+        //     // busy wait
+        // }
         try {
             return connection.execute("GET",
                 (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
