@@ -5,7 +5,7 @@
 		xmlns:task="http://www.springframework.org/schema/task"
 		xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
 				http://www.springframework.org/schema/task https://www.springframework.org/schema/task/spring-task.xsd
-				http://www.springframework.org/schema/valkey https://www.springframework.org/schema/valkey/spring-valkey-1.0.xsd">
+				http://www.springframework.org/schema/valkey https://spring.valkey.io/schema/valkey/spring-valkey-1.0.xsd">
 
 	<!-- the default ConnectionFactory -->
 	<bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory"/>

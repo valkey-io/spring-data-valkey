@@ -21,7 +21,5 @@ appendonlydir
 build/
 node_modules
 node
-package-lock.json
-package.json
 .mvn/.develocity
 .flattened-pom.xml

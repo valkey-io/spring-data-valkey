@@ -1,0 +1,345 @@
+---
+title: Working with Objects through ValkeyTemplate
+description: Template documentation
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+Most users are likely to use `io.valkey.springframework.data.core.ValkeyTemplate` and its corresponding package, `io.valkey.springframework.data.core` or its reactive variant `io.valkey.springframework.data.core.ReactiveValkeyTemplate`.
+The template is, in fact, the central class of the Valkey module, due to its rich feature set.
+The template offers a high-level abstraction for Valkey interactions.
+While `[Reactive]ValkeyConnection` offers low-level methods that accept and return binary values (`byte` arrays), the template takes care of serialization and connection management, freeing the user from dealing with such details.
+
+The `io.valkey.springframework.data.core.ValkeyTemplate` class implements the `io.valkey.springframework.data.core.ValkeyOperations`  interface and its reactive variant `io.valkey.springframework.data.core.ReactiveValkeyTemplate` implements `io.valkey.springframework.data.core.ReactiveValkeyOperations`.
+
+:::note
+The preferred way to reference operations on a `[Reactive]ValkeyTemplate` instance is through the
+`[Reactive]ValkeyOperations` interface.
+:::
+
+:::note[Driver Support]
+Reactive programming is currently only supported by the Lettuce driver. Valkey GLIDE and Jedis do not support reactive operations. For imperative (blocking) operations, all drivers are supported.
+:::
+
+Moreover, the template provides operations views (following the grouping from the Valkey command [reference](https://valkey.io/commands)) that offer rich, generified interfaces for working against a certain type or certain key (through the `KeyBound` interfaces) as described in the following table:
+
+<details>
+<summary>Operational views</summary>
+
+<Tabs>
+<TabItem label="Imperative">
+
+| Interface | Description |
+|-----------|-------------|
+| *Key Type Operations* | |
+| `io.valkey.springframework.data.core.GeoOperations` | Valkey geospatial operations, such as `GEOADD`, `GEORADIUS`,... |
+| `io.valkey.springframework.data.core.HashOperations` | Valkey hash operations |
+| `io.valkey.springframework.data.core.HyperLogLogOperations` | Valkey HyperLogLog operations, such as `PFADD`, `PFCOUNT`,... |
+| `io.valkey.springframework.data.core.ListOperations` | Valkey list operations |
+| `io.valkey.springframework.data.core.SetOperations` | Valkey set operations |
+| `io.valkey.springframework.data.core.ValueOperations` | Valkey string (or value) operations |
+| `io.valkey.springframework.data.core.ZSetOperations` | Valkey zset (or sorted set) operations |
+| *Key Bound Operations* | |
+| `io.valkey.springframework.data.core.BoundGeoOperations` | Valkey key bound geospatial operations |
+| `io.valkey.springframework.data.core.BoundHashOperations` | Valkey hash key bound operations |
+| `io.valkey.springframework.data.core.BoundKeyOperations` | Valkey key bound operations |
+| `io.valkey.springframework.data.core.BoundListOperations` | Valkey list key bound operations |
+| `io.valkey.springframework.data.core.BoundSetOperations` | Valkey set key bound operations |
+| `io.valkey.springframework.data.core.BoundValueOperations` | Valkey string (or value) key bound operations |
+| `io.valkey.springframework.data.core.BoundZSetOperations` | Valkey zset (or sorted set) key bound operations |
+
+</TabItem>
+<TabItem label="Reactive">
+
+| Interface | Description |
+|-----------|-------------|
+| *Key Type Operations* | |
+| `io.valkey.springframework.data.core.ReactiveGeoOperations` | Valkey geospatial operations such as `GEOADD`, `GEORADIUS`, and others |
+| `io.valkey.springframework.data.core.ReactiveHashOperations` | Valkey hash operations |
+| `io.valkey.springframework.data.core.ReactiveHyperLogLogOperations` | Valkey HyperLogLog operations such as (`PFADD`, `PFCOUNT`, and others) |
+| `io.valkey.springframework.data.core.ReactiveListOperations` | Valkey list operations |
+| `io.valkey.springframework.data.core.ReactiveSetOperations` | Valkey set operations |
+| `io.valkey.springframework.data.core.ReactiveValueOperations` | Valkey string (or value) operations |
+| `io.valkey.springframework.data.core.ReactiveZSetOperations` | Valkey zset (or sorted set) operations |
+
+</TabItem>
+</Tabs>
+
+</details>
+
+Once configured, the template is thread-safe and can be reused across multiple instances.
+
+`ValkeyTemplate` uses a Java-based serializer for most of its operations.
+This means that any object written or read by the template is serialized and deserialized through Java.
+
+You can change the serialization mechanism on the template, and the Valkey module offers several implementations, which are available in the `io.valkey.springframework.data.serializer` package.
+See [Serializers](#serializers) for more information.
+You can also set any of the serializers to null and use ValkeyTemplate with raw byte arrays by setting the `enableDefaultSerializer` property to `false`.
+Note that the template requires all keys to be non-null.
+However, values can be null as long as the underlying serializer accepts them.
+Read the Javadoc of each serializer for more information.
+
+For cases where you need a certain template view, declare the view as a dependency and inject the template.
+The container automatically performs the conversion, eliminating the `opsFor[X]` calls, as shown in the following example:
+
+*Configuring Template API*
+
+<Tabs>
+<TabItem label="Java Imperative">
+
+```java
+@Configuration
+class MyConfig {
+
+  @Bean
+  ValkeyGlideConnectionFactory connectionFactory() {
+    return new ValkeyGlideConnectionFactory();
+  }
+
+  @Bean
+  ValkeyTemplate<String, String> valkeyTemplate(ValkeyConnectionFactory connectionFactory) {
+
+    ValkeyTemplate<String, String> template = new ValkeyTemplate<>();
+    template.setConnectionFactory(connectionFactory);
+    return template;
+  }
+}
+```
+
+</TabItem>
+<TabItem label="Java Reactive">
+
+```java
+@Configuration
+class MyConfig {
+
+  @Bean
+  LettuceConnectionFactory connectionFactory() {
+    return new LettuceConnectionFactory();
+  }
+
+  @Bean
+  ReactiveValkeyTemplate<String, String> ReactiveValkeyTemplate(ReactiveValkeyConnectionFactory connectionFactory) {
+    return new ReactiveValkeyTemplate<>(connectionFactory, ValkeySerializationContext.string());
+  }
+}
+```
+
+</TabItem>
+<TabItem label="XML">
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:p="http://www.springframework.org/schema/p"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideConnectionFactory"/>
+  <!-- valkey template definition -->
+  <bean id="valkeyTemplate" class="io.valkey.springframework.data.core.ValkeyTemplate" p:connection-factory-ref="valkeyConnectionFactory"/>
+  ...
+
+</beans>
+```
+
+</TabItem>
+</Tabs>
+
+*Pushing an item to a List using `[Reactive]ValkeyTemplate`*
+
+<Tabs>
+<TabItem label="Imperative">
+
+```java
+public class Example {
+
+  // inject the actual operations
+  @Autowired
+  private ValkeyOperations<String, String> operations;
+
+  // inject the template as ListOperations
+  @Resource(name="valkeyTemplate")
+  private ListOperations<String, String> listOps;
+
+  public void addLink(String userId, URL url) {
+    listOps.leftPush(userId, url.toExternalForm());
+  }
+}
+```
+
+</TabItem>
+<TabItem label="Reactive">
+
+```java
+public class Example {
+
+  // inject the actual template
+  @Autowired
+  private ReactiveValkeyOperations<String, String> operations;
+
+  public Mono<Long> addLink(String userId, URL url) {
+    return operations.opsForList().leftPush(userId, url.toExternalForm());
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+## String-focused Convenience Classes
+
+Since it is quite common for the keys and values stored in Valkey to be `java.lang.String`, the Valkey modules provides two extensions to `ValkeyConnection` and `ValkeyTemplate`, respectively the `StringValkeyConnection` (and its `DefaultStringValkeyConnection` implementation) and `StringValkeyTemplate` as a convenient one-stop solution for intensive String operations.
+In addition to being bound to `String` keys, the template and the connection use the `StringValkeySerializer` underneath, which means the stored keys and values are human-readable (assuming the same encoding is used both in Valkey and your code).
+The following listings show an example:
+
+<Tabs>
+<TabItem label="Java Imperative">
+
+```java
+@Configuration
+class ValkeyConfiguration {
+
+  @Bean
+  ValkeyGlideConnectionFactory valkeyConnectionFactory() {
+    return new ValkeyGlideConnectionFactory();
+  }
+
+  @Bean
+  StringValkeyTemplate stringValkeyTemplate(ValkeyConnectionFactory valkeyConnectionFactory) {
+
+    StringValkeyTemplate template = new StringValkeyTemplate();
+    template.setConnectionFactory(valkeyConnectionFactory);
+    return template;
+  }
+}
+```
+
+</TabItem>
+<TabItem label="Java Reactive">
+
+```java
+@Configuration
+class ValkeyConfiguration {
+
+  @Bean
+  LettuceConnectionFactory valkeyConnectionFactory() {
+    return new LettuceConnectionFactory();
+  }
+
+  @Bean
+  ReactiveStringValkeyTemplate reactiveValkeyTemplate(ReactiveValkeyConnectionFactory factory) {
+    return new ReactiveStringValkeyTemplate<>(factory);
+  }
+}
+```
+
+</TabItem>
+<TabItem label="XML">
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:p="http://www.springframework.org/schema/p"
+  xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideConnectionFactory"/>
+
+  <bean id="stringValkeyTemplate" class="io.valkey.springframework.data.core.StringValkeyTemplate" p:connection-factory-ref="valkeyConnectionFactory"/>
+
+</beans>
+```
+
+</TabItem>
+</Tabs>
+
+<Tabs>
+<TabItem label="Imperative">
+
+```java
+public class Example {
+
+  @Autowired
+  private StringValkeyTemplate valkeyTemplate;
+
+  public void addLink(String userId, URL url) {
+    valkeyTemplate.opsForList().leftPush(userId, url.toExternalForm());
+  }
+}
+```
+
+</TabItem>
+<TabItem label="Reactive">
+
+```java
+public class Example {
+
+  @Autowired
+  private ReactiveStringValkeyTemplate valkeyTemplate;
+
+  public Mono<Long> addLink(String userId, URL url) {
+    return valkeyTemplate.opsForList().leftPush(userId, url.toExternalForm());
+  }
+}
+```
+
+</TabItem>
+</Tabs>
+
+As with the other Spring templates, `ValkeyTemplate` and `StringValkeyTemplate` let you talk directly to Valkey through the `ValkeyCallback` interface.
+This feature gives complete control to you, as it talks directly to the `ValkeyConnection`.
+Note that the callback receives an instance of `StringValkeyConnection` when a `StringValkeyTemplate` is used.
+The following example shows how to use the `ValkeyCallback` interface:
+
+```java
+public void useCallback() {
+
+  valkeyOperations.execute(new ValkeyCallback<Object>() {
+    public Object doInValkey(ValkeyConnection connection) throws DataAccessException {
+      Long size = connection.dbSize();
+      // Can cast to StringValkeyConnection if using a StringValkeyTemplate
+      ((StringValkeyConnection)connection).set("key", "value");
+    }
+   });
+}
+```
+
+## Serializers
+
+From the framework perspective, the data stored in Valkey is only bytes.
+While Valkey itself supports various types, for the most part, these refer to the way the data is stored rather than what it represents.
+It is up to the user to decide whether the information gets translated into strings or any other objects.
+
+In Spring Data, the conversion between the user (custom) types and raw data (and vice-versa) is handled by Spring Data Valkey in the `io.valkey.springframework.data.serializer` package.
+
+This package contains two types of serializers that, as the name implies, take care of the serialization process:
+
+* Two-way serializers based on `io.valkey.springframework.data.serializer.ValkeySerializer`.
+* Element readers and writers that use `ValkeyElementReader` and ``ValkeyElementWriter``.
+
+The main difference between these variants is that `ValkeySerializer` primarily serializes to `byte[]` while readers and writers use `ByteBuffer`.
+
+Multiple implementations are available (including two that have been already mentioned in this documentation):
+
+* `io.valkey.springframework.data.serializer.JdkSerializationValkeySerializer`, which is used by default for `io.valkey.springframework.data.cache.ValkeyCache` and `io.valkey.springframework.data.core.ValkeyTemplate`.
+* the `StringValkeySerializer`.
+
+However, one can use `OxmSerializer` for Object/XML mapping through Spring [OXM](https://docs.spring.io/spring-framework/reference/data-access.html#oxm) support or `io.valkey.springframework.data.serializer.Jackson2JsonValkeySerializer` or `io.valkey.springframework.data.serializer.GenericJackson2JsonValkeySerializer` for storing data in [JSON](https://en.wikipedia.org/wiki/JSON) format.
+
+Do note that the storage format is not limited only to values.
+It can be used for keys, values, or hashes without any restrictions.
+
+:::danger
+By default, `io.valkey.springframework.data.cache.ValkeyCache` and `io.valkey.springframework.data.core.ValkeyTemplate` are configured to use Java native serialization.
+Java native serialization is known for allowing the running of remote code caused by payloads that exploit vulnerable libraries and classes injecting unverified bytecode.
+Manipulated input could lead to unwanted code being run in the application during the deserialization step.
+As a consequence, do not use serialization in untrusted environments.
+In general, we strongly recommend any other message format (such as JSON) instead.
+
+If you are concerned about security vulnerabilities due to Java serialization, consider the general-purpose serialization filter mechanism at the core JVM level:
+
+* [Filter Incoming Serialization Data](https://docs.oracle.com/en/java/javase/17/core/serialization-filtering1.html).
+* [JEP 290](https://openjdk.org/jeps/290).
+* [OWASP: Deserialization of untrusted data](https://owasp.org/www-community/vulnerabilities/Deserialization_of_untrusted_data).
+:::

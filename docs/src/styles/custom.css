@@ -1,0 +1,63 @@
+/* Import Open Sans from Google Fonts CDN*/
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&display=swap');
+
+/* Define cascade layers - our overrides come after starlight */
+@layer starlight, valkey-overrides;
+
+@layer valkey-overrides {
+
+/* Dark mode colors. */
+:root {
+	--sl-color-accent-low: #192141;
+	--sl-color-accent: #475ad2;
+	--sl-color-accent-high: #bac7f2;
+	--sl-color-white: #ffffff;
+	--sl-color-gray-1: #eceef2;
+	--sl-color-gray-2: #c0c2c7;
+	--sl-color-gray-3: #888b96;
+	--sl-color-gray-4: #545861;
+	--sl-color-gray-5: #353841;
+	--sl-color-gray-6: #24272f;
+	--sl-color-black: #17181c;
+	--vk-color-main-hsl: 236, 83%, 63%;
+	--overlay-color: hsla(var(--vk-color-main-hsl), 0.2);
+	--sl-font: 'Open Sans', system-ui, sans-serif;
+  	--sl-font-system: 'Open Sans', system-ui, sans-serif;
+}
+
+/* Light mode colors. */
+:root[data-theme='light'] {
+	--sl-color-accent-low: #ccd6f6;
+	--sl-color-accent: #485cd5;
+	--sl-color-accent-high: #222d61;
+	--sl-color-white: #17181c;
+	--sl-color-gray-1: #24272f;
+	--sl-color-gray-2: #353841;
+	--sl-color-gray-3: #545861;
+	--sl-color-gray-4: #888b96;
+	--sl-color-gray-5: #c0c2c7;
+	--sl-color-gray-6: #eceef2;
+	--sl-color-gray-7: #f5f6f8;
+	--sl-color-black: #ffffff;
+	--vk-color-main-hsl: 236, 83%, 63%;
+}
+
+[data-has-hero] .page {
+	background:
+    linear-gradient(var(--sl-color-black) 25%, var(--overlay-color) 75%)
+}
+
+[data-has-hero] .hero > img {
+	filter: drop-shadow(0 0 3rem var(--overlay-color));
+}
+  /* Apply rounded corner */
+  .starlight-aside,
+  .card {
+    border-radius: 0.75rem;
+  }
+}
+
+.hero {
+	padding-bottom: 1.25rem;
+	padding-top: 1.25rem;
+}
