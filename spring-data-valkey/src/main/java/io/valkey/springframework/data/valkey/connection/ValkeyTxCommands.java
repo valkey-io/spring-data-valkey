@@ -26,42 +26,44 @@ import java.util.List;
  */
 public interface ValkeyTxCommands {
 
-	/**
-	 * Mark the start of a transaction block. <br>
-	 * Commands will be queued and can then be executed by calling {@link #exec()} or rolled back using {@link #discard()}
-	 *
-	 * @see <a href="https://valkey.io/commands/multi">Valkey Documentation: MULTI</a>
-	 */
-	void multi();
+    /**
+     * Mark the start of a transaction block. <br>
+     * Commands will be queued and can then be executed by calling {@link #exec()} or rolled back
+     * using {@link #discard()}
+     *
+     * @see <a href="https://valkey.io/commands/multi">Valkey Documentation: MULTI</a>
+     */
+    void multi();
 
-	/**
-	 * Executes all queued commands in a transaction started with {@link #multi()}. <br>
-	 * If used along with {@link #watch(byte[]...)} the operation will fail if any of watched keys has been modified.
-	 *
-	 * @return List of replies for each executed command.
-	 * @see <a href="https://valkey.io/commands/exec">Valkey Documentation: EXEC</a>
-	 */
-	List<Object> exec();
+    /**
+     * Executes all queued commands in a transaction started with {@link #multi()}. <br>
+     * If used along with {@link #watch(byte[]...)} the operation will fail if any of watched keys has
+     * been modified.
+     *
+     * @return List of replies for each executed command.
+     * @see <a href="https://valkey.io/commands/exec">Valkey Documentation: EXEC</a>
+     */
+    List<Object> exec();
 
-	/**
-	 * Discard all commands issued after {@link #multi()}.
-	 *
-	 * @see <a href="https://valkey.io/commands/discard">Valkey Documentation: DISCARD</a>
-	 */
-	void discard();
+    /**
+     * Discard all commands issued after {@link #multi()}.
+     *
+     * @see <a href="https://valkey.io/commands/discard">Valkey Documentation: DISCARD</a>
+     */
+    void discard();
 
-	/**
-	 * Watch given {@code keys} for modifications during transaction started with {@link #multi()}.
-	 *
-	 * @param keys must not be {@literal null}.
-	 * @see <a href="https://valkey.io/commands/watch">Valkey Documentation: WATCH</a>
-	 */
-	void watch(byte[]... keys);
+    /**
+     * Watch given {@code keys} for modifications during transaction started with {@link #multi()}.
+     *
+     * @param keys must not be {@literal null}.
+     * @see <a href="https://valkey.io/commands/watch">Valkey Documentation: WATCH</a>
+     */
+    void watch(byte[]... keys);
 
-	/**
-	 * Flushes all the previously {@link #watch(byte[]...)} keys.
-	 *
-	 * @see <a href="https://valkey.io/commands/unwatch">Valkey Documentation: UNWATCH</a>
-	 */
-	void unwatch();
+    /**
+     * Flushes all the previously {@link #watch(byte[]...)} keys.
+     *
+     * @see <a href="https://valkey.io/commands/unwatch">Valkey Documentation: UNWATCH</a>
+     */
+    void unwatch();
 }

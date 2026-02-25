@@ -15,46 +15,47 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-
+import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author Costin Leau
  */
 class SessionUnitTests {
 
-	@Test
-	void testSession() throws Exception {
-		ValkeyConnection conn = mock(ValkeyConnection.class);
-		StringValkeyConnection stringConn = mock(StringValkeyConnection.class);
-		ValkeyConnectionFactory factory = mock(ValkeyConnectionFactory.class);
-		StringValkeyTemplate template = spy(new StringValkeyTemplate(factory));
-		when(factory.getConnection()).thenReturn(conn);
-		doReturn(stringConn).when(template).preProcessConnection(eq(conn), anyBoolean());
+    @Test
+    void testSession() throws Exception {
+        ValkeyConnection conn = mock(ValkeyConnection.class);
+        StringValkeyConnection stringConn = mock(StringValkeyConnection.class);
+        ValkeyConnectionFactory factory = mock(ValkeyConnectionFactory.class);
+        StringValkeyTemplate template = spy(new StringValkeyTemplate(factory));
+        when(factory.getConnection()).thenReturn(conn);
+        doReturn(stringConn).when(template).preProcessConnection(eq(conn), anyBoolean());
 
-		template.execute(new SessionCallback<Object>() {
-			@SuppressWarnings("rawtypes")
-			public Object execute(ValkeyOperations operations) {
-				checkConnection(template, stringConn);
-				template.discard();
-				assertThat(operations).isSameAs(template);
-				checkConnection(template, stringConn);
-				return null;
-			}
-		});
-	}
+        template.execute(
+                new SessionCallback<Object>() {
+                    @SuppressWarnings("rawtypes")
+                    public Object execute(ValkeyOperations operations) {
+                        checkConnection(template, stringConn);
+                        template.discard();
+                        assertThat(operations).isSameAs(template);
+                        checkConnection(template, stringConn);
+                        return null;
+                    }
+                });
+    }
 
-	private void checkConnection(ValkeyTemplate<?, ?> template, ValkeyConnection expectedConnection) {
-		template.execute(connection -> {
-			assertThat(connection).isSameAs(expectedConnection);
-			return null;
-		}, true);
-	}
+    private void checkConnection(ValkeyTemplate<?, ?> template, ValkeyConnection expectedConnection) {
+        template.execute(
+                connection -> {
+                    assertThat(connection).isSameAs(expectedConnection);
+                    return null;
+                },
+                true);
+    }
 }

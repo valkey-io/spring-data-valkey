@@ -27,25 +27,25 @@ import org.springframework.data.geo.Distance;
  */
 class BoundingBoxUnitTests {
 
-	@Test // GH-2526
-	void shouldReturnCorrectValues() {
+    @Test // GH-2526
+    void shouldReturnCorrectValues() {
 
-		Distance w = new Distance(1);
-		Distance h = new Distance(2);
-		BoundingBox box = new BoundingBox(w, h);
+        Distance w = new Distance(1);
+        Distance h = new Distance(2);
+        BoundingBox box = new BoundingBox(w, h);
 
-		assertThat(box.getWidth()).isEqualTo(w);
-		assertThat(box.getHeight()).isEqualTo(h);
-	}
+        assertThat(box.getWidth()).isEqualTo(w);
+        assertThat(box.getHeight()).isEqualTo(h);
+    }
 
-	@Test // GH-2526
-	void shouldEqual() {
+    @Test // GH-2526
+    void shouldEqual() {
 
-		Distance w = new Distance(1);
-		Distance h = new Distance(2);
-		BoundingBox box1 = new BoundingBox(w, h);
-		BoundingBox box2 = new BoundingBox(w, h);
+        Distance w = new Distance(1);
+        Distance h = new Distance(2);
+        BoundingBox box1 = new BoundingBox(w, h);
+        BoundingBox box2 = new BoundingBox(w, h);
 
-		assertThat(box1).isEqualTo(box2).hasSameHashCodeAs(box2);
-	}
+        assertThat(box1).isEqualTo(box2).hasSameHashCodeAs(box2);
+    }
 }

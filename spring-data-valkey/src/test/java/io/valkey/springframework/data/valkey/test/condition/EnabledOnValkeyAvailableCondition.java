@@ -17,19 +17,19 @@ package io.valkey.springframework.data.valkey.test.condition;
 
 import static org.junit.jupiter.api.extension.ConditionEvaluationResult.*;
 
+import io.valkey.springframework.data.valkey.SettingsUtils;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Optional;
-
 import org.junit.jupiter.api.extension.ConditionEvaluationResult;
 import org.junit.jupiter.api.extension.ExecutionCondition;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.platform.commons.util.AnnotationUtils;
-import io.valkey.springframework.data.valkey.SettingsUtils;
 
 /**
- * {@link ExecutionCondition} for {@link EnabledOnValkeyAvailableCondition @EnabledOnValkeyAvailable}.
+ * {@link ExecutionCondition} for {@link
+ * EnabledOnValkeyAvailableCondition @EnabledOnValkeyAvailable}.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -37,32 +37,33 @@ import io.valkey.springframework.data.valkey.SettingsUtils;
  */
 class EnabledOnValkeyAvailableCondition implements ExecutionCondition {
 
-	private static final ConditionEvaluationResult ENABLED_BY_DEFAULT = enabled(
-			"@EnabledOnValkeyAvailable is not present");
+    private static final ConditionEvaluationResult ENABLED_BY_DEFAULT =
+            enabled("@EnabledOnValkeyAvailable is not present");
 
-	@Override
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
+    @Override
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    public ConditionEvaluationResult evaluateExecutionCondition(ExtensionContext context) {
 
-		Optional<EnabledOnValkeyAvailable> optional = AnnotationUtils.findAnnotation(context.getElement(),
-				EnabledOnValkeyAvailable.class);
+        Optional<EnabledOnValkeyAvailable> optional =
+                AnnotationUtils.findAnnotation(context.getElement(), EnabledOnValkeyAvailable.class);
 
-		if (!optional.isPresent()) {
-			return ENABLED_BY_DEFAULT;
-		}
+        if (!optional.isPresent()) {
+            return ENABLED_BY_DEFAULT;
+        }
 
-		EnabledOnValkeyAvailable annotation = optional.get();
+        EnabledOnValkeyAvailable annotation = optional.get();
 
-		try (Socket socket = new Socket()) {
+        try (Socket socket = new Socket()) {
 
-			socket.connect(new InetSocketAddress(SettingsUtils.getHost(), annotation.value()), 100);
+            socket.connect(new InetSocketAddress(SettingsUtils.getHost(), annotation.value()), 100);
 
-			return enabled("Connection successful to Valkey at %s:%d".formatted(SettingsUtils.getHost(),
-					annotation.value()));
-		} catch (IOException ex) {
-			return disabled("Cannot connect to Valkey at %s:%d (%s)".formatted(SettingsUtils.getHost(),
-					annotation.value(), ex));
-		}
-	}
-
+            return enabled(
+                    "Connection successful to Valkey at %s:%d"
+                            .formatted(SettingsUtils.getHost(), annotation.value()));
+        } catch (IOException ex) {
+            return disabled(
+                    "Cannot connect to Valkey at %s:%d (%s)"
+                            .formatted(SettingsUtils.getHost(), annotation.value(), ex));
+        }
+    }
 }

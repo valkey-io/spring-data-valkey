@@ -15,13 +15,12 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.springframework.dao.DataAccessException;
 
 /**
  * Utility methods for working with Valkey-Glide CompletableFuture objects.
@@ -41,12 +40,14 @@ public abstract class ValkeyGlideFutureUtils {
      * @return The result of the future
      * @throws DataAccessException if an error occurs while getting the result
      */
-    public static <T> T get(CompletableFuture<T> future, long timeout, ValkeyGlideExceptionConverter exceptionConverter) {
+    public static <T> T get(
+            CompletableFuture<T> future, long timeout, ValkeyGlideExceptionConverter exceptionConverter) {
         try {
             return timeout > 0 ? future.get(timeout, TimeUnit.MILLISECONDS) : future.get();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
-            throw new ValkeyConnectionFailureException("Interrupted while waiting for Valkey response", ex);
+            throw new ValkeyConnectionFailureException(
+                    "Interrupted while waiting for Valkey response", ex);
         } catch (ExecutionException ex) {
             Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
             if (cause instanceof Exception) {
@@ -71,7 +72,8 @@ public abstract class ValkeyGlideFutureUtils {
      * @return The result of the future
      * @throws DataAccessException if an error occurs while executing the future
      */
-    public static <T> T execute(FutureSupplier<T> supplier, long timeout, ValkeyGlideExceptionConverter exceptionConverter) {
+    public static <T> T execute(
+            FutureSupplier<T> supplier, long timeout, ValkeyGlideExceptionConverter exceptionConverter) {
         try {
             CompletableFuture<T> future = supplier.get();
             return get(future, timeout, exceptionConverter);

@@ -16,37 +16,35 @@
 package io.valkey.springframework.data.valkey;
 
 import java.io.Serial;
-
 import org.springframework.dao.DataRetrievalFailureException;
 
 /**
- * {@link DataRetrievalFailureException} thrown when following cluster redirects exceeds the max number of edges.
+ * {@link DataRetrievalFailureException} thrown when following cluster redirects exceeds the max
+ * number of edges.
  *
  * @author Christoph Strobl
  * @since 1.7
  */
 public class TooManyClusterRedirectionsException extends DataRetrievalFailureException {
 
-	@Serial
-	private static final long serialVersionUID = -2818933672669154328L;
+    @Serial private static final long serialVersionUID = -2818933672669154328L;
 
-	/**
-	 * Creates new {@link TooManyClusterRedirectionsException}.
-	 *
-	 * @param msg the detail message.
-	 */
-	public TooManyClusterRedirectionsException(String msg) {
-		super(msg);
-	}
+    /**
+     * Creates new {@link TooManyClusterRedirectionsException}.
+     *
+     * @param msg the detail message.
+     */
+    public TooManyClusterRedirectionsException(String msg) {
+        super(msg);
+    }
 
-	/**
-	 * Creates new {@link TooManyClusterRedirectionsException}.
-	 *
-	 * @param msg the detail message.
-	 * @param cause the root cause from the data access API in use.
-	 */
-	public TooManyClusterRedirectionsException(String msg, Throwable cause) {
-		super(msg, cause);
-	}
-
+    /**
+     * Creates new {@link TooManyClusterRedirectionsException}.
+     *
+     * @param msg the detail message.
+     * @param cause the root cause from the data access API in use.
+     */
+    public TooManyClusterRedirectionsException(String msg, Throwable cause) {
+        super(msg, cause);
+    }
 }

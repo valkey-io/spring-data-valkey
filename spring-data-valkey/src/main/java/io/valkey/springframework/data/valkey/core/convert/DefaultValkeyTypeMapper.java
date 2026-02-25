@@ -15,9 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
+import io.valkey.springframework.data.valkey.core.convert.Bucket.BucketPropertyPath;
 import java.util.Collections;
 import java.util.List;
-
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.data.convert.DefaultTypeMapper;
@@ -27,133 +27,142 @@ import org.springframework.data.convert.TypeInformationMapper;
 import org.springframework.data.mapping.Alias;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.context.MappingContext;
-import io.valkey.springframework.data.valkey.core.convert.Bucket.BucketPropertyPath;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Default implementation of {@link ValkeyTypeMapper} allowing configuration of the key to lookup and store type
- * information via {@link BucketPropertyPath} in buckets. The key defaults to {@link #DEFAULT_TYPE_KEY}. Actual
- * type-to-{@code byte[]} conversion and back is done in {@link BucketTypeAliasAccessor}.
+ * Default implementation of {@link ValkeyTypeMapper} allowing configuration of the key to lookup
+ * and store type information via {@link BucketPropertyPath} in buckets. The key defaults to {@link
+ * #DEFAULT_TYPE_KEY}. Actual type-to-{@code byte[]} conversion and back is done in {@link
+ * BucketTypeAliasAccessor}.
  *
  * @author Mark Paluch
  * @since 2.1
  */
-public class DefaultValkeyTypeMapper extends DefaultTypeMapper<BucketPropertyPath> implements ValkeyTypeMapper {
+public class DefaultValkeyTypeMapper extends DefaultTypeMapper<BucketPropertyPath>
+        implements ValkeyTypeMapper {
 
-	public static final String DEFAULT_TYPE_KEY = "_class";
+    public static final String DEFAULT_TYPE_KEY = "_class";
 
-	private final @Nullable String typeKey;
+    private final @Nullable String typeKey;
 
-	/**
-	 * Create a new {@link DefaultValkeyTypeMapper} using {@link #DEFAULT_TYPE_KEY} to exchange type hints.
-	 */
-	public DefaultValkeyTypeMapper() {
-		this(DEFAULT_TYPE_KEY);
-	}
+    /**
+     * Create a new {@link DefaultValkeyTypeMapper} using {@link #DEFAULT_TYPE_KEY} to exchange type
+     * hints.
+     */
+    public DefaultValkeyTypeMapper() {
+        this(DEFAULT_TYPE_KEY);
+    }
 
-	/**
-	 * Create a new {@link DefaultValkeyTypeMapper} given {@code typeKey} to exchange type hints. Does not consider type
-	 * hints if {@code typeKey} is {@literal null}.
-	 *
-	 * @param typeKey the type key can be {@literal null} to skip type hinting.
-	 */
-	public DefaultValkeyTypeMapper(@Nullable String typeKey) {
-		this(typeKey, Collections.singletonList(new SimpleTypeInformationMapper()));
-	}
+    /**
+     * Create a new {@link DefaultValkeyTypeMapper} given {@code typeKey} to exchange type hints. Does
+     * not consider type hints if {@code typeKey} is {@literal null}.
+     *
+     * @param typeKey the type key can be {@literal null} to skip type hinting.
+     */
+    public DefaultValkeyTypeMapper(@Nullable String typeKey) {
+        this(typeKey, Collections.singletonList(new SimpleTypeInformationMapper()));
+    }
 
-	/**
-	 * Create a new {@link DefaultValkeyTypeMapper} given {@code typeKey} to exchange type hints and
-	 * {@link MappingContext}. Does not consider type hints if {@code typeKey} is {@literal null}. {@link MappingContext}
-	 * is used to obtain entity-based aliases
-	 *
-	 * @param typeKey the type key can be {@literal null} to skip type hinting.
-	 * @param mappingContext must not be {@literal null}.
-	 * @see org.springframework.data.annotation.TypeAlias
-	 */
-	public DefaultValkeyTypeMapper(@Nullable String typeKey,
-			MappingContext<? extends PersistentEntity<?, ?>, ?> mappingContext) {
-		this(typeKey, new BucketTypeAliasAccessor(typeKey, getConversionService()), mappingContext,
-				Collections.singletonList(new SimpleTypeInformationMapper()));
-	}
+    /**
+     * Create a new {@link DefaultValkeyTypeMapper} given {@code typeKey} to exchange type hints and
+     * {@link MappingContext}. Does not consider type hints if {@code typeKey} is {@literal null}.
+     * {@link MappingContext} is used to obtain entity-based aliases
+     *
+     * @param typeKey the type key can be {@literal null} to skip type hinting.
+     * @param mappingContext must not be {@literal null}.
+     * @see org.springframework.data.annotation.TypeAlias
+     */
+    public DefaultValkeyTypeMapper(
+            @Nullable String typeKey,
+            MappingContext<? extends PersistentEntity<?, ?>, ?> mappingContext) {
+        this(
+                typeKey,
+                new BucketTypeAliasAccessor(typeKey, getConversionService()),
+                mappingContext,
+                Collections.singletonList(new SimpleTypeInformationMapper()));
+    }
 
-	/**
-	 * Create a new {@link DefaultValkeyTypeMapper} given {@code typeKey} to exchange type hints and {@link List} of
-	 * {@link TypeInformationMapper}. Does not consider type hints if {@code typeKey} is {@literal null}.
-	 * {@link MappingContext} is used to obtain entity-based aliases
-	 *
-	 * @param typeKey the type key can be {@literal null} to skip type hinting.
-	 * @param mappers must not be {@literal null}.
-	 */
-	public DefaultValkeyTypeMapper(@Nullable String typeKey, List<? extends TypeInformationMapper> mappers) {
-		this(typeKey, new BucketTypeAliasAccessor(typeKey, getConversionService()), null, mappers);
-	}
+    /**
+     * Create a new {@link DefaultValkeyTypeMapper} given {@code typeKey} to exchange type hints and
+     * {@link List} of {@link TypeInformationMapper}. Does not consider type hints if {@code typeKey}
+     * is {@literal null}. {@link MappingContext} is used to obtain entity-based aliases
+     *
+     * @param typeKey the type key can be {@literal null} to skip type hinting.
+     * @param mappers must not be {@literal null}.
+     */
+    public DefaultValkeyTypeMapper(
+            @Nullable String typeKey, List<? extends TypeInformationMapper> mappers) {
+        this(typeKey, new BucketTypeAliasAccessor(typeKey, getConversionService()), null, mappers);
+    }
 
-	private DefaultValkeyTypeMapper(@Nullable String typeKey, TypeAliasAccessor<BucketPropertyPath> accessor,
-			@Nullable MappingContext<? extends PersistentEntity<?, ?>, ?> mappingContext,
-			List<? extends TypeInformationMapper> mappers) {
+    private DefaultValkeyTypeMapper(
+            @Nullable String typeKey,
+            TypeAliasAccessor<BucketPropertyPath> accessor,
+            @Nullable MappingContext<? extends PersistentEntity<?, ?>, ?> mappingContext,
+            List<? extends TypeInformationMapper> mappers) {
 
-		super(accessor, mappingContext, mappers);
+        super(accessor, mappingContext, mappers);
 
-		this.typeKey = typeKey;
-	}
+        this.typeKey = typeKey;
+    }
 
-	private static GenericConversionService getConversionService() {
+    private static GenericConversionService getConversionService() {
 
-		GenericConversionService conversionService = new GenericConversionService();
-		new ValkeyCustomConversions().registerConvertersIn(conversionService);
+        GenericConversionService conversionService = new GenericConversionService();
+        new ValkeyCustomConversions().registerConvertersIn(conversionService);
 
-		return conversionService;
-	}
+        return conversionService;
+    }
 
-	public boolean isTypeKey(@Nullable String key) {
-		return key != null && typeKey != null && key.endsWith(typeKey);
-	}
+    public boolean isTypeKey(@Nullable String key) {
+        return key != null && typeKey != null && key.endsWith(typeKey);
+    }
 
-	/**
-	 * {@link TypeAliasAccessor} to store aliases in a {@link Bucket}.
-	 *
-	 * @author Mark Paluch
-	 */
-	static final class BucketTypeAliasAccessor implements TypeAliasAccessor<BucketPropertyPath> {
+    /**
+     * {@link TypeAliasAccessor} to store aliases in a {@link Bucket}.
+     *
+     * @author Mark Paluch
+     */
+    static final class BucketTypeAliasAccessor implements TypeAliasAccessor<BucketPropertyPath> {
 
-		private final @Nullable String typeKey;
+        private final @Nullable String typeKey;
 
-		private final ConversionService conversionService;
+        private final ConversionService conversionService;
 
-		BucketTypeAliasAccessor(@Nullable String typeKey, ConversionService conversionService) {
+        BucketTypeAliasAccessor(@Nullable String typeKey, ConversionService conversionService) {
 
-			Assert.notNull(conversionService, "ConversionService must not be null");
+            Assert.notNull(conversionService, "ConversionService must not be null");
 
-			this.typeKey = typeKey;
-			this.conversionService = conversionService;
-		}
+            this.typeKey = typeKey;
+            this.conversionService = conversionService;
+        }
 
-		public Alias readAliasFrom(BucketPropertyPath source) {
+        public Alias readAliasFrom(BucketPropertyPath source) {
 
-			if (typeKey == null || source instanceof List) {
-				return Alias.NONE;
-			}
+            if (typeKey == null || source instanceof List) {
+                return Alias.NONE;
+            }
 
-			byte[] bytes = source.get(typeKey);
+            byte[] bytes = source.get(typeKey);
 
-			if (bytes != null) {
-				return Alias.ofNullable(conversionService.convert(bytes, String.class));
-			}
+            if (bytes != null) {
+                return Alias.ofNullable(conversionService.convert(bytes, String.class));
+            }
 
-			return Alias.NONE;
-		}
+            return Alias.NONE;
+        }
 
-		public void writeTypeTo(BucketPropertyPath sink, Object alias) {
+        public void writeTypeTo(BucketPropertyPath sink, Object alias) {
 
-			if (typeKey != null) {
+            if (typeKey != null) {
 
-				if (alias instanceof byte[] aliasBytes) {
-					sink.put(typeKey, aliasBytes);
-				} else {
-					sink.put(typeKey, conversionService.convert(alias, byte[].class));
-				}
-			}
-		}
-	}
+                if (alias instanceof byte[] aliasBytes) {
+                    sink.put(typeKey, aliasBytes);
+                } else {
+                    sink.put(typeKey, conversionService.convert(alias, byte[].class));
+                }
+            }
+        }
+    }
 }

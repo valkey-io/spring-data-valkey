@@ -18,10 +18,9 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assumptions.*;
 
+import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import java.util.Arrays;
 import java.util.Collections;
-
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * @author Christoph Strobl
@@ -29,60 +28,75 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  */
 public class LettuceReactiveHyperLogLogCommandsTests extends LettuceReactiveCommandsTestSupport {
 
-	public LettuceReactiveHyperLogLogCommandsTests(Fixture fixture) {
-		super(fixture);
-	}
+    public LettuceReactiveHyperLogLogCommandsTests(Fixture fixture) {
+        super(fixture);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void pfAddShouldAddToNonExistingKeyCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void pfAddShouldAddToNonExistingKeyCorrectly() {
 
-		assertThat(connection.hyperLogLogCommands()
-				.pfAdd(KEY_1_BBUFFER, Arrays.asList(VALUE_1_BBUFFER, VALUE_2_BBUFFER, VALUE_3_BBUFFER)).block()).isEqualTo(1L);
-	}
+        assertThat(
+                        connection
+                                .hyperLogLogCommands()
+                                .pfAdd(
+                                        KEY_1_BBUFFER, Arrays.asList(VALUE_1_BBUFFER, VALUE_2_BBUFFER, VALUE_3_BBUFFER))
+                                .block())
+                .isEqualTo(1L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void pfAddShouldReturnZeroWhenValueAlreadyExists() {
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void pfAddShouldReturnZeroWhenValueAlreadyExists() {
 
-		nativeCommands.pfadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.pfadd(KEY_1, VALUE_3);
+        nativeCommands.pfadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.pfadd(KEY_1, VALUE_3);
 
-		assertThat(
-				connection.hyperLogLogCommands().pfAdd(KEY_1_BBUFFER, Collections.singletonList(VALUE_1_BBUFFER)).block())
-				.isEqualTo(0L);
-	}
+        assertThat(
+                        connection
+                                .hyperLogLogCommands()
+                                .pfAdd(KEY_1_BBUFFER, Collections.singletonList(VALUE_1_BBUFFER))
+                                .block())
+                .isEqualTo(0L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void pfCountShouldReturnCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void pfCountShouldReturnCorrectly() {
 
-		nativeCommands.pfadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.pfadd(KEY_1, VALUE_1, VALUE_2);
 
-		assertThat(connection.hyperLogLogCommands().pfCount(KEY_1_BBUFFER).block()).isEqualTo(2L);
-	}
+        assertThat(connection.hyperLogLogCommands().pfCount(KEY_1_BBUFFER).block()).isEqualTo(2L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void pfCountWithMultipleKeysShouldReturnCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void pfCountWithMultipleKeysShouldReturnCorrectly() {
 
-		assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
+        assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
 
-		nativeCommands.pfadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.pfadd(KEY_2, VALUE_2, VALUE_3);
+        nativeCommands.pfadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.pfadd(KEY_2, VALUE_2, VALUE_3);
 
-		assertThat(connection.hyperLogLogCommands().pfCount(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).block())
-				.isEqualTo(3L);
-	}
+        assertThat(
+                        connection
+                                .hyperLogLogCommands()
+                                .pfCount(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                                .block())
+                .isEqualTo(3L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void pfMergeShouldWorkCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void pfMergeShouldWorkCorrectly() {
 
-		assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
+        assumeThat(connectionProvider).isInstanceOf(StandaloneConnectionProvider.class);
 
-		nativeCommands.pfadd(KEY_1, VALUE_1, VALUE_2);
-		nativeCommands.pfadd(KEY_2, VALUE_2, VALUE_3);
+        nativeCommands.pfadd(KEY_1, VALUE_1, VALUE_2);
+        nativeCommands.pfadd(KEY_2, VALUE_2, VALUE_3);
 
-		assertThat(
-				connection.hyperLogLogCommands().pfMerge(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER)).block())
-						.isTrue();
+        assertThat(
+                        connection
+                                .hyperLogLogCommands()
+                                .pfMerge(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER))
+                                .block())
+                .isTrue();
 
-		assertThat(nativeCommands.pfcount(KEY_3)).isEqualTo(3L);
-	}
+        assertThat(nativeCommands.pfcount(KEY_3)).isEqualTo(3L);
+    }
 }

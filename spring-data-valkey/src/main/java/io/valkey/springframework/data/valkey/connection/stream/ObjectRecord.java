@@ -20,8 +20,8 @@ import io.valkey.springframework.data.valkey.hash.HashMapper;
 import org.springframework.util.Assert;
 
 /**
- * A {@link Record} within the stream mapped to a single object. This may be a simple type, such as {@link String} or a
- * complex one.
+ * A {@link Record} within the stream mapped to a single object. This may be a simple type, such as
+ * {@link String} or a complex one.
  *
  * @param <V> the type of the backing Object.
  * @author Christoph Strobl
@@ -30,36 +30,38 @@ import org.springframework.util.Assert;
  */
 public interface ObjectRecord<S, V> extends Record<S, V> {
 
-	/**
-	 * Creates a new {@link ObjectRecord} associated with the {@code stream} key and {@code value}.
-	 *
-	 * @param stream the stream key.
-	 * @param value the value.
-	 * @return the {@link ObjectRecord} holding the {@code stream} key and {@code value}.
-	 */
-	static <S, V> ObjectRecord<S, V> create(S stream, V value) {
+    /**
+     * Creates a new {@link ObjectRecord} associated with the {@code stream} key and {@code value}.
+     *
+     * @param stream the stream key.
+     * @param value the value.
+     * @return the {@link ObjectRecord} holding the {@code stream} key and {@code value}.
+     */
+    static <S, V> ObjectRecord<S, V> create(S stream, V value) {
 
-		Assert.notNull(stream, "Stream must not be null");
-		Assert.notNull(value, "Value must not be null");
+        Assert.notNull(stream, "Stream must not be null");
+        Assert.notNull(value, "Value must not be null");
 
-		return new ObjectBackedRecord<>(stream, RecordId.autoGenerate(), value);
-	}
+        return new ObjectBackedRecord<>(stream, RecordId.autoGenerate(), value);
+    }
 
-	@Override
-	ObjectRecord<S, V> withId(RecordId id);
+    @Override
+    ObjectRecord<S, V> withId(RecordId id);
 
-	<SK> ObjectRecord<SK, V> withStreamKey(SK key);
+    <SK> ObjectRecord<SK, V> withStreamKey(SK key);
 
-	/**
-	 * Apply the given {@link HashMapper} to the backing value to create a new {@link MapRecord}. An already assigned
-	 * {@link RecordId id} is carried over to the new instance.
-	 *
-	 * @param mapper must not be {@literal null}.
-	 * @param <HK> the key type of the resulting {@link MapRecord}.
-	 * @param <HV> the value type of the resulting {@link MapRecord}.
-	 * @return new instance of {@link MapRecord}.
-	 */
-	default <HK, HV> MapRecord<S, HK, HV> toMapRecord(HashMapper<? super V, HK, HV> mapper) {
-		return Record.<S, HK, HV> of(mapper.toHash(getValue())).withId(getId()).withStreamKey(getStream());
-	}
+    /**
+     * Apply the given {@link HashMapper} to the backing value to create a new {@link MapRecord}. An
+     * already assigned {@link RecordId id} is carried over to the new instance.
+     *
+     * @param mapper must not be {@literal null}.
+     * @param <HK> the key type of the resulting {@link MapRecord}.
+     * @param <HV> the value type of the resulting {@link MapRecord}.
+     * @return new instance of {@link MapRecord}.
+     */
+    default <HK, HV> MapRecord<S, HK, HV> toMapRecord(HashMapper<? super V, HK, HV> mapper) {
+        return Record.<S, HK, HV>of(mapper.toHash(getValue()))
+                .withId(getId())
+                .withStreamKey(getStream());
+    }
 }

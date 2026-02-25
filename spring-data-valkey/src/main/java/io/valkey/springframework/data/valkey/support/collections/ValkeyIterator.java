@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.support.collections;
 
 import java.util.Iterator;
-
 import org.springframework.lang.Nullable;
 
 /**
@@ -27,47 +26,47 @@ import org.springframework.lang.Nullable;
  */
 abstract class ValkeyIterator<E> implements Iterator<E> {
 
-	private final Iterator<E> delegate;
+    private final Iterator<E> delegate;
 
-	private @Nullable E item;
+    private @Nullable E item;
 
-	/**
-	 * Constructs a new <code>ValkeyIterator</code> instance.
-	 *
-	 * @param delegate
-	 */
-	ValkeyIterator(Iterator<E> delegate) {
-		this.delegate = delegate;
-	}
+    /**
+     * Constructs a new <code>ValkeyIterator</code> instance.
+     *
+     * @param delegate
+     */
+    ValkeyIterator(Iterator<E> delegate) {
+        this.delegate = delegate;
+    }
 
-	/**
-	 * @return
-	 * @see java.util.Iterator#hasNext()
-	 */
-	@Override
-	public boolean hasNext() {
-		return delegate.hasNext();
-	}
+    /**
+     * @return
+     * @see java.util.Iterator#hasNext()
+     */
+    @Override
+    public boolean hasNext() {
+        return delegate.hasNext();
+    }
 
-	/**
-	 * @return
-	 * @see java.util.Iterator#next()
-	 */
-	@Override
-	public E next() {
-		item = delegate.next();
-		return item;
-	}
+    /**
+     * @return
+     * @see java.util.Iterator#next()
+     */
+    @Override
+    public E next() {
+        item = delegate.next();
+        return item;
+    }
 
-	/**
-	 * @see java.util.Iterator#remove()
-	 */
-	@Override
-	public void remove() {
-		delegate.remove();
-		removeFromValkeyStorage(item);
-		item = null;
-	}
+    /**
+     * @see java.util.Iterator#remove()
+     */
+    @Override
+    public void remove() {
+        delegate.remove();
+        removeFromValkeyStorage(item);
+        item = null;
+    }
 
-	protected abstract void removeFromValkeyStorage(E item);
+    protected abstract void removeFromValkeyStorage(E item);
 }

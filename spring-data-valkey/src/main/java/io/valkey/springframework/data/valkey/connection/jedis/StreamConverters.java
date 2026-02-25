@@ -15,27 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.BuilderFactory;
-import redis.clients.jedis.StreamEntryID;
-import redis.clients.jedis.params.XAddParams;
-import redis.clients.jedis.params.XClaimParams;
-import redis.clients.jedis.params.XPendingParams;
-import redis.clients.jedis.params.XReadGroupParams;
-import redis.clients.jedis.params.XReadParams;
-import redis.clients.jedis.resps.StreamEntry;
-import redis.clients.jedis.resps.StreamPendingEntry;
-
-import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands;
 import io.valkey.springframework.data.valkey.connection.stream.ByteRecord;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
@@ -46,12 +25,31 @@ import io.valkey.springframework.data.valkey.connection.stream.RecordId;
 import io.valkey.springframework.data.valkey.connection.stream.StreamOffset;
 import io.valkey.springframework.data.valkey.connection.stream.StreamReadOptions;
 import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.Range;
+import redis.clients.jedis.BuilderFactory;
+import redis.clients.jedis.StreamEntryID;
+import redis.clients.jedis.params.XAddParams;
+import redis.clients.jedis.params.XClaimParams;
+import redis.clients.jedis.params.XPendingParams;
+import redis.clients.jedis.params.XReadGroupParams;
+import redis.clients.jedis.params.XReadParams;
+import redis.clients.jedis.resps.StreamEntry;
+import redis.clients.jedis.resps.StreamPendingEntry;
 
 /**
  * Converters for Valkey Stream-specific types.
- * <p>
- * Converters typically convert between value objects/argument objects retaining the actual types of values (i.e. no
- * serialization/deserialization happens here).
+ *
+ * <p>Converters typically convert between value objects/argument objects retaining the actual types
+ * of values (i.e. no serialization/deserialization happens here).
  *
  * @author dengliming
  * @author Mark Paluch
@@ -59,255 +57,271 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
  */
 class StreamConverters {
 
-	static byte[][] entryIdsToBytes(List<RecordId> recordIds) {
+    static byte[][] entryIdsToBytes(List<RecordId> recordIds) {
+
+        byte[][] target = new byte[recordIds.size()][];
 
-		byte[][] target = new byte[recordIds.size()][];
-
-		for (int i = 0; i < recordIds.size(); ++i) {
-			RecordId id = recordIds.get(i);
-			target[i] = JedisConverters.toBytes(id.getValue());
-		}
-
-		return target;
-	}
-
-	static String getLowerValue(Range<String> range) {
-		return getValue(range.getLowerBound(), "-");
-	}
-
-	static String getUpperValue(Range<String> range) {
-		return getValue(range.getUpperBound(), "+");
-	}
-
-	private static String getValue(Range.Bound<String> bound, String fallbackValue) {
-
-		if (bound.equals(Range.Bound.unbounded())) {
-			return fallbackValue;
-		}
-
-		return bound.getValue().map(it -> bound.isInclusive() ? it : "(" + it).orElse(fallbackValue);
-	}
-
-	static List<Object> mapToList(Map<String, Object> map) {
-
-		List<Object> sources = new ArrayList<>(map.size() * 2);
-		map.forEach((k, v) -> {
-			sources.add(k);
-
-			if (v instanceof StreamEntryID) {
-				sources.add(v.toString());
-			} else if (v instanceof StreamEntry streamEntry) {
-				List<Object> entries = new ArrayList<>(2);
-				entries.add(streamEntry.getID().toString());
-				entries.add(streamEntry.getFields());
-				sources.add(entries);
-			} else {
-				sources.add(v);
-			}
-		});
-		return sources;
-	}
-
-	static Map.Entry<byte[], byte[]>[] toStreamOffsets(StreamOffset<byte[]>[] streams) {
-		return Arrays.stream(streams)
-				.collect(Collectors.toMap(StreamOffset::getKey, v -> JedisConverters.toBytes(v.getOffset().getOffset())))
-				.entrySet().toArray(new Map.Entry[0]);
-	}
-
-	static List<ByteRecord> convertToByteRecord(byte[] key, Object source) {
-
-		List<List<Object>> objectList = (List<List<Object>>) source;
-		List<ByteRecord> result = new ArrayList<>(objectList.size() / 2);
-
-		if (objectList.isEmpty()) {
-			return result;
-		}
-
-		for (List<Object> res : objectList) {
-
-			if (res == null) {
-				result.add(null);
-				continue;
-			}
-
-			String entryIdString = JedisConverters.toString((byte[]) res.get(0));
-			List<byte[]> hash = (List<byte[]>) res.get(1);
-
-			Iterator<byte[]> hashIterator = hash.iterator();
-			Map<byte[], byte[]> fields = new HashMap<>(hash.size() / 2);
-			while (hashIterator.hasNext()) {
-				fields.put(hashIterator.next(), hashIterator.next());
-			}
-
-			result.add(StreamRecords.newRecord().in(key).withId(entryIdString).ofBytes(fields));
-		}
-		return result;
-	}
-
-	static List<ByteRecord> convertToByteRecords(List<?> sources) {
-
-		List<ByteRecord> result = new ArrayList<>(sources.size() / 2);
-
-		for (Object source : sources) {
-			List<Object> stream = (List<Object>) source;
-			result.addAll(convertToByteRecord((byte[]) stream.get(0), stream.get(1)));
-		}
-
-		return result;
-	}
-
-	static PendingMessagesSummary toPendingMessagesSummary(String groupName, Object source) {
-
-		List<Object> objectList = (List<Object>) source;
-		long total = BuilderFactory.LONG.build(objectList.get(0));
-		Range.Bound<String> lower = objectList.get(1) != null
-				? Range.Bound.inclusive(JedisConverters.toString((byte[]) objectList.get(1)))
-				: Range.Bound.unbounded();
-		Range.Bound<String> upper = objectList.get(2) != null
-				? Range.Bound.inclusive(JedisConverters.toString((byte[]) objectList.get(2)))
-				: Range.Bound.unbounded();
-		List<List<Object>> consumerObjList = (List<List<Object>>) objectList.get(3);
-		Map<String, Long> map;
-
-		if (consumerObjList != null) {
-			map = new HashMap<>(consumerObjList.size());
-			for (List<Object> consumerObj : consumerObjList) {
-				map.put(JedisConverters.toString((byte[]) consumerObj.get(0)),
-						Long.parseLong(JedisConverters.toString((byte[]) consumerObj.get(1))));
-			}
-		} else {
-			map = Collections.emptyMap();
-		}
-
-		return new PendingMessagesSummary(groupName, total, Range.of(lower, upper), map);
-	}
-
-	/**
-	 * Convert the raw Jedis {@code xpending} result to {@link PendingMessages}.
-	 *
-	 * @param groupName the group name
-	 * @param range the range of messages requested
-	 * @param response the raw jedis response.
-	 * @return
-	 */
-	static io.valkey.springframework.data.valkey.connection.stream.PendingMessages toPendingMessages(String groupName,
-			org.springframework.data.domain.Range<?> range, List<StreamPendingEntry> response) {
-
-		List<PendingMessage> messages = response.stream()
-				.map(streamPendingEntry -> new PendingMessage(RecordId.of(streamPendingEntry.getID().toString()),
-						Consumer.from(groupName, streamPendingEntry.getConsumerName()),
-						Duration.ofMillis(streamPendingEntry.getIdleTime()), streamPendingEntry.getDeliveredTimes()))
-				.collect(Collectors.toList());
-
-		return new PendingMessages(groupName, messages).withinRange(range);
-	}
-
-	public static XAddParams toXAddParams(RecordId recordId, ValkeyStreamCommands.XAddOptions options) {
-
-		XAddParams params = new XAddParams();
-		params.id(toStreamEntryId(recordId.getValue()));
-
-		if (options.hasMaxlen()) {
-			params.maxLen(options.getMaxlen());
-		}
-
-		if (options.hasMinId()) {
-			params.minId(options.getMinId().getValue());
-		}
-
-		if (options.isNoMkStream()) {
-			params.noMkStream();
-		}
-
-		if (options.isApproximateTrimming()) {
-			params.approximateTrimming();
-		}
-
-		return params;
-	}
-
-	private static StreamEntryID toStreamEntryId(String value) {
-
-		if ("*".equals(value)) {
-			return StreamEntryID.NEW_ENTRY;
-		}
-
-		if ("$".equals(value)) {
-			return StreamEntryID.LAST_ENTRY;
-		}
-
-		if (">".equals(value)) {
-			return StreamEntryID.UNRECEIVED_ENTRY;
-		}
-
-		return new StreamEntryID(value);
-	}
-
-	public static XClaimParams toXClaimParams(ValkeyStreamCommands.XClaimOptions options) {
-
-		XClaimParams params = XClaimParams.xClaimParams();
-
-		if (options.isForce()) {
-			params.force();
-		}
-
-		if (options.getRetryCount() != null) {
-			params.retryCount(options.getRetryCount().intValue());
-		}
-
-		if (options.getUnixTime() != null) {
-			params.time(options.getUnixTime().toEpochMilli());
-		}
-
-		return params;
-	}
-
-	public static XReadParams toXReadParams(StreamReadOptions readOptions) {
-
-		XReadParams params = XReadParams.xReadParams();
-
-		if (readOptions.isBlocking()) {
-			params.block(readOptions.getBlock().intValue());
-		}
-
-		if (readOptions.getCount() != null) {
-			params.count(readOptions.getCount().intValue());
-		}
-
-		return params;
-	}
-
-	public static XReadGroupParams toXReadGroupParams(StreamReadOptions readOptions) {
-
-		XReadGroupParams params = XReadGroupParams.xReadGroupParams();
-
-		if (readOptions.isBlocking()) {
-			params.block(readOptions.getBlock().intValue());
-		}
-
-		if (readOptions.getCount() != null) {
-			params.count(readOptions.getCount().intValue());
-		}
-
-		if (readOptions.isNoack()) {
-			params.noAck();
-		}
-
-		return params;
-
-	}
-
-	public static XPendingParams toXPendingParams(ValkeyStreamCommands.XPendingOptions options) {
-
-		Range<String> range = (Range<String>) options.getRange();
-		XPendingParams xPendingParams = XPendingParams.xPendingParams(StreamConverters.getLowerValue(range),
-				StreamConverters.getUpperValue(range), options.getCount().intValue());
-
-		if (options.hasConsumer()) {
-			xPendingParams.consumer(options.getConsumerName());
-		}
-
-		return xPendingParams;
-	}
-
+        for (int i = 0; i < recordIds.size(); ++i) {
+            RecordId id = recordIds.get(i);
+            target[i] = JedisConverters.toBytes(id.getValue());
+        }
+
+        return target;
+    }
+
+    static String getLowerValue(Range<String> range) {
+        return getValue(range.getLowerBound(), "-");
+    }
+
+    static String getUpperValue(Range<String> range) {
+        return getValue(range.getUpperBound(), "+");
+    }
+
+    private static String getValue(Range.Bound<String> bound, String fallbackValue) {
+
+        if (bound.equals(Range.Bound.unbounded())) {
+            return fallbackValue;
+        }
+
+        return bound.getValue().map(it -> bound.isInclusive() ? it : "(" + it).orElse(fallbackValue);
+    }
+
+    static List<Object> mapToList(Map<String, Object> map) {
+
+        List<Object> sources = new ArrayList<>(map.size() * 2);
+        map.forEach(
+                (k, v) -> {
+                    sources.add(k);
+
+                    if (v instanceof StreamEntryID) {
+                        sources.add(v.toString());
+                    } else if (v instanceof StreamEntry streamEntry) {
+                        List<Object> entries = new ArrayList<>(2);
+                        entries.add(streamEntry.getID().toString());
+                        entries.add(streamEntry.getFields());
+                        sources.add(entries);
+                    } else {
+                        sources.add(v);
+                    }
+                });
+        return sources;
+    }
+
+    static Map.Entry<byte[], byte[]>[] toStreamOffsets(StreamOffset<byte[]>[] streams) {
+        return Arrays.stream(streams)
+                .collect(
+                        Collectors.toMap(
+                                StreamOffset::getKey, v -> JedisConverters.toBytes(v.getOffset().getOffset())))
+                .entrySet()
+                .toArray(new Map.Entry[0]);
+    }
+
+    static List<ByteRecord> convertToByteRecord(byte[] key, Object source) {
+
+        List<List<Object>> objectList = (List<List<Object>>) source;
+        List<ByteRecord> result = new ArrayList<>(objectList.size() / 2);
+
+        if (objectList.isEmpty()) {
+            return result;
+        }
+
+        for (List<Object> res : objectList) {
+
+            if (res == null) {
+                result.add(null);
+                continue;
+            }
+
+            String entryIdString = JedisConverters.toString((byte[]) res.get(0));
+            List<byte[]> hash = (List<byte[]>) res.get(1);
+
+            Iterator<byte[]> hashIterator = hash.iterator();
+            Map<byte[], byte[]> fields = new HashMap<>(hash.size() / 2);
+            while (hashIterator.hasNext()) {
+                fields.put(hashIterator.next(), hashIterator.next());
+            }
+
+            result.add(StreamRecords.newRecord().in(key).withId(entryIdString).ofBytes(fields));
+        }
+        return result;
+    }
+
+    static List<ByteRecord> convertToByteRecords(List<?> sources) {
+
+        List<ByteRecord> result = new ArrayList<>(sources.size() / 2);
+
+        for (Object source : sources) {
+            List<Object> stream = (List<Object>) source;
+            result.addAll(convertToByteRecord((byte[]) stream.get(0), stream.get(1)));
+        }
+
+        return result;
+    }
+
+    static PendingMessagesSummary toPendingMessagesSummary(String groupName, Object source) {
+
+        List<Object> objectList = (List<Object>) source;
+        long total = BuilderFactory.LONG.build(objectList.get(0));
+        Range.Bound<String> lower =
+                objectList.get(1) != null
+                        ? Range.Bound.inclusive(JedisConverters.toString((byte[]) objectList.get(1)))
+                        : Range.Bound.unbounded();
+        Range.Bound<String> upper =
+                objectList.get(2) != null
+                        ? Range.Bound.inclusive(JedisConverters.toString((byte[]) objectList.get(2)))
+                        : Range.Bound.unbounded();
+        List<List<Object>> consumerObjList = (List<List<Object>>) objectList.get(3);
+        Map<String, Long> map;
+
+        if (consumerObjList != null) {
+            map = new HashMap<>(consumerObjList.size());
+            for (List<Object> consumerObj : consumerObjList) {
+                map.put(
+                        JedisConverters.toString((byte[]) consumerObj.get(0)),
+                        Long.parseLong(JedisConverters.toString((byte[]) consumerObj.get(1))));
+            }
+        } else {
+            map = Collections.emptyMap();
+        }
+
+        return new PendingMessagesSummary(groupName, total, Range.of(lower, upper), map);
+    }
+
+    /**
+     * Convert the raw Jedis {@code xpending} result to {@link PendingMessages}.
+     *
+     * @param groupName the group name
+     * @param range the range of messages requested
+     * @param response the raw jedis response.
+     * @return
+     */
+    static io.valkey.springframework.data.valkey.connection.stream.PendingMessages toPendingMessages(
+            String groupName,
+            org.springframework.data.domain.Range<?> range,
+            List<StreamPendingEntry> response) {
+
+        List<PendingMessage> messages =
+                response.stream()
+                        .map(
+                                streamPendingEntry ->
+                                        new PendingMessage(
+                                                RecordId.of(streamPendingEntry.getID().toString()),
+                                                Consumer.from(groupName, streamPendingEntry.getConsumerName()),
+                                                Duration.ofMillis(streamPendingEntry.getIdleTime()),
+                                                streamPendingEntry.getDeliveredTimes()))
+                        .collect(Collectors.toList());
+
+        return new PendingMessages(groupName, messages).withinRange(range);
+    }
+
+    public static XAddParams toXAddParams(
+            RecordId recordId, ValkeyStreamCommands.XAddOptions options) {
+
+        XAddParams params = new XAddParams();
+        params.id(toStreamEntryId(recordId.getValue()));
+
+        if (options.hasMaxlen()) {
+            params.maxLen(options.getMaxlen());
+        }
+
+        if (options.hasMinId()) {
+            params.minId(options.getMinId().getValue());
+        }
+
+        if (options.isNoMkStream()) {
+            params.noMkStream();
+        }
+
+        if (options.isApproximateTrimming()) {
+            params.approximateTrimming();
+        }
+
+        return params;
+    }
+
+    private static StreamEntryID toStreamEntryId(String value) {
+
+        if ("*".equals(value)) {
+            return StreamEntryID.NEW_ENTRY;
+        }
+
+        if ("$".equals(value)) {
+            return StreamEntryID.LAST_ENTRY;
+        }
+
+        if (">".equals(value)) {
+            return StreamEntryID.UNRECEIVED_ENTRY;
+        }
+
+        return new StreamEntryID(value);
+    }
+
+    public static XClaimParams toXClaimParams(ValkeyStreamCommands.XClaimOptions options) {
+
+        XClaimParams params = XClaimParams.xClaimParams();
+
+        if (options.isForce()) {
+            params.force();
+        }
+
+        if (options.getRetryCount() != null) {
+            params.retryCount(options.getRetryCount().intValue());
+        }
+
+        if (options.getUnixTime() != null) {
+            params.time(options.getUnixTime().toEpochMilli());
+        }
+
+        return params;
+    }
+
+    public static XReadParams toXReadParams(StreamReadOptions readOptions) {
+
+        XReadParams params = XReadParams.xReadParams();
+
+        if (readOptions.isBlocking()) {
+            params.block(readOptions.getBlock().intValue());
+        }
+
+        if (readOptions.getCount() != null) {
+            params.count(readOptions.getCount().intValue());
+        }
+
+        return params;
+    }
+
+    public static XReadGroupParams toXReadGroupParams(StreamReadOptions readOptions) {
+
+        XReadGroupParams params = XReadGroupParams.xReadGroupParams();
+
+        if (readOptions.isBlocking()) {
+            params.block(readOptions.getBlock().intValue());
+        }
+
+        if (readOptions.getCount() != null) {
+            params.count(readOptions.getCount().intValue());
+        }
+
+        if (readOptions.isNoack()) {
+            params.noAck();
+        }
+
+        return params;
+    }
+
+    public static XPendingParams toXPendingParams(ValkeyStreamCommands.XPendingOptions options) {
+
+        Range<String> range = (Range<String>) options.getRange();
+        XPendingParams xPendingParams =
+                XPendingParams.xPendingParams(
+                        StreamConverters.getLowerValue(range),
+                        StreamConverters.getUpperValue(range),
+                        options.getCount().intValue());
+
+        if (options.hasConsumer()) {
+            xPendingParams.consumer(options.getConsumerName());
+        }
+
+        return xPendingParams;
+    }
 }

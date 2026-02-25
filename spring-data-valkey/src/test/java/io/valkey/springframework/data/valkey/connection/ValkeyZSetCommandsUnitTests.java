@@ -17,8 +17,8 @@ package io.valkey.springframework.data.valkey.connection;
 
 import static org.assertj.core.api.Assertions.*;
 
-import org.junit.jupiter.api.Test;
 import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.ZAddArgs;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ValkeyZSetCommands}.
@@ -27,10 +27,10 @@ import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.ZAddA
  */
 class ValkeyZSetCommandsUnitTests {
 
-	@Test // GH-2588
-	void zAddArgsShouldReportEmpty() {
+    @Test // GH-2588
+    void zAddArgsShouldReportEmpty() {
 
-		assertThat(ZAddArgs.empty().isEmpty()).isTrue();
-		assertThat(ZAddArgs.ifExists().isEmpty()).isFalse();
-	}
+        assertThat(ZAddArgs.empty().isEmpty()).isTrue();
+        assertThat(ZAddArgs.ifExists().isEmpty()).isFalse();
+    }
 }

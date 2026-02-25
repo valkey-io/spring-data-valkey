@@ -20,10 +20,8 @@ import static org.assertj.core.api.Assertions.*;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
-
 import org.assertj.core.api.ThrowableAssert;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.mock.env.MockPropertySource;
 import org.springframework.util.StringUtils;
 
@@ -38,206 +36,219 @@ import org.springframework.util.StringUtils;
  */
 class ValkeySentinelConfigurationUnitTests {
 
-	private static final String HOST_AND_PORT_1 = "127.0.0.1:123";
-	private static final String HOST_AND_PORT_2 = "localhost:456";
-	private static final String HOST_AND_PORT_3 = "localhost:789";
+    private static final String HOST_AND_PORT_1 = "127.0.0.1:123";
+    private static final String HOST_AND_PORT_2 = "localhost:456";
+    private static final String HOST_AND_PORT_3 = "localhost:789";
 
-	@Test // DATAREDIS-372
-	void shouldCreateValkeySentinelConfigurationCorrectlyGivenMasterAndSingleHostAndPortString() {
+    @Test // DATAREDIS-372
+    void shouldCreateValkeySentinelConfigurationCorrectlyGivenMasterAndSingleHostAndPortString() {
 
-		ValkeySentinelConfiguration config = new ValkeySentinelConfiguration("mymaster",
-				Collections.singleton(HOST_AND_PORT_1));
+        ValkeySentinelConfiguration config =
+                new ValkeySentinelConfiguration("mymaster", Collections.singleton(HOST_AND_PORT_1));
 
-		assertThat(config.getSentinels()).hasSize(1);
-		assertThat(config.getSentinels()).contains(new ValkeyNode("127.0.0.1", 123));
-	}
+        assertThat(config.getSentinels()).hasSize(1);
+        assertThat(config.getSentinels()).contains(new ValkeyNode("127.0.0.1", 123));
+    }
 
-	@Test // GH-2418
-	void shouldCreateValkeySentinelConfigurationCorrectlyGivenMasterAndSingleIPV6HostAndPortString() {
+    @Test // GH-2418
+    void shouldCreateValkeySentinelConfigurationCorrectlyGivenMasterAndSingleIPV6HostAndPortString() {
 
-		ValkeySentinelConfiguration config = new ValkeySentinelConfiguration("mymaster",
-				Collections.singleton("[ca:fee::1]:123"));
+        ValkeySentinelConfiguration config =
+                new ValkeySentinelConfiguration("mymaster", Collections.singleton("[ca:fee::1]:123"));
 
-		assertThat(config.getSentinels()).hasSize(1);
-		assertThat(config.getSentinels()).contains(new ValkeyNode("ca:fee::1", 123));
-	}
+        assertThat(config.getSentinels()).hasSize(1);
+        assertThat(config.getSentinels()).contains(new ValkeyNode("ca:fee::1", 123));
+    }
 
-	@Test // DATAREDIS-372
-	void shouldCreateValkeySentinelConfigurationCorrectlyGivenMasterAndMultipleHostAndPortStrings() {
+    @Test // DATAREDIS-372
+    void shouldCreateValkeySentinelConfigurationCorrectlyGivenMasterAndMultipleHostAndPortStrings() {
 
-		ValkeySentinelConfiguration config = new ValkeySentinelConfiguration("mymaster",
-				new HashSet<>(Arrays.asList(HOST_AND_PORT_1, HOST_AND_PORT_2, HOST_AND_PORT_3)));
+        ValkeySentinelConfiguration config =
+                new ValkeySentinelConfiguration(
+                        "mymaster",
+                        new HashSet<>(Arrays.asList(HOST_AND_PORT_1, HOST_AND_PORT_2, HOST_AND_PORT_3)));
 
-		assertThat(config.getSentinels()).hasSize(3);
-		assertThat(config.getSentinels()).contains(new ValkeyNode("127.0.0.1", 123), new ValkeyNode("localhost", 456),
-				new ValkeyNode("localhost", 789));
-	}
+        assertThat(config.getSentinels()).hasSize(3);
+        assertThat(config.getSentinels())
+                .contains(
+                        new ValkeyNode("127.0.0.1", 123),
+                        new ValkeyNode("localhost", 456),
+                        new ValkeyNode("localhost", 789));
+    }
 
-	@Test // DATAREDIS-372
-	void shouldThrowExceptionWhenListOfHostAndPortIsNull() {
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> new ValkeySentinelConfiguration("mymaster", Collections.singleton(null)));
-	}
+    @Test // DATAREDIS-372
+    void shouldThrowExceptionWhenListOfHostAndPortIsNull() {
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> new ValkeySentinelConfiguration("mymaster", Collections.singleton(null)));
+    }
 
-	@Test // DATAREDIS-372
-	void shouldNotFailWhenListOfHostAndPortIsEmpty() {
+    @Test // DATAREDIS-372
+    void shouldNotFailWhenListOfHostAndPortIsEmpty() {
 
-		ValkeySentinelConfiguration config = new ValkeySentinelConfiguration("mymaster", Collections.emptySet());
+        ValkeySentinelConfiguration config =
+                new ValkeySentinelConfiguration("mymaster", Collections.emptySet());
 
-		assertThat(config.getSentinels()).isEmpty();
-	}
+        assertThat(config.getSentinels()).isEmpty();
+    }
 
-	@Test // DATAREDIS-372
-	void shouldThrowExceptionGivenNullPropertySource() {
-		assertThatIllegalArgumentException().isThrownBy(() -> ValkeySentinelConfiguration.of(null));
-	}
+    @Test // DATAREDIS-372
+    void shouldThrowExceptionGivenNullPropertySource() {
+        assertThatIllegalArgumentException().isThrownBy(() -> ValkeySentinelConfiguration.of(null));
+    }
 
-	@Test // DATAREDIS-372
-	void shouldNotFailWhenGivenPropertySourceNotContainingRelevantProperties() {
+    @Test // DATAREDIS-372
+    void shouldNotFailWhenGivenPropertySourceNotContainingRelevantProperties() {
 
-		ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(new MockPropertySource());
+        ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(new MockPropertySource());
 
-		assertThat(config.getMaster()).isNull();
-		assertThat(config.getSentinels()).isEmpty();
-	}
+        assertThat(config.getMaster()).isNull();
+        assertThat(config.getSentinels()).isEmpty();
+    }
 
-	@Test // DATAREDIS-372
-	void shouldBeCreatedCorrectlyGivenValidPropertySourceWithMasterAndSingleHostPort() {
+    @Test // DATAREDIS-372
+    void shouldBeCreatedCorrectlyGivenValidPropertySourceWithMasterAndSingleHostPort() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.master", "myMaster");
-		propertySource.setProperty("spring.valkey.sentinel.nodes", HOST_AND_PORT_1);
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.master", "myMaster");
+        propertySource.setProperty("spring.valkey.sentinel.nodes", HOST_AND_PORT_1);
 
-		ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
+        ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
 
-		assertThat(config.getMaster()).isNotNull();
-		assertThat(config.getMaster().getName()).isEqualTo("myMaster");
-		assertThat(config.getSentinels()).hasSize(1);
-		assertThat(config.getSentinels()).contains(new ValkeyNode("127.0.0.1", 123));
-	}
+        assertThat(config.getMaster()).isNotNull();
+        assertThat(config.getMaster().getName()).isEqualTo("myMaster");
+        assertThat(config.getSentinels()).hasSize(1);
+        assertThat(config.getSentinels()).contains(new ValkeyNode("127.0.0.1", 123));
+    }
 
-	@Test // DATAREDIS-372
-	void shouldBeCreatedCorrectlyGivenValidPropertySourceWithMasterAndMultipleHostPort() {
+    @Test // DATAREDIS-372
+    void shouldBeCreatedCorrectlyGivenValidPropertySourceWithMasterAndMultipleHostPort() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.master", "myMaster");
-		propertySource.setProperty("spring.valkey.sentinel.nodes",
-				StringUtils.collectionToCommaDelimitedString(Arrays.asList(HOST_AND_PORT_1, HOST_AND_PORT_2, HOST_AND_PORT_3)));
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.master", "myMaster");
+        propertySource.setProperty(
+                "spring.valkey.sentinel.nodes",
+                StringUtils.collectionToCommaDelimitedString(
+                        Arrays.asList(HOST_AND_PORT_1, HOST_AND_PORT_2, HOST_AND_PORT_3)));
 
-		ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
+        ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
 
-		assertThat(config.getSentinels()).hasSize(3);
-		assertThat(config.getSentinels()).contains(new ValkeyNode("127.0.0.1", 123), new ValkeyNode("localhost", 456),
-				new ValkeyNode("localhost", 789));
-	}
+        assertThat(config.getSentinels()).hasSize(3);
+        assertThat(config.getSentinels())
+                .contains(
+                        new ValkeyNode("127.0.0.1", 123),
+                        new ValkeyNode("localhost", 456),
+                        new ValkeyNode("localhost", 789));
+    }
 
-	@Test // DATAREDIS-1060
-	void dataNodePasswordDoesNotAffectSentinelPassword() {
+    @Test // DATAREDIS-1060
+    void dataNodePasswordDoesNotAffectSentinelPassword() {
 
-		ValkeyPassword password = ValkeyPassword.of("88888888-8x8-getting-creative-now");
-		ValkeySentinelConfiguration configuration = new ValkeySentinelConfiguration("myMaster",
-				Collections.singleton(HOST_AND_PORT_1));
-		configuration.setPassword(password);
+        ValkeyPassword password = ValkeyPassword.of("88888888-8x8-getting-creative-now");
+        ValkeySentinelConfiguration configuration =
+                new ValkeySentinelConfiguration("myMaster", Collections.singleton(HOST_AND_PORT_1));
+        configuration.setPassword(password);
 
-		assertThat(configuration.getSentinelPassword()).isEqualTo(ValkeyPassword.none());
-	}
+        assertThat(configuration.getSentinelPassword()).isEqualTo(ValkeyPassword.none());
+    }
 
-	@Test // GH-2218
-	void dataNodeUsernameDoesNotAffectSentinelUsername() {
+    @Test // GH-2218
+    void dataNodeUsernameDoesNotAffectSentinelUsername() {
 
-		ValkeySentinelConfiguration configuration = new ValkeySentinelConfiguration("myMaster",
-				Collections.singleton(HOST_AND_PORT_1));
-		configuration.setUsername("data-admin");
-		configuration.setSentinelUsername("sentinel-admin");
+        ValkeySentinelConfiguration configuration =
+                new ValkeySentinelConfiguration("myMaster", Collections.singleton(HOST_AND_PORT_1));
+        configuration.setUsername("data-admin");
+        configuration.setSentinelUsername("sentinel-admin");
 
-		assertThat(configuration.getDataNodeUsername()).isEqualTo("data-admin");
-		assertThat(configuration.getSentinelUsername()).isEqualTo("sentinel-admin");
-	}
+        assertThat(configuration.getDataNodeUsername()).isEqualTo("data-admin");
+        assertThat(configuration.getSentinelUsername()).isEqualTo("sentinel-admin");
+    }
 
-	@Test // DATAREDIS-1060
-	void readSentinelPasswordFromConfigProperty() {
+    @Test // DATAREDIS-1060
+    void readSentinelPasswordFromConfigProperty() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.master", "myMaster");
-		propertySource.setProperty("spring.valkey.sentinel.nodes", HOST_AND_PORT_1);
-		propertySource.setProperty("spring.valkey.sentinel.password", "computer-says-no");
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.master", "myMaster");
+        propertySource.setProperty("spring.valkey.sentinel.nodes", HOST_AND_PORT_1);
+        propertySource.setProperty("spring.valkey.sentinel.password", "computer-says-no");
 
-		ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
+        ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
 
-		assertThat(config.getSentinelPassword()).isEqualTo(ValkeyPassword.of("computer-says-no"));
-		assertThat(config.getSentinels()).hasSize(1).contains(new ValkeyNode("127.0.0.1", 123));
-	}
+        assertThat(config.getSentinelPassword()).isEqualTo(ValkeyPassword.of("computer-says-no"));
+        assertThat(config.getSentinels()).hasSize(1).contains(new ValkeyNode("127.0.0.1", 123));
+    }
 
-	@Test // GH-2218
-	void readSentinelUsernameFromConfigProperty() {
+    @Test // GH-2218
+    void readSentinelUsernameFromConfigProperty() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.master", "myMaster");
-		propertySource.setProperty("spring.valkey.sentinel.nodes", HOST_AND_PORT_1);
-		propertySource.setProperty("spring.valkey.sentinel.username", "sentinel-admin");
-		propertySource.setProperty("spring.valkey.sentinel.password", "foo");
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.master", "myMaster");
+        propertySource.setProperty("spring.valkey.sentinel.nodes", HOST_AND_PORT_1);
+        propertySource.setProperty("spring.valkey.sentinel.username", "sentinel-admin");
+        propertySource.setProperty("spring.valkey.sentinel.password", "foo");
 
-		ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
+        ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
 
-		assertThat(config.getSentinelUsername()).isEqualTo("sentinel-admin");
-		assertThat(config.getSentinelPassword()).isEqualTo(ValkeyPassword.of("foo"));
-		assertThat(config.getSentinels()).hasSize(1).contains(new ValkeyNode("127.0.0.1", 123));
-	}
+        assertThat(config.getSentinelUsername()).isEqualTo("sentinel-admin");
+        assertThat(config.getSentinelPassword()).isEqualTo(ValkeyPassword.of("foo"));
+        assertThat(config.getSentinels()).hasSize(1).contains(new ValkeyNode("127.0.0.1", 123));
+    }
 
-	@Test // GH-2860
-	void readSentinelDataNodeUsernameFromConfigProperty() {
+    @Test // GH-2860
+    void readSentinelDataNodeUsernameFromConfigProperty() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.dataNode.username", "datanode-user");
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.dataNode.username", "datanode-user");
 
-		ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
+        ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
 
-		assertThat(config.getDataNodeUsername()).isEqualTo("datanode-user");
-	}
+        assertThat(config.getDataNodeUsername()).isEqualTo("datanode-user");
+    }
 
-	@Test // GH-2860
-	void readSentinelDataNodePasswordFromConfigProperty() {
+    @Test // GH-2860
+    void readSentinelDataNodePasswordFromConfigProperty() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.dataNode.password", "datanode-password");
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.dataNode.password", "datanode-password");
 
-		ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
+        ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
 
-		assertThat(config.getDataNodePassword()).isEqualTo(ValkeyPassword.of("datanode-password"));
-	}
+        assertThat(config.getDataNodePassword()).isEqualTo(ValkeyPassword.of("datanode-password"));
+    }
 
-	@Test // GH-2860
-	void readSentinelDataNodeDatabaseFromConfigProperty() {
+    @Test // GH-2860
+    void readSentinelDataNodeDatabaseFromConfigProperty() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.dataNode.database", "5");
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.dataNode.database", "5");
 
-		ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
+        ValkeySentinelConfiguration config = ValkeySentinelConfiguration.of(propertySource);
 
-		assertThat(config.getDatabase()).isEqualTo(5);
-	}
+        assertThat(config.getDatabase()).isEqualTo(5);
+    }
 
-	@Test // GH-2860
-	void shouldThrowErrorWhen() {
+    @Test // GH-2860
+    void shouldThrowErrorWhen() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.dataNode.database", "thisIsNotAnInteger");
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.dataNode.database", "thisIsNotAnInteger");
 
-		ThrowableAssert.ThrowingCallable call = () -> ValkeySentinelConfiguration.of(propertySource);
+        ThrowableAssert.ThrowingCallable call = () -> ValkeySentinelConfiguration.of(propertySource);
 
-		assertThatThrownBy(call).isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("Invalid DB index '%s'; integer required", "thisIsNotAnInteger");
-	}
+        assertThatThrownBy(call)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Invalid DB index '%s'; integer required", "thisIsNotAnInteger");
+    }
 
-	@Test // GH-2860
-	void shouldThrowErrorWhen2() {
+    @Test // GH-2860
+    void shouldThrowErrorWhen2() {
 
-		MockPropertySource propertySource = new MockPropertySource();
-		propertySource.setProperty("spring.valkey.sentinel.dataNode.database", "null");
+        MockPropertySource propertySource = new MockPropertySource();
+        propertySource.setProperty("spring.valkey.sentinel.dataNode.database", "null");
 
-		ThrowableAssert.ThrowingCallable call = () -> ValkeySentinelConfiguration.of(propertySource);
+        ThrowableAssert.ThrowingCallable call = () -> ValkeySentinelConfiguration.of(propertySource);
 
-		assertThatThrownBy(call).isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("Invalid DB index '%s'; integer required", "null");
-	}
+        assertThatThrownBy(call)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Invalid DB index '%s'; integer required", "null");
+    }
 }

@@ -18,17 +18,17 @@ package io.valkey.springframework.data.valkey.listener.adapter;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.connection.DefaultMessage;
+import io.valkey.springframework.data.valkey.connection.Message;
+import io.valkey.springframework.data.valkey.connection.MessageListener;
+import io.valkey.springframework.data.valkey.serializer.SerializationException;
+import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import io.valkey.springframework.data.valkey.connection.DefaultMessage;
-import io.valkey.springframework.data.valkey.connection.Message;
-import io.valkey.springframework.data.valkey.connection.MessageListener;
-import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import io.valkey.springframework.data.valkey.serializer.SerializationException;
-import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 
 /**
  * Unit test for MessageListenerAdapter.
@@ -41,282 +41,285 @@ import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 @ExtendWith(MockitoExtension.class)
 class MessageListenerUnitTests {
 
-	private static final StringValkeySerializer serializer = StringValkeySerializer.UTF_8;
-	private static final String CHANNEL = "some::test:";
-	private static final byte[] RAW_CHANNEL = serializer.serialize(CHANNEL);
-	private static final String PAYLOAD = "do re mi";
-	private static final byte[] RAW_PAYLOAD = serializer.serialize(PAYLOAD);
-	private static final Message STRING_MSG = new DefaultMessage(RAW_CHANNEL, RAW_PAYLOAD);
+    private static final StringValkeySerializer serializer = StringValkeySerializer.UTF_8;
+    private static final String CHANNEL = "some::test:";
+    private static final byte[] RAW_CHANNEL = serializer.serialize(CHANNEL);
+    private static final String PAYLOAD = "do re mi";
+    private static final byte[] RAW_PAYLOAD = serializer.serialize(PAYLOAD);
+    private static final Message STRING_MSG = new DefaultMessage(RAW_CHANNEL, RAW_PAYLOAD);
 
-	private MessageListenerAdapter adapter;
+    private MessageListenerAdapter adapter;
 
-	public static interface Delegate {
-		void handleMessage(String argument);
+    public static interface Delegate {
+        void handleMessage(String argument);
 
-		void customMethod(String arg);
+        void customMethod(String arg);
+
+        void customMethodWithChannel(String arg, String channel);
+    }
 
-		void customMethodWithChannel(String arg, String channel);
-	}
+    @Mock private Delegate target;
+
+    @BeforeEach
+    void setUp() {
+        this.adapter = new MessageListenerAdapter();
+    }
 
-	@Mock private Delegate target;
+    @Test
+    void testThatWhenNoDelegateIsSuppliedTheDelegateIsAssumedToBeTheMessageListenerAdapterItself()
+            throws Exception {
+        assertThat(adapter.getDelegate()).isSameAs(adapter);
+    }
 
-	@BeforeEach
-	void setUp() {
-		this.adapter = new MessageListenerAdapter();
-	}
+    @Test
+    void testThatTheDefaultMessageHandlingMethodNameIsTheConstantDefault() throws Exception {
+        assertThat(adapter.getDefaultListenerMethod())
+                .isEqualTo(MessageListenerAdapter.ORIGINAL_DEFAULT_LISTENER_METHOD);
+    }
 
-	@Test
-	void testThatWhenNoDelegateIsSuppliedTheDelegateIsAssumedToBeTheMessageListenerAdapterItself()
-			throws Exception {
-		assertThat(adapter.getDelegate()).isSameAs(adapter);
-	}
+    @Test
+    void testAdapterWithListenerAndDefaultMessage() throws Exception {
+        MessageListener mock = mock(MessageListener.class);
 
-	@Test
-	void testThatTheDefaultMessageHandlingMethodNameIsTheConstantDefault() throws Exception {
-		assertThat(adapter.getDefaultListenerMethod()).isEqualTo(MessageListenerAdapter.ORIGINAL_DEFAULT_LISTENER_METHOD);
-	}
+        MessageListenerAdapter adapter =
+                new MessageListenerAdapter(mock) {
+                    protected void handleListenerException(Throwable ex) {
+                        throw new IllegalStateException(ex);
+                    }
+                };
 
-	@Test
-	void testAdapterWithListenerAndDefaultMessage() throws Exception {
-		MessageListener mock = mock(MessageListener.class);
+        adapter.onMessage(STRING_MSG, null);
+        verify(mock).onMessage(STRING_MSG, null);
+    }
 
-		MessageListenerAdapter adapter = new MessageListenerAdapter(mock) {
-			protected void handleListenerException(Throwable ex) {
-				throw new IllegalStateException(ex);
-			}
-		};
+    @Test
+    void testRawMessage() throws Exception {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(target);
+        adapter.afterPropertiesSet();
+        adapter.onMessage(STRING_MSG, null);
 
-		adapter.onMessage(STRING_MSG, null);
-		verify(mock).onMessage(STRING_MSG, null);
-	}
+        verify(target).handleMessage(PAYLOAD);
+    }
 
-	@Test
-	void testRawMessage() throws Exception {
-		MessageListenerAdapter adapter = new MessageListenerAdapter(target);
-		adapter.afterPropertiesSet();
-		adapter.onMessage(STRING_MSG, null);
+    @Test
+    void testCustomMethod() throws Exception {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(target);
+        adapter.setDefaultListenerMethod("customMethod");
+        adapter.afterPropertiesSet();
 
-		verify(target).handleMessage(PAYLOAD);
-	}
+        adapter.onMessage(STRING_MSG, null);
 
-	@Test
-	void testCustomMethod() throws Exception {
-		MessageListenerAdapter adapter = new MessageListenerAdapter(target);
-		adapter.setDefaultListenerMethod("customMethod");
-		adapter.afterPropertiesSet();
+        verify(target).customMethod(PAYLOAD);
+    }
 
-		adapter.onMessage(STRING_MSG, null);
+    @Test
+    void testCustomMethodWithAlternateConstructor() throws Exception {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(target, "customMethod");
+        adapter.afterPropertiesSet();
 
-		verify(target).customMethod(PAYLOAD);
-	}
+        adapter.onMessage(STRING_MSG, null);
 
-	@Test
-	void testCustomMethodWithAlternateConstructor() throws Exception {
-		MessageListenerAdapter adapter = new MessageListenerAdapter(target, "customMethod");
-		adapter.afterPropertiesSet();
+        verify(target).customMethod(PAYLOAD);
+    }
 
-		adapter.onMessage(STRING_MSG, null);
+    @Test
+    void testCustomMethodWithChannel() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(target);
+        adapter.setDefaultListenerMethod("customMethodWithChannel");
+        adapter.afterPropertiesSet();
 
-		verify(target).customMethod(PAYLOAD);
-	}
+        adapter.onMessage(STRING_MSG, RAW_CHANNEL);
 
-	@Test
-	void testCustomMethodWithChannel() {
-		MessageListenerAdapter adapter = new MessageListenerAdapter(target);
-		adapter.setDefaultListenerMethod("customMethodWithChannel");
-		adapter.afterPropertiesSet();
+        verify(target).customMethodWithChannel(PAYLOAD, CHANNEL);
+    }
 
-		adapter.onMessage(STRING_MSG, RAW_CHANNEL);
+    @Test
+    void testCustomMethodWithChannelAndAlternateConstructor() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(target, "customMethodWithChannel");
+        adapter.afterPropertiesSet();
 
-		verify(target).customMethodWithChannel(PAYLOAD, CHANNEL);
-	}
+        adapter.onMessage(STRING_MSG, RAW_CHANNEL);
 
-	@Test
-	void testCustomMethodWithChannelAndAlternateConstructor() {
-		MessageListenerAdapter adapter = new MessageListenerAdapter(target, "customMethodWithChannel");
-		adapter.afterPropertiesSet();
+        verify(target).customMethodWithChannel(PAYLOAD, CHANNEL);
+    }
 
-		adapter.onMessage(STRING_MSG, RAW_CHANNEL);
+    @Test // DATAREDIS-92
+    void triggersListenerImplementingInterfaceCorrectly() {
 
-		verify(target).customMethodWithChannel(PAYLOAD, CHANNEL);
-	}
+        SampleListener listener = new SampleListener();
 
-	@Test // DATAREDIS-92
-	void triggersListenerImplementingInterfaceCorrectly() {
+        MessageListener listenerAdapter =
+                new MessageListenerAdapter(listener) {
+                    @Override
+                    public void setDefaultListenerMethod(String defaultListenerMethod) {
+                        throw new RuntimeException("Boom");
+                    }
+                };
 
-		SampleListener listener = new SampleListener();
+        listenerAdapter.onMessage(STRING_MSG, RAW_CHANNEL);
+        assertThat(listener.count).isEqualTo(1);
+    }
 
-		MessageListener listenerAdapter = new MessageListenerAdapter(listener) {
-			@Override
-			public void setDefaultListenerMethod(String defaultListenerMethod) {
-				throw new RuntimeException("Boom");
-			}
-		};
+    @Test // DATAREDIS-337
+    void defaultConcreteHandlerMethodShouldOnlyBeInvokedOnce() {
 
-		listenerAdapter.onMessage(STRING_MSG, RAW_CHANNEL);
-		assertThat(listener.count).isEqualTo(1);
-	}
+        ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
 
-	@Test // DATAREDIS-337
-	void defaultConcreteHandlerMethodShouldOnlyBeInvokedOnce() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
+        adapter.afterPropertiesSet();
 
-		ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
+        adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
 
-		MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
-		adapter.afterPropertiesSet();
+        verify(listener, times(1)).handleMessage(anyString(), anyString());
+    }
 
-		adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
+    @Test // DATAREDIS-337
+    void defaultConcreteHandlerMethodWithoutSerializerShouldOnlyBeInvokedOnce() {
 
-		verify(listener, times(1)).handleMessage(anyString(), anyString());
-	}
+        ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
 
-	@Test // DATAREDIS-337
-	void defaultConcreteHandlerMethodWithoutSerializerShouldOnlyBeInvokedOnce() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
+        adapter.setSerializer(null);
+        adapter.afterPropertiesSet();
 
-		ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
+        adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
 
-		MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
-		adapter.setSerializer(null);
-		adapter.afterPropertiesSet();
+        verify(listener, times(1)).handleMessage(any(byte[].class), anyString());
+    }
 
-		adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
+    @Test // DATAREDIS-337
+    void defaultConcreteHandlerMethodWithCustomSerializerShouldOnlyBeInvokedOnce() {
 
-		verify(listener, times(1)).handleMessage(any(byte[].class), anyString());
-	}
+        ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
 
-	@Test // DATAREDIS-337
-	void defaultConcreteHandlerMethodWithCustomSerializerShouldOnlyBeInvokedOnce() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
+        adapter.setSerializer(new PojoValkeySerializer());
+        adapter.afterPropertiesSet();
 
-		ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
+        adapter.onMessage(new DefaultMessage(new byte[0], "body".getBytes()), "".getBytes());
 
-		MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
-		adapter.setSerializer(new PojoValkeySerializer());
-		adapter.afterPropertiesSet();
+        verify(listener, times(1)).handleMessage(any(Pojo.class), anyString());
+    }
 
-		adapter.onMessage(new DefaultMessage(new byte[0], "body".getBytes()), "".getBytes());
+    @Test // DATAREDIS-337
+    void customConcreteHandlerMethodShouldOnlyBeInvokedOnce() {
 
-		verify(listener, times(1)).handleMessage(any(Pojo.class), anyString());
-	}
+        ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
 
-	@Test // DATAREDIS-337
-	void customConcreteHandlerMethodShouldOnlyBeInvokedOnce() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
+        adapter.setDefaultListenerMethod("handle");
+        adapter.afterPropertiesSet();
 
-		ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
+        adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
 
-		MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
-		adapter.setDefaultListenerMethod("handle");
-		adapter.afterPropertiesSet();
+        verify(listener, times(1)).handle(anyString(), anyString());
+    }
 
-		adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
+    @Test // DATAREDIS-337
+    void customConcreteMessageOnlyHandlerMethodShouldOnlyBeInvokedOnce() {
 
-		verify(listener, times(1)).handle(anyString(), anyString());
-	}
+        ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
 
-	@Test // DATAREDIS-337
-	void customConcreteMessageOnlyHandlerMethodShouldOnlyBeInvokedOnce() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
+        adapter.setDefaultListenerMethod("handleMessageOnly");
+        adapter.afterPropertiesSet();
 
-		ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
+        adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
 
-		MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
-		adapter.setDefaultListenerMethod("handleMessageOnly");
-		adapter.afterPropertiesSet();
+        verify(listener, times(1)).handleMessageOnly(anyString());
+    }
 
-		adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
+    @Test // DATAREDIS-337
+    void customConcreteHandlerMethodWithoutSerializerShouldOnlyBeInvokedOnce() {
 
-		verify(listener, times(1)).handleMessageOnly(anyString());
-	}
+        ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
 
-	@Test // DATAREDIS-337
-	void customConcreteHandlerMethodWithoutSerializerShouldOnlyBeInvokedOnce() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
+        adapter.setDefaultListenerMethod("handle");
+        adapter.setSerializer(null);
+        adapter.afterPropertiesSet();
 
-		ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
+        adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
 
-		MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
-		adapter.setDefaultListenerMethod("handle");
-		adapter.setSerializer(null);
-		adapter.afterPropertiesSet();
+        verify(listener, times(1)).handle(any(byte[].class), anyString());
+    }
 
-		adapter.onMessage(new DefaultMessage("channel1".getBytes(), "body".getBytes()), "".getBytes());
+    @Test // DATAREDIS-337
+    void customConcreteHandlerMethodWithCustomSerializerShouldOnlyBeInvokedOnce() {
 
-		verify(listener, times(1)).handle(any(byte[].class), anyString());
-	}
+        ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
 
-	@Test // DATAREDIS-337
-	void customConcreteHandlerMethodWithCustomSerializerShouldOnlyBeInvokedOnce() {
+        MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
+        adapter.setDefaultListenerMethod("handle");
+        adapter.setSerializer(new PojoValkeySerializer());
+        adapter.afterPropertiesSet();
 
-		ConcreteMessageHandler listener = spy(new ConcreteMessageHandler());
+        adapter.onMessage(new DefaultMessage(new byte[0], "body".getBytes()), "".getBytes());
 
-		MessageListenerAdapter adapter = new MessageListenerAdapter(listener);
-		adapter.setDefaultListenerMethod("handle");
-		adapter.setSerializer(new PojoValkeySerializer());
-		adapter.afterPropertiesSet();
+        verify(listener, times(1)).handle(any(Pojo.class), anyString());
+    }
 
-		adapter.onMessage(new DefaultMessage(new byte[0], "body".getBytes()), "".getBytes());
+    class SampleListener implements MessageListener {
 
-		verify(listener, times(1)).handle(any(Pojo.class), anyString());
-	}
+        int count;
 
-	class SampleListener implements MessageListener {
+        public void onMessage(Message message, byte[] pattern) {
+            count++;
+        }
+    }
 
-		int count;
+    /**
+     * @author Thomas Darimont
+     */
+    static class AbstractMessageHandler {
 
-		public void onMessage(Message message, byte[] pattern) {
-			count++;
-		}
-	}
+        public void handleMessage(Pojo message, String channel) {}
 
-	/**
-	 * @author Thomas Darimont
-	 */
-	static class AbstractMessageHandler {
+        public void handleMessage(byte[] message, String channel) {}
 
-		public void handleMessage(Pojo message, String channel) {}
+        public void handleMessage(String message, String channel) {}
 
-		public void handleMessage(byte[] message, String channel) {}
+        public void handle(Pojo message, String channel) {}
 
-		public void handleMessage(String message, String channel) {}
+        public void handle(String message, String channel) {}
 
-		public void handle(Pojo message, String channel) {}
+        public void handle(byte[] message, String channel) {}
 
-		public void handle(String message, String channel) {}
+        public void handleMessageOnly(String message) {}
+    }
 
-		public void handle(byte[] message, String channel) {}
+    /**
+     * @author Thomas Darimont
+     */
+    static class ConcreteMessageHandler extends AbstractMessageHandler {
 
-		public void handleMessageOnly(String message) {}
-	}
+        public void handleMessage(Pojo message, String channel) {}
 
-	/**
-	 * @author Thomas Darimont
-	 */
-	static class ConcreteMessageHandler extends AbstractMessageHandler {
+        public void handleMessage(byte[] message, String channel) {}
 
-		public void handleMessage(Pojo message, String channel) {}
+        public void handleMessage(String message, String channel) {}
 
-		public void handleMessage(byte[] message, String channel) {}
+        public void handle(Pojo message, String channel) {}
 
-		public void handleMessage(String message, String channel) {}
+        public void handle(String message, String channel) {}
 
-		public void handle(Pojo message, String channel) {}
+        public void handle(byte[] message, String channel) {}
 
-		public void handle(String message, String channel) {}
+        public void handleMessageOnly(String message) {}
+    }
 
-		public void handle(byte[] message, String channel) {}
+    static class Pojo {}
 
-		public void handleMessageOnly(String message) {}
-	}
+    static class PojoValkeySerializer implements ValkeySerializer<Pojo> {
 
-	static class Pojo {}
+        @Override
+        public byte[] serialize(Pojo value) throws SerializationException {
+            return new byte[0];
+        }
 
-	static class PojoValkeySerializer implements ValkeySerializer<Pojo> {
-
-		@Override
-		public byte[] serialize(Pojo value) throws SerializationException {
-			return new byte[0];
-		}
-
-		@Override
-		public Pojo deserialize(byte[] bytes) throws SerializationException {
-			return new Pojo();
-		}
-	}
+        @Override
+        public Pojo deserialize(byte[] bytes) throws SerializationException {
+            return new Pojo();
+        }
+    }
 }

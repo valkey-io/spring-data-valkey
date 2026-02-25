@@ -15,240 +15,466 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import static org.assertj.core.api.Assertions.*;
 import static io.valkey.springframework.data.valkey.connection.ClusterTestVariables.*;
 import static io.valkey.springframework.data.valkey.connection.lettuce.LettuceReactiveCommandsTestSupport.*;
+import static org.assertj.core.api.Assertions.*;
 
-import reactor.test.StepVerifier;
-
-import org.junit.jupiter.api.Test;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.FlushOption;
+import org.junit.jupiter.api.Test;
+import reactor.test.StepVerifier;
 
 /**
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author Dennis Neufeld
  */
-class LettuceReactiveClusterServerCommandsIntegrationTests extends LettuceReactiveClusterTestSupport {
+class LettuceReactiveClusterServerCommandsIntegrationTests
+        extends LettuceReactiveClusterTestSupport {
 
-	private static final ValkeyClusterNode NODE1 = new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT);
-	private static final ValkeyClusterNode NODE2 = new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_2_PORT);
-	private static final ValkeyClusterNode NODE3 = new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_3_PORT);
+    private static final ValkeyClusterNode NODE1 =
+            new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT);
+    private static final ValkeyClusterNode NODE2 =
+            new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_2_PORT);
+    private static final ValkeyClusterNode NODE3 =
+            new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_3_PORT);
 
-	@Test // DATAREDIS-659
-	void pingShouldRespondCorrectly() {
-		connection.ping(NODE1).as(StepVerifier::create).expectNext("PONG").verifyComplete();
-	}
+    @Test // DATAREDIS-659
+    void pingShouldRespondCorrectly() {
+        connection.ping(NODE1).as(StepVerifier::create).expectNext("PONG").verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void lastSaveShouldRespondCorrectly() {
-		connection.serverCommands().lastSave(NODE1).as(StepVerifier::create).expectNextCount(1).verifyComplete();
-	}
+    @Test // DATAREDIS-659
+    void lastSaveShouldRespondCorrectly() {
+        connection
+                .serverCommands()
+                .lastSave(NODE1)
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void saveShouldRespondCorrectly() {
-		connection.serverCommands().save(NODE1).as(StepVerifier::create).expectNext("OK").verifyComplete();
-	}
+    @Test // DATAREDIS-659
+    void saveShouldRespondCorrectly() {
+        connection
+                .serverCommands()
+                .save(NODE1)
+                .as(StepVerifier::create)
+                .expectNext("OK")
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void dbSizeShouldRespondCorrectly() {
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNextCount(1).verifyComplete();
-	}
+    @Test // DATAREDIS-659
+    void dbSizeShouldRespondCorrectly() {
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void flushDbShouldRespondCorrectly() {
+    @Test // DATAREDIS-659
+    void flushDbShouldRespondCorrectly() {
 
-		connection.serverCommands().flushDb() //
-				.then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
-				.then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNextCount(1) //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushDb() //
+                .then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
+                .then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNextCount(1) //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(1L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
 
-		connection.serverCommands().flushDb(NODE1).as(StepVerifier::create).expectNext("OK").verifyComplete();
+        connection
+                .serverCommands()
+                .flushDb(NODE1)
+                .as(StepVerifier::create)
+                .expectNext("OK")
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(0L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(0L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
 
-	@Test // GH-2187
-	void flushDbSyncShouldRespondCorrectly() {
+    @Test // GH-2187
+    void flushDbSyncShouldRespondCorrectly() {
 
-		connection.serverCommands().flushDb() //
-				.then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
-				.then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNextCount(1) //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushDb() //
+                .then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
+                .then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNextCount(1) //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(1L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
 
-		connection.serverCommands().flushDb(NODE1, FlushOption.SYNC).as(StepVerifier::create) //
-				.expectNext("OK") //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushDb(NODE1, FlushOption.SYNC)
+                .as(StepVerifier::create) //
+                .expectNext("OK") //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(0L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(0L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
 
-	@Test // GH-2187
-	void flushDbAsyncShouldRespondCorrectly() {
+    @Test // GH-2187
+    void flushDbAsyncShouldRespondCorrectly() {
 
-		connection.serverCommands().flushDb() //
-				.then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
-				.then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNextCount(1) //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushDb() //
+                .then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
+                .then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNextCount(1) //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(1L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
 
-		connection.serverCommands().flushDb(NODE1, FlushOption.ASYNC).as(StepVerifier::create) //
-				.expectNext("OK") //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushDb(NODE1, FlushOption.ASYNC)
+                .as(StepVerifier::create) //
+                .expectNext("OK") //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(0L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(0L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void flushAllShouldRespondCorrectly() {
+    @Test // DATAREDIS-659
+    void flushAllShouldRespondCorrectly() {
 
-		connection.serverCommands().flushAll() //
-				.then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
-				.then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNextCount(1) //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushAll() //
+                .then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
+                .then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNextCount(1) //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(1L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
 
-		connection.serverCommands().flushAll(NODE1).as(StepVerifier::create).expectNext("OK").verifyComplete();
+        connection
+                .serverCommands()
+                .flushAll(NODE1)
+                .as(StepVerifier::create)
+                .expectNext("OK")
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(0L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(0L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
 
-	@Test // GH-2187
-	void flushAllSyncShouldRespondCorrectly() {
+    @Test // GH-2187
+    void flushAllSyncShouldRespondCorrectly() {
 
-		connection.serverCommands().flushAll() //
-				.then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
-				.then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNextCount(1) //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushAll() //
+                .then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
+                .then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNextCount(1) //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(1L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
 
-		connection.serverCommands().flushAll(NODE1, FlushOption.SYNC).as(StepVerifier::create) //
-				.expectNext("OK") //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushAll(NODE1, FlushOption.SYNC)
+                .as(StepVerifier::create) //
+                .expectNext("OK") //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(0L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(0L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
 
-	@Test // GH-2187
-	void flushAllAsyncShouldRespondCorrectly() {
+    @Test // GH-2187
+    void flushAllAsyncShouldRespondCorrectly() {
 
-		connection.serverCommands().flushAll() //
-				.then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
-				.then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER)).as(StepVerifier::create) //
-				.expectNextCount(1) //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushAll() //
+                .then(connection.stringCommands().set(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
+                .then(connection.stringCommands().set(KEY_2_BBUFFER, VALUE_2_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNextCount(1) //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(1L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
 
-		connection.serverCommands().flushAll(NODE1, FlushOption.ASYNC).as(StepVerifier::create) //
-				.expectNext("OK") //
-				.verifyComplete();
+        connection
+                .serverCommands()
+                .flushAll(NODE1, FlushOption.ASYNC)
+                .as(StepVerifier::create) //
+                .expectNext("OK") //
+                .verifyComplete();
 
-		connection.serverCommands().dbSize(NODE1).as(StepVerifier::create).expectNext(0L).verifyComplete();
-		connection.serverCommands().dbSize(NODE3).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .dbSize(NODE1)
+                .as(StepVerifier::create)
+                .expectNext(0L)
+                .verifyComplete();
+        connection
+                .serverCommands()
+                .dbSize(NODE3)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void infoShouldRespondCorrectly() {
+    @Test // DATAREDIS-659
+    void infoShouldRespondCorrectly() {
 
-		connection.serverCommands().info(NODE1).as(StepVerifier::create) //
-				.consumeNextWith(properties -> assertThat(properties).containsKey("tcp_port")) //
-				.verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .info(NODE1)
+                .as(StepVerifier::create) //
+                .consumeNextWith(properties -> assertThat(properties).containsKey("tcp_port")) //
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void standaloneInfoWithSectionShouldRespondCorrectly() {
+    @Test // DATAREDIS-659
+    void standaloneInfoWithSectionShouldRespondCorrectly() {
 
-		connection.serverCommands().info(NODE1, "server").as(StepVerifier::create) //
-				.consumeNextWith(properties -> {
-					assertThat(properties).containsKey("tcp_port").doesNotContainKey("role");
-				}) //
-				.verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .info(NODE1, "server")
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        properties -> {
+                            assertThat(properties).containsKey("tcp_port").doesNotContainKey("role");
+                        }) //
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void getConfigShouldRespondCorrectly() {
+    @Test // DATAREDIS-659
+    void getConfigShouldRespondCorrectly() {
 
-		connection.serverCommands().getConfig(NODE1, "*").as(StepVerifier::create) //
-				.consumeNextWith(properties -> {
-					assertThat(properties).containsEntry("port", NODE1.getPort().toString());
-				}) //
-				.verifyComplete();
-	}
+        connection
+                .serverCommands()
+                .getConfig(NODE1, "*")
+                .as(StepVerifier::create) //
+                .consumeNextWith(
+                        properties -> {
+                            assertThat(properties).containsEntry("port", NODE1.getPort().toString());
+                        }) //
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void setConfigShouldApplyConfiguration() throws InterruptedException {
+    @Test // DATAREDIS-659
+    void setConfigShouldApplyConfiguration() throws InterruptedException {
 
-		final String slowLogKey = "slowlog-max-len";
+        final String slowLogKey = "slowlog-max-len";
 
-		String resetValue = connection.serverCommands().getConfig(slowLogKey).map(it -> {
-			if (it.containsKey(slowLogKey)) {
-				return it.get(slowLogKey);
-			}
-			return it.get("127.0.0.1:7379." + slowLogKey);
-		}).block().toString();
+        String resetValue =
+                connection
+                        .serverCommands()
+                        .getConfig(slowLogKey)
+                        .map(
+                                it -> {
+                                    if (it.containsKey(slowLogKey)) {
+                                        return it.get(slowLogKey);
+                                    }
+                                    return it.get("127.0.0.1:7379." + slowLogKey);
+                                })
+                        .block()
+                        .toString();
 
-		try {
-			connection.serverCommands().setConfig(slowLogKey, resetValue).as(StepVerifier::create) //
-					.expectNext("OK") //
-					.verifyComplete();
+        try {
+            connection
+                    .serverCommands()
+                    .setConfig(slowLogKey, resetValue)
+                    .as(StepVerifier::create) //
+                    .expectNext("OK") //
+                    .verifyComplete();
 
-			connection.serverCommands().setConfig(NODE1, slowLogKey, "127").as(StepVerifier::create) //
-					.expectNext("OK") //
-					.verifyComplete();
+            connection
+                    .serverCommands()
+                    .setConfig(NODE1, slowLogKey, "127")
+                    .as(StepVerifier::create) //
+                    .expectNext("OK") //
+                    .verifyComplete();
 
-			connection.serverCommands().getConfig(NODE1, slowLogKey).as(StepVerifier::create) //
-					.consumeNextWith(properties -> {
-						assertThat(properties).containsEntry(slowLogKey, "127");
-					}) //
-					.verifyComplete();
+            connection
+                    .serverCommands()
+                    .getConfig(NODE1, slowLogKey)
+                    .as(StepVerifier::create) //
+                    .consumeNextWith(
+                            properties -> {
+                                assertThat(properties).containsEntry(slowLogKey, "127");
+                            }) //
+                    .verifyComplete();
 
-			connection.serverCommands().getConfig(NODE2, slowLogKey).as(StepVerifier::create) //
-					.consumeNextWith(properties -> {
-						assertThat(properties).containsEntry(slowLogKey, resetValue);
-					}) //
-					.verifyComplete();
-		} finally {
-			connection.serverCommands().setConfig(slowLogKey, resetValue).block();
-		}
-	}
+            connection
+                    .serverCommands()
+                    .getConfig(NODE2, slowLogKey)
+                    .as(StepVerifier::create) //
+                    .consumeNextWith(
+                            properties -> {
+                                assertThat(properties).containsEntry(slowLogKey, resetValue);
+                            }) //
+                    .verifyComplete();
+        } finally {
+            connection.serverCommands().setConfig(slowLogKey, resetValue).block();
+        }
+    }
 
-	@Test // DATAREDIS-659
-	void configResetstatShouldRespondCorrectly() {
-		connection.serverCommands().resetConfigStats(NODE1).as(StepVerifier::create).expectNext("OK").verifyComplete();
-	}
+    @Test // DATAREDIS-659
+    void configResetstatShouldRespondCorrectly() {
+        connection
+                .serverCommands()
+                .resetConfigStats(NODE1)
+                .as(StepVerifier::create)
+                .expectNext("OK")
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void timeShouldRespondCorrectly() {
-		connection.serverCommands().time(NODE1).as(StepVerifier::create).expectNextCount(1).verifyComplete();
-	}
+    @Test // DATAREDIS-659
+    void timeShouldRespondCorrectly() {
+        connection
+                .serverCommands()
+                .time(NODE1)
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
+    }
 
-	@Test // DATAREDIS-659
-	void getClientListShouldReportClient() {
-		connection.serverCommands().getClientList(NODE1).as(StepVerifier::create).expectNextCount(1).thenCancel().verify();
-	}
+    @Test // DATAREDIS-659
+    void getClientListShouldReportClient() {
+        connection
+                .serverCommands()
+                .getClientList(NODE1)
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .thenCancel()
+                .verify();
+    }
 }

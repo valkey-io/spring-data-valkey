@@ -18,9 +18,9 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 import org.springframework.dao.DataAccessException;
 
 /**
- * Exception thrown when a Valkey transaction is aborted due to a WATCH conflict.
- * This exception is used to signal that a watched key was modified between
- * the WATCH command and the EXEC command, causing the transaction to be aborted.
+ * Exception thrown when a Valkey transaction is aborted due to a WATCH conflict. This exception is
+ * used to signal that a watched key was modified between the WATCH command and the EXEC command,
+ * causing the transaction to be aborted.
  *
  * @author Ilia Kolominsky
  * @since 2.0

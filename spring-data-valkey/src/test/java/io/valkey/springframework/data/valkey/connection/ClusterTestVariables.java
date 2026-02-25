@@ -22,43 +22,58 @@ import io.valkey.springframework.data.valkey.connection.ValkeyNode.NodeType;
  */
 public abstract class ClusterTestVariables {
 
-	public static final String KEY_1 = "key1";
-	public static final String KEY_2 = "key2";
-	public static final String KEY_3 = "key3";
-	public static final String KEY_4 = "key4";
+    public static final String KEY_1 = "key1";
+    public static final String KEY_2 = "key2";
+    public static final String KEY_3 = "key3";
+    public static final String KEY_4 = "key4";
 
-	public static final String VALUE_1 = "value1";
-	public static final String VALUE_2 = "value2";
-	public static final String VALUE_3 = "value3";
-	public static final String VALUE_4 = "value4";
+    public static final String VALUE_1 = "value1";
+    public static final String VALUE_2 = "value2";
+    public static final String VALUE_3 = "value3";
+    public static final String VALUE_4 = "value4";
 
-	public static final String SAME_SLOT_KEY_1 = "key2660";
-	public static final String SAME_SLOT_KEY_2 = "key7112";
-	public static final String SAME_SLOT_KEY_3 = "key8885";
+    public static final String SAME_SLOT_KEY_1 = "key2660";
+    public static final String SAME_SLOT_KEY_2 = "key7112";
+    public static final String SAME_SLOT_KEY_3 = "key8885";
 
-	public static final String CLUSTER_HOST = "127.0.0.1";
-	public static final int MASTER_NODE_1_PORT = 7379;
-	public static final int MASTER_NODE_2_PORT = 7380;
-	public static final int MASTER_NODE_3_PORT = 7381;
-	public static final int REPLICAOF_NODE_1_PORT = 7382;
+    public static final String CLUSTER_HOST = "127.0.0.1";
+    public static final int MASTER_NODE_1_PORT = 7379;
+    public static final int MASTER_NODE_2_PORT = 7380;
+    public static final int MASTER_NODE_3_PORT = 7381;
+    public static final int REPLICAOF_NODE_1_PORT = 7382;
 
-	public static final String MASTER_NODE_1_ID = "ef570f86c7b1a953846668debc177a3a16733420";
-	public static final String MASTER_NODE_2_ID = "0f2ee5df45d18c50aca07228cc18b1da96fd5e84";
-	public static final String MASTER_NODE_3_ID = "3b9b8192a874fa8f1f09dbc0ee20afab5738eee7";
-	public static final String REPLICAOF_NODE_1_ID = "b8b5ee73b1d1997abff694b3fe8b2397d2138b6d";
+    public static final String MASTER_NODE_1_ID = "ef570f86c7b1a953846668debc177a3a16733420";
+    public static final String MASTER_NODE_2_ID = "0f2ee5df45d18c50aca07228cc18b1da96fd5e84";
+    public static final String MASTER_NODE_3_ID = "3b9b8192a874fa8f1f09dbc0ee20afab5738eee7";
+    public static final String REPLICAOF_NODE_1_ID = "b8b5ee73b1d1997abff694b3fe8b2397d2138b6d";
 
-	public static final ValkeyClusterNode CLUSTER_NODE_1 = ValkeyClusterNode.newValkeyClusterNode()
-			.listeningAt(CLUSTER_HOST, MASTER_NODE_1_PORT).withId(MASTER_NODE_1_ID).promotedAs(NodeType.MASTER).build();
-	public static final ValkeyClusterNode CLUSTER_NODE_2 = ValkeyClusterNode.newValkeyClusterNode()
-			.listeningAt(CLUSTER_HOST, MASTER_NODE_2_PORT).withId(MASTER_NODE_2_ID).promotedAs(NodeType.MASTER).build();
-	public static final ValkeyClusterNode CLUSTER_NODE_3 = ValkeyClusterNode.newValkeyClusterNode()
-			.listeningAt(CLUSTER_HOST, MASTER_NODE_3_PORT).withId(MASTER_NODE_3_ID).promotedAs(NodeType.MASTER).build();
-	public static final ValkeyClusterNode REPLICA_OF_NODE_1 = ValkeyClusterNode.newValkeyClusterNode()
-			.listeningAt(CLUSTER_HOST, REPLICAOF_NODE_1_PORT).withId(REPLICAOF_NODE_1_ID).promotedAs(NodeType.REPLICA)
-			.build();
+    public static final ValkeyClusterNode CLUSTER_NODE_1 =
+            ValkeyClusterNode.newValkeyClusterNode()
+                    .listeningAt(CLUSTER_HOST, MASTER_NODE_1_PORT)
+                    .withId(MASTER_NODE_1_ID)
+                    .promotedAs(NodeType.MASTER)
+                    .build();
+    public static final ValkeyClusterNode CLUSTER_NODE_2 =
+            ValkeyClusterNode.newValkeyClusterNode()
+                    .listeningAt(CLUSTER_HOST, MASTER_NODE_2_PORT)
+                    .withId(MASTER_NODE_2_ID)
+                    .promotedAs(NodeType.MASTER)
+                    .build();
+    public static final ValkeyClusterNode CLUSTER_NODE_3 =
+            ValkeyClusterNode.newValkeyClusterNode()
+                    .listeningAt(CLUSTER_HOST, MASTER_NODE_3_PORT)
+                    .withId(MASTER_NODE_3_ID)
+                    .promotedAs(NodeType.MASTER)
+                    .build();
+    public static final ValkeyClusterNode REPLICA_OF_NODE_1 =
+            ValkeyClusterNode.newValkeyClusterNode()
+                    .listeningAt(CLUSTER_HOST, REPLICAOF_NODE_1_PORT)
+                    .withId(REPLICAOF_NODE_1_ID)
+                    .promotedAs(NodeType.REPLICA)
+                    .build();
 
-	public static final ValkeyClusterNode UNKNOWN_CLUSTER_NODE = new ValkeyClusterNode("8.8.8.8", 6379);
+    public static final ValkeyClusterNode UNKNOWN_CLUSTER_NODE =
+            new ValkeyClusterNode("8.8.8.8", 6379);
 
-	private ClusterTestVariables() {}
-
+    private ClusterTestVariables() {}
 }

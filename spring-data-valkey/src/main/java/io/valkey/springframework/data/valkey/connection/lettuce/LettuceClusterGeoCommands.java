@@ -22,7 +22,7 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
  */
 class LettuceClusterGeoCommands extends LettuceGeoCommands {
 
-	LettuceClusterGeoCommands(LettuceClusterConnection connection) {
-		super(connection);
-	}
+    LettuceClusterGeoCommands(LettuceClusterConnection connection) {
+        super(connection);
+    }
 }

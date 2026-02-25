@@ -22,47 +22,45 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-
-/**
- * Example demonstrating Spring Data Valkey repositories.
- */
+/** Example demonstrating Spring Data Valkey repositories. */
 public class RepositoriesExample {
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 
-		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext(Config.class);
-		PersonRepository repository = context.getBean(PersonRepository.class);
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext(Config.class);
+        PersonRepository repository = context.getBean(PersonRepository.class);
 
-		repository.save(new Person("1", "John", "Doe", 30));
-		repository.save(new Person("2", "Jane", "Doe", 28));
-		repository.save(new Person("3", "Bob", "Smith", 35));
+        repository.save(new Person("1", "John", "Doe", 30));
+        repository.save(new Person("2", "Jane", "Doe", 28));
+        repository.save(new Person("3", "Bob", "Smith", 35));
 
-		System.out.println("All persons:");
-		repository.findAll().forEach(System.out::println);
+        System.out.println("All persons:");
+        repository.findAll().forEach(System.out::println);
 
-		System.out.println("\nPersons with lastname 'Doe':");
-		repository.findByLastname("Doe").forEach(System.out::println);
+        System.out.println("\nPersons with lastname 'Doe':");
+        repository.findByLastname("Doe").forEach(System.out::println);
 
-		// Cleanup
-		repository.deleteAll();
+        // Cleanup
+        repository.deleteAll();
 
-		context.close();
-	}
+        context.close();
+    }
 
-	@Configuration
-	@EnableValkeyRepositories
-	static class Config {
+    @Configuration
+    @EnableValkeyRepositories
+    static class Config {
 
-		@Bean
-		public ValkeyGlideConnectionFactory connectionFactory() {
-			return new ValkeyGlideConnectionFactory();
-		}
+        @Bean
+        public ValkeyGlideConnectionFactory connectionFactory() {
+            return new ValkeyGlideConnectionFactory();
+        }
 
-		@Bean
-		public ValkeyTemplate<?, ?> valkeyTemplate(ValkeyGlideConnectionFactory connectionFactory) {
-			ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
-			template.setConnectionFactory(connectionFactory);
-			return template;
-		}
-	}
+        @Bean
+        public ValkeyTemplate<?, ?> valkeyTemplate(ValkeyGlideConnectionFactory connectionFactory) {
+            ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
+            template.setConnectionFactory(connectionFactory);
+            return template;
+        }
+    }
 }

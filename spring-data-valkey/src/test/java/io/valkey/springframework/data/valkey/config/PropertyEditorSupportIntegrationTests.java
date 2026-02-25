@@ -17,10 +17,6 @@ package io.valkey.springframework.data.valkey.config;
 
 import static org.assertj.core.api.Assertions.*;
 
-import jakarta.annotation.Resource;
-
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.core.ClusterOperations;
 import io.valkey.springframework.data.valkey.core.GeoOperations;
 import io.valkey.springframework.data.valkey.core.HashOperations;
@@ -29,6 +25,8 @@ import io.valkey.springframework.data.valkey.core.SetOperations;
 import io.valkey.springframework.data.valkey.core.StreamOperations;
 import io.valkey.springframework.data.valkey.core.ValueOperations;
 import io.valkey.springframework.data.valkey.core.ZSetOperations;
+import jakarta.annotation.Resource;
+import org.junit.jupiter.api.Test;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 /**
@@ -39,25 +37,40 @@ import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 @SpringJUnitConfig(locations = "namespace.xml")
 class PropertyEditorSupportIntegrationTests {
 
-	@Resource(name = "valkeyTemplate") ClusterOperations<String, String> cluster;
-	@Resource(name = "valkeyTemplate") GeoOperations<String, String> geo;
-	@Resource(name = "valkeyTemplate") HashOperations<String, String, String> hash;
-	@Resource(name = "valkeyTemplate") HyperLogLogOperations<String, String> hll;
-	@Resource(name = "valkeyTemplate") SetOperations<String, String> set;
-	@Resource(name = "valkeyTemplate") StreamOperations<String, String, String> stream;
-	@Resource(name = "valkeyTemplate") ValueOperations<String, String> value;
-	@Resource(name = "valkeyTemplate") ZSetOperations<String, String> zSet;
+    @Resource(name = "valkeyTemplate")
+    ClusterOperations<String, String> cluster;
 
-	@Test // GH-2828, GH-2825
-	void shouldInjectResources() {
+    @Resource(name = "valkeyTemplate")
+    GeoOperations<String, String> geo;
 
-		assertThat(cluster).isNotNull();
-		assertThat(geo).isNotNull();
-		assertThat(hash).isNotNull();
-		assertThat(hll).isNotNull();
-		assertThat(set).isNotNull();
-		assertThat(stream).isNotNull();
-		assertThat(value).isNotNull();
-		assertThat(zSet).isNotNull();
-	}
+    @Resource(name = "valkeyTemplate")
+    HashOperations<String, String, String> hash;
+
+    @Resource(name = "valkeyTemplate")
+    HyperLogLogOperations<String, String> hll;
+
+    @Resource(name = "valkeyTemplate")
+    SetOperations<String, String> set;
+
+    @Resource(name = "valkeyTemplate")
+    StreamOperations<String, String, String> stream;
+
+    @Resource(name = "valkeyTemplate")
+    ValueOperations<String, String> value;
+
+    @Resource(name = "valkeyTemplate")
+    ZSetOperations<String, String> zSet;
+
+    @Test // GH-2828, GH-2825
+    void shouldInjectResources() {
+
+        assertThat(cluster).isNotNull();
+        assertThat(geo).isNotNull();
+        assertThat(hash).isNotNull();
+        assertThat(hll).isNotNull();
+        assertThat(set).isNotNull();
+        assertThat(stream).isNotNull();
+        assertThat(value).isNotNull();
+        assertThat(zSet).isNotNull();
+    }
 }

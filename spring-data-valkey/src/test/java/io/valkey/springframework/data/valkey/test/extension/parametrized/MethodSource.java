@@ -20,35 +20,34 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 /**
  * {@code @MethodSource} is an {@link ArgumentsSource} which provides access to values returned from
- * {@linkplain #value() factory methods} of the class in which this annotation is declared or from static factory
- * methods in external classes referenced by <em>fully qualified method name</em>.
- * <p>
- * This variant can be used only on type level.
- * <p>
- * Copy of {@code org.junit.jupiter.params.provider.MethodSource}.
+ * {@linkplain #value() factory methods} of the class in which this annotation is declared or from
+ * static factory methods in external classes referenced by <em>fully qualified method name</em>.
+ *
+ * <p>This variant can be used only on type level.
+ *
+ * <p>Copy of {@code org.junit.jupiter.params.provider.MethodSource}.
  */
-@Target({ ElementType.ANNOTATION_TYPE, ElementType.TYPE })
+@Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @ArgumentsSource(MethodArgumentsProvider.class)
 public @interface MethodSource {
 
-	/**
-	 * The names of factory methods within the test class or in external classes to use as sources for arguments.
-	 * <p>
-	 * Factory methods in external classes must be referenced by <em>fully qualified method name</em> &mdash; for example,
-	 * {@code com.example.StringsProviders#blankStrings}.
-	 * <p>
-	 * If no factory method names are declared, a method within the test class that has the same name as the test method
-	 * will be used as the factory method by default.
-	 * <p>
-	 * For further information, see the {@linkplain MethodSource class-level Javadoc}.
-	 */
-	String[] value() default "";
-
+    /**
+     * The names of factory methods within the test class or in external classes to use as sources for
+     * arguments.
+     *
+     * <p>Factory methods in external classes must be referenced by <em>fully qualified method
+     * name</em> &mdash; for example, {@code com.example.StringsProviders#blankStrings}.
+     *
+     * <p>If no factory method names are declared, a method within the test class that has the same
+     * name as the test method will be used as the factory method by default.
+     *
+     * <p>For further information, see the {@linkplain MethodSource class-level Javadoc}.
+     */
+    String[] value() default "";
 }

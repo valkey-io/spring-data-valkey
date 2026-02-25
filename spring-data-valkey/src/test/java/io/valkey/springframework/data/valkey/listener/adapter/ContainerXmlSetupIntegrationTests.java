@@ -17,12 +17,11 @@ package io.valkey.springframework.data.valkey.listener.adapter;
 
 import static org.assertj.core.api.Assertions.*;
 
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-
-import org.springframework.beans.factory.annotation.Autowired;
 import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyAvailable;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -35,10 +34,10 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 @ContextConfiguration("/io/valkey/springframework/data/valkey/listener/container.xml")
 class ContainerXmlSetupIntegrationTests {
 
-	@Autowired ValkeyMessageListenerContainer container;
+    @Autowired ValkeyMessageListenerContainer container;
 
-	@Test
-	void testContainerSetup() {
-		assertThat(container.isRunning()).isTrue();
-	}
+    @Test
+    void testContainerSetup() {
+        assertThat(container.isRunning()).isTrue();
+    }
 }

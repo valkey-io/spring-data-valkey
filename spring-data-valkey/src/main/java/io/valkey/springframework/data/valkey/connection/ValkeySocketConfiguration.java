@@ -21,8 +21,9 @@ import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Configuration class used for setting up {@link ValkeyConnection} via {@link ValkeyConnectionFactory} connecting to
- * single <a href="https://valkey.io/">Valkey</a> using a local unix domain socket.
+ * Configuration class used for setting up {@link ValkeyConnection} via {@link
+ * ValkeyConnectionFactory} connecting to single <a href="https://valkey.io/">Valkey</a> using a
+ * local unix domain socket.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -30,105 +31,104 @@ import org.springframework.util.ObjectUtils;
  */
 public class ValkeySocketConfiguration implements ValkeyConfiguration, DomainSocketConfiguration {
 
-	private static final String DEFAULT_SOCKET = "/tmp/valkey.sock";
+    private static final String DEFAULT_SOCKET = "/tmp/valkey.sock";
 
-	private String socket = DEFAULT_SOCKET;
-	private int database;
-	private @Nullable String username = null;
-	private ValkeyPassword password = ValkeyPassword.none();
+    private String socket = DEFAULT_SOCKET;
+    private int database;
+    private @Nullable String username = null;
+    private ValkeyPassword password = ValkeyPassword.none();
 
-	/**
-	 * Create a new default {@link ValkeySocketConfiguration}.
-	 */
-	public ValkeySocketConfiguration() {}
+    /** Create a new default {@link ValkeySocketConfiguration}. */
+    public ValkeySocketConfiguration() {}
 
-	/**
-	 * Create a new {@link ValkeySocketConfiguration} given {@code socket}.
-	 *
-	 * @param socket must not be {@literal null} or empty.
-	 */
-	public ValkeySocketConfiguration(String socket) {
+    /**
+     * Create a new {@link ValkeySocketConfiguration} given {@code socket}.
+     *
+     * @param socket must not be {@literal null} or empty.
+     */
+    public ValkeySocketConfiguration(String socket) {
 
-		Assert.hasText(socket, "Socket path must not be null nor empty");
+        Assert.hasText(socket, "Socket path must not be null nor empty");
 
-		this.socket = socket;
-	}
+        this.socket = socket;
+    }
 
-	@Override
-	public String getSocket() {
-		return socket;
-	}
+    @Override
+    public String getSocket() {
+        return socket;
+    }
 
-	@Override
-	public void setSocket(String socket) {
+    @Override
+    public void setSocket(String socket) {
 
-		Assert.hasText(socket, "Socket must not be null nor empty");
-		this.socket = socket;
-	}
+        Assert.hasText(socket, "Socket must not be null nor empty");
+        this.socket = socket;
+    }
 
-	@Override
-	public int getDatabase() {
-		return database;
-	}
+    @Override
+    public int getDatabase() {
+        return database;
+    }
 
-	@Override
-	public void setDatabase(int index) {
+    @Override
+    public void setDatabase(int index) {
 
-		Assert.isTrue(index >= 0, () -> "Invalid DB index '%s'; non-negative index required".formatted(index));
+        Assert.isTrue(
+                index >= 0, () -> "Invalid DB index '%s'; non-negative index required".formatted(index));
 
-		this.database = index;
-	}
+        this.database = index;
+    }
 
-	@Override
-	public void setUsername(@Nullable String username) {
-		this.username = username;
-	}
+    @Override
+    public void setUsername(@Nullable String username) {
+        this.username = username;
+    }
 
-	@Nullable
-	@Override
-	public String getUsername() {
-		return this.username;
-	}
+    @Nullable
+    @Override
+    public String getUsername() {
+        return this.username;
+    }
 
-	@Override
-	public ValkeyPassword getPassword() {
-		return password;
-	}
+    @Override
+    public ValkeyPassword getPassword() {
+        return password;
+    }
 
-	@Override
-	public void setPassword(ValkeyPassword password) {
+    @Override
+    public void setPassword(ValkeyPassword password) {
 
-		Assert.notNull(password, "ValkeyPassword must not be null");
+        Assert.notNull(password, "ValkeyPassword must not be null");
 
-		this.password = password;
-	}
+        this.password = password;
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (!(o instanceof ValkeySocketConfiguration that)) {
-			return false;
-		}
-		if (database != that.database) {
-			return false;
-		}
-		if (!ObjectUtils.nullSafeEquals(socket, that.socket)) {
-			return false;
-		}
-		if (!ObjectUtils.nullSafeEquals(username, that.username)) {
-			return false;
-		}
-		return ObjectUtils.nullSafeEquals(password, that.password);
-	}
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof ValkeySocketConfiguration that)) {
+            return false;
+        }
+        if (database != that.database) {
+            return false;
+        }
+        if (!ObjectUtils.nullSafeEquals(socket, that.socket)) {
+            return false;
+        }
+        if (!ObjectUtils.nullSafeEquals(username, that.username)) {
+            return false;
+        }
+        return ObjectUtils.nullSafeEquals(password, that.password);
+    }
 
-	@Override
-	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(socket);
-		result = 31 * result + database;
-		result = 31 * result + ObjectUtils.nullSafeHashCode(username);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(password);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = ObjectUtils.nullSafeHashCode(socket);
+        result = 31 * result + database;
+        result = 31 * result + ObjectUtils.nullSafeHashCode(username);
+        result = 31 * result + ObjectUtils.nullSafeHashCode(password);
+        return result;
+    }
 }

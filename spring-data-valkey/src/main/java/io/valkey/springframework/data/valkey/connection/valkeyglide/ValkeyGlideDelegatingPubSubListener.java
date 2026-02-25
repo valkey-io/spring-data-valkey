@@ -15,53 +15,41 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import glide.api.models.PubSubMessage;
 import glide.api.models.GlideString;
-
+import glide.api.models.PubSubMessage;
 import io.valkey.springframework.data.valkey.connection.DefaultMessage;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
 
 /**
- * A delegating pub/sub listener that is configured at client creation time,
- * with the actual listener set later when subscribe() is called.
+ * A delegating pub/sub listener that is configured at client creation time, with the actual
+ * listener set later when subscribe() is called.
  */
 class DelegatingPubSubListener {
-    
+
     private volatile MessageListener messageListener;
-    
-    /**
-     * Called by Glide when a pub/sub message arrives.
-     */
+
+    /** Called by Glide when a pub/sub message arrives. */
     void onMessage(PubSubMessage msg, Object context) {
         MessageListener listener = this.messageListener;
         if (listener != null && msg != null) {
             byte[] channel = msg.getChannel().getBytes();
             byte[] body = msg.getMessage().getBytes();
-            byte[] pattern = msg.getPattern()
-                .map(GlideString::getBytes)
-                .orElse(null);
-            
-            listener.onMessage(new DefaultMessage(channel, body), pattern);
-            
-        }
+            byte[] pattern = msg.getPattern().map(GlideString::getBytes).orElse(null);
 
+            listener.onMessage(new DefaultMessage(channel, body), pattern);
+        }
     }
-    
-    /**
-     * Set the actual listener when subscribe() is called.
-     */
+
+    /** Set the actual listener when subscribe() is called. */
     void setListener(MessageListener listener) {
         this.messageListener = listener;
     }
-    
-    /**
-     * Clear the listener when subscription closes.
-     */
+
+    /** Clear the listener when subscription closes. */
     void clearListener() {
         this.messageListener = null;
     }
-    
-    
+
     boolean hasListener() {
         return messageListener != null;
     }

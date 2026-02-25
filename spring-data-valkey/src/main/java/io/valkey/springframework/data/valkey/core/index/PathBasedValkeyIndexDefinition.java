@@ -25,10 +25,9 @@ import org.springframework.lang.Nullable;
  */
 public interface PathBasedValkeyIndexDefinition extends IndexDefinition {
 
-	/**
-	 * @return can be {@literal null}.
-	 */
-	@Nullable
-	String getPath();
-
+    /**
+     * @return can be {@literal null}.
+     */
+    @Nullable
+    String getPath();
 }

@@ -24,21 +24,33 @@ import org.springframework.lang.Nullable;
  * @author Christoph Strobl
  * @author Mark Paluch
  */
-public interface ValkeyCommands extends ValkeyKeyCommands, ValkeyStringCommands, ValkeyListCommands, ValkeySetCommands,
-		ValkeyZSetCommands, ValkeyHashCommands, ValkeyTxCommands, ValkeyPubSubCommands, ValkeyConnectionCommands,
-		ValkeyServerCommands, ValkeyStreamCommands, ValkeyScriptingCommands, ValkeyGeoCommands, ValkeyHyperLogLogCommands {
+public interface ValkeyCommands
+        extends ValkeyKeyCommands,
+                ValkeyStringCommands,
+                ValkeyListCommands,
+                ValkeySetCommands,
+                ValkeyZSetCommands,
+                ValkeyHashCommands,
+                ValkeyTxCommands,
+                ValkeyPubSubCommands,
+                ValkeyConnectionCommands,
+                ValkeyServerCommands,
+                ValkeyStreamCommands,
+                ValkeyScriptingCommands,
+                ValkeyGeoCommands,
+                ValkeyHyperLogLogCommands {
 
-	/**
-	 * {@literal Native} or {@literal raw} execution of the given Valkey command along with the given arguments.
-	 * <p>
-	 * The command is executed as is, with as little interpretation as possible - it is up to the caller to take care
-	 * of any processing of arguments or the result.
-	 *
-	 * @param command Valkey {@link String command} to execute; must not be {@literal null}.
-	 * @param args optional array of command arguments; may be empty;
-	 * @return the execution result; may be {@literal null}.
-	 */
-	@Nullable
-	Object execute(String command, byte[]... args);
-
+    /**
+     * {@literal Native} or {@literal raw} execution of the given Valkey command along with the given
+     * arguments.
+     *
+     * <p>The command is executed as is, with as little interpretation as possible - it is up to the
+     * caller to take care of any processing of arguments or the result.
+     *
+     * @param command Valkey {@link String command} to execute; must not be {@literal null}.
+     * @param args optional array of command arguments; may be empty;
+     * @return the execution result; may be {@literal null}.
+     */
+    @Nullable
+    Object execute(String command, byte[]... args);
 }

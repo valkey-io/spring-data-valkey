@@ -15,6 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
+import io.valkey.springframework.data.valkey.connection.convert.Converters;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
+import io.valkey.springframework.data.valkey.core.types.Expirations;
+import io.valkey.springframework.data.valkey.core.types.Expirations.Timeouts;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
@@ -25,13 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
 import org.springframework.core.convert.converter.Converter;
-import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
-import io.valkey.springframework.data.valkey.connection.convert.Converters;
-import io.valkey.springframework.data.valkey.core.types.Expiration;
-import io.valkey.springframework.data.valkey.core.types.Expirations;
-import io.valkey.springframework.data.valkey.core.types.Expirations.Timeouts;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -43,301 +42,331 @@ import org.springframework.util.Assert;
  * @author Ninad Divadkar
  * @author Tihomir Mateev
  */
-class DefaultHashOperations<K, HK, HV> extends AbstractOperations<K, Object> implements HashOperations<K, HK, HV> {
-
-	@SuppressWarnings("unchecked")
-	DefaultHashOperations(ValkeyTemplate<K, ?> template) {
-		super((ValkeyTemplate<K, Object>) template);
-	}
+class DefaultHashOperations<K, HK, HV> extends AbstractOperations<K, Object>
+        implements HashOperations<K, HK, HV> {
+
+    @SuppressWarnings("unchecked")
+    DefaultHashOperations(ValkeyTemplate<K, ?> template) {
+        super((ValkeyTemplate<K, Object>) template);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public HV get(K key, Object hashKey) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawHashKey = rawHashKey(hashKey);
+        byte[] rawHashValue = execute(connection -> connection.hGet(rawKey, rawHashKey));
+
+        return (HV) rawHashValue != null ? deserializeHashValue(rawHashValue) : null;
+    }
+
+    @Override
+    public Boolean hasKey(K key, Object hashKey) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawHashKey = rawHashKey(hashKey);
+        return execute(connection -> connection.hExists(rawKey, rawHashKey));
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public HV get(K key, Object hashKey) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawHashKey = rawHashKey(hashKey);
-		byte[] rawHashValue = execute(connection -> connection.hGet(rawKey, rawHashKey));
+    @Override
+    public Long increment(K key, HK hashKey, long delta) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawHashKey = rawHashKey(hashKey);
+        return execute(connection -> connection.hIncrBy(rawKey, rawHashKey, delta));
+    }
+
+    @Override
+    public Double increment(K key, HK hashKey, double delta) {
+
+        byte[] rawKey = rawKey(key);
+        byte[] rawHashKey = rawHashKey(hashKey);
+        return execute(connection -> connection.hIncrBy(rawKey, rawHashKey, delta));
+    }
+
+    @Nullable
+    @Override
+    public HK randomKey(K key) {
+
+        byte[] rawKey = rawKey(key);
+        return deserializeHashKey(execute(connection -> connection.hRandField(rawKey)));
+    }
+
+    @Nullable
+    @Override
+    public Entry<HK, HV> randomEntry(K key) {
 
-		return (HV) rawHashValue != null ? deserializeHashValue(rawHashValue) : null;
-	}
-
-	@Override
-	public Boolean hasKey(K key, Object hashKey) {
+        byte[] rawKey = rawKey(key);
+        Entry<byte[], byte[]> rawEntry = execute(connection -> connection.hRandFieldWithValues(rawKey));
+        return rawEntry == null
+                ? null
+                : Converters.entryOf(
+                        deserializeHashKey(rawEntry.getKey()), deserializeHashValue(rawEntry.getValue()));
+    }
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawHashKey = rawHashKey(hashKey);
-		return execute(connection -> connection.hExists(rawKey, rawHashKey));
-	}
+    @Nullable
+    @Override
+    public List<HK> randomKeys(K key, long count) {
 
-	@Override
-	public Long increment(K key, HK hashKey, long delta) {
+        byte[] rawKey = rawKey(key);
+        List<byte[]> rawValues = execute(connection -> connection.hRandField(rawKey, count));
+        return deserializeHashKeys(rawValues);
+    }
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawHashKey = rawHashKey(hashKey);
-		return execute(connection -> connection.hIncrBy(rawKey, rawHashKey, delta));
-	}
+    @Nullable
+    @Override
+    public Map<HK, HV> randomEntries(K key, long count) {
 
-	@Override
-	public Double increment(K key, HK hashKey, double delta) {
+        Assert.isTrue(count > 0, "Count must not be negative");
+        byte[] rawKey = rawKey(key);
+        List<Entry<byte[], byte[]>> rawEntries =
+                execute(connection -> connection.hRandFieldWithValues(rawKey, count));
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawHashKey = rawHashKey(hashKey);
-		return execute(connection -> connection.hIncrBy(rawKey, rawHashKey, delta));
-	}
+        if (rawEntries == null) {
+            return null;
+        }
 
-	@Nullable
-	@Override
-	public HK randomKey(K key) {
+        Map<byte[], byte[]> rawMap = new LinkedHashMap<>(rawEntries.size());
+        rawEntries.forEach(entry -> rawMap.put(entry.getKey(), entry.getValue()));
+        return deserializeHashMap(rawMap);
+    }
 
-		byte[] rawKey = rawKey(key);
-		return deserializeHashKey(execute(connection -> connection.hRandField(rawKey)));
-	}
+    @Override
+    public Set<HK> keys(K key) {
 
-	@Nullable
-	@Override
-	public Entry<HK, HV> randomEntry(K key) {
+        byte[] rawKey = rawKey(key);
+        Set<byte[]> rawValues = execute(connection -> connection.hKeys(rawKey));
 
-		byte[] rawKey = rawKey(key);
-		Entry<byte[], byte[]> rawEntry = execute(connection -> connection.hRandFieldWithValues(rawKey));
-		return rawEntry == null ? null
-				: Converters.entryOf(deserializeHashKey(rawEntry.getKey()), deserializeHashValue(rawEntry.getValue()));
-	}
+        return rawValues != null ? deserializeHashKeys(rawValues) : Collections.emptySet();
+    }
+
+    @Override
+    public Long size(K key) {
 
-	@Nullable
-	@Override
-	public List<HK> randomKeys(K key, long count) {
+        byte[] rawKey = rawKey(key);
+        return execute(connection -> connection.hLen(rawKey));
+    }
 
-		byte[] rawKey = rawKey(key);
-		List<byte[]> rawValues = execute(connection -> connection.hRandField(rawKey, count));
-		return deserializeHashKeys(rawValues);
-	}
+    @Nullable
+    @Override
+    public Long lengthOfValue(K key, HK hashKey) {
 
-	@Nullable
-	@Override
-	public Map<HK, HV> randomEntries(K key, long count) {
+        byte[] rawKey = rawKey(key);
+        byte[] rawHashKey = rawHashKey(hashKey);
+        return execute(connection -> connection.hStrLen(rawKey, rawHashKey));
+    }
 
-		Assert.isTrue(count > 0, "Count must not be negative");
-		byte[] rawKey = rawKey(key);
-		List<Entry<byte[], byte[]>> rawEntries = execute(connection -> connection.hRandFieldWithValues(rawKey, count));
+    @Override
+    public void putAll(K key, Map<? extends HK, ? extends HV> m) {
 
-		if (rawEntries == null) {
-			return null;
-		}
+        if (m.isEmpty()) {
+            return;
+        }
 
-		Map<byte[], byte[]> rawMap = new LinkedHashMap<>(rawEntries.size());
-		rawEntries.forEach(entry -> rawMap.put(entry.getKey(), entry.getValue()));
-		return deserializeHashMap(rawMap);
-	}
+        byte[] rawKey = rawKey(key);
 
-	@Override
-	public Set<HK> keys(K key) {
+        Map<byte[], byte[]> hashes = new LinkedHashMap<>(m.size());
 
-		byte[] rawKey = rawKey(key);
-		Set<byte[]> rawValues = execute(connection -> connection.hKeys(rawKey));
+        for (Map.Entry<? extends HK, ? extends HV> entry : m.entrySet()) {
+            hashes.put(rawHashKey(entry.getKey()), rawHashValue(entry.getValue()));
+        }
 
-		return rawValues != null ? deserializeHashKeys(rawValues) : Collections.emptySet();
-	}
+        execute(
+                connection -> {
+                    connection.hMSet(rawKey, hashes);
+                    return null;
+                });
+    }
+
+    @Override
+    public List<HV> multiGet(K key, Collection<HK> fields) {
+
+        if (fields.isEmpty()) {
+            return Collections.emptyList();
+        }
 
-	@Override
-	public Long size(K key) {
+        byte[] rawKey = rawKey(key);
+        byte[][] rawHashKeys = new byte[fields.size()][];
+
+        int counter = 0;
+        for (HK hashKey : fields) {
+            rawHashKeys[counter++] = rawHashKey(hashKey);
+        }
 
-		byte[] rawKey = rawKey(key);
-		return execute(connection -> connection.hLen(rawKey));
-	}
+        List<byte[]> rawValues = execute(connection -> connection.hMGet(rawKey, rawHashKeys));
 
-	@Nullable
-	@Override
-	public Long lengthOfValue(K key, HK hashKey) {
+        return deserializeHashValues(rawValues);
+    }
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawHashKey = rawHashKey(hashKey);
-		return execute(connection -> connection.hStrLen(rawKey, rawHashKey));
-	}
+    @Override
+    public void put(K key, HK hashKey, HV value) {
 
-	@Override
-	public void putAll(K key, Map<? extends HK, ? extends HV> m) {
+        byte[] rawKey = rawKey(key);
+        byte[] rawHashKey = rawHashKey(hashKey);
+        byte[] rawHashValue = rawHashValue(value);
 
-		if (m.isEmpty()) {
-			return;
-		}
+        execute(
+                connection -> {
+                    connection.hSet(rawKey, rawHashKey, rawHashValue);
+                    return null;
+                });
+    }
 
-		byte[] rawKey = rawKey(key);
+    @Override
+    public Boolean putIfAbsent(K key, HK hashKey, HV value) {
 
-		Map<byte[], byte[]> hashes = new LinkedHashMap<>(m.size());
+        byte[] rawKey = rawKey(key);
+        byte[] rawHashKey = rawHashKey(hashKey);
+        byte[] rawHashValue = rawHashValue(value);
 
-		for (Map.Entry<? extends HK, ? extends HV> entry : m.entrySet()) {
-			hashes.put(rawHashKey(entry.getKey()), rawHashValue(entry.getValue()));
-		}
+        return execute(connection -> connection.hSetNX(rawKey, rawHashKey, rawHashValue));
+    }
 
-		execute(connection -> {
-			connection.hMSet(rawKey, hashes);
-			return null;
-		});
-	}
+    @Override
+    public ExpireChanges<HK> expire(K key, Duration duration, Collection<HK> hashKeys) {
 
-	@Override
-	public List<HV> multiGet(K key, Collection<HK> fields) {
+        List<HK> orderedKeys = List.copyOf(hashKeys);
 
-		if (fields.isEmpty()) {
-			return Collections.emptyList();
-		}
+        byte[] rawKey = rawKey(key);
+        byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
+        boolean hasMillis = TimeoutUtils.hasMillis(duration);
 
-		byte[] rawKey = rawKey(key);
-		byte[][] rawHashKeys = new byte[fields.size()][];
+        List<Long> raw =
+                execute(
+                        connection ->
+                                TimeoutUtils.hasMillis(duration)
+                                        ? connection.hashCommands().hpExpire(rawKey, duration.toMillis(), rawHashKeys)
+                                        : connection
+                                                .hashCommands()
+                                                .hExpire(rawKey, TimeoutUtils.toSeconds(duration), rawHashKeys));
 
-		int counter = 0;
-		for (HK hashKey : fields) {
-			rawHashKeys[counter++] = rawHashKey(hashKey);
-		}
+        return raw != null ? ExpireChanges.of(orderedKeys, raw) : null;
+    }
 
-		List<byte[]> rawValues = execute(connection -> connection.hMGet(rawKey, rawHashKeys));
+    @Override
+    public ExpireChanges<HK> expireAt(K key, Instant instant, Collection<HK> hashKeys) {
 
-		return deserializeHashValues(rawValues);
-	}
+        List<HK> orderedKeys = List.copyOf(hashKeys);
 
-	@Override
-	public void put(K key, HK hashKey, HV value) {
+        byte[] rawKey = rawKey(key);
+        byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
+        long millis = instant.toEpochMilli();
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawHashKey = rawHashKey(hashKey);
-		byte[] rawHashValue = rawHashValue(value);
+        List<Long> raw =
+                execute(
+                        connection ->
+                                TimeoutUtils.containsSplitSecond(millis)
+                                        ? connection.hashCommands().hpExpireAt(rawKey, millis, rawHashKeys)
+                                        : connection
+                                                .hashCommands()
+                                                .hExpireAt(rawKey, instant.getEpochSecond(), rawHashKeys));
 
-		execute(connection -> {
-			connection.hSet(rawKey, rawHashKey, rawHashValue);
-			return null;
-		});
-	}
+        return raw != null ? ExpireChanges.of(orderedKeys, raw) : null;
+    }
 
-	@Override
-	public Boolean putIfAbsent(K key, HK hashKey, HV value) {
+    @Override
+    public ExpireChanges<HK> expire(
+            K key, Expiration expiration, ExpirationOptions options, Collection<HK> hashKeys) {
 
-		byte[] rawKey = rawKey(key);
-		byte[] rawHashKey = rawHashKey(hashKey);
-		byte[] rawHashValue = rawHashValue(value);
+        List<HK> orderedKeys = List.copyOf(hashKeys);
+        byte[] rawKey = rawKey(key);
+        byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
+        List<Long> raw =
+                execute(
+                        connection ->
+                                connection
+                                        .hashCommands()
+                                        .applyHashFieldExpiration(rawKey, expiration, options, rawHashKeys));
 
-		return execute(connection -> connection.hSetNX(rawKey, rawHashKey, rawHashValue));
-	}
+        return raw != null ? ExpireChanges.of(orderedKeys, raw) : null;
+    }
 
-	@Override
-	public ExpireChanges<HK> expire(K key, Duration duration, Collection<HK> hashKeys) {
+    @Override
+    public ExpireChanges<HK> persist(K key, Collection<HK> hashKeys) {
 
-		List<HK> orderedKeys = List.copyOf(hashKeys);
+        List<HK> orderedKeys = List.copyOf(hashKeys);
+        byte[] rawKey = rawKey(key);
+        byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
 
-		byte[] rawKey = rawKey(key);
-		byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
-		boolean hasMillis = TimeoutUtils.hasMillis(duration);
+        List<Long> raw = execute(connection -> connection.hashCommands().hPersist(rawKey, rawHashKeys));
 
-		List<Long> raw = execute(connection -> TimeoutUtils.hasMillis(duration)
-				? connection.hashCommands().hpExpire(rawKey, duration.toMillis(), rawHashKeys)
-				: connection.hashCommands().hExpire(rawKey, TimeoutUtils.toSeconds(duration), rawHashKeys));
+        return raw != null ? ExpireChanges.of(orderedKeys, raw) : null;
+    }
 
-		return raw != null ? ExpireChanges.of(orderedKeys, raw) : null;
-	}
+    @Override
+    public Expirations<HK> getTimeToLive(K key, TimeUnit timeUnit, Collection<HK> hashKeys) {
 
-	@Override
-	public ExpireChanges<HK> expireAt(K key, Instant instant, Collection<HK> hashKeys) {
+        if (timeUnit.compareTo(TimeUnit.MILLISECONDS) < 0) {
+            throw new IllegalArgumentException(
+                    "%s precision is not supported must be >= MILLISECONDS".formatted(timeUnit));
+        }
 
-		List<HK> orderedKeys = List.copyOf(hashKeys);
+        List<HK> orderedKeys = List.copyOf(hashKeys);
 
-		byte[] rawKey = rawKey(key);
-		byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
-		long millis = instant.toEpochMilli();
+        byte[] rawKey = rawKey(key);
+        byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
 
-		List<Long> raw = execute(connection -> TimeoutUtils.containsSplitSecond(millis)
-				? connection.hashCommands().hpExpireAt(rawKey, millis, rawHashKeys)
-				: connection.hashCommands().hExpireAt(rawKey, instant.getEpochSecond(), rawHashKeys));
+        List<Long> raw =
+                execute(
+                        connection ->
+                                TimeUnit.MILLISECONDS.equals(timeUnit)
+                                        ? connection.hashCommands().hpTtl(rawKey, rawHashKeys)
+                                        : connection.hashCommands().hTtl(rawKey, timeUnit, rawHashKeys));
 
-		return raw != null ? ExpireChanges.of(orderedKeys, raw) : null;
-	}
+        if (raw == null) {
+            return null;
+        }
 
-	@Override
-	public ExpireChanges<HK> expire(K key, Expiration expiration, ExpirationOptions options, Collection<HK> hashKeys) {
+        Timeouts timeouts =
+                new Timeouts(TimeUnit.MILLISECONDS.equals(timeUnit) ? timeUnit : TimeUnit.SECONDS, raw);
+        return Expirations.of(timeUnit, orderedKeys, timeouts);
+    }
 
-		List<HK> orderedKeys = List.copyOf(hashKeys);
-		byte[] rawKey = rawKey(key);
-		byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
-		List<Long> raw = execute(
-				connection -> connection.hashCommands().applyHashFieldExpiration(rawKey, expiration, options, rawHashKeys));
+    @Override
+    public List<HV> values(K key) {
 
-		return raw != null ? ExpireChanges.of(orderedKeys, raw) : null;
-	}
+        byte[] rawKey = rawKey(key);
+        List<byte[]> rawValues = execute(connection -> connection.hVals(rawKey));
 
-	@Override
-	public ExpireChanges<HK> persist(K key, Collection<HK> hashKeys) {
+        return rawValues != null ? deserializeHashValues(rawValues) : Collections.emptyList();
+    }
 
-		List<HK> orderedKeys = List.copyOf(hashKeys);
-		byte[] rawKey = rawKey(key);
-		byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
+    @Override
+    public Long delete(K key, Object... hashKeys) {
 
-		List<Long> raw = execute(connection -> connection.hashCommands().hPersist(rawKey, rawHashKeys));
+        byte[] rawKey = rawKey(key);
+        byte[][] rawHashKeys = rawHashKeys(hashKeys);
 
-		return raw != null ? ExpireChanges.of(orderedKeys, raw) : null;
-	}
+        return execute(connection -> connection.hDel(rawKey, rawHashKeys));
+    }
 
-	@Override
-	public Expirations<HK> getTimeToLive(K key, TimeUnit timeUnit, Collection<HK> hashKeys) {
+    @Override
+    public Map<HK, HV> entries(K key) {
 
-		if(timeUnit.compareTo(TimeUnit.MILLISECONDS) < 0) {
-			throw new IllegalArgumentException("%s precision is not supported must be >= MILLISECONDS".formatted(timeUnit));
-		}
+        byte[] rawKey = rawKey(key);
+        Map<byte[], byte[]> entries = execute(connection -> connection.hGetAll(rawKey));
 
-		List<HK> orderedKeys = List.copyOf(hashKeys);
+        return entries != null ? deserializeHashMap(entries) : Collections.emptyMap();
+    }
 
-		byte[] rawKey = rawKey(key);
-		byte[][] rawHashKeys = rawHashKeys(orderedKeys.toArray());
+    @Override
+    public Cursor<Entry<HK, HV>> scan(K key, ScanOptions options) {
 
-		List<Long> raw = execute(
-				connection -> TimeUnit.MILLISECONDS.equals(timeUnit) ? connection.hashCommands().hpTtl(rawKey, rawHashKeys)
-						: connection.hashCommands().hTtl(rawKey, timeUnit, rawHashKeys));
+        byte[] rawKey = rawKey(key);
+        return template.executeWithStickyConnection(
+                (ValkeyCallback<Cursor<Entry<HK, HV>>>)
+                        connection ->
+                                new ConvertingCursor<>(
+                                        connection.hScan(rawKey, options),
+                                        new Converter<Entry<byte[], byte[]>, Entry<HK, HV>>() {
 
-		if (raw == null) {
-			return null;
-		}
-
-		Timeouts timeouts = new Timeouts(TimeUnit.MILLISECONDS.equals(timeUnit) ? timeUnit : TimeUnit.SECONDS, raw);
-		return Expirations.of(timeUnit, orderedKeys, timeouts);
-	}
-
-	@Override
-	public List<HV> values(K key) {
-
-		byte[] rawKey = rawKey(key);
-		List<byte[]> rawValues = execute(connection -> connection.hVals(rawKey));
-
-		return rawValues != null ? deserializeHashValues(rawValues) : Collections.emptyList();
-	}
-
-	@Override
-	public Long delete(K key, Object... hashKeys) {
-
-		byte[] rawKey = rawKey(key);
-		byte[][] rawHashKeys = rawHashKeys(hashKeys);
-
-		return execute(connection -> connection.hDel(rawKey, rawHashKeys));
-	}
-
-	@Override
-	public Map<HK, HV> entries(K key) {
-
-		byte[] rawKey = rawKey(key);
-		Map<byte[], byte[]> entries = execute(connection -> connection.hGetAll(rawKey));
-
-		return entries != null ? deserializeHashMap(entries) : Collections.emptyMap();
-	}
-
-	@Override
-	public Cursor<Entry<HK, HV>> scan(K key, ScanOptions options) {
-
-		byte[] rawKey = rawKey(key);
-		return template.executeWithStickyConnection(
-				(ValkeyCallback<Cursor<Entry<HK, HV>>>) connection -> new ConvertingCursor<>(connection.hScan(rawKey, options),
-						new Converter<Entry<byte[], byte[]>, Entry<HK, HV>>() {
-
-							@Override
-							public Entry<HK, HV> convert(final Entry<byte[], byte[]> source) {
-								return Converters.entryOf(deserializeHashKey(source.getKey()), deserializeHashValue(source.getValue()));
-							}
-						}));
-
-	}
+                                            @Override
+                                            public Entry<HK, HV> convert(final Entry<byte[], byte[]> source) {
+                                                return Converters.entryOf(
+                                                        deserializeHashKey(source.getKey()),
+                                                        deserializeHashValue(source.getValue()));
+                                            }
+                                        }));
+    }
 }

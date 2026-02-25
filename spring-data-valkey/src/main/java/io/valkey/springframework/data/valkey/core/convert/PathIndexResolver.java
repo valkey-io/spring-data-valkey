@@ -15,17 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.springframework.data.geo.Point;
-import org.springframework.data.mapping.PersistentProperty;
-import org.springframework.data.mapping.PersistentPropertyAccessor;
-import org.springframework.data.mapping.PropertyHandler;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 import io.valkey.springframework.data.valkey.core.index.ConfigurableIndexDefinitionProvider;
 import io.valkey.springframework.data.valkey.core.index.GeoIndexDefinition;
@@ -39,6 +28,16 @@ import io.valkey.springframework.data.valkey.core.index.SimpleIndexDefinition;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentProperty;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import org.springframework.data.geo.Point;
+import org.springframework.data.mapping.PersistentProperty;
+import org.springframework.data.mapping.PersistentPropertyAccessor;
+import org.springframework.data.mapping.PropertyHandler;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -46,8 +45,8 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 
 /**
- * {@link IndexResolver} implementation considering properties annotated with {@link Indexed} or paths set up in
- * {@link IndexConfiguration}.
+ * {@link IndexResolver} implementation considering properties annotated with {@link Indexed} or
+ * paths set up in {@link IndexConfiguration}.
  *
  * @author Christoph Strobl
  * @author Greg Turnquist
@@ -55,217 +54,272 @@ import org.springframework.util.CollectionUtils;
  */
 public class PathIndexResolver implements IndexResolver {
 
-	private final Set<Class<?>> VALUE_TYPES = new HashSet<>(Arrays.<Class<?>> asList(Point.class, GeoLocation.class));
+    private final Set<Class<?>> VALUE_TYPES =
+            new HashSet<>(Arrays.<Class<?>>asList(Point.class, GeoLocation.class));
 
-	private final ConfigurableIndexDefinitionProvider indexConfiguration;
-	private final ValkeyMappingContext mappingContext;
-	private final IndexedDataFactoryProvider indexedDataFactoryProvider;
+    private final ConfigurableIndexDefinitionProvider indexConfiguration;
+    private final ValkeyMappingContext mappingContext;
+    private final IndexedDataFactoryProvider indexedDataFactoryProvider;
 
-	/**
-	 * Creates new {@link PathIndexResolver} with empty {@link IndexConfiguration}.
-	 */
-	public PathIndexResolver() {
-		this(new ValkeyMappingContext());
-	}
+    /** Creates new {@link PathIndexResolver} with empty {@link IndexConfiguration}. */
+    public PathIndexResolver() {
+        this(new ValkeyMappingContext());
+    }
 
-	/**
-	 * Creates new {@link PathIndexResolver} with given {@link IndexConfiguration}.
-	 *
-	 * @param mappingContext must not be {@literal null}.
-	 */
-	public PathIndexResolver(ValkeyMappingContext mappingContext) {
+    /**
+     * Creates new {@link PathIndexResolver} with given {@link IndexConfiguration}.
+     *
+     * @param mappingContext must not be {@literal null}.
+     */
+    public PathIndexResolver(ValkeyMappingContext mappingContext) {
 
-		Assert.notNull(mappingContext, "MappingContext must not be null");
+        Assert.notNull(mappingContext, "MappingContext must not be null");
 
-		this.mappingContext = mappingContext;
-		this.indexConfiguration = mappingContext.getMappingConfiguration().getIndexConfiguration();
-		this.indexedDataFactoryProvider = new IndexedDataFactoryProvider();
-	}
+        this.mappingContext = mappingContext;
+        this.indexConfiguration = mappingContext.getMappingConfiguration().getIndexConfiguration();
+        this.indexedDataFactoryProvider = new IndexedDataFactoryProvider();
+    }
 
-	public Set<IndexedData> resolveIndexesFor(TypeInformation<?> typeInformation, @Nullable Object value) {
-		return doResolveIndexesFor(mappingContext.getRequiredPersistentEntity(typeInformation).getKeySpace(), "",
-				typeInformation, null, value);
-	}
+    public Set<IndexedData> resolveIndexesFor(
+            TypeInformation<?> typeInformation, @Nullable Object value) {
+        return doResolveIndexesFor(
+                mappingContext.getRequiredPersistentEntity(typeInformation).getKeySpace(),
+                "",
+                typeInformation,
+                null,
+                value);
+    }
 
-	@Override
-	public Set<IndexedData> resolveIndexesFor(String keyspace, String path, TypeInformation<?> typeInformation,
-			Object value) {
-		return doResolveIndexesFor(keyspace, path, typeInformation, null, value);
-	}
+    @Override
+    public Set<IndexedData> resolveIndexesFor(
+            String keyspace, String path, TypeInformation<?> typeInformation, Object value) {
+        return doResolveIndexesFor(keyspace, path, typeInformation, null, value);
+    }
 
-	private Set<IndexedData> doResolveIndexesFor(final String keyspace, final String path,
-			TypeInformation<?> typeInformation, @Nullable PersistentProperty<?> fallback, @Nullable Object value) {
+    private Set<IndexedData> doResolveIndexesFor(
+            final String keyspace,
+            final String path,
+            TypeInformation<?> typeInformation,
+            @Nullable PersistentProperty<?> fallback,
+            @Nullable Object value) {
 
-		ValkeyPersistentEntity<?> entity = mappingContext.getPersistentEntity(typeInformation);
+        ValkeyPersistentEntity<?> entity = mappingContext.getPersistentEntity(typeInformation);
 
-		if (entity == null || (value != null && VALUE_TYPES.contains(value.getClass()))) {
-			return resolveIndex(keyspace, path, fallback, value);
-		}
+        if (entity == null || (value != null && VALUE_TYPES.contains(value.getClass()))) {
+            return resolveIndex(keyspace, path, fallback, value);
+        }
 
-		// this might happen on update where we address a property within an entity directly
-		if (!ClassUtils.isAssignable(entity.getType(), value.getClass())) {
+        // this might happen on update where we address a property within an entity directly
+        if (!ClassUtils.isAssignable(entity.getType(), value.getClass())) {
 
-			String propertyName = path.lastIndexOf('.') > 0 ? path.substring(path.lastIndexOf('.') + 1, path.length()) : path;
-			return resolveIndex(keyspace, path, entity.getPersistentProperty(propertyName), value);
-		}
+            String propertyName =
+                    path.lastIndexOf('.') > 0
+                            ? path.substring(path.lastIndexOf('.') + 1, path.length())
+                            : path;
+            return resolveIndex(keyspace, path, entity.getPersistentProperty(propertyName), value);
+        }
 
-		final PersistentPropertyAccessor accessor = entity.getPropertyAccessor(value);
-		final Set<IndexedData> indexes = new LinkedHashSet<>();
+        final PersistentPropertyAccessor accessor = entity.getPropertyAccessor(value);
+        final Set<IndexedData> indexes = new LinkedHashSet<>();
 
-		entity.doWithProperties(new PropertyHandler<ValkeyPersistentProperty>() {
+        entity.doWithProperties(
+                new PropertyHandler<ValkeyPersistentProperty>() {
 
-			@Override
-			public void doWithPersistentProperty(ValkeyPersistentProperty persistentProperty) {
+                    @Override
+                    public void doWithPersistentProperty(ValkeyPersistentProperty persistentProperty) {
 
-				String currentPath = !path.isEmpty() ? path + "." + persistentProperty.getName() : persistentProperty.getName();
+                        String currentPath =
+                                !path.isEmpty()
+                                        ? path + "." + persistentProperty.getName()
+                                        : persistentProperty.getName();
 
-				Object propertyValue = accessor.getProperty(persistentProperty);
+                        Object propertyValue = accessor.getProperty(persistentProperty);
 
-				if (propertyValue == null) {
-					indexes.addAll(resolveIndex(keyspace, currentPath, persistentProperty, null));
-					return;
-				}
+                        if (propertyValue == null) {
+                            indexes.addAll(resolveIndex(keyspace, currentPath, persistentProperty, null));
+                            return;
+                        }
 
-				TypeInformation<?> typeHint = persistentProperty.isMap()
-						? persistentProperty.getTypeInformation().getRequiredMapValueType()
-						: persistentProperty.getTypeInformation().getActualType();
+                        TypeInformation<?> typeHint =
+                                persistentProperty.isMap()
+                                        ? persistentProperty.getTypeInformation().getRequiredMapValueType()
+                                        : persistentProperty.getTypeInformation().getActualType();
 
-				if (persistentProperty.isMap()) {
+                        if (persistentProperty.isMap()) {
 
-					for (Entry<?, ?> entry : ((Map<?, ?>) propertyValue).entrySet()) {
+                            for (Entry<?, ?> entry : ((Map<?, ?>) propertyValue).entrySet()) {
 
-						TypeInformation<?> typeToUse = updateTypeHintForActualValue(typeHint, entry.getValue());
-						indexes.addAll(doResolveIndexesFor(keyspace, currentPath + "." + entry.getKey(), typeToUse.getActualType(),
-								persistentProperty, entry.getValue()));
-					}
+                                TypeInformation<?> typeToUse =
+                                        updateTypeHintForActualValue(typeHint, entry.getValue());
+                                indexes.addAll(
+                                        doResolveIndexesFor(
+                                                keyspace,
+                                                currentPath + "." + entry.getKey(),
+                                                typeToUse.getActualType(),
+                                                persistentProperty,
+                                                entry.getValue()));
+                            }
 
-				} else if (persistentProperty.isCollectionLike()) {
+                        } else if (persistentProperty.isCollectionLike()) {
 
-					final Iterable<?> iterable;
+                            final Iterable<?> iterable;
 
-					if (Iterable.class.isAssignableFrom(propertyValue.getClass())) {
-						iterable = (Iterable<?>) propertyValue;
-					} else if (propertyValue.getClass().isArray()) {
-						iterable = CollectionUtils.arrayToList(propertyValue);
-					} else {
-						throw new RuntimeException("Don't know how to handle " + propertyValue.getClass() + " type of collection");
-					}
+                            if (Iterable.class.isAssignableFrom(propertyValue.getClass())) {
+                                iterable = (Iterable<?>) propertyValue;
+                            } else if (propertyValue.getClass().isArray()) {
+                                iterable = CollectionUtils.arrayToList(propertyValue);
+                            } else {
+                                throw new RuntimeException(
+                                        "Don't know how to handle " + propertyValue.getClass() + " type of collection");
+                            }
 
-					for (Object listValue : iterable) {
+                            for (Object listValue : iterable) {
 
-						if (listValue != null) {
-							TypeInformation<?> typeToUse = updateTypeHintForActualValue(typeHint, listValue);
-							indexes.addAll(
-									doResolveIndexesFor(keyspace, currentPath, typeToUse.getActualType(), persistentProperty, listValue));
-						}
-					}
-				}
+                                if (listValue != null) {
+                                    TypeInformation<?> typeToUse = updateTypeHintForActualValue(typeHint, listValue);
+                                    indexes.addAll(
+                                            doResolveIndexesFor(
+                                                    keyspace,
+                                                    currentPath,
+                                                    typeToUse.getActualType(),
+                                                    persistentProperty,
+                                                    listValue));
+                                }
+                            }
+                        } else if (persistentProperty.isEntity()
+                                || persistentProperty
+                                        .getTypeInformation()
+                                        .getActualType()
+                                        .equals(TypeInformation.OBJECT)) {
 
-				else if (persistentProperty.isEntity()
-						|| persistentProperty.getTypeInformation().getActualType().equals(TypeInformation.OBJECT)) {
+                            typeHint = updateTypeHintForActualValue(typeHint, propertyValue);
+                            indexes.addAll(
+                                    doResolveIndexesFor(
+                                            keyspace,
+                                            currentPath,
+                                            typeHint.getActualType(),
+                                            persistentProperty,
+                                            propertyValue));
+                        } else {
+                            indexes.addAll(
+                                    resolveIndex(keyspace, currentPath, persistentProperty, propertyValue));
+                        }
+                    }
 
-					typeHint = updateTypeHintForActualValue(typeHint, propertyValue);
-					indexes.addAll(
-							doResolveIndexesFor(keyspace, currentPath, typeHint.getActualType(), persistentProperty, propertyValue));
-				} else {
-					indexes.addAll(resolveIndex(keyspace, currentPath, persistentProperty, propertyValue));
-				}
+                    private TypeInformation<?> updateTypeHintForActualValue(
+                            TypeInformation<?> typeHint, Object propertyValue) {
 
-			}
+                        if (typeHint.equals(TypeInformation.OBJECT) || typeHint.getClass().isInterface()) {
+                            try {
+                                typeHint =
+                                        mappingContext
+                                                .getRequiredPersistentEntity(propertyValue.getClass())
+                                                .getTypeInformation();
+                            } catch (Exception ignore) {
+                                // ignore for cases where property value cannot be resolved as an entity, in that
+                                // case
+                                // the provided type hint has to be sufficient
+                            }
+                        }
+                        return typeHint;
+                    }
+                });
 
-			private TypeInformation<?> updateTypeHintForActualValue(TypeInformation<?> typeHint, Object propertyValue) {
+        return indexes;
+    }
 
-				if (typeHint.equals(TypeInformation.OBJECT) || typeHint.getClass().isInterface()) {
-					try {
-						typeHint = mappingContext.getRequiredPersistentEntity(propertyValue.getClass()).getTypeInformation();
-					} catch (Exception ignore) {
-						// ignore for cases where property value cannot be resolved as an entity, in that case
-						// the provided type hint has to be sufficient
-					}
-				}
-				return typeHint;
-			}
+    protected Set<IndexedData> resolveIndex(
+            String keyspace,
+            String propertyPath,
+            @Nullable PersistentProperty<?> property,
+            @Nullable Object value) {
 
-		});
+        String path = normalizeIndexPath(propertyPath, property);
 
-		return indexes;
-	}
+        Set<IndexedData> data = new LinkedHashSet<>();
 
-	protected Set<IndexedData> resolveIndex(String keyspace, String propertyPath,
-			@Nullable PersistentProperty<?> property, @Nullable Object value) {
+        if (indexConfiguration.hasIndexFor(keyspace, path)) {
 
-		String path = normalizeIndexPath(propertyPath, property);
+            IndexingContext context =
+                    new IndexingContext(
+                            keyspace,
+                            path,
+                            property != null ? property.getTypeInformation() : TypeInformation.OBJECT);
 
-		Set<IndexedData> data = new LinkedHashSet<>();
+            for (IndexDefinition indexDefinition :
+                    indexConfiguration.getIndexDefinitionsFor(keyspace, path)) {
 
-		if (indexConfiguration.hasIndexFor(keyspace, path)) {
+                if (!verifyConditions(indexDefinition.getConditions(), value, context)) {
+                    continue;
+                }
 
-			IndexingContext context = new IndexingContext(keyspace, path,
-					property != null ? property.getTypeInformation() : TypeInformation.OBJECT);
+                Object transformedValue = indexDefinition.valueTransformer().convert(value);
+                IndexedData indexedData;
 
-			for (IndexDefinition indexDefinition : indexConfiguration.getIndexDefinitionsFor(keyspace, path)) {
+                if (transformedValue == null) {
+                    indexedData = new RemoveIndexedData(indexDefinition);
+                } else {
+                    indexedData =
+                            indexedDataFactoryProvider
+                                    .getIndexedDataFactory(indexDefinition)
+                                    .createIndexedDataFor(value);
+                }
 
-				if (!verifyConditions(indexDefinition.getConditions(), value, context)) {
-					continue;
-				}
+                data.add(indexedData);
+            }
+        } else if (property != null && value != null && property.isAnnotationPresent(Indexed.class)) {
 
-				Object transformedValue = indexDefinition.valueTransformer().convert(value);
-				IndexedData indexedData;
+            SimpleIndexDefinition indexDefinition = new SimpleIndexDefinition(keyspace, path);
+            indexConfiguration.addIndexDefinition(indexDefinition);
 
-				if (transformedValue == null) {
-					indexedData = new RemoveIndexedData(indexDefinition);
-				} else {
-					indexedData = indexedDataFactoryProvider.getIndexedDataFactory(indexDefinition).createIndexedDataFor(value);
-				}
+            data.add(
+                    indexedDataFactoryProvider
+                            .getIndexedDataFactory(indexDefinition)
+                            .createIndexedDataFor(value));
+        } else if (property != null
+                && value != null
+                && property.isAnnotationPresent(GeoIndexed.class)) {
 
-				data.add(indexedData);
-			}
-		}
+            GeoIndexDefinition indexDefinition = new GeoIndexDefinition(keyspace, path);
+            indexConfiguration.addIndexDefinition(indexDefinition);
 
-		else if (property != null && value != null && property.isAnnotationPresent(Indexed.class)) {
+            data.add(
+                    indexedDataFactoryProvider
+                            .getIndexedDataFactory(indexDefinition)
+                            .createIndexedDataFor(value));
+        }
 
-			SimpleIndexDefinition indexDefinition = new SimpleIndexDefinition(keyspace, path);
-			indexConfiguration.addIndexDefinition(indexDefinition);
+        return data;
+    }
 
-			data.add(indexedDataFactoryProvider.getIndexedDataFactory(indexDefinition).createIndexedDataFor(value));
-		} else if (property != null &&  value != null && property.isAnnotationPresent(GeoIndexed.class)) {
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private boolean verifyConditions(
+            Iterable<Condition<?>> conditions, Object value, IndexingContext context) {
 
-			GeoIndexDefinition indexDefinition = new GeoIndexDefinition(keyspace, path);
-			indexConfiguration.addIndexDefinition(indexDefinition);
+        for (Condition condition : conditions) {
 
-			data.add(indexedDataFactoryProvider.getIndexedDataFactory(indexDefinition).createIndexedDataFor(value));
-		}
+            // TODO: generics lookup
+            if (!condition.matches(value, context)) {
+                return false;
+            }
+        }
 
-		return data;
-	}
+        return true;
+    }
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private boolean verifyConditions(Iterable<Condition<?>> conditions, Object value, IndexingContext context) {
+    private String normalizeIndexPath(String path, @Nullable PersistentProperty<?> property) {
 
-		for (Condition condition : conditions) {
+        if (property == null) {
+            return path;
+        }
 
-			// TODO: generics lookup
-			if (!condition.matches(value, context)) {
-				return false;
-			}
-		}
+        if (property.isMap()) {
+            return path.replaceAll("\\[", "").replaceAll("\\]", "");
+        }
+        if (property.isCollectionLike()) {
+            return path.replaceAll("\\[(\\p{Digit})*\\]", "").replaceAll("\\.\\.", ".");
+        }
 
-		return true;
-	}
-
-	private String normalizeIndexPath(String path, @Nullable PersistentProperty<?> property) {
-
-		if (property == null) {
-			return path;
-		}
-
-		if (property.isMap()) {
-			return path.replaceAll("\\[", "").replaceAll("\\]", "");
-		}
-		if (property.isCollectionLike()) {
-			return path.replaceAll("\\[(\\p{Digit})*\\]", "").replaceAll("\\.\\.", ".");
-		}
-
-		return path;
-	}
+        return path;
+    }
 }

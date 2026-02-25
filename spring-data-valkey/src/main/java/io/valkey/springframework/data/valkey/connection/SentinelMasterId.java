@@ -28,37 +28,37 @@ import org.springframework.util.ObjectUtils;
  */
 class SentinelMasterId implements NamedNode {
 
-	private final String name;
+    private final String name;
 
-	public SentinelMasterId(String name) {
-		Assert.hasText(name, "Sentinel Master Id must not be null or empty");
-		this.name = name;
-	}
+    public SentinelMasterId(String name) {
+        Assert.hasText(name, "Sentinel Master Id must not be null or empty");
+        this.name = name;
+    }
 
-	@NonNull
-	@Override
-	public String getName() {
-		return name;
-	}
+    @NonNull
+    @Override
+    public String getName() {
+        return name;
+    }
 
-	@Override
-	public String toString() {
-		return getName();
-	}
+    @Override
+    public String toString() {
+        return getName();
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (!(o instanceof SentinelMasterId that)) {
-			return false;
-		}
-		return ObjectUtils.nullSafeEquals(name, that.name);
-	}
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof SentinelMasterId that)) {
+            return false;
+        }
+        return ObjectUtils.nullSafeEquals(name, that.name);
+    }
 
-	@Override
-	public int hashCode() {
-		return ObjectUtils.nullSafeHashCode(name);
-	}
+    @Override
+    public int hashCode() {
+        return ObjectUtils.nullSafeHashCode(name);
+    }
 }

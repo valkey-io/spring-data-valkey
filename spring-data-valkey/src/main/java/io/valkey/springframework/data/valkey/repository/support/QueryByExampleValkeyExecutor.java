@@ -15,6 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.repository.support;
 
+import io.valkey.springframework.data.valkey.core.ValkeyKeyValueTemplate;
+import io.valkey.springframework.data.valkey.core.convert.IndexResolver;
+import io.valkey.springframework.data.valkey.core.convert.PathIndexResolver;
+import io.valkey.springframework.data.valkey.repository.query.ExampleQueryMapper;
+import io.valkey.springframework.data.valkey.repository.query.ValkeyOperationChain;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -22,7 +27,6 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.beans.factory.BeanFactory;
@@ -37,11 +41,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.keyvalue.core.query.KeyValueQuery;
 import org.springframework.data.mapping.model.EntityInstantiators;
 import org.springframework.data.projection.SpelAwareProxyProjectionFactory;
-import io.valkey.springframework.data.valkey.core.ValkeyKeyValueTemplate;
-import io.valkey.springframework.data.valkey.core.convert.IndexResolver;
-import io.valkey.springframework.data.valkey.core.convert.PathIndexResolver;
-import io.valkey.springframework.data.valkey.repository.query.ExampleQueryMapper;
-import io.valkey.springframework.data.valkey.repository.query.ValkeyOperationChain;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.query.FluentQuery;
 import org.springframework.data.repository.query.ListQueryByExampleExecutor;
@@ -52,10 +51,11 @@ import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Repository fragment implementing Valkey {@link QueryByExampleExecutor Query-by-Example} operations.
- * <p>
- * This executor uses {@link ExampleQueryMapper} to map {@link Example}s into {@link KeyValueQuery} to execute its query
- * methods.
+ * Repository fragment implementing Valkey {@link QueryByExampleExecutor Query-by-Example}
+ * operations.
+ *
+ * <p>This executor uses {@link ExampleQueryMapper} to map {@link Example}s into {@link
+ * KeyValueQuery} to execute its query methods.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -63,269 +63,297 @@ import org.springframework.util.Assert;
  */
 @SuppressWarnings("unchecked")
 public class QueryByExampleValkeyExecutor<T>
-		implements ListQueryByExampleExecutor<T>, BeanFactoryAware, BeanClassLoaderAware {
-
-	private final EntityInformation<T, ?> entityInformation;
-	private final ValkeyKeyValueTemplate keyValueTemplate;
-	private final ExampleQueryMapper mapper;
-	private final SpelAwareProxyProjectionFactory projectionFactory;
-	private final EntityInstantiators entityInstantiators = new EntityInstantiators();
-
-	/**
-	 * Create a new {@link QueryByExampleValkeyExecutor} given {@link EntityInformation} and {@link ValkeyKeyValueTemplate}.
-	 * This constructor uses the configured {@link IndexResolver} from the converter.
-	 *
-	 * @param entityInformation must not be {@literal null}.
-	 * @param keyValueTemplate must not be {@literal null}.
-	 */
-	public QueryByExampleValkeyExecutor(EntityInformation<T, ?> entityInformation,
-			ValkeyKeyValueTemplate keyValueTemplate) {
-
-		this(entityInformation, keyValueTemplate,
-				keyValueTemplate.getConverter().getIndexResolver() != null ? keyValueTemplate.getConverter().getIndexResolver()
-						: new PathIndexResolver(keyValueTemplate.getMappingContext()));
-	}
-
-	/**
-	 * Create a new {@link QueryByExampleValkeyExecutor} given {@link EntityInformation} and {@link ValkeyKeyValueTemplate}.
-	 *
-	 * @param entityInformation must not be {@literal null}.
-	 * @param keyValueTemplate must not be {@literal null}.
-	 */
-	public QueryByExampleValkeyExecutor(EntityInformation<T, ?> entityInformation, ValkeyKeyValueTemplate keyValueTemplate,
-			IndexResolver indexResolver) {
-
-		Assert.notNull(entityInformation, "EntityInformation must not be null");
-		Assert.notNull(keyValueTemplate, "ValkeyKeyValueTemplate must not be null");
-		Assert.notNull(indexResolver, "IndexResolver must not be null");
-
-		this.entityInformation = entityInformation;
-		this.keyValueTemplate = keyValueTemplate;
-
-		this.mapper = new ExampleQueryMapper(keyValueTemplate.getMappingContext(), indexResolver);
-		this.projectionFactory = new SpelAwareProxyProjectionFactory();
-	}
-
-	@Override
-	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-		this.projectionFactory.setBeanFactory(beanFactory);
-	}
-
-	@Override
-	public void setBeanClassLoader(ClassLoader classLoader) {
-		this.projectionFactory.setBeanClassLoader(classLoader);
-	}
-
-	@Override
-	public <S extends T> Optional<S> findOne(Example<S> example) {
-
-		return Optional.ofNullable(doFindOne(example));
-	}
-
-	@Nullable
-	private <S extends T> S doFindOne(Example<S> example) {
-
-		Iterator<S> iterator = doFind(example);
-
-		if (iterator.hasNext()) {
-			S result = iterator.next();
-			if (iterator.hasNext()) {
-				throw new IncorrectResultSizeDataAccessException(1);
-			}
-
-			return result;
-		}
-
-		return null;
-	}
-
-	private <S extends T> Iterator<S> doFind(Example<S> example) {
-
-		ValkeyOperationChain operationChain = createQuery(example);
-
-		KeyValueQuery<ValkeyOperationChain> query = new KeyValueQuery<>(operationChain);
-		return (Iterator<S>) keyValueTemplate.find(query.limit(2), entityInformation.getJavaType()).iterator();
-	}
-
-	@Override
-	public <S extends T> List<S> findAll(Example<S> example) {
-
-		ValkeyOperationChain operationChain = createQuery(example);
-
-		Iterable<T> result = keyValueTemplate.find(new KeyValueQuery<>(operationChain), entityInformation.getJavaType());
-
-		return (List<S>) (result instanceof List<?> list ? list : Streamable.of(result).toList());
-	}
-
-	@Override
-	public <S extends T> List<S> findAll(Example<S> example, Sort sort) {
-		throw new UnsupportedOperationException("Ordering is not supported");
-	}
-
-	@Override
-	public <S extends T> Page<S> findAll(Example<S> example, Pageable pageable) {
-
-		Assert.notNull(pageable, "Pageable must not be null");
-
-		ValkeyOperationChain operationChain = createQuery(example);
-
-		KeyValueQuery<ValkeyOperationChain> query = new KeyValueQuery<>(operationChain);
-		List<S> result = (List<S>) keyValueTemplate.find(
-				query.orderBy(pageable.getSort()).skip(pageable.getOffset()).limit(pageable.getPageSize()),
-				entityInformation.getJavaType());
-
-		return PageableExecutionUtils.getPage(result, pageable,
-				() -> operationChain.isEmpty() ? keyValueTemplate.count(entityInformation.getJavaType())
-						: keyValueTemplate.count(query, entityInformation.getJavaType()));
-	}
-
-	@Override
-	public <S extends T> long count(Example<S> example) {
-
-		ValkeyOperationChain operationChain = createQuery(example);
-
-		return keyValueTemplate.count(new KeyValueQuery<>(operationChain), entityInformation.getJavaType());
-	}
-
-	@Override
-	public <S extends T> boolean exists(Example<S> example) {
-		return count(example) > 0;
-	}
-
-	@Override
-	public <S extends T, R> R findBy(Example<S> example,
-			Function<org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery<S>, R> queryFunction) {
-
-		Assert.notNull(example, "Example must not be null");
-		Assert.notNull(queryFunction, "Query function must not be null");
-
-		return queryFunction.apply(new FluentQueryByExample<>(example, example.getProbeType()));
-	}
-
-	private <S extends T> ValkeyOperationChain createQuery(Example<S> example) {
-
-		Assert.notNull(example, "Example must not be null");
-
-		return mapper.getMappedExample(example);
-	}
-
-	/**
-	 * {@link org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery} using {@link Example}.
-	 *
-	 * @author Mark Paluch
-	 * @since 2.6
-	 */
-	class FluentQueryByExample<S extends T, R> implements FluentQuery.FetchableFluentQuery<R> {
-
-		private final Example<S> example;
-		private final Sort sort;
-		private final Class<?> domainType;
-		private final Class<R> resultType;
-
-		FluentQueryByExample(Example<S> example, Class<R> resultType) {
-			this(example, Sort.unsorted(), resultType, resultType);
-		}
-
-		FluentQueryByExample(Example<S> example, Sort sort, Class<?> domainType, Class<R> resultType) {
-			this.example = example;
-			this.sort = sort;
-			this.domainType = domainType;
-			this.resultType = resultType;
-		}
-
-		@Override
-		public FetchableFluentQuery<R> sortBy(Sort sort) {
-			return new FluentQueryByExample<>(example, sort, domainType, resultType);
-		}
-
-		@Override
-		public <R1> FetchableFluentQuery<R1> as(Class<R1> resultType) {
-			return new FluentQueryByExample<>(example, sort, domainType, resultType);
-		}
-
-		@Override
-		public FetchableFluentQuery<R> project(Collection<String> properties) {
-			return this;
-		}
-
-		@Nullable
-		@Override
-		public R oneValue() {
-
-			S one = doFindOne(example);
-
-			if (one != null) {
-				return getConversionFunction(entityInformation.getJavaType(), resultType).apply(one);
-			}
-
-			return null;
-		}
-
-		@Nullable
-		@Override
-		public R firstValue() {
-
-			Iterator<S> iterator = doFind(example);
-
-			if (iterator.hasNext()) {
-				return getConversionFunction(entityInformation.getJavaType(), resultType).apply(iterator.next());
-			}
-
-			return null;
-		}
-
-		@Override
-		public List<R> all() {
-			return stream().collect(Collectors.toList());
-		}
-
-		@Override
-		public Page<R> page(Pageable pageable) {
-
-			Assert.notNull(pageable, "Pageable must not be null");
-
-			Function<Object, R> conversionFunction = getConversionFunction(entityInformation.getJavaType(), resultType);
-
-			List<R> content = findAll(example, pageable).stream().map(conversionFunction).collect(Collectors.toList());
-			return PageableExecutionUtils.getPage(content, pageable, this::count);
-		}
-
-		@Override
-		public Stream<R> stream() {
-
-			Function<Object, R> conversionFunction = getConversionFunction(entityInformation.getJavaType(), resultType);
-
-			if (sort.isSorted()) {
-				return findAll(example, PageRequest.of(0, Integer.MAX_VALUE, sort)).stream().map(conversionFunction);
-			}
-
-			return Streamable.of(findAll(example)).map(conversionFunction).stream();
-		}
-
-		@Override
-		public long count() {
-			return QueryByExampleValkeyExecutor.this.count(example);
-		}
-
-		@Override
-		public boolean exists() {
-			return QueryByExampleValkeyExecutor.this.exists(example);
-		}
-
-		private <P> Function<Object, P> getConversionFunction(Class<?> inputType, Class<P> targetType) {
-
-			if (targetType.isAssignableFrom(inputType)) {
-				return (Function<Object, P>) Function.identity();
-			}
-
-			if (targetType.isInterface()) {
-				return o -> projectionFactory.createProjection(targetType, o);
-			}
-
-			DtoInstantiatingConverter converter = new DtoInstantiatingConverter(targetType,
-					keyValueTemplate.getMappingContext(), entityInstantiators);
-
-			return o -> (P) converter.convert(o);
-		}
-	}
+        implements ListQueryByExampleExecutor<T>, BeanFactoryAware, BeanClassLoaderAware {
+
+    private final EntityInformation<T, ?> entityInformation;
+    private final ValkeyKeyValueTemplate keyValueTemplate;
+    private final ExampleQueryMapper mapper;
+    private final SpelAwareProxyProjectionFactory projectionFactory;
+    private final EntityInstantiators entityInstantiators = new EntityInstantiators();
+
+    /**
+     * Create a new {@link QueryByExampleValkeyExecutor} given {@link EntityInformation} and {@link
+     * ValkeyKeyValueTemplate}. This constructor uses the configured {@link IndexResolver} from the
+     * converter.
+     *
+     * @param entityInformation must not be {@literal null}.
+     * @param keyValueTemplate must not be {@literal null}.
+     */
+    public QueryByExampleValkeyExecutor(
+            EntityInformation<T, ?> entityInformation, ValkeyKeyValueTemplate keyValueTemplate) {
+
+        this(
+                entityInformation,
+                keyValueTemplate,
+                keyValueTemplate.getConverter().getIndexResolver() != null
+                        ? keyValueTemplate.getConverter().getIndexResolver()
+                        : new PathIndexResolver(keyValueTemplate.getMappingContext()));
+    }
+
+    /**
+     * Create a new {@link QueryByExampleValkeyExecutor} given {@link EntityInformation} and {@link
+     * ValkeyKeyValueTemplate}.
+     *
+     * @param entityInformation must not be {@literal null}.
+     * @param keyValueTemplate must not be {@literal null}.
+     */
+    public QueryByExampleValkeyExecutor(
+            EntityInformation<T, ?> entityInformation,
+            ValkeyKeyValueTemplate keyValueTemplate,
+            IndexResolver indexResolver) {
+
+        Assert.notNull(entityInformation, "EntityInformation must not be null");
+        Assert.notNull(keyValueTemplate, "ValkeyKeyValueTemplate must not be null");
+        Assert.notNull(indexResolver, "IndexResolver must not be null");
+
+        this.entityInformation = entityInformation;
+        this.keyValueTemplate = keyValueTemplate;
+
+        this.mapper = new ExampleQueryMapper(keyValueTemplate.getMappingContext(), indexResolver);
+        this.projectionFactory = new SpelAwareProxyProjectionFactory();
+    }
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        this.projectionFactory.setBeanFactory(beanFactory);
+    }
+
+    @Override
+    public void setBeanClassLoader(ClassLoader classLoader) {
+        this.projectionFactory.setBeanClassLoader(classLoader);
+    }
+
+    @Override
+    public <S extends T> Optional<S> findOne(Example<S> example) {
+
+        return Optional.ofNullable(doFindOne(example));
+    }
+
+    @Nullable
+    private <S extends T> S doFindOne(Example<S> example) {
+
+        Iterator<S> iterator = doFind(example);
+
+        if (iterator.hasNext()) {
+            S result = iterator.next();
+            if (iterator.hasNext()) {
+                throw new IncorrectResultSizeDataAccessException(1);
+            }
+
+            return result;
+        }
+
+        return null;
+    }
+
+    private <S extends T> Iterator<S> doFind(Example<S> example) {
+
+        ValkeyOperationChain operationChain = createQuery(example);
+
+        KeyValueQuery<ValkeyOperationChain> query = new KeyValueQuery<>(operationChain);
+        return (Iterator<S>)
+                keyValueTemplate.find(query.limit(2), entityInformation.getJavaType()).iterator();
+    }
+
+    @Override
+    public <S extends T> List<S> findAll(Example<S> example) {
+
+        ValkeyOperationChain operationChain = createQuery(example);
+
+        Iterable<T> result =
+                keyValueTemplate.find(new KeyValueQuery<>(operationChain), entityInformation.getJavaType());
+
+        return (List<S>) (result instanceof List<?> list ? list : Streamable.of(result).toList());
+    }
+
+    @Override
+    public <S extends T> List<S> findAll(Example<S> example, Sort sort) {
+        throw new UnsupportedOperationException("Ordering is not supported");
+    }
+
+    @Override
+    public <S extends T> Page<S> findAll(Example<S> example, Pageable pageable) {
+
+        Assert.notNull(pageable, "Pageable must not be null");
+
+        ValkeyOperationChain operationChain = createQuery(example);
+
+        KeyValueQuery<ValkeyOperationChain> query = new KeyValueQuery<>(operationChain);
+        List<S> result =
+                (List<S>)
+                        keyValueTemplate.find(
+                                query
+                                        .orderBy(pageable.getSort())
+                                        .skip(pageable.getOffset())
+                                        .limit(pageable.getPageSize()),
+                                entityInformation.getJavaType());
+
+        return PageableExecutionUtils.getPage(
+                result,
+                pageable,
+                () ->
+                        operationChain.isEmpty()
+                                ? keyValueTemplate.count(entityInformation.getJavaType())
+                                : keyValueTemplate.count(query, entityInformation.getJavaType()));
+    }
+
+    @Override
+    public <S extends T> long count(Example<S> example) {
+
+        ValkeyOperationChain operationChain = createQuery(example);
+
+        return keyValueTemplate.count(
+                new KeyValueQuery<>(operationChain), entityInformation.getJavaType());
+    }
+
+    @Override
+    public <S extends T> boolean exists(Example<S> example) {
+        return count(example) > 0;
+    }
+
+    @Override
+    public <S extends T, R> R findBy(
+            Example<S> example,
+            Function<org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery<S>, R>
+                    queryFunction) {
+
+        Assert.notNull(example, "Example must not be null");
+        Assert.notNull(queryFunction, "Query function must not be null");
+
+        return queryFunction.apply(new FluentQueryByExample<>(example, example.getProbeType()));
+    }
+
+    private <S extends T> ValkeyOperationChain createQuery(Example<S> example) {
+
+        Assert.notNull(example, "Example must not be null");
+
+        return mapper.getMappedExample(example);
+    }
+
+    /**
+     * {@link org.springframework.data.repository.query.FluentQuery.FetchableFluentQuery} using {@link
+     * Example}.
+     *
+     * @author Mark Paluch
+     * @since 2.6
+     */
+    class FluentQueryByExample<S extends T, R> implements FluentQuery.FetchableFluentQuery<R> {
+
+        private final Example<S> example;
+        private final Sort sort;
+        private final Class<?> domainType;
+        private final Class<R> resultType;
+
+        FluentQueryByExample(Example<S> example, Class<R> resultType) {
+            this(example, Sort.unsorted(), resultType, resultType);
+        }
+
+        FluentQueryByExample(Example<S> example, Sort sort, Class<?> domainType, Class<R> resultType) {
+            this.example = example;
+            this.sort = sort;
+            this.domainType = domainType;
+            this.resultType = resultType;
+        }
+
+        @Override
+        public FetchableFluentQuery<R> sortBy(Sort sort) {
+            return new FluentQueryByExample<>(example, sort, domainType, resultType);
+        }
+
+        @Override
+        public <R1> FetchableFluentQuery<R1> as(Class<R1> resultType) {
+            return new FluentQueryByExample<>(example, sort, domainType, resultType);
+        }
+
+        @Override
+        public FetchableFluentQuery<R> project(Collection<String> properties) {
+            return this;
+        }
+
+        @Nullable
+        @Override
+        public R oneValue() {
+
+            S one = doFindOne(example);
+
+            if (one != null) {
+                return getConversionFunction(entityInformation.getJavaType(), resultType).apply(one);
+            }
+
+            return null;
+        }
+
+        @Nullable
+        @Override
+        public R firstValue() {
+
+            Iterator<S> iterator = doFind(example);
+
+            if (iterator.hasNext()) {
+                return getConversionFunction(entityInformation.getJavaType(), resultType)
+                        .apply(iterator.next());
+            }
+
+            return null;
+        }
+
+        @Override
+        public List<R> all() {
+            return stream().collect(Collectors.toList());
+        }
+
+        @Override
+        public Page<R> page(Pageable pageable) {
+
+            Assert.notNull(pageable, "Pageable must not be null");
+
+            Function<Object, R> conversionFunction =
+                    getConversionFunction(entityInformation.getJavaType(), resultType);
+
+            List<R> content =
+                    findAll(example, pageable).stream().map(conversionFunction).collect(Collectors.toList());
+            return PageableExecutionUtils.getPage(content, pageable, this::count);
+        }
+
+        @Override
+        public Stream<R> stream() {
+
+            Function<Object, R> conversionFunction =
+                    getConversionFunction(entityInformation.getJavaType(), resultType);
+
+            if (sort.isSorted()) {
+                return findAll(example, PageRequest.of(0, Integer.MAX_VALUE, sort)).stream()
+                        .map(conversionFunction);
+            }
+
+            return Streamable.of(findAll(example)).map(conversionFunction).stream();
+        }
+
+        @Override
+        public long count() {
+            return QueryByExampleValkeyExecutor.this.count(example);
+        }
+
+        @Override
+        public boolean exists() {
+            return QueryByExampleValkeyExecutor.this.exists(example);
+        }
+
+        private <P> Function<Object, P> getConversionFunction(Class<?> inputType, Class<P> targetType) {
+
+            if (targetType.isAssignableFrom(inputType)) {
+                return (Function<Object, P>) Function.identity();
+            }
+
+            if (targetType.isInterface()) {
+                return o -> projectionFactory.createProjection(targetType, o);
+            }
+
+            DtoInstantiatingConverter converter =
+                    new DtoInstantiatingConverter(
+                            targetType, keyValueTemplate.getMappingContext(), entityInstantiators);
+
+            return o -> (P) converter.convert(o);
+        }
+    }
 }

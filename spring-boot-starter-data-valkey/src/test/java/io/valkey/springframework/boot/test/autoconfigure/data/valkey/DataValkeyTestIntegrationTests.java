@@ -16,23 +16,21 @@
 
 package io.valkey.springframework.boot.test.autoconfigure.data.valkey;
 
-import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import org.testcontainers.containers.GenericContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * Integration tests for {@link DataValkeyTest @DataValkeyTest}.
@@ -46,42 +44,38 @@ import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 @DataValkeyTest
 class DataValkeyTestIntegrationTests {
 
-	@Container
-	@ServiceConnection
-	@SuppressWarnings("resource")
-	static final GenericContainer<?> valkey = new GenericContainer<>("valkey/valkey:latest")
-		.withExposedPorts(6379);
+    @Container
+    @ServiceConnection
+    @SuppressWarnings("resource")
+    static final GenericContainer<?> valkey =
+            new GenericContainer<>("valkey/valkey:latest").withExposedPorts(6379);
 
-	@Autowired
-	private ExampleRepository exampleRepository;
+    @Autowired private ExampleRepository exampleRepository;
 
-	@Autowired
-	private ApplicationContext applicationContext;
+    @Autowired private ApplicationContext applicationContext;
 
-	@Test
-	void testRepository() {
-		PersonHash personHash = new PersonHash();
-		personHash.setDescription("Look, new @DataValkeyTest!");
-		PersonHash savedEntity = this.exampleRepository.save(personHash);
-		assertThat(savedEntity.getId()).isNotNull();
-		assertThat(savedEntity.getDescription()).isEqualTo("Look, new @DataValkeyTest!");
-		this.exampleRepository.deleteAll();
-	}
+    @Test
+    void testRepository() {
+        PersonHash personHash = new PersonHash();
+        personHash.setDescription("Look, new @DataValkeyTest!");
+        PersonHash savedEntity = this.exampleRepository.save(personHash);
+        assertThat(savedEntity.getId()).isNotNull();
+        assertThat(savedEntity.getDescription()).isEqualTo("Look, new @DataValkeyTest!");
+        this.exampleRepository.deleteAll();
+    }
 
-	@Test
-	void didNotInjectExampleService() {
-		assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
-			.isThrownBy(() -> this.applicationContext.getBean(ExampleService.class));
-	}
+    @Test
+    void didNotInjectExampleService() {
+        assertThatExceptionOfType(NoSuchBeanDefinitionException.class)
+                .isThrownBy(() -> this.applicationContext.getBean(ExampleService.class));
+    }
 
-	@TestConfiguration(proxyBeanMethods = false)
-	static class Config {
+    @TestConfiguration(proxyBeanMethods = false)
+    static class Config {
 
-		@Bean
-		StringValkeyTemplate stringValkeyTemplate(ValkeyConnectionFactory connectionFactory) {
-			return new StringValkeyTemplate(connectionFactory);
-		}
-
-	}
-
+        @Bean
+        StringValkeyTemplate stringValkeyTemplate(ValkeyConnectionFactory connectionFactory) {
+            return new StringValkeyTemplate(connectionFactory);
+        }
+    }
 }

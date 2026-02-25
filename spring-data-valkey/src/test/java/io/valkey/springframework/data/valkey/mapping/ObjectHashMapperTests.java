@@ -18,16 +18,14 @@ package io.valkey.springframework.data.valkey.mapping;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import java.util.Collections;
-import java.util.Map;
-import java.util.Objects;
-
-import org.junit.jupiter.api.Test;
-
-import org.springframework.data.annotation.TypeAlias;
 import io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverter;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.hash.ObjectHashMapper;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Objects;
+import org.junit.jupiter.api.Test;
+import org.springframework.data.annotation.TypeAlias;
 
 /**
  * Unit tests for {@link ObjectHashMapper}.
@@ -38,84 +36,86 @@ import io.valkey.springframework.data.valkey.hash.ObjectHashMapper;
  */
 class ObjectHashMapperTests extends AbstractHashMapperTests {
 
-	@SuppressWarnings("rawtypes")
-	protected ObjectHashMapper mapperFor(Class type) {
-		return new ObjectHashMapper();
-	}
+    @SuppressWarnings("rawtypes")
+    protected ObjectHashMapper mapperFor(Class type) {
+        return new ObjectHashMapper();
+    }
 
-	@Test // DATAREDIS-503
-	void testSimpleType() {
-		assertBackAndForwardMapping(100);
-	}
+    @Test // DATAREDIS-503
+    void testSimpleType() {
+        assertBackAndForwardMapping(100);
+    }
 
-	@Test // DATAREDIS-503
-	void fromHashShouldCastToType() {
+    @Test // DATAREDIS-503
+    void fromHashShouldCastToType() {
 
-		ObjectHashMapper objectHashMapper = new ObjectHashMapper();
-		Map<byte[], byte[]> hash = objectHashMapper.toHash(100);
+        ObjectHashMapper objectHashMapper = new ObjectHashMapper();
+        Map<byte[], byte[]> hash = objectHashMapper.toHash(100);
 
-		Integer result = objectHashMapper.fromHash(hash, Integer.class);
+        Integer result = objectHashMapper.fromHash(hash, Integer.class);
 
-		assertThat(result).isEqualTo(100);
-	}
+        assertThat(result).isEqualTo(100);
+    }
 
-	@Test // DATAREDIS-503
-	void fromHashShouldFailIfTypeDoesNotMatch() {
+    @Test // DATAREDIS-503
+    void fromHashShouldFailIfTypeDoesNotMatch() {
 
-		ObjectHashMapper objectHashMapper = new ObjectHashMapper();
-		Map<byte[], byte[]> hash = objectHashMapper.toHash(100);
+        ObjectHashMapper objectHashMapper = new ObjectHashMapper();
+        Map<byte[], byte[]> hash = objectHashMapper.toHash(100);
 
-		assertThatExceptionOfType(ClassCastException.class).isThrownBy(() -> objectHashMapper.fromHash(hash, String.class));
-	}
+        assertThatExceptionOfType(ClassCastException.class)
+                .isThrownBy(() -> objectHashMapper.fromHash(hash, String.class));
+    }
 
-	@Test // DATAREDIS-1179
-	void hashMapperAllowsReuseOfValkeyConverter/*and thus the MappingContext holding eg. TypeAlias information*/() {
+    @Test // DATAREDIS-1179
+    void
+            hashMapperAllowsReuseOfValkeyConverter /*and thus the MappingContext holding eg. TypeAlias information*/() {
 
-		WithTypeAlias source = new WithTypeAlias();
-		source.value = "val";
-		Map<byte[], byte[]> hash = new ObjectHashMapper().toHash(source);
+        WithTypeAlias source = new WithTypeAlias();
+        source.value = "val";
+        Map<byte[], byte[]> hash = new ObjectHashMapper().toHash(source);
 
-		ValkeyMappingContext ctx = new ValkeyMappingContext();
-		ctx.setInitialEntitySet(Collections.singleton(WithTypeAlias.class));
-		ctx.afterPropertiesSet();
+        ValkeyMappingContext ctx = new ValkeyMappingContext();
+        ctx.setInitialEntitySet(Collections.singleton(WithTypeAlias.class));
+        ctx.afterPropertiesSet();
 
-		MappingValkeyConverter mappingValkeyConverter = new MappingValkeyConverter(ctx, null, null);
-		mappingValkeyConverter.afterPropertiesSet();
+        MappingValkeyConverter mappingValkeyConverter = new MappingValkeyConverter(ctx, null, null);
+        mappingValkeyConverter.afterPropertiesSet();
 
-		ObjectHashMapper objectHashMapper = new ObjectHashMapper(mappingValkeyConverter);
-		assertThat(objectHashMapper.fromHash(hash)).isEqualTo(source);
-	}
+        ObjectHashMapper objectHashMapper = new ObjectHashMapper(mappingValkeyConverter);
+        assertThat(objectHashMapper.fromHash(hash)).isEqualTo(source);
+    }
 
-	@TypeAlias("_42_")
-	static class WithTypeAlias {
+    @TypeAlias("_42_")
+    static class WithTypeAlias {
 
-		private String value;
+        private String value;
 
-		public String getValue() {
-			return this.value;
-		}
+        public String getValue() {
+            return this.value;
+        }
 
-		public void setValue(String value) {
-			this.value = value;
-		}
+        public void setValue(String value) {
+            this.value = value;
+        }
 
-		@Override
-		public boolean equals(Object obj) {
+        @Override
+        public boolean equals(Object obj) {
 
-			if (this == obj) {
-				return true;
-			}
+            if (this == obj) {
+                return true;
+            }
 
-			if (!(obj instanceof WithTypeAlias that)) {
-				return false;
-			}
+            if (!(obj instanceof WithTypeAlias that)) {
+                return false;
+            }
 
-			return Objects.equals(this.getValue(), that.getValue());
-		}
+            return Objects.equals(this.getValue(), that.getValue());
+        }
 
-		@Override
-		public int hashCode() {
-			return Objects.hash(getValue());
-		}
-	}
+        @Override
+        public int hashCode() {
+            return Objects.hash(getValue());
+        }
+    }
 }

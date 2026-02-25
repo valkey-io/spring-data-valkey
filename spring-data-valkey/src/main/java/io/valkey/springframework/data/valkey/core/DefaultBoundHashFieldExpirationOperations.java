@@ -15,15 +15,14 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
+import io.valkey.springframework.data.valkey.core.types.Expirations;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
-
-import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
-import io.valkey.springframework.data.valkey.core.types.Expiration;
-import io.valkey.springframework.data.valkey.core.types.Expirations;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -33,61 +32,61 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @since 3.5
  */
-class DefaultBoundHashFieldExpirationOperations<H, HK> implements BoundHashFieldExpirationOperations<HK> {
+class DefaultBoundHashFieldExpirationOperations<H, HK>
+        implements BoundHashFieldExpirationOperations<HK> {
 
-	private final HashOperations<H, HK, ?> operations;
-	private final H key;
-	private final Supplier<? extends Collection<HK>> hashFields;
+    private final HashOperations<H, HK, ?> operations;
+    private final H key;
+    private final Supplier<? extends Collection<HK>> hashFields;
 
-	public DefaultBoundHashFieldExpirationOperations(HashOperations<H, HK, ?> operations, H key,
-			Supplier<? extends Collection<HK>> hashFields) {
+    public DefaultBoundHashFieldExpirationOperations(
+            HashOperations<H, HK, ?> operations, H key, Supplier<? extends Collection<HK>> hashFields) {
 
-		this.operations = operations;
-		this.key = key;
-		this.hashFields = hashFields;
-	}
+        this.operations = operations;
+        this.key = key;
+        this.hashFields = hashFields;
+    }
 
-	@Override
-	public ExpireChanges<HK> expire(Expiration expiration, ExpirationOptions options) {
-		return operations.expire(key, expiration, options, getHashKeys());
-	}
+    @Override
+    public ExpireChanges<HK> expire(Expiration expiration, ExpirationOptions options) {
+        return operations.expire(key, expiration, options, getHashKeys());
+    }
 
-	@Nullable
-	@Override
-	public ExpireChanges<HK> expire(Duration timeout) {
-		return operations.expire(key, timeout, getHashKeys());
-	}
+    @Nullable
+    @Override
+    public ExpireChanges<HK> expire(Duration timeout) {
+        return operations.expire(key, timeout, getHashKeys());
+    }
 
-	@Nullable
-	@Override
-	public ExpireChanges<HK> expireAt(Instant expireAt) {
-		return operations.expireAt(key, expireAt, getHashKeys());
-	}
+    @Nullable
+    @Override
+    public ExpireChanges<HK> expireAt(Instant expireAt) {
+        return operations.expireAt(key, expireAt, getHashKeys());
+    }
 
-	@Nullable
-	@Override
-	public ExpireChanges<HK> persist() {
-		return operations.persist(key, getHashKeys());
-	}
+    @Nullable
+    @Override
+    public ExpireChanges<HK> persist() {
+        return operations.persist(key, getHashKeys());
+    }
 
-	@Nullable
-	@Override
-	public Expirations<HK> getTimeToLive() {
-		return operations.getTimeToLive(key, getHashKeys());
-	}
+    @Nullable
+    @Override
+    public Expirations<HK> getTimeToLive() {
+        return operations.getTimeToLive(key, getHashKeys());
+    }
 
-	@Nullable
-	@Override
-	public Expirations<HK> getTimeToLive(TimeUnit timeUnit) {
-		return operations.getTimeToLive(key, timeUnit, getHashKeys());
-	}
+    @Nullable
+    @Override
+    public Expirations<HK> getTimeToLive(TimeUnit timeUnit) {
+        return operations.getTimeToLive(key, timeUnit, getHashKeys());
+    }
 
-	private Collection<HK> getHashKeys() {
+    private Collection<HK> getHashKeys() {
 
-		Collection<HK> hks = hashFields.get();
+        Collection<HK> hks = hashFields.get();
 
-		Assert.state(hks != null, "Hash keys must not be null");
-		return hks;
-	}
-
+        Assert.state(hks != null, "Hash keys must not be null");
+        return hks;
+    }
 }

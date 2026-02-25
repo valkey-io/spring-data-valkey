@@ -15,66 +15,82 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-
-import org.reactivestreams.Publisher;
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.ReactiveClusterListCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.ByteBufferResponse;
+import java.nio.ByteBuffer;
+import org.reactivestreams.Publisher;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Christoph Strobl
  * @author Mark Paluch
  * @since 2.0
  */
-class LettuceReactiveClusterListCommands extends LettuceReactiveListCommands implements ReactiveClusterListCommands {
+class LettuceReactiveClusterListCommands extends LettuceReactiveListCommands
+        implements ReactiveClusterListCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveClusterListCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterListCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveClusterListCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterListCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 
-	@Override
-	public Flux<PopResponse> bPop(Publisher<BPopCommand> commands) {
+    @Override
+    public Flux<PopResponse> bPop(Publisher<BPopCommand> commands) {
 
-		return getConnection().execute(cmd -> Flux.from(commands).concatMap(command -> {
+        return getConnection()
+                .execute(
+                        cmd ->
+                                Flux.from(commands)
+                                        .concatMap(
+                                                command -> {
+                                                    Assert.notNull(command.getKeys(), "Keys must not be null");
+                                                    Assert.notNull(command.getDirection(), "Direction must not be null");
 
-			Assert.notNull(command.getKeys(), "Keys must not be null");
-			Assert.notNull(command.getDirection(), "Direction must not be null");
+                                                    if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getKeys())) {
+                                                        return super.bPop(Mono.just(command));
+                                                    }
 
-			if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getKeys())) {
-				return super.bPop(Mono.just(command));
-			}
+                                                    return Mono.error(
+                                                            new InvalidDataAccessApiUsageException(
+                                                                    "All keys must map to the same slot for BPOP command."));
+                                                }));
+    }
 
-			return Mono.error(new InvalidDataAccessApiUsageException("All keys must map to the same slot for BPOP command."));
-		}));
-	}
+    @Override
+    public Flux<ByteBufferResponse<RPopLPushCommand>> rPopLPush(
+            Publisher<RPopLPushCommand> commands) {
 
-	@Override
-	public Flux<ByteBufferResponse<RPopLPushCommand>> rPopLPush(Publisher<RPopLPushCommand> commands) {
+        return getConnection()
+                .execute(
+                        cmd ->
+                                Flux.from(commands)
+                                        .concatMap(
+                                                command -> {
+                                                    Assert.notNull(command.getKey(), "Key must not be null");
+                                                    Assert.notNull(
+                                                            command.getDestination(), "Destination key must not be null");
 
-		return getConnection().execute(cmd -> Flux.from(commands).concatMap(command -> {
+                                                    if (ClusterSlotHashUtil.isSameSlotForAllKeys(
+                                                            command.getKey(), command.getDestination())) {
+                                                        return super.rPopLPush(Mono.just(command));
+                                                    }
 
-			Assert.notNull(command.getKey(), "Key must not be null");
-			Assert.notNull(command.getDestination(), "Destination key must not be null");
+                                                    Mono<ByteBuffer> result =
+                                                            cmd.rpop(command.getKey())
+                                                                    .flatMap(
+                                                                            value ->
+                                                                                    cmd.lpush(command.getDestination(), value)
+                                                                                            .map(x -> value));
 
-			if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getKey(), command.getDestination())) {
-				return super.rPopLPush(Mono.just(command));
-			}
-
-			Mono<ByteBuffer> result = cmd.rpop(command.getKey())
-					.flatMap(value -> cmd.lpush(command.getDestination(), value).map(x -> value));
-
-			return result.map(value -> new ByteBufferResponse<>(command, value));
-		}));
-	}
+                                                    return result.map(value -> new ByteBufferResponse<>(command, value));
+                                                }));
+    }
 }

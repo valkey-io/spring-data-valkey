@@ -18,16 +18,16 @@ package io.valkey.springframework.data.valkey;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Implementation of {@link ObjectFactory} that returns unique Doubles as Strings, incrementing by 1 each time
+ * Implementation of {@link ObjectFactory} that returns unique Doubles as Strings, incrementing by 1
+ * each time
  *
  * @author Jennifer Hickey
  */
 public class DoubleAsStringObjectFactory implements ObjectFactory<String> {
 
-	private AtomicLong counter = new AtomicLong();
+    private AtomicLong counter = new AtomicLong();
 
-	public String instance() {
-		return String.valueOf(Double.valueOf(counter.getAndIncrement()));
-	}
-
+    public String instance() {
+        return String.valueOf(Double.valueOf(counter.getAndIncrement()));
+    }
 }

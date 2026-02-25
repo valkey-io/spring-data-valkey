@@ -19,12 +19,23 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.util.ReflectionTestUtils.*;
 
+import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
+import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter.EnableKeyspaceEvents;
+import io.valkey.springframework.data.valkey.core.convert.Bucket;
+import io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration;
+import io.valkey.springframework.data.valkey.core.convert.MappingConfiguration;
+import io.valkey.springframework.data.valkey.core.convert.SimpleIndexedPropertyValue;
+import io.valkey.springframework.data.valkey.core.convert.ValkeyData;
+import io.valkey.springframework.data.valkey.core.index.IndexConfiguration;
+import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
+import io.valkey.springframework.data.valkey.listener.KeyExpirationEventMessageListener;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,20 +45,7 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-
 import org.springframework.data.annotation.Id;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
-import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
-import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter.EnableKeyspaceEvents;
-import io.valkey.springframework.data.valkey.core.convert.Bucket;
-import io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration;
-import io.valkey.springframework.data.valkey.core.convert.MappingConfiguration;
-import io.valkey.springframework.data.valkey.core.convert.ValkeyData;
-import io.valkey.springframework.data.valkey.core.convert.SimpleIndexedPropertyValue;
-import io.valkey.springframework.data.valkey.core.index.IndexConfiguration;
-import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
-import io.valkey.springframework.data.valkey.listener.KeyExpirationEventMessageListener;
 
 /**
  * Unit tests for {@link ValkeyKeyValueAdapter}.
@@ -59,180 +57,213 @@ import io.valkey.springframework.data.valkey.listener.KeyExpirationEventMessageL
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ValkeyKeyValueAdapterUnitTests {
 
-	private ValkeyKeyValueAdapter adapter;
-	private ValkeyTemplate<?, ?> template;
-	private ValkeyMappingContext context;
-	@Mock JedisConnectionFactory jedisConnectionFactoryMock;
-	@Mock ValkeyConnection valkeyConnectionMock;
+    private ValkeyKeyValueAdapter adapter;
+    private ValkeyTemplate<?, ?> template;
+    private ValkeyMappingContext context;
+    @Mock JedisConnectionFactory jedisConnectionFactoryMock;
+    @Mock ValkeyConnection valkeyConnectionMock;
 
-	@BeforeEach
-	void setUp() throws Exception {
+    @BeforeEach
+    void setUp() throws Exception {
 
-		template = new ValkeyTemplate<>();
-		template.setConnectionFactory(jedisConnectionFactoryMock);
-		template.afterPropertiesSet();
+        template = new ValkeyTemplate<>();
+        template.setConnectionFactory(jedisConnectionFactoryMock);
+        template.afterPropertiesSet();
 
-		doAnswer(it -> {
+        doAnswer(
+                        it -> {
+                            SubscriptionListener listener = it.getArgument(0);
+                            listener.onChannelSubscribed(it.getArgument(1), 0);
 
-			SubscriptionListener listener = it.getArgument(0);
-			listener.onChannelSubscribed(it.getArgument(1), 0);
+                            return null;
+                        })
+                .when(valkeyConnectionMock)
+                .subscribe(any(), any());
 
-			return null;
-		}).when(valkeyConnectionMock).subscribe(any(), any());
+        doAnswer(
+                        it -> {
+                            SubscriptionListener listener = it.getArgument(0);
+                            listener.onPatternSubscribed(it.getArgument(1), 0);
 
-		doAnswer(it -> {
+                            return null;
+                        })
+                .when(valkeyConnectionMock)
+                .pSubscribe(any(), any());
 
-			SubscriptionListener listener = it.getArgument(0);
-			listener.onPatternSubscribed(it.getArgument(1), 0);
+        when(jedisConnectionFactoryMock.getConnection()).thenReturn(valkeyConnectionMock);
 
-			return null;
-		}).when(valkeyConnectionMock).pSubscribe(any(), any());
+        Properties keyspaceEventsConfig = new Properties();
+        keyspaceEventsConfig.put("notify-keyspace-events", "KEA");
 
-		when(jedisConnectionFactoryMock.getConnection()).thenReturn(valkeyConnectionMock);
+        when(valkeyConnectionMock.getConfig("notify-keyspace-events")).thenReturn(keyspaceEventsConfig);
 
-		Properties keyspaceEventsConfig = new Properties();
-		keyspaceEventsConfig.put("notify-keyspace-events", "KEA");
+        context =
+                new ValkeyMappingContext(
+                        new MappingConfiguration(new IndexConfiguration(), new KeyspaceConfiguration()));
+        context.afterPropertiesSet();
 
-		when(valkeyConnectionMock.getConfig("notify-keyspace-events")).thenReturn(keyspaceEventsConfig);
+        adapter = new ValkeyKeyValueAdapter(template, context);
+        adapter.afterPropertiesSet();
+        adapter.start();
+    }
 
-		context = new ValkeyMappingContext(new MappingConfiguration(new IndexConfiguration(), new KeyspaceConfiguration()));
-		context.afterPropertiesSet();
+    @AfterEach
+    void tearDown() throws Exception {
+        adapter.destroy();
+    }
 
-		adapter = new ValkeyKeyValueAdapter(template, context);
-		adapter.afterPropertiesSet();
-		adapter.start();
-	}
+    @Test // DATAREDIS-507
+    void destroyShouldNotDestroyConnectionFactory() throws Exception {
 
-	@AfterEach
-	void tearDown() throws Exception {
-		adapter.destroy();
-	}
+        adapter.destroy();
 
-	@Test // DATAREDIS-507
-	void destroyShouldNotDestroyConnectionFactory() throws Exception {
+        verify(jedisConnectionFactoryMock, never()).destroy();
+    }
 
-		adapter.destroy();
+    @Test // DATAREDIS-512, DATAREDIS-530
+    void putShouldRemoveExistingIndexValuesWhenUpdating() {
 
-		verify(jedisConnectionFactoryMock, never()).destroy();
-	}
+        ValkeyData rd =
+                new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("_id", "1")));
+        rd.addIndexedData(new SimpleIndexedPropertyValue("persons", "firstname", "rand"));
 
-	@Test // DATAREDIS-512, DATAREDIS-530
-	void putShouldRemoveExistingIndexValuesWhenUpdating() {
+        when(valkeyConnectionMock.sMembers(Mockito.any(byte[].class)))
+                .thenReturn(new LinkedHashSet<>(Arrays.asList("persons:firstname:rand".getBytes())));
+        when(valkeyConnectionMock.del((byte[][]) any())).thenReturn(1L);
 
-		ValkeyData rd = new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("_id", "1")));
-		rd.addIndexedData(new SimpleIndexedPropertyValue("persons", "firstname", "rand"));
+        adapter.put("1", rd, "persons");
 
-		when(valkeyConnectionMock.sMembers(Mockito.any(byte[].class)))
-				.thenReturn(new LinkedHashSet<>(Arrays.asList("persons:firstname:rand".getBytes())));
-		when(valkeyConnectionMock.del((byte[][]) any())).thenReturn(1L);
+        verify(valkeyConnectionMock, times(1))
+                .sRem(Mockito.any(byte[].class), Mockito.any(byte[].class));
+    }
 
-		adapter.put("1", rd, "persons");
+    @Test // DATAREDIS-512
+    void putShouldNotTryToRemoveExistingIndexValuesWhenInsertingNew() {
 
-		verify(valkeyConnectionMock, times(1)).sRem(Mockito.any(byte[].class), Mockito.any(byte[].class));
-	}
+        ValkeyData rd =
+                new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("_id", "1")));
+        rd.addIndexedData(new SimpleIndexedPropertyValue("persons", "firstname", "rand"));
 
-	@Test // DATAREDIS-512
-	void putShouldNotTryToRemoveExistingIndexValuesWhenInsertingNew() {
+        when(valkeyConnectionMock.sMembers(Mockito.any(byte[].class)))
+                .thenReturn(new LinkedHashSet<>(Arrays.asList("persons:firstname:rand".getBytes())));
+        when(valkeyConnectionMock.del((byte[][]) any())).thenReturn(0L);
 
-		ValkeyData rd = new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("_id", "1")));
-		rd.addIndexedData(new SimpleIndexedPropertyValue("persons", "firstname", "rand"));
+        adapter.put("1", rd, "persons");
 
-		when(valkeyConnectionMock.sMembers(Mockito.any(byte[].class)))
-				.thenReturn(new LinkedHashSet<>(Arrays.asList("persons:firstname:rand".getBytes())));
-		when(valkeyConnectionMock.del((byte[][]) any())).thenReturn(0L);
+        verify(valkeyConnectionMock, never()).sRem(Mockito.any(byte[].class), (byte[][]) any());
+    }
 
-		adapter.put("1", rd, "persons");
+    @Test // DATAREDIS-491
+    void shouldInitKeyExpirationListenerOnStartup() throws Exception {
 
-		verify(valkeyConnectionMock, never()).sRem(Mockito.any(byte[].class), (byte[][]) any());
-	}
+        adapter.destroy();
 
-	@Test // DATAREDIS-491
-	void shouldInitKeyExpirationListenerOnStartup() throws Exception {
+        adapter = new ValkeyKeyValueAdapter(template, context);
+        adapter.setEnableKeyspaceEvents(EnableKeyspaceEvents.ON_STARTUP);
+        adapter.afterPropertiesSet();
+        adapter.start();
 
-		adapter.destroy();
+        KeyExpirationEventMessageListener listener =
+                ((AtomicReference<KeyExpirationEventMessageListener>)
+                                getField(adapter, "expirationListener"))
+                        .get();
+        assertThat(listener).isNotNull();
+    }
 
-		adapter = new ValkeyKeyValueAdapter(template, context);
-		adapter.setEnableKeyspaceEvents(EnableKeyspaceEvents.ON_STARTUP);
-		adapter.afterPropertiesSet();
-		adapter.start();
+    @Test // GH-2957
+    void adapterShouldBeRestartable() throws Exception {
 
-		KeyExpirationEventMessageListener listener = ((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter,
-				"expirationListener")).get();
-		assertThat(listener).isNotNull();
-	}
+        adapter.destroy();
 
-	@Test // GH-2957
-	void adapterShouldBeRestartable() throws Exception {
+        adapter = new ValkeyKeyValueAdapter(template, context);
+        adapter.setEnableKeyspaceEvents(EnableKeyspaceEvents.ON_STARTUP);
+        adapter.afterPropertiesSet();
+        adapter.start();
+        adapter.stop();
 
-		adapter.destroy();
+        assertThat(
+                        ((AtomicReference<KeyExpirationEventMessageListener>)
+                                        getField(adapter, "expirationListener"))
+                                .get())
+                .isNull();
 
-		adapter = new ValkeyKeyValueAdapter(template, context);
-		adapter.setEnableKeyspaceEvents(EnableKeyspaceEvents.ON_STARTUP);
-		adapter.afterPropertiesSet();
-		adapter.start();
-		adapter.stop();
+        adapter.start();
+        assertThat(
+                        ((AtomicReference<KeyExpirationEventMessageListener>)
+                                        getField(adapter, "expirationListener"))
+                                .get())
+                .isNotNull();
+    }
 
-		assertThat(((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter, "expirationListener")).get())
-				.isNull();
+    @Test // DATAREDIS-491
+    void shouldInitKeyExpirationListenerOnFirstPutWithTtl() throws Exception {
 
-		adapter.start();
-		assertThat(((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter, "expirationListener")).get())
-				.isNotNull();
-	}
+        adapter.destroy();
 
-	@Test // DATAREDIS-491
-	void shouldInitKeyExpirationListenerOnFirstPutWithTtl() throws Exception {
+        adapter = new ValkeyKeyValueAdapter(template, context);
+        adapter.setEnableKeyspaceEvents(EnableKeyspaceEvents.ON_DEMAND);
+        adapter.afterPropertiesSet();
 
-		adapter.destroy();
+        KeyExpirationEventMessageListener listener =
+                ((AtomicReference<KeyExpirationEventMessageListener>)
+                                getField(adapter, "expirationListener"))
+                        .get();
+        assertThat(listener).isNull();
 
-		adapter = new ValkeyKeyValueAdapter(template, context);
-		adapter.setEnableKeyspaceEvents(EnableKeyspaceEvents.ON_DEMAND);
-		adapter.afterPropertiesSet();
+        adapter.put("should-NOT-start-listener", new WithoutTimeToLive(), "keyspace");
 
-		KeyExpirationEventMessageListener listener = ((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter,
-				"expirationListener")).get();
-		assertThat(listener).isNull();
+        listener =
+                ((AtomicReference<KeyExpirationEventMessageListener>)
+                                getField(adapter, "expirationListener"))
+                        .get();
+        assertThat(listener).isNull();
 
-		adapter.put("should-NOT-start-listener", new WithoutTimeToLive(), "keyspace");
+        adapter.put("should-start-listener", new WithTimeToLive(), "keyspace");
 
-		listener = ((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter, "expirationListener")).get();
-		assertThat(listener).isNull();
+        listener =
+                ((AtomicReference<KeyExpirationEventMessageListener>)
+                                getField(adapter, "expirationListener"))
+                        .get();
+        assertThat(listener).isNotNull();
+    }
 
-		adapter.put("should-start-listener", new WithTimeToLive(), "keyspace");
+    @Test // DATAREDIS-491
+    void shouldNeverInitKeyExpirationListener() throws Exception {
 
-		listener = ((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter, "expirationListener")).get();
-		assertThat(listener).isNotNull();
-	}
+        adapter.destroy();
 
-	@Test // DATAREDIS-491
-	void shouldNeverInitKeyExpirationListener() throws Exception {
+        adapter = new ValkeyKeyValueAdapter(template, context);
+        adapter.afterPropertiesSet();
 
-		adapter.destroy();
+        KeyExpirationEventMessageListener listener =
+                ((AtomicReference<KeyExpirationEventMessageListener>)
+                                getField(adapter, "expirationListener"))
+                        .get();
+        assertThat(listener).isNull();
 
-		adapter = new ValkeyKeyValueAdapter(template, context);
-		adapter.afterPropertiesSet();
+        adapter.put("should-NOT-start-listener", new WithoutTimeToLive(), "keyspace");
 
-		KeyExpirationEventMessageListener listener = ((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter,
-				"expirationListener")).get();
-		assertThat(listener).isNull();
+        listener =
+                ((AtomicReference<KeyExpirationEventMessageListener>)
+                                getField(adapter, "expirationListener"))
+                        .get();
+        assertThat(listener).isNull();
 
-		adapter.put("should-NOT-start-listener", new WithoutTimeToLive(), "keyspace");
+        adapter.put("should-start-listener", new WithTimeToLive(), "keyspace");
 
-		listener = ((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter, "expirationListener")).get();
-		assertThat(listener).isNull();
+        listener =
+                ((AtomicReference<KeyExpirationEventMessageListener>)
+                                getField(adapter, "expirationListener"))
+                        .get();
+        assertThat(listener).isNull();
+    }
 
-		adapter.put("should-start-listener", new WithTimeToLive(), "keyspace");
+    static class WithoutTimeToLive {
+        @Id String id;
+    }
 
-		listener = ((AtomicReference<KeyExpirationEventMessageListener>) getField(adapter, "expirationListener")).get();
-		assertThat(listener).isNull();
-	}
-
-	static class WithoutTimeToLive {
-		@Id String id;
-	}
-
-	@ValkeyHash(timeToLive = 10)
-	static class WithTimeToLive {
-		@Id String id;
-	}
+    @ValkeyHash(timeToLive = 10)
+    static class WithTimeToLive {
+        @Id String id;
+    }
 }

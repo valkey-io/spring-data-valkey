@@ -7,16 +7,15 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * Minimal Spring Boot example that demonstrates OpenTelemetry integration
- * with Valkey-GLIDE via {@link StringValkeyTemplate}.
+ * Minimal Spring Boot example that demonstrates OpenTelemetry integration with Valkey-GLIDE via
+ * {@link StringValkeyTemplate}.
  *
- * <p>This example exists to verify and showcase that Valkey commands executed
- * through Spring Data Valkey automatically emit OpenTelemetry signals when
- * OpenTelemetry is enabled via application properties.</p>
+ * <p>This example exists to verify and showcase that Valkey commands executed through Spring Data
+ * Valkey automatically emit OpenTelemetry signals when OpenTelemetry is enabled via application
+ * properties.
  *
- * <p>Telemetry is emitted while the application runs and Valkey commands are
- * executed. Traces can be inspected via the configured OpenTelemetry backend,
- * for example by viewing the collector logs:</p>
+ * <p>Telemetry is emitted while the application runs and Valkey commands are executed. Traces can
+ * be inspected via the configured OpenTelemetry backend, for example by viewing the collector logs:
  *
  * <pre>
  * docker logs -f boot-telemetry-otel-collector-1
@@ -25,8 +24,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class SpringBootTelemetryExample implements CommandLineRunner {
 
-    @Autowired
-    private StringValkeyTemplate valkeyTemplate;
+    @Autowired private StringValkeyTemplate valkeyTemplate;
 
     public static void main(String[] args) {
         SpringApplication.run(SpringBootTelemetryExample.class, args);

@@ -25,17 +25,17 @@ import org.springframework.lang.Nullable;
  */
 public interface TimeToLiveAccessor {
 
-	/**
-	 * @param source must not be {@literal null}.
-	 * @return {@literal null} if not configured.
-	 */
-	@Nullable
-	Long getTimeToLive(Object source);
+    /**
+     * @param source must not be {@literal null}.
+     * @return {@literal null} if not configured.
+     */
+    @Nullable
+    Long getTimeToLive(Object source);
 
-	/**
-	 * @param type must not be {@literal null}.
-	 * @return return {@literal true} if the entity could potentially expire.
-	 * @since 2.3
-	 */
-	boolean isExpiringEntity(Class<?> type);
+    /**
+     * @param type must not be {@literal null}.
+     * @return return {@literal true} if the entity could potentially expire.
+     * @since 2.3
+     */
+    boolean isExpiringEntity(Class<?> type);
 }

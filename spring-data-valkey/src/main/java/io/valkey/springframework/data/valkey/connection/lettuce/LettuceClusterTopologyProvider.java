@@ -16,11 +16,9 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.cluster.RedisClusterClient;
-
-import java.util.LinkedHashSet;
-
 import io.valkey.springframework.data.valkey.connection.ClusterTopology;
 import io.valkey.springframework.data.valkey.connection.ClusterTopologyProvider;
+import java.util.LinkedHashSet;
 import org.springframework.util.Assert;
 
 /**
@@ -32,20 +30,21 @@ import org.springframework.util.Assert;
  */
 class LettuceClusterTopologyProvider implements ClusterTopologyProvider {
 
-	private final RedisClusterClient client;
+    private final RedisClusterClient client;
 
-	/**
-	 * @param client must not be {@literal null}.
-	 */
-	LettuceClusterTopologyProvider(RedisClusterClient client) {
+    /**
+     * @param client must not be {@literal null}.
+     */
+    LettuceClusterTopologyProvider(RedisClusterClient client) {
 
-		Assert.notNull(client, "RedisClusterClient must not be null");
+        Assert.notNull(client, "RedisClusterClient must not be null");
 
-		this.client = client;
-	}
+        this.client = client;
+    }
 
-	@Override
-	public ClusterTopology getTopology() {
-		return new ClusterTopology(new LinkedHashSet<>(LettuceConverters.partitionsToClusterNodes(client.getPartitions())));
-	}
+    @Override
+    public ClusterTopology getTopology() {
+        return new ClusterTopology(
+                new LinkedHashSet<>(LettuceConverters.partitionsToClusterNodes(client.getPartitions())));
+    }
 }

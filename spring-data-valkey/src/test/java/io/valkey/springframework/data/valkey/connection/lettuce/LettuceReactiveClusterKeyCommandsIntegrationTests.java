@@ -15,48 +15,46 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import static org.assertj.core.api.Assertions.*;
 import static io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.*;
 import static io.valkey.springframework.data.valkey.connection.lettuce.LettuceReactiveCommandsTestSupport.*;
-
-import reactor.core.publisher.Mono;
-
-import java.nio.ByteBuffer;
-import java.util.List;
-
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.*;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import java.nio.ByteBuffer;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Christoph Strobl
  */
 class LettuceReactiveClusterKeyCommandsIntegrationTests extends LettuceReactiveClusterTestSupport {
 
-	private static final ValkeyClusterNode NODE_1 = newValkeyClusterNode().listeningAt("127.0.0.1", 7379).build();
+    private static final ValkeyClusterNode NODE_1 =
+            newValkeyClusterNode().listeningAt("127.0.0.1", 7379).build();
 
-	@Test // DATAREDIS-525
-	void keysShouldReturnOnlyKeysFromSelectedNode() {
+    @Test // DATAREDIS-525
+    void keysShouldReturnOnlyKeysFromSelectedNode() {
 
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
 
-		List<ByteBuffer> result = connection.keyCommands().keys(NODE_1, ByteBuffer.wrap("*".getBytes())).block();
-		assertThat(result).hasSize(1);
-		assertThat(result).containsExactly(KEY_1_BBUFFER);
-	}
+        List<ByteBuffer> result =
+                connection.keyCommands().keys(NODE_1, ByteBuffer.wrap("*".getBytes())).block();
+        assertThat(result).hasSize(1);
+        assertThat(result).containsExactly(KEY_1_BBUFFER);
+    }
 
-	@Test // DATAREDIS-525
-	void randomkeyShouldReturnOnlyKeysFromSelectedNode() {
+    @Test // DATAREDIS-525
+    void randomkeyShouldReturnOnlyKeysFromSelectedNode() {
 
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
 
-		Mono<ByteBuffer> randomkey = connection.keyCommands().randomKey(NODE_1);
+        Mono<ByteBuffer> randomkey = connection.keyCommands().randomKey(NODE_1);
 
-		for (int i = 0; i < 10; i++) {
-			assertThat(randomkey.block()).isEqualTo(KEY_1_BBUFFER);
-		}
-	}
-
+        for (int i = 0; i < 10; i++) {
+            assertThat(randomkey.block()).isEqualTo(KEY_1_BBUFFER);
+        }
+    }
 }

@@ -16,6 +16,9 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.repository.configuration.EnableValkeyRepositories;
+import io.valkey.springframework.data.valkey.repository.support.ValkeyRepositoryFactoryBean;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -23,13 +26,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProp
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Import;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.repository.configuration.EnableValkeyRepositories;
-import io.valkey.springframework.data.valkey.repository.support.ValkeyRepositoryFactoryBean;
 
 /**
- * {@link EnableAutoConfiguration Auto-configuration} for Spring Data's Valkey
- * Repositories.
+ * {@link EnableAutoConfiguration Auto-configuration} for Spring Data's Valkey Repositories.
  *
  * @author Eddú Meléndez
  * @author Stephane Nicoll
@@ -39,9 +38,9 @@ import io.valkey.springframework.data.valkey.repository.support.ValkeyRepository
 @AutoConfiguration(after = ValkeyAutoConfiguration.class)
 @ConditionalOnClass(EnableValkeyRepositories.class)
 @ConditionalOnBean(ValkeyConnectionFactory.class)
-@ConditionalOnBooleanProperty(name = "spring.data.valkey.repositories.enabled", matchIfMissing = true)
+@ConditionalOnBooleanProperty(
+        name = "spring.data.valkey.repositories.enabled",
+        matchIfMissing = true)
 @ConditionalOnMissingBean(ValkeyRepositoryFactoryBean.class)
 @Import(ValkeyRepositoriesRegistrar.class)
-public class ValkeyRepositoriesAutoConfiguration {
-
-}
+public class ValkeyRepositoriesAutoConfiguration {}

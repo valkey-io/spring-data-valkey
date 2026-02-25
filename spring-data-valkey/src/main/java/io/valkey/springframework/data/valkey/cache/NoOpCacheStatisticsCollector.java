@@ -17,118 +17,117 @@ package io.valkey.springframework.data.valkey.cache;
 
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
  * {@link CacheStatisticsCollector} implementation that does not capture anything but throws an
- * {@link IllegalStateException} when {@link #getCacheStatistics(String) obtaining} {@link CacheStatistics} for a cache.
+ * {@link IllegalStateException} when {@link #getCacheStatistics(String) obtaining} {@link
+ * CacheStatistics} for a cache.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
  * @since 2.4
  */
 enum NoOpCacheStatisticsCollector implements CacheStatisticsCollector {
+    INSTANCE;
 
-	INSTANCE;
+    @Override
+    public void incPuts(String cacheName) {}
 
-	@Override
-	public void incPuts(String cacheName) {}
+    @Override
+    public void incGets(String cacheName) {}
 
-	@Override
-	public void incGets(String cacheName) {}
+    @Override
+    public void incHits(String cacheName) {}
 
-	@Override
-	public void incHits(String cacheName) {}
+    @Override
+    public void incMisses(String cacheName) {}
 
-	@Override
-	public void incMisses(String cacheName) {}
+    @Override
+    public void incDeletesBy(String cacheName, int value) {}
 
-	@Override
-	public void incDeletesBy(String cacheName, int value) {}
+    @Override
+    public void incLockTime(String name, long durationNS) {}
 
-	@Override
-	public void incLockTime(String name, long durationNS) {}
+    @Override
+    public void reset(String cacheName) {}
 
-	@Override
-	public void reset(String cacheName) {}
+    @Override
+    public CacheStatistics getCacheStatistics(String cacheName) {
+        return new EmptyStatistics(cacheName);
+    }
 
-	@Override
-	public CacheStatistics getCacheStatistics(String cacheName) {
-		return new EmptyStatistics(cacheName);
-	}
+    private static class EmptyStatistics implements CacheStatistics {
 
-	private static class EmptyStatistics implements CacheStatistics {
+        private final String cacheName;
 
-		private final String cacheName;
+        EmptyStatistics(String cacheName) {
+            this.cacheName = cacheName;
+        }
 
-		EmptyStatistics(String cacheName) {
-			this.cacheName = cacheName;
-		}
+        @Override
+        public String getCacheName() {
+            return cacheName;
+        }
 
-		@Override
-		public String getCacheName() {
-			return cacheName;
-		}
+        @Override
+        public long getPuts() {
+            return 0;
+        }
 
-		@Override
-		public long getPuts() {
-			return 0;
-		}
+        @Override
+        public long getGets() {
+            return 0;
+        }
 
-		@Override
-		public long getGets() {
-			return 0;
-		}
+        @Override
+        public long getHits() {
+            return 0;
+        }
 
-		@Override
-		public long getHits() {
-			return 0;
-		}
+        @Override
+        public long getMisses() {
+            return 0;
+        }
 
-		@Override
-		public long getMisses() {
-			return 0;
-		}
+        @Override
+        public long getDeletes() {
+            return 0;
+        }
 
-		@Override
-		public long getDeletes() {
-			return 0;
-		}
+        @Override
+        public long getLockWaitDuration(TimeUnit unit) {
+            return 0;
+        }
 
-		@Override
-		public long getLockWaitDuration(TimeUnit unit) {
-			return 0;
-		}
+        @Override
+        public Instant getSince() {
+            return Instant.EPOCH;
+        }
 
-		@Override
-		public Instant getSince() {
-			return Instant.EPOCH;
-		}
+        @Override
+        public Instant getLastReset() {
+            return getSince();
+        }
 
-		@Override
-		public Instant getLastReset() {
-			return getSince();
-		}
+        @Override
+        public boolean equals(@Nullable Object o) {
 
-		@Override
-		public boolean equals(@Nullable Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
-			if (this == o) {
-				return true;
-			}
-			if (o == null || getClass() != o.getClass()) {
-				return false;
-			}
+            EmptyStatistics that = (EmptyStatistics) o;
+            return ObjectUtils.nullSafeEquals(cacheName, that.cacheName);
+        }
 
-			EmptyStatistics that = (EmptyStatistics) o;
-			return ObjectUtils.nullSafeEquals(cacheName, that.cacheName);
-		}
-
-		@Override
-		public int hashCode() {
-			return ObjectUtils.nullSafeHashCode(cacheName);
-		}
-	}
+        @Override
+        public int hashCode() {
+            return ObjectUtils.nullSafeHashCode(cacheName);
+        }
+    }
 }

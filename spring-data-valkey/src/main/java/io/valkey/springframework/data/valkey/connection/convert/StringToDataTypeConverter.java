@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.connection.convert;
 
-import org.springframework.core.convert.converter.Converter;
 import io.valkey.springframework.data.valkey.connection.DataType;
+import org.springframework.core.convert.converter.Converter;
 
 /**
  * Converts Strings to {@link DataType}s
@@ -26,9 +26,8 @@ import io.valkey.springframework.data.valkey.connection.DataType;
  */
 public class StringToDataTypeConverter implements Converter<String, DataType> {
 
-	@Override
-	public DataType convert(String source) {
-		return DataType.fromCode(source);
-	}
-
+    @Override
+    public DataType convert(String source) {
+        return DataType.fromCode(source);
+    }
 }

@@ -18,18 +18,20 @@ package io.valkey.springframework.data.valkey.core;
 import java.beans.PropertyEditorSupport;
 
 /**
- * PropertyEditor allowing for easy injection of {@link StreamOperations} from {@link ValkeyOperations}.
+ * PropertyEditor allowing for easy injection of {@link StreamOperations} from {@link
+ * ValkeyOperations}.
  *
  * @author Mark Paluch
  */
 class StreamOperationsEditor extends PropertyEditorSupport {
 
-	public void setValue(Object value) {
+    public void setValue(Object value) {
 
-		if (value instanceof ValkeyOperations<?, ?> valkeyOperations) {
-			super.setValue(valkeyOperations.opsForStream());
-		} else {
-			throw new IllegalArgumentException("Editor supports only conversion of type " + ValkeyOperations.class);
-		}
-	}
+        if (value instanceof ValkeyOperations<?, ?> valkeyOperations) {
+            super.setValue(valkeyOperations.opsForStream());
+        } else {
+            throw new IllegalArgumentException(
+                    "Editor supports only conversion of type " + ValkeyOperations.class);
+        }
+    }
 }

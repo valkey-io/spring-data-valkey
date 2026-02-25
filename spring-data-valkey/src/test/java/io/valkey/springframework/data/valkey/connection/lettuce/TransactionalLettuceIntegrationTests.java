@@ -15,33 +15,33 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.AbstractTransactionalTestBase;
 import io.valkey.springframework.data.valkey.connection.lettuce.TransactionalLettuceIntegrationTests.LettuceContextConfiguration;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.test.context.ContextConfiguration;
 
 /**
  * @author Christoph Strobl
  * @author Mark Paluch
  */
-@ContextConfiguration(classes = { LettuceContextConfiguration.class })
+@ContextConfiguration(classes = {LettuceContextConfiguration.class})
 public class TransactionalLettuceIntegrationTests extends AbstractTransactionalTestBase {
 
-	@Configuration
-	public static class LettuceContextConfiguration extends ValkeyContextConfiguration {
+    @Configuration
+    public static class LettuceContextConfiguration extends ValkeyContextConfiguration {
 
-		@Override
-		@Bean
-		public LettuceConnectionFactory valkeyConnectionFactory() {
+        @Override
+        @Bean
+        public LettuceConnectionFactory valkeyConnectionFactory() {
 
-			LettuceConnectionFactory factory = new LettuceConnectionFactory();
-			factory.setClientResources(LettuceTestClientResources.getSharedClientResources());
-			factory.setHostName(SettingsUtils.getHost());
-			factory.setPort(SettingsUtils.getPort());
-			return factory;
-		}
-	}
+            LettuceConnectionFactory factory = new LettuceConnectionFactory();
+            factory.setClientResources(LettuceTestClientResources.getSharedClientResources());
+            factory.setHostName(SettingsUtils.getHost());
+            factory.setPort(SettingsUtils.getPort());
+            return factory;
+        }
+    }
 }

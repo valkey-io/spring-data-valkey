@@ -17,12 +17,6 @@ package io.valkey.springframework.data.valkey.connection;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.io.Serializable;
-import java.util.Collections;
-import java.util.Map;
-
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.connection.stream.ByteRecord;
 import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
 import io.valkey.springframework.data.valkey.connection.stream.ObjectRecord;
@@ -32,6 +26,10 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
 import io.valkey.springframework.data.valkey.hash.HashMapper;
 import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
+import java.io.Serializable;
+import java.util.Collections;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link StreamRecords}.
@@ -41,127 +39,144 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
  */
 class StreamRecordsUnitTests {
 
-	private static final String STRING_STREAM_KEY = "stream-key";
-	private static final RecordId RECORD_ID = RecordId.of("1-0");
-	private static final String STRING_MAP_KEY = "string-key";
-	private static final String STRING_VAL = "string-val";
-	private static final DummyObject OBJECT_VAL = new DummyObject();
+    private static final String STRING_STREAM_KEY = "stream-key";
+    private static final RecordId RECORD_ID = RecordId.of("1-0");
+    private static final String STRING_MAP_KEY = "string-key";
+    private static final String STRING_VAL = "string-val";
+    private static final DummyObject OBJECT_VAL = new DummyObject();
 
-	private static final Jackson2JsonValkeySerializer<DummyObject> JSON_VALKEY_SERIALIZER = new Jackson2JsonValkeySerializer<>(
-			DummyObject.class);
+    private static final Jackson2JsonValkeySerializer<DummyObject> JSON_VALKEY_SERIALIZER =
+            new Jackson2JsonValkeySerializer<>(DummyObject.class);
 
-	private static final byte[] SERIALIZED_STRING_VAL = ValkeySerializer.string().serialize(STRING_VAL);
-	private static final byte[] SERIALIZED_STRING_MAP_KEY = ValkeySerializer.string().serialize(STRING_MAP_KEY);
-	private static final byte[] SERIALIZED_STRING_STREAM_KEY = ValkeySerializer.string().serialize(STRING_STREAM_KEY);
-	private static final byte[] SERIALIZED_JSON_OBJECT_VAL = JSON_VALKEY_SERIALIZER.serialize(OBJECT_VAL);
+    private static final byte[] SERIALIZED_STRING_VAL =
+            ValkeySerializer.string().serialize(STRING_VAL);
+    private static final byte[] SERIALIZED_STRING_MAP_KEY =
+            ValkeySerializer.string().serialize(STRING_MAP_KEY);
+    private static final byte[] SERIALIZED_STRING_STREAM_KEY =
+            ValkeySerializer.string().serialize(STRING_STREAM_KEY);
+    private static final byte[] SERIALIZED_JSON_OBJECT_VAL =
+            JSON_VALKEY_SERIALIZER.serialize(OBJECT_VAL);
 
-	private static class DummyObject implements Serializable {
-		private final Integer dummyId = 1;
+    private static class DummyObject implements Serializable {
+        private final Integer dummyId = 1;
 
-		public Integer getDummyId() {
-			return this.dummyId;
-		}
-	}
+        public Integer getDummyId() {
+            return this.dummyId;
+        }
+    }
 
-	@Test // DATAREDIS-864
-	void objectRecordToMapRecordViaHashMapper() {
+    @Test // DATAREDIS-864
+    void objectRecordToMapRecordViaHashMapper() {
 
-		ObjectRecord<String, String> source = Record.of("some-string").withId(RECORD_ID).withStreamKey(STRING_STREAM_KEY);
+        ObjectRecord<String, String> source =
+                Record.of("some-string").withId(RECORD_ID).withStreamKey(STRING_STREAM_KEY);
 
-		MapRecord<String, String, String> target = source
-				.toMapRecord(StubValueReturningHashMapper.simpleString(STRING_VAL));
+        MapRecord<String, String, String> target =
+                source.toMapRecord(StubValueReturningHashMapper.simpleString(STRING_VAL));
 
-		assertThat(target.getId()).isEqualTo(RECORD_ID);
-		assertThat(target.getStream()).isEqualTo(STRING_STREAM_KEY);
-		assertThat(target.getValue()).hasSize(1).containsEntry(STRING_MAP_KEY, STRING_VAL);
-	}
+        assertThat(target.getId()).isEqualTo(RECORD_ID);
+        assertThat(target.getStream()).isEqualTo(STRING_STREAM_KEY);
+        assertThat(target.getValue()).hasSize(1).containsEntry(STRING_MAP_KEY, STRING_VAL);
+    }
 
-	@Test // DATAREDIS-864
-	void mapRecordToObjectRecordViaHashMapper() {
+    @Test // DATAREDIS-864
+    void mapRecordToObjectRecordViaHashMapper() {
 
-		MapRecord<String, String, String> source = Record.of(Collections.singletonMap(STRING_MAP_KEY, "some-string"))
-				.withId(RECORD_ID).withStreamKey(STRING_STREAM_KEY);
+        MapRecord<String, String, String> source =
+                Record.of(Collections.singletonMap(STRING_MAP_KEY, "some-string"))
+                        .withId(RECORD_ID)
+                        .withStreamKey(STRING_STREAM_KEY);
 
-		ObjectRecord<String, String> target = source.toObjectRecord(StubValueReturningHashMapper.simpleString(STRING_VAL));
+        ObjectRecord<String, String> target =
+                source.toObjectRecord(StubValueReturningHashMapper.simpleString(STRING_VAL));
 
-		assertThat(target.getId()).isEqualTo(RECORD_ID);
-		assertThat(target.getStream()).isEqualTo(STRING_STREAM_KEY);
-		assertThat(target.getValue()).isEqualTo(STRING_VAL);
-	}
+        assertThat(target.getId()).isEqualTo(RECORD_ID);
+        assertThat(target.getStream()).isEqualTo(STRING_STREAM_KEY);
+        assertThat(target.getValue()).isEqualTo(STRING_VAL);
+    }
 
-	@Test // DATAREDIS-864
-	void serializeMapRecordStringAsHashValue() {
+    @Test // DATAREDIS-864
+    void serializeMapRecordStringAsHashValue() {
 
-		MapRecord<String, String, String> source = Record.of(Collections.singletonMap(STRING_MAP_KEY, STRING_VAL))
-				.withId(RECORD_ID).withStreamKey(STRING_STREAM_KEY);
+        MapRecord<String, String, String> source =
+                Record.of(Collections.singletonMap(STRING_MAP_KEY, STRING_VAL))
+                        .withId(RECORD_ID)
+                        .withStreamKey(STRING_STREAM_KEY);
 
-		ByteRecord target = source.serialize(ValkeySerializer.string());
+        ByteRecord target = source.serialize(ValkeySerializer.string());
 
-		assertThat(target.getId()).isEqualTo(RECORD_ID);
-		assertThat(target.getStream()).isEqualTo(SERIALIZED_STRING_STREAM_KEY);
-		assertThat(target.getValue().keySet().iterator().next()).isEqualTo(SERIALIZED_STRING_MAP_KEY);
-		assertThat(target.getValue().values().iterator().next()).isEqualTo(SERIALIZED_STRING_VAL);
-	}
+        assertThat(target.getId()).isEqualTo(RECORD_ID);
+        assertThat(target.getStream()).isEqualTo(SERIALIZED_STRING_STREAM_KEY);
+        assertThat(target.getValue().keySet().iterator().next()).isEqualTo(SERIALIZED_STRING_MAP_KEY);
+        assertThat(target.getValue().values().iterator().next()).isEqualTo(SERIALIZED_STRING_VAL);
+    }
 
-	@Test // DATAREDIS-993
-	void serializeMapRecordObjectAsHashValue() {
+    @Test // DATAREDIS-993
+    void serializeMapRecordObjectAsHashValue() {
 
-		MapRecord<String, String, DummyObject> source = Record.of(Collections.singletonMap(STRING_MAP_KEY, OBJECT_VAL))
-				.withId(RECORD_ID).withStreamKey(STRING_STREAM_KEY);
+        MapRecord<String, String, DummyObject> source =
+                Record.of(Collections.singletonMap(STRING_MAP_KEY, OBJECT_VAL))
+                        .withId(RECORD_ID)
+                        .withStreamKey(STRING_STREAM_KEY);
 
-		ByteRecord target = source.serialize(ValkeySerializer.string(), ValkeySerializer.string(), JSON_VALKEY_SERIALIZER);
+        ByteRecord target =
+                source.serialize(
+                        ValkeySerializer.string(), ValkeySerializer.string(), JSON_VALKEY_SERIALIZER);
 
-		assertThat(target.getId()).isEqualTo(RECORD_ID);
-		assertThat(target.getStream()).isEqualTo(SERIALIZED_STRING_STREAM_KEY);
-		assertThat(target.getValue().keySet().iterator().next()).isEqualTo(SERIALIZED_STRING_MAP_KEY);
-		assertThat(target.getValue().values().iterator().next()).isEqualTo(SERIALIZED_JSON_OBJECT_VAL);
-	}
+        assertThat(target.getId()).isEqualTo(RECORD_ID);
+        assertThat(target.getStream()).isEqualTo(SERIALIZED_STRING_STREAM_KEY);
+        assertThat(target.getValue().keySet().iterator().next()).isEqualTo(SERIALIZED_STRING_MAP_KEY);
+        assertThat(target.getValue().values().iterator().next()).isEqualTo(SERIALIZED_JSON_OBJECT_VAL);
+    }
 
-	@Test // DATAREDIS-864
-	void deserializeByteMapRecord() {
+    @Test // DATAREDIS-864
+    void deserializeByteMapRecord() {
 
-		ByteRecord source = StreamRecords.newRecord().in(SERIALIZED_STRING_STREAM_KEY).withId(RECORD_ID)
-				.ofBytes(Collections.singletonMap(SERIALIZED_STRING_MAP_KEY, SERIALIZED_STRING_VAL));
+        ByteRecord source =
+                StreamRecords.newRecord()
+                        .in(SERIALIZED_STRING_STREAM_KEY)
+                        .withId(RECORD_ID)
+                        .ofBytes(Collections.singletonMap(SERIALIZED_STRING_MAP_KEY, SERIALIZED_STRING_VAL));
 
-		MapRecord<String, String, String> target = source.deserialize(ValkeySerializer.string());
+        MapRecord<String, String, String> target = source.deserialize(ValkeySerializer.string());
 
-		assertThat(target.getId()).isEqualTo(RECORD_ID);
-		assertThat(target.getStream()).isEqualTo(STRING_STREAM_KEY);
-		assertThat(target.getValue().keySet().iterator().next()).isEqualTo(STRING_MAP_KEY);
-		assertThat(target.getValue().values().iterator().next()).isEqualTo(STRING_VAL);
-	}
+        assertThat(target.getId()).isEqualTo(RECORD_ID);
+        assertThat(target.getStream()).isEqualTo(STRING_STREAM_KEY);
+        assertThat(target.getValue().keySet().iterator().next()).isEqualTo(STRING_MAP_KEY);
+        assertThat(target.getValue().values().iterator().next()).isEqualTo(STRING_VAL);
+    }
 
-	static class StubValueReturningHashMapper<T, K, V> implements HashMapper<T, K, V> {
+    static class StubValueReturningHashMapper<T, K, V> implements HashMapper<T, K, V> {
 
-		final Map<K, V> to;
-		final T from;
+        final Map<K, V> to;
+        final T from;
 
-		public StubValueReturningHashMapper(Map<K, V> to) {
-			this(to, (T) new Object());
-		}
+        public StubValueReturningHashMapper(Map<K, V> to) {
+            this(to, (T) new Object());
+        }
 
-		public StubValueReturningHashMapper(T from) {
-			this(Collections.emptyMap(), from);
-		}
+        public StubValueReturningHashMapper(T from) {
+            this(Collections.emptyMap(), from);
+        }
 
-		StubValueReturningHashMapper(Map<K, V> to, T from) {
-			this.to = to;
-			this.from = from;
-		}
+        StubValueReturningHashMapper(Map<K, V> to, T from) {
+            this.to = to;
+            this.from = from;
+        }
 
-		@Override
-		public Map<K, V> toHash(T object) {
-			return to;
-		}
+        @Override
+        public Map<K, V> toHash(T object) {
+            return to;
+        }
 
-		@Override
-		public T fromHash(Map<K, V> hash) {
-			return from;
-		}
+        @Override
+        public T fromHash(Map<K, V> hash) {
+            return from;
+        }
 
-		static HashMapper<Object, String, String> simpleString(String value) {
-			return new StubValueReturningHashMapper<>(Collections.singletonMap(STRING_MAP_KEY, value), value);
-		}
-	}
-
+        static HashMapper<Object, String, String> simpleString(String value) {
+            return new StubValueReturningHashMapper<>(
+                    Collections.singletonMap(STRING_MAP_KEY, value), value);
+        }
+    }
 }

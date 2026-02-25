@@ -17,15 +17,13 @@ package io.valkey.springframework.data.valkey.serializer;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.io.Serializable;
-import java.util.Objects;
-import java.util.UUID;
-
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.Address;
 import io.valkey.springframework.data.valkey.Person;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
+import java.io.Serializable;
+import java.util.Objects;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
 import org.springframework.instrument.classloading.ShadowingClassLoader;
 
 /**
@@ -36,119 +34,122 @@ import org.springframework.instrument.classloading.ShadowingClassLoader;
  */
 class SimpleValkeySerializerTests {
 
-	private static class A implements Serializable {
+    private static class A implements Serializable {
 
-		private Integer value = Integer.valueOf(30);
+        private Integer value = Integer.valueOf(30);
 
-		@Override
-		public boolean equals(Object obj) {
+        @Override
+        public boolean equals(Object obj) {
 
-			if (this == obj) {
-				return true;
-			}
+            if (this == obj) {
+                return true;
+            }
 
-			if (!(obj instanceof A that)) {
-				return false;
-			}
+            if (!(obj instanceof A that)) {
+                return false;
+            }
 
-			return Objects.equals(this.value, that.value);
-		}
+            return Objects.equals(this.value, that.value);
+        }
 
-		@Override
-		public int hashCode() {
-			return Objects.hash(this.value);
-		}
-	}
+        @Override
+        public int hashCode() {
+            return Objects.hash(this.value);
+        }
+    }
 
-	private static class B implements Serializable {
+    private static class B implements Serializable {
 
-		private A a = new A();
-		private String name = getClass().getName();
+        private A a = new A();
+        private String name = getClass().getName();
 
-		@Override
-		public boolean equals(Object obj) {
+        @Override
+        public boolean equals(Object obj) {
 
-			if (this == obj) {
-				return true;
-			}
+            if (this == obj) {
+                return true;
+            }
 
-			if (!(obj instanceof B that)) {
-				return false;
-			}
+            if (!(obj instanceof B that)) {
+                return false;
+            }
 
-			return Objects.equals(this.a, that.a)
-				&& Objects.equals(this.name, that.name);
-		}
+            return Objects.equals(this.a, that.a) && Objects.equals(this.name, that.name);
+        }
 
-		@Override
-		public int hashCode() {
-			return Objects.hash(this.a, this.name);
-		}
-	}
+        @Override
+        public int hashCode() {
+            return Objects.hash(this.a, this.name);
+        }
+    }
 
-	private ValkeySerializer serializer = new JdkSerializationValkeySerializer();
+    private ValkeySerializer serializer = new JdkSerializationValkeySerializer();
 
-	@Test
-	void testBasicSerializationRoundtrip() throws Exception {
-		verifySerializedObjects(new Integer(300), new Double(200), new B());
-	}
+    @Test
+    void testBasicSerializationRoundtrip() throws Exception {
+        verifySerializedObjects(new Integer(300), new Double(200), new B());
+    }
 
-	private void verifySerializedObjects(Object... objects) {
-		for (Object object : objects) {
-			assertThat(serializer.deserialize(serializer.serialize(object))).as("Incorrectly (de)serialized object " + object)
-					.isEqualTo(object);
-		}
-	}
+    private void verifySerializedObjects(Object... objects) {
+        for (Object object : objects) {
+            assertThat(serializer.deserialize(serializer.serialize(object)))
+                    .as("Incorrectly (de)serialized object " + object)
+                    .isEqualTo(object);
+        }
+    }
 
-	@Test // DATAREDIS-427
-	void jdkSerializerShouldUseCustomClassLoader() throws ClassNotFoundException {
+    @Test // DATAREDIS-427
+    void jdkSerializerShouldUseCustomClassLoader() throws ClassNotFoundException {
 
-		ClassLoader customClassLoader = new ShadowingClassLoader(ClassLoader.getSystemClassLoader());
+        ClassLoader customClassLoader = new ShadowingClassLoader(ClassLoader.getSystemClassLoader());
 
-		JdkSerializationValkeySerializer serializer = new JdkSerializationValkeySerializer(customClassLoader);
-		SerializableDomainClass domainClass = new SerializableDomainClass();
+        JdkSerializationValkeySerializer serializer =
+                new JdkSerializationValkeySerializer(customClassLoader);
+        SerializableDomainClass domainClass = new SerializableDomainClass();
 
-		byte[] serialized = serializer.serialize(domainClass);
-		Object deserialized = serializer.deserialize(serialized);
+        byte[] serialized = serializer.serialize(domainClass);
+        Object deserialized = serializer.deserialize(serialized);
 
-		assertThat(deserialized.getClass().getName()).isEqualTo(SerializableDomainClass.class.getName());
-		assertThat(deserialized).isNotInstanceOf(SerializableDomainClass.class);
-		assertThat(deserialized.getClass().getClassLoader()).isEqualTo(customClassLoader);
-	}
+        assertThat(deserialized.getClass().getName())
+                .isEqualTo(SerializableDomainClass.class.getName());
+        assertThat(deserialized).isNotInstanceOf(SerializableDomainClass.class);
+        assertThat(deserialized.getClass().getClassLoader()).isEqualTo(customClassLoader);
+    }
 
-	@Test
-	void testStringEncodedSerialization() {
-		String value = UUID.randomUUID().toString();
-		assertThat(serializer.deserialize(serializer.serialize(value))).isEqualTo(value);
-		assertThat(serializer.deserialize(serializer.serialize(value))).isEqualTo(value);
-		assertThat(serializer.deserialize(serializer.serialize(value))).isEqualTo(value);
-	}
+    @Test
+    void testStringEncodedSerialization() {
+        String value = UUID.randomUUID().toString();
+        assertThat(serializer.deserialize(serializer.serialize(value))).isEqualTo(value);
+        assertThat(serializer.deserialize(serializer.serialize(value))).isEqualTo(value);
+        assertThat(serializer.deserialize(serializer.serialize(value))).isEqualTo(value);
+    }
 
-	@Test
-	void testPersonSerialization() throws Exception {
-		String value = UUID.randomUUID().toString();
-		Person p1 = new Person(value, value, 1, new Address(value, 2));
-		assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
-		assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
-	}
+    @Test
+    void testPersonSerialization() throws Exception {
+        String value = UUID.randomUUID().toString();
+        Person p1 = new Person(value, value, 1, new Address(value, 2));
+        assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
+        assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
+    }
 
-	@Test
-	void testOxmSerializer() throws Exception {
+    @Test
+    void testOxmSerializer() throws Exception {
 
-		OxmSerializer serializer = XstreamOxmSerializerSingleton.getInstance();
+        OxmSerializer serializer = XstreamOxmSerializerSingleton.getInstance();
 
-		String value = UUID.randomUUID().toString();
-		Person p1 = new Person(value, value, 1, new Address(value, 2));
-		assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
-		assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
-	}
+        String value = UUID.randomUUID().toString();
+        Person p1 = new Person(value, value, 1, new Address(value, 2));
+        assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
+        assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
+    }
 
-	@Test
-	void testJsonSerializer() throws Exception {
-		Jackson2JsonValkeySerializer<Person> serializer = new Jackson2JsonValkeySerializer<>(Person.class);
-		String value = UUID.randomUUID().toString();
-		Person p1 = new Person(value, value, 1, new Address(value, 2));
-		assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
-		assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
-	}
+    @Test
+    void testJsonSerializer() throws Exception {
+        Jackson2JsonValkeySerializer<Person> serializer =
+                new Jackson2JsonValkeySerializer<>(Person.class);
+        String value = UUID.randomUUID().toString();
+        Person p1 = new Person(value, value, 1, new Address(value, 2));
+        assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
+        assertThat(serializer.deserialize(serializer.serialize(p1))).isEqualTo(p1);
+    }
 }

@@ -26,45 +26,46 @@ import org.springframework.dao.support.PersistenceExceptionTranslator;
  */
 public interface ValkeyConnectionFactory extends PersistenceExceptionTranslator {
 
-	/**
-	 * Specifies if pipelined results should be converted to the expected data type.
-	 * <p>
-	 * If {@literal false}, results of {@link ValkeyConnection#closePipeline()} and {@link ValkeyConnection#exec()} will be
-	 * of the type returned by the underlying driver. This method is mostly for backwards compatibility with
-	 * {@literal 1.0}. It is generally always a good idea to allow results to be converted and deserialized. In fact, this
-	 * is now the default behavior.
-	 *
-	 * @return {@code true} to convert pipeline and transaction results; {@code false} otherwise.
-	 */
-	boolean getConvertPipelineAndTxResults();
+    /**
+     * Specifies if pipelined results should be converted to the expected data type.
+     *
+     * <p>If {@literal false}, results of {@link ValkeyConnection#closePipeline()} and {@link
+     * ValkeyConnection#exec()} will be of the type returned by the underlying driver. This method is
+     * mostly for backwards compatibility with {@literal 1.0}. It is generally always a good idea to
+     * allow results to be converted and deserialized. In fact, this is now the default behavior.
+     *
+     * @return {@code true} to convert pipeline and transaction results; {@code false} otherwise.
+     */
+    boolean getConvertPipelineAndTxResults();
 
-	/**
-	 * Returns a suitable {@link ValkeyConnection connection} for interacting with Valkey.
-	 *
-	 * @return {@link ValkeyConnection connection} for interacting with Valkey.
-	 * @throws IllegalStateException if the connection factory requires initialization and the factory has not yet been
-	 *           initialized.
-	 */
-	ValkeyConnection getConnection();
+    /**
+     * Returns a suitable {@link ValkeyConnection connection} for interacting with Valkey.
+     *
+     * @return {@link ValkeyConnection connection} for interacting with Valkey.
+     * @throws IllegalStateException if the connection factory requires initialization and the factory
+     *     has not yet been initialized.
+     */
+    ValkeyConnection getConnection();
 
-	/**
-	 * Returns a suitable {@link ValkeyClusterConnection connection} for interacting with Valkey Cluster.
-	 *
-	 * @return a {@link ValkeyClusterConnection connection} for interacting with Valkey Cluster.
-	 * @throws IllegalStateException if the connection factory requires initialization and the factory has not yet been
-	 *           initialized.
-	 * @since 1.7
-	 */
-	ValkeyClusterConnection getClusterConnection();
+    /**
+     * Returns a suitable {@link ValkeyClusterConnection connection} for interacting with Valkey
+     * Cluster.
+     *
+     * @return a {@link ValkeyClusterConnection connection} for interacting with Valkey Cluster.
+     * @throws IllegalStateException if the connection factory requires initialization and the factory
+     *     has not yet been initialized.
+     * @since 1.7
+     */
+    ValkeyClusterConnection getClusterConnection();
 
-	/**
-	 * Returns a suitable {@link ValkeySentinelConnection connection} for interacting with Valkey Sentinel.
-	 *
-	 * @return a {@link ValkeySentinelConnection connection} for interacting with Valkey Sentinel.
-	 * @throws IllegalStateException if the connection factory requires initialization and the factory has not yet been
-	 *           initialized.
-	 * @since 1.4
-	 */
-	ValkeySentinelConnection getSentinelConnection();
-
+    /**
+     * Returns a suitable {@link ValkeySentinelConnection connection} for interacting with Valkey
+     * Sentinel.
+     *
+     * @return a {@link ValkeySentinelConnection connection} for interacting with Valkey Sentinel.
+     * @throws IllegalStateException if the connection factory requires initialization and the factory
+     *     has not yet been initialized.
+     * @since 1.4
+     */
+    ValkeySentinelConnection getSentinelConnection();
 }

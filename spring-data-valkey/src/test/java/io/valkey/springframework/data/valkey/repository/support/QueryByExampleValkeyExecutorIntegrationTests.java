@@ -17,24 +17,6 @@ package io.valkey.springframework.data.valkey.repository.support;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Stream;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
-import org.springframework.dao.IncorrectResultSizeDataAccessException;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.domain.Example;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.keyvalue.core.KeyValueTemplate;
-import org.springframework.data.keyvalue.repository.support.SimpleKeyValueRepository;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.core.ValkeyHash;
@@ -46,6 +28,22 @@ import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 import io.valkey.springframework.data.valkey.repository.core.MappingValkeyEntityInformation;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Stream;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.domain.Example;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.keyvalue.core.KeyValueTemplate;
+import org.springframework.data.keyvalue.repository.support.SimpleKeyValueRepository;
 import org.springframework.data.repository.query.FluentQuery;
 
 /**
@@ -57,405 +55,430 @@ import org.springframework.data.repository.query.FluentQuery;
  */
 class QueryByExampleValkeyExecutorIntegrationTests {
 
-	private static ValkeyGlideConnectionFactory connectionFactory;
-	private ValkeyMappingContext mappingContext = new ValkeyMappingContext();
-	private ValkeyKeyValueTemplate kvTemplate;
+    private static ValkeyGlideConnectionFactory connectionFactory;
+    private ValkeyMappingContext mappingContext = new ValkeyMappingContext();
+    private ValkeyKeyValueTemplate kvTemplate;
 
-	private Person walt, hank, gus;
+    private Person walt, hank, gus;
 
-	@BeforeAll
-	static void beforeAll() {
-		connectionFactory = ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
-	}
+    @BeforeAll
+    static void beforeAll() {
+        connectionFactory =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+    }
 
-	@BeforeEach
-	void before() {
+    @BeforeEach
+    void before() {
 
-		ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
-		template.setConnectionFactory(connectionFactory);
-		template.afterPropertiesSet();
+        ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
+        template.setConnectionFactory(connectionFactory);
+        template.afterPropertiesSet();
 
-		kvTemplate = new ValkeyKeyValueTemplate(new ValkeyKeyValueAdapter(template, mappingContext), mappingContext);
+        kvTemplate =
+                new ValkeyKeyValueTemplate(
+                        new ValkeyKeyValueAdapter(template, mappingContext), mappingContext);
 
-		SimpleKeyValueRepository<Person, String> repository = new SimpleKeyValueRepository<>(
-				getEntityInformation(Person.class), new KeyValueTemplate(new ValkeyKeyValueAdapter(template)));
-		repository.deleteAll();
+        SimpleKeyValueRepository<Person, String> repository =
+                new SimpleKeyValueRepository<>(
+                        getEntityInformation(Person.class),
+                        new KeyValueTemplate(new ValkeyKeyValueAdapter(template)));
+        repository.deleteAll();
 
-		walt = new Person("Walter", "White");
-		walt.setHometown(new City("Albuquerqe"));
+        walt = new Person("Walter", "White");
+        walt.setHometown(new City("Albuquerqe"));
 
-		hank = new Person("Hank", "Schrader");
-		hank.setHometown(new City("Albuquerqe"));
+        hank = new Person("Hank", "Schrader");
+        hank.setHometown(new City("Albuquerqe"));
 
-		gus = new Person("Gus", "Fring");
-		gus.setHometown(new City("Albuquerqe"));
+        gus = new Person("Gus", "Fring");
+        gus.setHometown(new City("Albuquerqe"));
 
-		repository.saveAll(Arrays.asList(walt, hank, gus));
-	}
+        repository.saveAll(Arrays.asList(walt, hank, gus));
+    }
 
-	@Test // DATAREDIS-605
-	void shouldFindOneByExample() {
+    @Test // DATAREDIS-605
+    void shouldFindOneByExample() {
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		Optional<Person> result = executor.findOne(Example.of(walt));
+        Optional<Person> result = executor.findOne(Example.of(walt));
 
-		assertThat(result).contains(walt);
-	}
+        assertThat(result).contains(walt);
+    }
 
-	@Test // DATAREDIS-605
-	void shouldThrowExceptionWhenFindOneByExampleReturnsNonUniqueResult() {
+    @Test // DATAREDIS-605
+    void shouldThrowExceptionWhenFindOneByExampleReturnsNonUniqueResult() {
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-		assertThatThrownBy(() -> executor.findOne(Example.of(person)))
-				.isInstanceOf(IncorrectResultSizeDataAccessException.class);
-	}
+        assertThatThrownBy(() -> executor.findOne(Example.of(person)))
+                .isInstanceOf(IncorrectResultSizeDataAccessException.class);
+    }
 
-	@Test // DATAREDIS-605
-	void shouldNotFindOneByExample() {
+    @Test // DATAREDIS-605
+    void shouldNotFindOneByExample() {
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		Optional<Person> result = executor.findOne(Example.of(new Person("Skyler", "White")));
-		assertThat(result).isEmpty();
-	}
+        Optional<Person> result = executor.findOne(Example.of(new Person("Skyler", "White")));
+        assertThat(result).isEmpty();
+    }
 
-	@Test // DATAREDIS-605, GH-2880
-	void shouldFindAllByExample() {
+    @Test // DATAREDIS-605, GH-2880
+    void shouldFindAllByExample() {
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-		List<Person> result = executor.findAll(Example.of(person));
-		assertThat(result).contains(walt, gus, hank);
-	}
+        List<Person> result = executor.findAll(Example.of(person));
+        assertThat(result).contains(walt, gus, hank);
+    }
 
-	@Test // DATAREDIS-605
-	void shouldNotSupportFindAllOrdered() {
+    @Test // DATAREDIS-605
+    void shouldNotSupportFindAllOrdered() {
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-		assertThatThrownBy(() -> executor.findAll(Example.of(person), Sort.by("foo")))
-				.isInstanceOf(UnsupportedOperationException.class);
-	}
+        assertThatThrownBy(() -> executor.findAll(Example.of(person), Sort.by("foo")))
+                .isInstanceOf(UnsupportedOperationException.class);
+    }
 
-	@Test // DATAREDIS-605
-	void shouldFindAllPagedByExample() {
+    @Test // DATAREDIS-605
+    void shouldFindAllPagedByExample() {
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-		Page<Person> result = executor.findAll(Example.of(person), PageRequest.of(0, 2));
-		assertThat(result).hasSize(2);
-		assertThat(result.getTotalElements()).isEqualTo(3);
-	}
+        Page<Person> result = executor.findAll(Example.of(person), PageRequest.of(0, 2));
+        assertThat(result).hasSize(2);
+        assertThat(result.getTotalElements()).isEqualTo(3);
+    }
+
+    @Test // DATAREDIS-605
+    void shouldCountCorrectly() {
+
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-	@Test // DATAREDIS-605
-	void shouldCountCorrectly() {
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+        assertThat(executor.count(Example.of(person))).isEqualTo(3);
+        assertThat(executor.count(Example.of(walt))).isEqualTo(1);
+        assertThat(executor.count(Example.of(new Person()))).isEqualTo(3);
+        assertThat(executor.count(Example.of(new Person("Foo", "Bar")))).isZero();
+    }
+
+    @Test // DATAREDIS-605
+    void shouldReportExistenceCorrectly() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		assertThat(executor.count(Example.of(person))).isEqualTo(3);
-		assertThat(executor.count(Example.of(walt))).isEqualTo(1);
-		assertThat(executor.count(Example.of(new Person()))).isEqualTo(3);
-		assertThat(executor.count(Example.of(new Person("Foo", "Bar")))).isZero();
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // DATAREDIS-605
-	void shouldReportExistenceCorrectly() {
+        assertThat(executor.exists(Example.of(person))).isTrue();
+        assertThat(executor.exists(Example.of(walt))).isTrue();
+        assertThat(executor.exists(Example.of(new Person()))).isTrue();
+        assertThat(executor.exists(Example.of(new Person("Foo", "Bar")))).isFalse();
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @Test // GH-2150
+    void findByShouldFindFirst() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		assertThat(executor.exists(Example.of(person))).isTrue();
-		assertThat(executor.exists(Example.of(walt))).isTrue();
-		assertThat(executor.exists(Example.of(new Person()))).isTrue();
-		assertThat(executor.exists(Example.of(new Person("Foo", "Bar")))).isFalse();
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // GH-2150
-	void findByShouldFindFirst() {
+        assertThat(
+                        (Object) executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::first))
+                .isNotNull();
+        assertThat(
+                        executor
+                                .findBy(Example.of(walt), it -> it.as(PersonProjection.class).firstValue())
+                                .getFirstname())
+                .isEqualTo(walt.getFirstname());
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @Test // GH-2150
+    void findByShouldFindFirstAsDto() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		assertThat((Object) executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::first)).isNotNull();
-		assertThat(executor.findBy(Example.of(walt), it -> it.as(PersonProjection.class).firstValue()).getFirstname())
-				.isEqualTo(walt.getFirstname());
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // GH-2150
-	void findByShouldFindFirstAsDto() {
+        assertThat(
+                        executor
+                                .findBy(Example.of(walt), it -> it.as(PersonDto.class).firstValue())
+                                .getFirstname())
+                .isEqualTo(walt.getFirstname());
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @Test // GH-2150
+    void findByShouldFindOne() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		assertThat(executor.findBy(Example.of(walt), it -> it.as(PersonDto.class).firstValue()).getFirstname())
-				.isEqualTo(walt.getFirstname());
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // GH-2150
-	void findByShouldFindOne() {
+        assertThatExceptionOfType(IncorrectResultSizeDataAccessException.class)
+                .isThrownBy(
+                        () -> executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::one));
+        assertThat(
+                        executor
+                                .findBy(Example.of(walt), it -> it.as(PersonProjection.class).oneValue())
+                                .getFirstname())
+                .isEqualTo(walt.getFirstname());
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @Test // GH-2150
+    void findByShouldFindAll() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		assertThatExceptionOfType(IncorrectResultSizeDataAccessException.class)
-				.isThrownBy(() -> executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::one));
-		assertThat(executor.findBy(Example.of(walt), it -> it.as(PersonProjection.class).oneValue()).getFirstname())
-				.isEqualTo(walt.getFirstname());
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // GH-2150
-	void findByShouldFindAll() {
+        assertThat(
+                        (List<Person>)
+                                executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::all))
+                .hasSize(3);
+        List<PersonProjection> people =
+                executor.findBy(Example.of(walt), it -> it.as(PersonProjection.class).all());
+        assertThat(people).hasOnlyElementsOfType(PersonProjection.class);
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @Test // GH-2150
+    void findByShouldFindPage() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		assertThat((List<Person>) executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::all)).hasSize(3);
-		List<PersonProjection> people = executor.findBy(Example.of(walt), it -> it.as(PersonProjection.class).all());
-		assertThat(people).hasOnlyElementsOfType(PersonProjection.class);
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // GH-2150
-	void findByShouldFindPage() {
+        Page<Person> result = executor.findBy(Example.of(person), it -> it.page(PageRequest.of(0, 2)));
+        assertThat(result).hasSize(2);
+        assertThat(result.getTotalElements()).isEqualTo(3);
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @Test // GH-2150
+    void findByShouldFindStream() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		Page<Person> result = executor.findBy(Example.of(person), it -> it.page(PageRequest.of(0, 2)));
-		assertThat(result).hasSize(2);
-		assertThat(result.getTotalElements()).isEqualTo(3);
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // GH-2150
-	void findByShouldFindStream() {
+        Stream<Person> result =
+                executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::stream);
+        assertThat(result).hasSize(3);
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @Test // GH-2150
+    void findByShouldCount() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		Stream<Person> result = executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::stream);
-		assertThat(result).hasSize(3);
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // GH-2150
-	void findByShouldCount() {
+        assertThat((Long) executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::count))
+                .isEqualTo(3);
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @Test // GH-2150
+    void findByShouldExists() {
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+        QueryByExampleValkeyExecutor<Person> executor =
+                new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class), kvTemplate);
 
-		assertThat((Long) executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::count)).isEqualTo(3);
-	}
+        Person person = new Person();
+        person.setHometown(walt.getHometown());
 
-	@Test // GH-2150
-	void findByShouldExists() {
+        assertThat(
+                        (Boolean) executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::exists))
+                .isTrue();
+    }
 
-		QueryByExampleValkeyExecutor<Person> executor = new QueryByExampleValkeyExecutor<>(getEntityInformation(Person.class),
-				kvTemplate);
+    @SuppressWarnings("unchecked")
+    private <T> MappingValkeyEntityInformation<T, String> getEntityInformation(Class<T> entityClass) {
+        return new MappingValkeyEntityInformation<>(
+                (ValkeyPersistentEntity) mappingContext.getRequiredPersistentEntity(entityClass));
+    }
 
-		Person person = new Person();
-		person.setHometown(walt.getHometown());
+    @ValkeyHash("persons")
+    static class Person {
 
-		assertThat((Boolean) executor.findBy(Example.of(person), FluentQuery.FetchableFluentQuery::exists)).isTrue();
-	}
+        private @Id String id;
+        private @Indexed String firstname;
+        private String lastname;
+        private City hometown;
 
-	@SuppressWarnings("unchecked")
-	private <T> MappingValkeyEntityInformation<T, String> getEntityInformation(Class<T> entityClass) {
-		return new MappingValkeyEntityInformation<>(
-				(ValkeyPersistentEntity) mappingContext.getRequiredPersistentEntity(entityClass));
-	}
+        Person() {}
 
-	@ValkeyHash("persons")
-	static class Person {
+        Person(String firstname, String lastname) {
+            this.firstname = firstname;
+            this.lastname = lastname;
+        }
 
-		private @Id String id;
-		private @Indexed String firstname;
-		private String lastname;
-		private City hometown;
+        public String getId() {
+            return this.id;
+        }
 
-		Person() { }
+        public void setId(String id) {
+            this.id = id;
+        }
 
-		Person(String firstname, String lastname) {
-			this.firstname = firstname;
-			this.lastname = lastname;
-		}
+        public String getFirstname() {
+            return this.firstname;
+        }
 
-		public String getId() {
-			return this.id;
-		}
+        public void setFirstname(String firstname) {
+            this.firstname = firstname;
+        }
 
-		public void setId(String id) {
-			this.id = id;
-		}
+        public String getLastname() {
+            return this.lastname;
+        }
 
-		public String getFirstname() {
-			return this.firstname;
-		}
+        public void setLastname(String lastname) {
+            this.lastname = lastname;
+        }
 
-		public void setFirstname(String firstname) {
-			this.firstname = firstname;
-		}
+        public City getHometown() {
+            return this.hometown;
+        }
 
-		public String getLastname() {
-			return this.lastname;
-		}
+        public void setHometown(City hometown) {
+            this.hometown = hometown;
+        }
 
-		public void setLastname(String lastname) {
-			this.lastname = lastname;
-		}
+        @Override
+        public boolean equals(Object obj) {
 
-		public City getHometown() {
-			return this.hometown;
-		}
+            if (this == obj) {
+                return true;
+            }
 
-		public void setHometown(City hometown) {
-			this.hometown = hometown;
-		}
+            if (!(obj instanceof Person that)) {
+                return false;
+            }
 
-		@Override
-		public boolean equals(Object obj) {
+            return Objects.equals(this.getId(), that.getId())
+                    && Objects.equals(this.getFirstname(), that.getFirstname())
+                    && Objects.equals(this.getLastname(), that.getLastname())
+                    && Objects.equals(this.getHometown(), that.getHometown());
+        }
 
-			if (this == obj) {
-				return true;
-			}
+        @Override
+        public int hashCode() {
+            return Objects.hash(getId(), getFirstname(), getLastname(), getHometown());
+        }
+    }
 
-			if (!(obj instanceof Person that)) {
-				return false;
-			}
+    static class City {
 
-			return Objects.equals(this.getId(), that.getId())
-				&& Objects.equals(this.getFirstname(), that.getFirstname())
-				&& Objects.equals(this.getLastname(), that.getLastname())
-				&& Objects.equals(this.getHometown(), that.getHometown());
-		}
+        private @Indexed String name;
 
-		@Override
-		public int hashCode() {
-			return Objects.hash(getId(), getFirstname(), getLastname(), getHometown());
-		}
-	}
+        public City() {}
 
-	static class City {
+        public City(String name) {
+            this.name = name;
+        }
 
-		private @Indexed String name;
+        public String getName() {
+            return name;
+        }
 
-		public City() { }
+        public void setName(String name) {
+            this.name = name;
+        }
 
-		public City(String name) {
-			this.name = name;
-		}
+        @Override
+        public boolean equals(Object obj) {
 
-		public String getName() {
-			return name;
-		}
+            if (this == obj) {
+                return true;
+            }
 
-		public void setName(String name) {
-			this.name = name;
-		}
+            if (!(obj instanceof City that)) {
+                return false;
+            }
 
-		@Override
-		public boolean equals(Object obj) {
+            return Objects.equals(this.getName(), that.getName());
+        }
 
-			if (this == obj) {
-				return true;
-			}
+        @Override
+        public int hashCode() {
+            return Objects.hash(getName());
+        }
+    }
 
-			if (!(obj instanceof City that)) {
-				return false;
-			}
+    static class PersonDto {
 
-			return Objects.equals(this.getName(), that.getName());
-		}
+        private String firstname;
 
-		@Override
-		public int hashCode() {
-			return Objects.hash(getName());
-		}
-	}
+        public String getFirstname() {
+            return this.firstname;
+        }
 
-	static class PersonDto {
+        public void setFirstname(String firstname) {
+            this.firstname = firstname;
+        }
 
-		private String firstname;
+        @Override
+        public boolean equals(Object obj) {
 
-		public String getFirstname() {
-			return this.firstname;
-		}
+            if (this == obj) {
+                return true;
+            }
 
-		public void setFirstname(String firstname) {
-			this.firstname = firstname;
-		}
+            if (!(obj instanceof Person that)) {
+                return false;
+            }
 
-		@Override
-		public boolean equals(Object obj) {
+            return Objects.equals(this.getFirstname(), that.getLastname());
+        }
 
-			if (this == obj) {
-				return true;
-			}
+        @Override
+        public int hashCode() {
+            return Objects.hash(getFirstname());
+        }
 
-			if (!(obj instanceof Person that)) {
-				return false;
-			}
+        @Override
+        public String toString() {
+            return getFirstname();
+        }
+    }
 
-			return Objects.equals(this.getFirstname(), that.getLastname());
-		}
-
-		@Override
-		public int hashCode() {
-			return Objects.hash(getFirstname());
-		}
-
-		@Override
-		public String toString() {
-			return getFirstname();
-		}
-	}
-
-	interface PersonProjection {
-		String getFirstname();
-	}
+    interface PersonProjection {
+        String getFirstname();
+    }
 }

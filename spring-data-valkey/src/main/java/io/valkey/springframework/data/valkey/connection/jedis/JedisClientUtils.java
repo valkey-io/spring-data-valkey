@@ -15,12 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.Protocol;
-import redis.clients.jedis.commands.ProtocolCommand;
-
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
+import redis.clients.jedis.Protocol;
+import redis.clients.jedis.commands.ProtocolCommand;
 
 /**
  * Utility class to dispatch arbitrary Valkey commands using Jedis commands.
@@ -30,26 +29,26 @@ import java.util.stream.Collectors;
  * @author Serhii Siryi
  * @since 2.1
  */
-@SuppressWarnings({ "unchecked", "ConstantConditions" })
+@SuppressWarnings({"unchecked", "ConstantConditions"})
 class JedisClientUtils {
 
-	private static final Set<String> KNOWN_COMMANDS;
+    private static final Set<String> KNOWN_COMMANDS;
 
-	static {
-		KNOWN_COMMANDS = Arrays.stream(Protocol.Command.values()).map(Enum::name).collect(Collectors.toSet());
-	}
+    static {
+        KNOWN_COMMANDS =
+                Arrays.stream(Protocol.Command.values()).map(Enum::name).collect(Collectors.toSet());
+    }
 
-	public static ProtocolCommand getCommand(String command) {
+    public static ProtocolCommand getCommand(String command) {
 
-		if (isKnownCommand(command)) {
-			return Protocol.Command.valueOf(command.trim().toUpperCase());
-		}
+        if (isKnownCommand(command)) {
+            return Protocol.Command.valueOf(command.trim().toUpperCase());
+        }
 
-		return () -> JedisConverters.toBytes(command);
-	}
+        return () -> JedisConverters.toBytes(command);
+    }
 
-	private static boolean isKnownCommand(String command) {
-		return KNOWN_COMMANDS.contains(command);
-	}
-
+    private static boolean isKnownCommand(String command) {
+        return KNOWN_COMMANDS.contains(command);
+    }
 }

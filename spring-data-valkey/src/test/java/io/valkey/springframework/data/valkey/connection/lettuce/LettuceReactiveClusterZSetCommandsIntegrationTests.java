@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import static org.assertj.core.api.Assertions.*;
 import static io.valkey.springframework.data.valkey.connection.lettuce.LettuceReactiveCommandsTestSupport.*;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.Arrays;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -27,30 +26,43 @@ import org.junit.jupiter.api.Test;
  */
 class LettuceReactiveClusterZSetCommandsIntegrationTests extends LettuceReactiveClusterTestSupport {
 
-	@Test // DATAREDIS-525
-	void zUnionStoreShouldWorkWhenAllKeysMapToSameSlot() {
+    @Test // DATAREDIS-525
+    void zUnionStoreShouldWorkWhenAllKeysMapToSameSlot() {
 
-		nativeCommands.zadd(SAME_SLOT_KEY_1, 1D, VALUE_1);
-		nativeCommands.zadd(SAME_SLOT_KEY_1, 2D, VALUE_2);
-		nativeCommands.zadd(SAME_SLOT_KEY_2, 1D, VALUE_1);
-		nativeCommands.zadd(SAME_SLOT_KEY_2, 2D, VALUE_2);
-		nativeCommands.zadd(SAME_SLOT_KEY_2, 3D, VALUE_3);
+        nativeCommands.zadd(SAME_SLOT_KEY_1, 1D, VALUE_1);
+        nativeCommands.zadd(SAME_SLOT_KEY_1, 2D, VALUE_2);
+        nativeCommands.zadd(SAME_SLOT_KEY_2, 1D, VALUE_1);
+        nativeCommands.zadd(SAME_SLOT_KEY_2, 2D, VALUE_2);
+        nativeCommands.zadd(SAME_SLOT_KEY_2, 3D, VALUE_3);
 
-		assertThat(connection.zSetCommands().zUnionStore(SAME_SLOT_KEY_3_BBUFFER,
-				Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER), Arrays.asList(2D, 3D)).block()).isEqualTo(3L);
+        assertThat(
+                        connection
+                                .zSetCommands()
+                                .zUnionStore(
+                                        SAME_SLOT_KEY_3_BBUFFER,
+                                        Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
+                                        Arrays.asList(2D, 3D))
+                                .block())
+                .isEqualTo(3L);
+    }
 
-	}
+    @Test // DATAREDIS-525
+    void zInterStoreShouldWorkCorrectlyWhenKeysMapToSameSlot() {
 
-	@Test // DATAREDIS-525
-	void zInterStoreShouldWorkCorrectlyWhenKeysMapToSameSlot() {
+        nativeCommands.zadd(SAME_SLOT_KEY_1, 1D, VALUE_1);
+        nativeCommands.zadd(SAME_SLOT_KEY_1, 2D, VALUE_2);
+        nativeCommands.zadd(SAME_SLOT_KEY_2, 1D, VALUE_1);
+        nativeCommands.zadd(SAME_SLOT_KEY_2, 2D, VALUE_2);
+        nativeCommands.zadd(SAME_SLOT_KEY_2, 3D, VALUE_3);
 
-		nativeCommands.zadd(SAME_SLOT_KEY_1, 1D, VALUE_1);
-		nativeCommands.zadd(SAME_SLOT_KEY_1, 2D, VALUE_2);
-		nativeCommands.zadd(SAME_SLOT_KEY_2, 1D, VALUE_1);
-		nativeCommands.zadd(SAME_SLOT_KEY_2, 2D, VALUE_2);
-		nativeCommands.zadd(SAME_SLOT_KEY_2, 3D, VALUE_3);
-
-		assertThat(connection.zSetCommands().zInterStore(SAME_SLOT_KEY_3_BBUFFER,
-				Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER), Arrays.asList(2D, 3D)).block()).isEqualTo(2L);
-	}
+        assertThat(
+                        connection
+                                .zSetCommands()
+                                .zInterStore(
+                                        SAME_SLOT_KEY_3_BBUFFER,
+                                        Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
+                                        Arrays.asList(2D, 3D))
+                                .block())
+                .isEqualTo(2L);
+    }
 }

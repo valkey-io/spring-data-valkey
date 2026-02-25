@@ -17,40 +17,38 @@ package io.valkey.springframework.data.valkey;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
 import org.springframework.context.support.GenericXmlApplicationContext;
-import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 
 /**
  * @author Costin Leau
  */
 class PropertyEditorsIntegrationTests {
 
-	private GenericXmlApplicationContext ctx;
+    private GenericXmlApplicationContext ctx;
 
-	@BeforeEach
-	void setUp() {
-		ctx = new GenericXmlApplicationContext("/io/valkey/springframework/data/valkey/pe.xml");
-	}
+    @BeforeEach
+    void setUp() {
+        ctx = new GenericXmlApplicationContext("/io/valkey/springframework/data/valkey/pe.xml");
+    }
 
-	@AfterEach
-	void tearDown() {
-		if (ctx != null)
-			ctx.close();
-	}
+    @AfterEach
+    void tearDown() {
+        if (ctx != null) ctx.close();
+    }
 
-	@Test
-	void testInjection() throws Exception {
-		ValkeyViewPE bean = ctx.getBean(ValkeyViewPE.class);
-		ValkeyOperations<?, ?> ops = ctx.getBean(ValkeyOperations.class);
+    @Test
+    void testInjection() throws Exception {
+        ValkeyViewPE bean = ctx.getBean(ValkeyViewPE.class);
+        ValkeyOperations<?, ?> ops = ctx.getBean(ValkeyOperations.class);
 
-		assertThat(bean.getValueOps()).isSameAs(ops.opsForValue());
-		assertThat(bean.getListOps()).isSameAs(ops.opsForList());
-		assertThat(bean.getSetOps()).isSameAs(ops.opsForSet());
-		assertThat(bean.getZsetOps()).isSameAs(ops.opsForZSet());
-		assertThat(bean.getHashOps().getOperations()).isSameAs(ops);
-	}
+        assertThat(bean.getValueOps()).isSameAs(ops.opsForValue());
+        assertThat(bean.getListOps()).isSameAs(ops.opsForList());
+        assertThat(bean.getSetOps()).isSameAs(ops.opsForSet());
+        assertThat(bean.getZsetOps()).isSameAs(ops.opsForZSet());
+        assertThat(bean.getHashOps().getOperations()).isSameAs(ops);
+    }
 }

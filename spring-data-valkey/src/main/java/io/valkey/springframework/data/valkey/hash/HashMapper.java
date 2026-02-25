@@ -18,8 +18,8 @@ package io.valkey.springframework.data.valkey.hash;
 import java.util.Map;
 
 /**
- * Core mapping contract between Java types and Valkey hashes/maps. It's up to the implementation to support nested
- * objects.
+ * Core mapping contract between Java types and Valkey hashes/maps. It's up to the implementation to
+ * support nested objects.
  *
  * @param <T> Object type
  * @param <K> Valkey Hash field type
@@ -29,19 +29,19 @@ import java.util.Map;
  */
 public interface HashMapper<T, K, V> {
 
-	/**
-	 * Convert an {@code object} to a map that can be used with Valkey hashes.
-	 *
-	 * @param object
-	 * @return
-	 */
-	Map<K, V> toHash(T object);
+    /**
+     * Convert an {@code object} to a map that can be used with Valkey hashes.
+     *
+     * @param object
+     * @return
+     */
+    Map<K, V> toHash(T object);
 
-	/**
-	 * Convert a {@code hash} (map) to an object.
-	 *
-	 * @param hash
-	 * @return
-	 */
-	T fromHash(Map<K, V> hash);
+    /**
+     * Convert a {@code hash} (map) to an object.
+     *
+     * @param hash
+     * @return
+     */
+    T fromHash(Map<K, V> hash);
 }

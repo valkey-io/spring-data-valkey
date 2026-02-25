@@ -19,7 +19,6 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -29,29 +28,29 @@ import org.junit.jupiter.api.Test;
  */
 class DefaultValkeyElementReaderUnitTests {
 
-	@Test // DATAREDIS-602
-	void shouldDecodeByteBufferCorrectly() {
+    @Test // DATAREDIS-602
+    void shouldDecodeByteBufferCorrectly() {
 
-		String input = "123ü?™";
-		byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
+        String input = "123ü?™";
+        byte[] bytes = input.getBytes(StandardCharsets.UTF_8);
 
-		DefaultValkeyElementReader<String> reader = new DefaultValkeyElementReader<>(
-				new StringValkeySerializer(StandardCharsets.UTF_8));
+        DefaultValkeyElementReader<String> reader =
+                new DefaultValkeyElementReader<>(new StringValkeySerializer(StandardCharsets.UTF_8));
 
-		String result = reader.read(ByteBuffer.wrap(bytes));
+        String result = reader.read(ByteBuffer.wrap(bytes));
 
-		assertThat(result).isEqualTo(input);
-	}
+        assertThat(result).isEqualTo(input);
+    }
 
-	@Test // DATAREDIS-602
-	void shouldPassThroughByteBufferForAbsentSerializer() {
+    @Test // DATAREDIS-602
+    void shouldPassThroughByteBufferForAbsentSerializer() {
 
-		ByteBuffer input = ByteBuffer.allocate(1);
+        ByteBuffer input = ByteBuffer.allocate(1);
 
-		DefaultValkeyElementReader<Object> reader = new DefaultValkeyElementReader<>(null);
+        DefaultValkeyElementReader<Object> reader = new DefaultValkeyElementReader<>(null);
 
-		Object result = reader.read(input);
+        Object result = reader.read(input);
 
-		assertThat(result).isEqualTo(input);
-	}
+        assertThat(result).isEqualTo(input);
+    }
 }

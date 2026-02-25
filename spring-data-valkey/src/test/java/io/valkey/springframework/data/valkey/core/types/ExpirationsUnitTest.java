@@ -17,17 +17,15 @@ package io.valkey.springframework.data.valkey.core.types;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.core.types.Expirations.Timeouts;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
-
-import io.valkey.springframework.data.valkey.core.types.Expirations.Timeouts;
 
 /**
  * Unit test for {@link Expirations}
@@ -37,69 +35,77 @@ import io.valkey.springframework.data.valkey.core.types.Expirations.Timeouts;
  */
 class ExpirationsUnitTest {
 
-	static final String KEY_1 = "key-1";
-	static final String KEY_2 = "key-2";
-	static final String KEY_3 = "key-3";
+    static final String KEY_1 = "key-1";
+    static final String KEY_2 = "key-2";
+    static final String KEY_3 = "key-3";
 
-	@ParameterizedTest // GH-3054
-	@EnumSource(TimeUnit.class)
-	void expirationMemorizesSourceUnit(TimeUnit targetUnit) {
+    @ParameterizedTest // GH-3054
+    @EnumSource(TimeUnit.class)
+    void expirationMemorizesSourceUnit(TimeUnit targetUnit) {
 
-		Expirations<String> exp = Expirations.of(targetUnit, List.of(KEY_1), new Timeouts(TimeUnit.SECONDS, List.of(120L)));
+        Expirations<String> exp =
+                Expirations.of(targetUnit, List.of(KEY_1), new Timeouts(TimeUnit.SECONDS, List.of(120L)));
 
-		assertThat(exp.ttl().get(0)).satisfies(expiration -> {
-			assertThat(expiration.raw()).isEqualTo(120L);
-			assertThat(expiration.value()).isEqualTo(targetUnit.convert(120, TimeUnit.SECONDS));
-		});
-	}
+        assertThat(exp.ttl().get(0))
+                .satisfies(
+                        expiration -> {
+                            assertThat(expiration.raw()).isEqualTo(120L);
+                            assertThat(expiration.value()).isEqualTo(targetUnit.convert(120, TimeUnit.SECONDS));
+                        });
+    }
 
-	@Test // GH-3054
-	void expirationsCategorizesElements() {
+    @Test // GH-3054
+    void expirationsCategorizesElements() {
 
-		Expirations<String> exp = createExpirations(new Timeouts(TimeUnit.SECONDS, List.of(-2L, -1L, 120L)));
+        Expirations<String> exp =
+                createExpirations(new Timeouts(TimeUnit.SECONDS, List.of(-2L, -1L, 120L)));
 
-		assertThat(exp.persistent()).containsExactly(KEY_2);
-		assertThat(exp.missing()).containsExactly(KEY_1);
-		assertThat(exp.expiring()).containsExactly(Map.entry(KEY_3, Duration.ofMinutes(2)));
-	}
+        assertThat(exp.persistent()).containsExactly(KEY_2);
+        assertThat(exp.missing()).containsExactly(KEY_1);
+        assertThat(exp.expiring()).containsExactly(Map.entry(KEY_3, Duration.ofMinutes(2)));
+    }
 
-	@Test // GH-3054
-	void returnsNullForMissingElements() {
+    @Test // GH-3054
+    void returnsNullForMissingElements() {
 
-		Expirations<String> exp = createExpirations(new Timeouts(TimeUnit.SECONDS, List.of(-2L, -1L, 120L)));
+        Expirations<String> exp =
+                createExpirations(new Timeouts(TimeUnit.SECONDS, List.of(-2L, -1L, 120L)));
 
-		assertThat(exp.expirationOf("missing")).isNull();
-		assertThat(exp.ttlOf("missing")).isNull();
-	}
+        assertThat(exp.expirationOf("missing")).isNull();
+        assertThat(exp.ttlOf("missing")).isNull();
+    }
 
-	@Test // GH-3054
-	void ttlReturnsDurationForEntriesWithTimeout() {
+    @Test // GH-3054
+    void ttlReturnsDurationForEntriesWithTimeout() {
 
-		Expirations<String> exp = createExpirations(new Timeouts(TimeUnit.SECONDS, List.of(-2L, -1L, 120L)));
+        Expirations<String> exp =
+                createExpirations(new Timeouts(TimeUnit.SECONDS, List.of(-2L, -1L, 120L)));
 
-		assertThat(exp.ttlOf(KEY_3)).isEqualTo(Duration.ofMinutes(2));
-	}
+        assertThat(exp.ttlOf(KEY_3)).isEqualTo(Duration.ofMinutes(2));
+    }
 
-	@Test // GH-3054
-	void ttlReturnsNullForPersistentAndMissingEntries() {
+    @Test // GH-3054
+    void ttlReturnsNullForPersistentAndMissingEntries() {
 
-		Expirations<String> exp = createExpirations(new Timeouts(TimeUnit.SECONDS, List.of(-2L, -1L, 120L)));
+        Expirations<String> exp =
+                createExpirations(new Timeouts(TimeUnit.SECONDS, List.of(-2L, -1L, 120L)));
 
-		assertThat(exp.ttlOf(KEY_1)).isNull();
-		assertThat(exp.ttlOf(KEY_2)).isNull();
-	}
+        assertThat(exp.ttlOf(KEY_1)).isNull();
+        assertThat(exp.ttlOf(KEY_2)).isNull();
+    }
 
-	@Test // GH-3054
-	void shouldRenderToString() {
+    @Test // GH-3054
+    void shouldRenderToString() {
 
-		assertThat(Expirations.TimeToLive.PERSISTENT).hasToString("PERSISTENT");
-		assertThat(Expirations.TimeToLive.MISSING).hasToString("MISSING");
-		assertThat(Expirations.TimeToLive.of(1, TimeUnit.SECONDS)).hasToString("1 SECONDS");
-	}
+        assertThat(Expirations.TimeToLive.PERSISTENT).hasToString("PERSISTENT");
+        assertThat(Expirations.TimeToLive.MISSING).hasToString("MISSING");
+        assertThat(Expirations.TimeToLive.of(1, TimeUnit.SECONDS)).hasToString("1 SECONDS");
+    }
 
-	static Expirations<String> createExpirations(Timeouts timeouts) {
+    static Expirations<String> createExpirations(Timeouts timeouts) {
 
-		List<String> keys = IntStream.range(1, timeouts.raw().size() + 1).mapToObj("key-%s"::formatted).toList();
-		return Expirations.of(timeouts.timeUnit(), keys, timeouts);
-	}
+        List<String> keys =
+                IntStream.range(1, timeouts.raw().size() + 1).mapToObj("key-%s"::formatted).toList();
+        return Expirations.of(timeouts.timeUnit(), keys, timeouts);
+    }
 }

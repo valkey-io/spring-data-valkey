@@ -26,49 +26,49 @@ import io.valkey.springframework.data.valkey.core.ZSetOperations;
  */
 public class ValkeyViewPE {
 
-	private ValueOperations<String, String> valueOps;
-	private ListOperations<String, String> listOps;
-	private SetOperations<String, String> setOps;
-	private ZSetOperations<String, Object> zsetOps;
-	private HashOperations<Object, String, Object> hashOps;
+    private ValueOperations<String, String> valueOps;
+    private ListOperations<String, String> listOps;
+    private SetOperations<String, String> setOps;
+    private ZSetOperations<String, Object> zsetOps;
+    private HashOperations<Object, String, Object> hashOps;
 
-	public ValueOperations<String, String> getValueOps() {
-		return valueOps;
-	}
+    public ValueOperations<String, String> getValueOps() {
+        return valueOps;
+    }
 
-	public void setValueOps(ValueOperations<String, String> valueOps) {
-		this.valueOps = valueOps;
-	}
+    public void setValueOps(ValueOperations<String, String> valueOps) {
+        this.valueOps = valueOps;
+    }
 
-	public ListOperations<String, String> getListOps() {
-		return listOps;
-	}
+    public ListOperations<String, String> getListOps() {
+        return listOps;
+    }
 
-	public void setListOps(ListOperations<String, String> listOps) {
-		this.listOps = listOps;
-	}
+    public void setListOps(ListOperations<String, String> listOps) {
+        this.listOps = listOps;
+    }
 
-	public SetOperations<String, String> getSetOps() {
-		return setOps;
-	}
+    public SetOperations<String, String> getSetOps() {
+        return setOps;
+    }
 
-	public void setSetOps(SetOperations<String, String> setOps) {
-		this.setOps = setOps;
-	}
+    public void setSetOps(SetOperations<String, String> setOps) {
+        this.setOps = setOps;
+    }
 
-	public ZSetOperations<String, Object> getZsetOps() {
-		return zsetOps;
-	}
+    public ZSetOperations<String, Object> getZsetOps() {
+        return zsetOps;
+    }
 
-	public void setZsetOps(ZSetOperations<String, Object> zsetOps) {
-		this.zsetOps = zsetOps;
-	}
+    public void setZsetOps(ZSetOperations<String, Object> zsetOps) {
+        this.zsetOps = zsetOps;
+    }
 
-	public HashOperations<Object, String, Object> getHashOps() {
-		return hashOps;
-	}
+    public HashOperations<Object, String, Object> getHashOps() {
+        return hashOps;
+    }
 
-	public void setHashOps(HashOperations<Object, String, Object> hashOps) {
-		this.hashOps = hashOps;
-	}
+    public void setHashOps(HashOperations<Object, String, Object> hashOps) {
+        this.hashOps = hashOps;
+    }
 }

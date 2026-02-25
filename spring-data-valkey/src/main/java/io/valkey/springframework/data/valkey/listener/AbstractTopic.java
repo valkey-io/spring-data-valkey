@@ -26,43 +26,43 @@ import org.springframework.util.ObjectUtils;
  */
 abstract class AbstractTopic implements Topic {
 
-	private final String name;
+    private final String name;
 
-	AbstractTopic(String name) {
-		this.name = name;
-	}
+    AbstractTopic(String name) {
+        this.name = name;
+    }
 
-	@Override
-	public String getTopic() {
-		return this.name;
-	}
+    @Override
+    public String getTopic() {
+        return this.name;
+    }
 
-	@Override
-	public boolean equals(@Nullable Object obj) {
+    @Override
+    public boolean equals(@Nullable Object obj) {
 
-		if (this == obj) {
-			return true;
-		}
+        if (this == obj) {
+            return true;
+        }
 
-		if (!(obj instanceof AbstractTopic that)) {
-			return false;
-		}
+        if (!(obj instanceof AbstractTopic that)) {
+            return false;
+        }
 
-		// Must be exact Topic type
-		if (this.getClass() != that.getClass()) {
-			return false;
-		}
+        // Must be exact Topic type
+        if (this.getClass() != that.getClass()) {
+            return false;
+        }
 
-		return ObjectUtils.nullSafeEquals(this.getTopic(), that.getTopic());
-	}
+        return ObjectUtils.nullSafeEquals(this.getTopic(), that.getTopic());
+    }
 
-	@Override
-	public int hashCode() {
-		return ObjectUtils.nullSafeHashCode(getTopic());
-	}
+    @Override
+    public int hashCode() {
+        return ObjectUtils.nullSafeHashCode(getTopic());
+    }
 
-	@Override
-	public String toString() {
-		return getTopic();
-	}
+    @Override
+    public String toString() {
+        return getTopic();
+    }
 }

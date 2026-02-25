@@ -15,29 +15,27 @@
  */
 package io.valkey.springframework.data.valkey.connection.zset;
 
-/**
- * ZSet tuple.
- */
+/** ZSet tuple. */
 public interface Tuple extends Comparable<Double> {
 
-	/**
-	 * @return the raw value of the member.
-	 */
-	byte[] getValue();
+    /**
+     * @return the raw value of the member.
+     */
+    byte[] getValue();
 
-	/**
-	 * @return the member score value used for sorting.
-	 */
-	Double getScore();
+    /**
+     * @return the member score value used for sorting.
+     */
+    Double getScore();
 
-	/**
-	 * Create a new {@link Tuple}.
-	 *
-	 * @param value
-	 * @param score
-	 * @return
-	 */
-	static Tuple of(byte[] value, Double score) {
-		return new DefaultTuple(value, score);
-	}
+    /**
+     * Create a new {@link Tuple}.
+     *
+     * @param value
+     * @param score
+     * @return
+     */
+    static Tuple of(byte[] value, Double score) {
+        return new DefaultTuple(value, score);
+    }
 }

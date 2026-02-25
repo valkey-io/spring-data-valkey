@@ -15,36 +15,35 @@
  */
 package io.valkey.springframework.data.valkey.test;
 
+import com.thoughtworks.xstream.security.AnyTypePermission;
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import org.springframework.oxm.xstream.XStreamMarshaller;
-
-import com.thoughtworks.xstream.security.AnyTypePermission;
 
 /**
  * @author Mark Paluch
  */
 public final class XstreamOxmSerializerSingleton {
 
-	private static final XstreamOxmSerializerSingleton instance = new XstreamOxmSerializerSingleton();
+    private static final XstreamOxmSerializerSingleton instance = new XstreamOxmSerializerSingleton();
 
-	private final OxmSerializer serializer;
+    private final OxmSerializer serializer;
 
-	private XstreamOxmSerializerSingleton() {
+    private XstreamOxmSerializerSingleton() {
 
-		// XStream serializer
-		XStreamMarshaller xstream = new XStreamMarshaller();
-		xstream.getXStream().addPermission(AnyTypePermission.ANY);
-		try {
-			xstream.afterPropertiesSet();
-		} catch (Exception ex) {
-			throw new RuntimeException("Cannot init XStream", ex);
-		}
+        // XStream serializer
+        XStreamMarshaller xstream = new XStreamMarshaller();
+        xstream.getXStream().addPermission(AnyTypePermission.ANY);
+        try {
+            xstream.afterPropertiesSet();
+        } catch (Exception ex) {
+            throw new RuntimeException("Cannot init XStream", ex);
+        }
 
-		serializer = new OxmSerializer(xstream, xstream);
-		serializer.afterPropertiesSet();
-	}
+        serializer = new OxmSerializer(xstream, xstream);
+        serializer.afterPropertiesSet();
+    }
 
-	public static OxmSerializer getInstance() {
-		return instance.serializer;
-	}
+    public static OxmSerializer getInstance() {
+        return instance.serializer;
+    }
 }

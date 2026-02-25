@@ -20,10 +20,8 @@ import io.lettuce.core.ReadFrom;
 import io.lettuce.core.SslVerifyMode;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.resource.ClientResources;
-
 import java.time.Duration;
 import java.util.Optional;
-
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 
 /**
@@ -37,79 +35,80 @@ import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
  */
 class DefaultLettucePoolingClientConfiguration implements LettucePoolingClientConfiguration {
 
-	private final LettuceClientConfiguration clientConfiguration;
-	private final GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig;
+    private final LettuceClientConfiguration clientConfiguration;
+    private final GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig;
 
-	DefaultLettucePoolingClientConfiguration(LettuceClientConfiguration clientConfiguration,
-			GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig) {
+    DefaultLettucePoolingClientConfiguration(
+            LettuceClientConfiguration clientConfiguration,
+            GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig) {
 
-		this.clientConfiguration = clientConfiguration;
-		this.poolConfig = poolConfig;
-	}
+        this.clientConfiguration = clientConfiguration;
+        this.poolConfig = poolConfig;
+    }
 
-	@Override
-	public boolean isUseSsl() {
-		return clientConfiguration.isUseSsl();
-	}
+    @Override
+    public boolean isUseSsl() {
+        return clientConfiguration.isUseSsl();
+    }
 
-	@Override
-	@Deprecated
-	public boolean isVerifyPeer() {
-		return clientConfiguration.isVerifyPeer();
-	}
+    @Override
+    @Deprecated
+    public boolean isVerifyPeer() {
+        return clientConfiguration.isVerifyPeer();
+    }
 
-	@Override
-	public SslVerifyMode getVerifyMode() {
-		return clientConfiguration.getVerifyMode();
-	}
+    @Override
+    public SslVerifyMode getVerifyMode() {
+        return clientConfiguration.getVerifyMode();
+    }
 
-	@Override
-	public boolean isStartTls() {
-		return clientConfiguration.isStartTls();
-	}
+    @Override
+    public boolean isStartTls() {
+        return clientConfiguration.isStartTls();
+    }
 
-	@Override
-	public Optional<ClientResources> getClientResources() {
-		return clientConfiguration.getClientResources();
-	}
+    @Override
+    public Optional<ClientResources> getClientResources() {
+        return clientConfiguration.getClientResources();
+    }
 
-	@Override
-	public Optional<ClientOptions> getClientOptions() {
-		return clientConfiguration.getClientOptions();
-	}
+    @Override
+    public Optional<ClientOptions> getClientOptions() {
+        return clientConfiguration.getClientOptions();
+    }
 
-	@Override
-	public Optional<String> getClientName() {
-		return clientConfiguration.getClientName();
-	}
+    @Override
+    public Optional<String> getClientName() {
+        return clientConfiguration.getClientName();
+    }
 
-	@Override
-	public Optional<ReadFrom> getReadFrom() {
-		return clientConfiguration.getReadFrom();
-	}
+    @Override
+    public Optional<ReadFrom> getReadFrom() {
+        return clientConfiguration.getReadFrom();
+    }
 
-	@Override
-	public Optional<ValkeyCredentialsProviderFactory> getValkeyCredentialsProviderFactory() {
-		return clientConfiguration.getValkeyCredentialsProviderFactory();
-	}
+    @Override
+    public Optional<ValkeyCredentialsProviderFactory> getValkeyCredentialsProviderFactory() {
+        return clientConfiguration.getValkeyCredentialsProviderFactory();
+    }
 
-	@Override
-	public Duration getCommandTimeout() {
-		return clientConfiguration.getCommandTimeout();
-	}
+    @Override
+    public Duration getCommandTimeout() {
+        return clientConfiguration.getCommandTimeout();
+    }
 
-	@Override
-	public Duration getShutdownTimeout() {
-		return clientConfiguration.getShutdownTimeout();
-	}
+    @Override
+    public Duration getShutdownTimeout() {
+        return clientConfiguration.getShutdownTimeout();
+    }
 
-	@Override
-	public Duration getShutdownQuietPeriod() {
-		return clientConfiguration.getShutdownQuietPeriod();
-	}
+    @Override
+    public Duration getShutdownQuietPeriod() {
+        return clientConfiguration.getShutdownQuietPeriod();
+    }
 
-	@Override
-	public GenericObjectPoolConfig<StatefulConnection<?, ?>> getPoolConfig() {
-		return poolConfig;
-	}
+    @Override
+    public GenericObjectPoolConfig<StatefulConnection<?, ?>> getPoolConfig() {
+        return poolConfig;
+    }
 }

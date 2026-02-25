@@ -16,14 +16,12 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.api.async.RedisScriptingAsyncCommands;
-
+import io.valkey.springframework.data.valkey.connection.ReturnType;
+import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
 import java.util.Arrays;
 import java.util.List;
-
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
-import io.valkey.springframework.data.valkey.connection.ReturnType;
 import org.springframework.util.Assert;
 
 /**
@@ -32,114 +30,126 @@ import org.springframework.util.Assert;
  */
 class LettuceScriptingCommands implements ValkeyScriptingCommands {
 
-	private final LettuceConnection connection;
+    private final LettuceConnection connection;
 
-	LettuceScriptingCommands(LettuceConnection connection) {
-		this.connection = connection;
-	}
+    LettuceScriptingCommands(LettuceConnection connection) {
+        this.connection = connection;
+    }
 
-	@Override
-	public void scriptFlush() {
-		connection.invoke().just(RedisScriptingAsyncCommands::scriptFlush);
-	}
+    @Override
+    public void scriptFlush() {
+        connection.invoke().just(RedisScriptingAsyncCommands::scriptFlush);
+    }
 
-	@Override
-	public void scriptKill() {
+    @Override
+    public void scriptKill() {
 
-		if (connection.isQueueing()) {
-			throw new InvalidDataAccessApiUsageException("Script kill not permitted in a transaction");
-		}
+        if (connection.isQueueing()) {
+            throw new InvalidDataAccessApiUsageException("Script kill not permitted in a transaction");
+        }
 
-		connection.invoke().just(RedisScriptingAsyncCommands::scriptKill);
-	}
+        connection.invoke().just(RedisScriptingAsyncCommands::scriptKill);
+    }
 
-	@Override
-	public String scriptLoad(byte[] script) {
+    @Override
+    public String scriptLoad(byte[] script) {
 
-		Assert.notNull(script, "Script must not be null");
+        Assert.notNull(script, "Script must not be null");
 
-		return connection.invoke().just(RedisScriptingAsyncCommands::scriptLoad, script);
-	}
+        return connection.invoke().just(RedisScriptingAsyncCommands::scriptLoad, script);
+    }
 
-	@Override
-	public List<Boolean> scriptExists(String... scriptSha1) {
+    @Override
+    public List<Boolean> scriptExists(String... scriptSha1) {
 
-		Assert.notNull(scriptSha1, "Script digests must not be null");
-		Assert.noNullElements(scriptSha1, "Script digests must not contain null elements");
+        Assert.notNull(scriptSha1, "Script digests must not be null");
+        Assert.noNullElements(scriptSha1, "Script digests must not contain null elements");
 
-		return connection.invoke().just(RedisScriptingAsyncCommands::scriptExists, scriptSha1);
-	}
+        return connection.invoke().just(RedisScriptingAsyncCommands::scriptExists, scriptSha1);
+    }
 
-	@Override
-	public <T> T eval(byte[] script, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
+    @Override
+    public <T> T eval(byte[] script, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
 
-		Assert.notNull(script, "Script must not be null");
+        Assert.notNull(script, "Script must not be null");
 
-		byte[][] keys = extractScriptKeys(numKeys, keysAndArgs);
-		byte[][] args = extractScriptArgs(numKeys, keysAndArgs);
-		String convertedScript = LettuceConverters.toString(script);
+        byte[][] keys = extractScriptKeys(numKeys, keysAndArgs);
+        byte[][] args = extractScriptArgs(numKeys, keysAndArgs);
+        String convertedScript = LettuceConverters.toString(script);
 
-		return connection
-				.invoke().from(RedisScriptingAsyncCommands::eval, convertedScript,
-						LettuceConverters.toScriptOutputType(returnType), keys, args)
-				.get(new LettuceEvalResultsConverter<T>(returnType));
-	}
+        return connection
+                .invoke()
+                .from(
+                        RedisScriptingAsyncCommands::eval,
+                        convertedScript,
+                        LettuceConverters.toScriptOutputType(returnType),
+                        keys,
+                        args)
+                .get(new LettuceEvalResultsConverter<T>(returnType));
+    }
 
-	@Override
-	public <T> T evalSha(String scriptSha1, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
+    @Override
+    public <T> T evalSha(
+            String scriptSha1, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
 
-		Assert.notNull(scriptSha1, "Script digest must not be null");
+        Assert.notNull(scriptSha1, "Script digest must not be null");
 
-		byte[][] keys = extractScriptKeys(numKeys, keysAndArgs);
-		byte[][] args = extractScriptArgs(numKeys, keysAndArgs);
+        byte[][] keys = extractScriptKeys(numKeys, keysAndArgs);
+        byte[][] args = extractScriptArgs(numKeys, keysAndArgs);
 
-		return connection
-				.invoke().from(RedisScriptingAsyncCommands::evalsha, scriptSha1,
-						LettuceConverters.toScriptOutputType(returnType), keys, args)
-				.get(new LettuceEvalResultsConverter<T>(returnType));
-	}
+        return connection
+                .invoke()
+                .from(
+                        RedisScriptingAsyncCommands::evalsha,
+                        scriptSha1,
+                        LettuceConverters.toScriptOutputType(returnType),
+                        keys,
+                        args)
+                .get(new LettuceEvalResultsConverter<T>(returnType));
+    }
 
-	@Override
-	public <T> T evalSha(byte[] scriptSha1, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
+    @Override
+    public <T> T evalSha(
+            byte[] scriptSha1, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
 
-		Assert.notNull(scriptSha1, "Script digest must not be null");
+        Assert.notNull(scriptSha1, "Script digest must not be null");
 
-		return evalSha(LettuceConverters.toString(scriptSha1), returnType, numKeys, keysAndArgs);
-	}
+        return evalSha(LettuceConverters.toString(scriptSha1), returnType, numKeys, keysAndArgs);
+    }
 
-	private static byte[][] extractScriptKeys(int numKeys, byte[]... keysAndArgs) {
-		if (numKeys > 0) {
-			return Arrays.copyOfRange(keysAndArgs, 0, numKeys);
-		}
-		return new byte[0][0];
-	}
+    private static byte[][] extractScriptKeys(int numKeys, byte[]... keysAndArgs) {
+        if (numKeys > 0) {
+            return Arrays.copyOfRange(keysAndArgs, 0, numKeys);
+        }
+        return new byte[0][0];
+    }
 
-	private static byte[][] extractScriptArgs(int numKeys, byte[]... keysAndArgs) {
-		if (keysAndArgs.length > numKeys) {
-			return Arrays.copyOfRange(keysAndArgs, numKeys, keysAndArgs.length);
-		}
-		return new byte[0][0];
-	}
+    private static byte[][] extractScriptArgs(int numKeys, byte[]... keysAndArgs) {
+        if (keysAndArgs.length > numKeys) {
+            return Arrays.copyOfRange(keysAndArgs, numKeys, keysAndArgs.length);
+        }
+        return new byte[0][0];
+    }
 
-	private class LettuceEvalResultsConverter<T> implements Converter<Object, T> {
+    private class LettuceEvalResultsConverter<T> implements Converter<Object, T> {
 
-		private final ReturnType returnType;
+        private final ReturnType returnType;
 
-		public LettuceEvalResultsConverter(ReturnType returnType) {
-			this.returnType = returnType;
-		}
+        public LettuceEvalResultsConverter(ReturnType returnType) {
+            this.returnType = returnType;
+        }
 
-		@SuppressWarnings({ "rawtypes", "unchecked" })
-		public T convert(Object source) {
-			if (returnType == ReturnType.MULTI) {
-				List resultList = (List) source;
-				for (Object obj : resultList) {
-					if (obj instanceof Exception ex) {
-						throw connection.convertLettuceAccessException(ex);
-					}
-				}
-			}
-			return (T) source;
-		}
-	}
+        @SuppressWarnings({"rawtypes", "unchecked"})
+        public T convert(Object source) {
+            if (returnType == ReturnType.MULTI) {
+                List resultList = (List) source;
+                for (Object obj : resultList) {
+                    if (obj instanceof Exception ex) {
+                        throw connection.convertLettuceAccessException(ex);
+                    }
+                }
+            }
+            return (T) source;
+        }
+    }
 }

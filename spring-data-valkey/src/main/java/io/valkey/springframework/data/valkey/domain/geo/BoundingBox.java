@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.domain.geo;
 
 import java.io.Serial;
-
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Metric;
 import org.springframework.data.geo.Shape;
@@ -32,81 +31,82 @@ import org.springframework.util.ObjectUtils;
  */
 public class BoundingBox implements Shape {
 
-	@Serial
-	private static final long serialVersionUID = 5215611530535947924L;
+    @Serial private static final long serialVersionUID = 5215611530535947924L;
 
-	private final Distance width;
-	private final Distance height;
+    private final Distance width;
+    private final Distance height;
 
-	/**
-	 * Creates a new {@link BoundingBox} from the given width and height. Both distances must use the same
-	 * {@link Metric}.
-	 *
-	 * @param width must not be {@literal null}.
-	 * @param height must not be {@literal null}.
-	 */
-	public BoundingBox(Distance width, Distance height) {
+    /**
+     * Creates a new {@link BoundingBox} from the given width and height. Both distances must use the
+     * same {@link Metric}.
+     *
+     * @param width must not be {@literal null}.
+     * @param height must not be {@literal null}.
+     */
+    public BoundingBox(Distance width, Distance height) {
 
-		Assert.notNull(width, "Width must not be null");
-		Assert.notNull(height, "Height must not be null");
-		Assert.isTrue(width.getMetric().equals(height.getMetric()), "Metric for width and height must be the same");
+        Assert.notNull(width, "Width must not be null");
+        Assert.notNull(height, "Height must not be null");
+        Assert.isTrue(
+                width.getMetric().equals(height.getMetric()),
+                "Metric for width and height must be the same");
 
-		this.width = width;
-		this.height = height;
-	}
+        this.width = width;
+        this.height = height;
+    }
 
-	/**
-	 * Creates a new {@link BoundingBox} from the given width, height and {@link Metric}.
-	 *
-	 * @param width
-	 * @param height
-	 * @param metric must not be {@literal null}.
-	 */
-	public BoundingBox(double width, double height, Metric metric) {
-		this(new Distance(width, metric), new Distance(height, metric));
-	}
+    /**
+     * Creates a new {@link BoundingBox} from the given width, height and {@link Metric}.
+     *
+     * @param width
+     * @param height
+     * @param metric must not be {@literal null}.
+     */
+    public BoundingBox(double width, double height, Metric metric) {
+        this(new Distance(width, metric), new Distance(height, metric));
+    }
 
-	/**
-	 * Returns the width of this bounding box.
-	 *
-	 * @return will never be {@literal null}.
-	 */
-	public Distance getWidth() {
-		return width;
-	}
+    /**
+     * Returns the width of this bounding box.
+     *
+     * @return will never be {@literal null}.
+     */
+    public Distance getWidth() {
+        return width;
+    }
 
-	/**
-	 * Returns the height of this bounding box.
-	 *
-	 * @return will never be {@literal null}.
-	 */
-	public Distance getHeight() {
-		return height;
-	}
+    /**
+     * Returns the height of this bounding box.
+     *
+     * @return will never be {@literal null}.
+     */
+    public Distance getHeight() {
+        return height;
+    }
 
-	@Override
-	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(width);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(height);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = ObjectUtils.nullSafeHashCode(width);
+        result = 31 * result + ObjectUtils.nullSafeHashCode(height);
+        return result;
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (!(o instanceof BoundingBox that)) {
-			return false;
-		}
-		if (!ObjectUtils.nullSafeEquals(width, that.width)) {
-			return false;
-		}
-		return ObjectUtils.nullSafeEquals(height, that.height);
-	}
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof BoundingBox that)) {
+            return false;
+        }
+        if (!ObjectUtils.nullSafeEquals(width, that.width)) {
+            return false;
+        }
+        return ObjectUtils.nullSafeEquals(height, that.height);
+    }
 
-	@Override
-	public String toString() {
-		return "Bounding box: [width=%s, height=%s]".formatted(width, height);
-	}
+    @Override
+    public String toString() {
+        return "Bounding box: [width=%s, height=%s]".formatted(width, height);
+    }
 }

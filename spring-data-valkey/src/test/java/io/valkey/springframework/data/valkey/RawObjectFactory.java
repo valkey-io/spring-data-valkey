@@ -24,7 +24,7 @@ import java.util.UUID;
  */
 public class RawObjectFactory implements ObjectFactory<byte[]> {
 
-	public byte[] instance() {
-		return UUID.randomUUID().toString().getBytes();
-	}
+    public byte[] instance() {
+        return UUID.randomUUID().toString().getBytes();
+    }
 }

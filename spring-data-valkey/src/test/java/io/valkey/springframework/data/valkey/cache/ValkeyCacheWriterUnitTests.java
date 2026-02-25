@@ -29,7 +29,6 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
-
 import org.junit.jupiter.api.Test;
 
 /**
@@ -39,42 +38,44 @@ import org.junit.jupiter.api.Test;
  */
 class ValkeyCacheWriterUnitTests {
 
-	@Test // GH-2351
-	void defaultGetWithNameKeyAndTtlCallsGetWithNameAndKeyDiscardingTtl() {
+    @Test // GH-2351
+    void defaultGetWithNameKeyAndTtlCallsGetWithNameAndKeyDiscardingTtl() {
 
-		byte[] key = "TestKey".getBytes();
-		byte[] value = "TestValue".getBytes();
+        byte[] key = "TestKey".getBytes();
+        byte[] value = "TestValue".getBytes();
 
-		Duration thirtyMinutes = Duration.ofMinutes(30);
+        Duration thirtyMinutes = Duration.ofMinutes(30);
 
-		ValkeyCacheWriter cacheWriter = mock(ValkeyCacheWriter.class);
+        ValkeyCacheWriter cacheWriter = mock(ValkeyCacheWriter.class);
 
-		doCallRealMethod().when(cacheWriter).get(anyString(), any(), any());
-		doReturn(value).when(cacheWriter).get(anyString(), any());
+        doCallRealMethod().when(cacheWriter).get(anyString(), any(), any());
+        doReturn(value).when(cacheWriter).get(anyString(), any());
 
-		assertThat(cacheWriter.get("TestCacheName", key, thirtyMinutes)).isEqualTo(value);
+        assertThat(cacheWriter.get("TestCacheName", key, thirtyMinutes)).isEqualTo(value);
 
-		verify(cacheWriter, times(1)).get(eq("TestCacheName"), eq(key), eq(thirtyMinutes));
-		verify(cacheWriter, times(1)).get(eq("TestCacheName"), eq(key));
-		verifyNoMoreInteractions(cacheWriter);
-	}
+        verify(cacheWriter, times(1)).get(eq("TestCacheName"), eq(key), eq(thirtyMinutes));
+        verify(cacheWriter, times(1)).get(eq("TestCacheName"), eq(key));
+        verifyNoMoreInteractions(cacheWriter);
+    }
 
-	@Test // GH-2650
-	void defaultRetrieveWithNameAndKeyCallsRetrieveWithNameKeyAndTtl() throws Exception {
+    @Test // GH-2650
+    void defaultRetrieveWithNameAndKeyCallsRetrieveWithNameKeyAndTtl() throws Exception {
 
-		byte[] key = "TestKey".getBytes();
-		byte[] value = "TestValue".getBytes();
+        byte[] key = "TestKey".getBytes();
+        byte[] value = "TestValue".getBytes();
 
-		ValkeyCacheWriter cacheWriter = mock(ValkeyCacheWriter.class);
+        ValkeyCacheWriter cacheWriter = mock(ValkeyCacheWriter.class);
 
-		doCallRealMethod().when(cacheWriter).retrieve(anyString(), any());
-		doReturn(CompletableFuture.completedFuture(value)).when(cacheWriter).retrieve(anyString(), any(), any());
+        doCallRealMethod().when(cacheWriter).retrieve(anyString(), any());
+        doReturn(CompletableFuture.completedFuture(value))
+                .when(cacheWriter)
+                .retrieve(anyString(), any(), any());
 
-		assertThat(cacheWriter.retrieve("TestCacheName", key).thenApply(String::new).get())
-				.isEqualTo("TestValue");
+        assertThat(cacheWriter.retrieve("TestCacheName", key).thenApply(String::new).get())
+                .isEqualTo("TestValue");
 
-		verify(cacheWriter, times(1)).retrieve(eq("TestCacheName"), eq(key));
-		verify(cacheWriter, times(1)).retrieve(eq("TestCacheName"), eq(key), isNull());
-		verifyNoMoreInteractions(cacheWriter);
-	}
+        verify(cacheWriter, times(1)).retrieve(eq("TestCacheName"), eq(key));
+        verify(cacheWriter, times(1)).retrieve(eq("TestCacheName"), eq(key), isNull());
+        verifyNoMoreInteractions(cacheWriter);
+    }
 }

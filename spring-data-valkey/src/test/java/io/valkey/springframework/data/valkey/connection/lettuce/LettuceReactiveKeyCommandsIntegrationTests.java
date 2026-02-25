@@ -19,17 +19,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assumptions.*;
 
 import io.lettuce.core.SetArgs;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
-
-import java.nio.ByteBuffer;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-
 import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
@@ -44,6 +33,15 @@ import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.nio.ByteBuffer;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.test.StepVerifier;
 
 /**
  * Integration tests for {@link LettuceReactiveKeyCommands}.
@@ -54,462 +52,616 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  */
 public class LettuceReactiveKeyCommandsIntegrationTests extends LettuceReactiveCommandsTestSupport {
 
-	public LettuceReactiveKeyCommandsIntegrationTests(Fixture fixture) {
-		super(fixture);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void existsShouldReturnTrueForExistingKeys() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.keyCommands().exists(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(true).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void existsShouldReturnFalseForNonExistingKeys() {
-		connection.keyCommands().exists(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(false).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // GH-2883
-	void existsKeyReturnsKeyCount() {
-
-		nativeCommands.set(KEY_1, "1000");
-		nativeCommands.set(KEY_2, "2000");
-		nativeCommands.set(KEY_3, "3000");
-
-		connection.keyCommands().exists(List.of(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER)).as(StepVerifier::create)
-				.expectNext(3L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // GH-2883
-	void existsKeyReturnsZeroWhenKeysDoNotExist() {
-		connection.keyCommands().exists(List.of(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER)).as(StepVerifier::create)
-				.expectNext(0L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void typeShouldReturnTypeCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_2);
-		nativeCommands.sadd(KEY_2, VALUE_2);
-		nativeCommands.hset(KEY_3, KEY_1, VALUE_1);
-
-		connection.keyCommands().type(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(DataType.STRING).verifyComplete();
-		connection.keyCommands().type(KEY_2_BBUFFER).as(StepVerifier::create).expectNext(DataType.SET).verifyComplete();
-		connection.keyCommands().type(KEY_3_BBUFFER).as(StepVerifier::create).expectNext(DataType.HASH).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void keysShouldReturnCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_2);
-		nativeCommands.set(KEY_2, VALUE_2);
-		nativeCommands.set(KEY_3, VALUE_3);
-
-		nativeCommands.set(VALUE_1, KEY_1);
-		nativeCommands.set(VALUE_2, KEY_2);
-		nativeCommands.set(VALUE_3, KEY_3);
-
-		connection.keyCommands().keys(ByteBuffer.wrap("*".getBytes())).flatMapIterable(it -> it).as(StepVerifier::create) //
-				.expectNextCount(6) //
-				.verifyComplete();
-
-		connection.keyCommands().keys(ByteBuffer.wrap("key*".getBytes())).flatMapIterable(it -> it).as(StepVerifier::create) //
-				.expectNextCount(3).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-743
-	void scanShouldShouldIterateOverKeyspace() {
-
-		nativeCommands.set(KEY_1, VALUE_2);
-		nativeCommands.set(KEY_2, VALUE_2);
-		nativeCommands.set(KEY_3, VALUE_3);
-
-		nativeCommands.set(VALUE_1, KEY_1);
-		nativeCommands.set(VALUE_2, KEY_2);
-		nativeCommands.set(VALUE_3, KEY_3);
-
-		connection.keyCommands().scan(ScanOptions.scanOptions().count(2).build()).as(StepVerifier::create) //
-				.expectNextCount(6) //
-				.verifyComplete();
-
-		connection.keyCommands().scan(ScanOptions.scanOptions().count(2).match("key*").build()).as(StepVerifier::create) //
-				.expectNextCount(3) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // GH-2089
-	@EnabledOnValkeyVersion("6.0")
-	void scanWithType() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.lpush(KEY_2, VALUE_2);
-		nativeCommands.sadd(KEY_3, VALUE_3);
-
-		connection.keyCommands().scan(KeyScanOptions.scanOptions(DataType.STRING).build()) //
-				.as(StepVerifier::create) //
-				.expectNext(KEY_1_BBUFFER) //
-				.verifyComplete();
-
-		connection.keyCommands().scan(KeyScanOptions.scanOptions(DataType.SET).build()) //
-				.as(StepVerifier::create) //
-				.expectNext(KEY_3_BBUFFER) //
-				.verifyComplete();
-
-		connection.keyCommands().scan(KeyScanOptions.scanOptions(DataType.NONE).build()) //
-				.as(StepVerifier::create) //
-				.expectNextCount(3) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void randomKeyShouldReturnAnyKey() {
-
-		nativeCommands.set(KEY_1, VALUE_2);
-		nativeCommands.set(KEY_2, VALUE_2);
-		nativeCommands.set(KEY_3, VALUE_3);
-
-		connection.keyCommands().randomKey().as(StepVerifier::create).expectNextCount(1).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void randomKeyShouldReturnNullWhenNoKeyExists() {
-		connection.keyCommands().randomKey().as(StepVerifier::create).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void renameShouldAlterKeyNameCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_2);
-
-		connection.keyCommands().rename(KEY_1_BBUFFER, KEY_2_BBUFFER).as(StepVerifier::create).expectNext(true)
-				.verifyComplete();
-		assertThat(nativeCommands.exists(KEY_2)).isEqualTo(1L);
-		assertThat(nativeCommands.exists(KEY_1)).isZero();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void renameShouldThrowErrorWhenKeyDoesNotExist() {
-
-		connection.keyCommands().rename(KEY_1_BBUFFER, KEY_2_BBUFFER).as(StepVerifier::create)
-				.expectError(ValkeySystemException.class).verify();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void renameNXShouldAlterKeyNameCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_2);
-
-		connection.keyCommands().renameNX(KEY_1_BBUFFER, KEY_2_BBUFFER).as(StepVerifier::create).expectNext(true)
-				.verifyComplete();
-
-		assertThat(nativeCommands.exists(KEY_2)).isEqualTo(1L);
-		assertThat(nativeCommands.exists(KEY_1)).isZero();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void renameNXShouldNotAlterExistingKeyName() {
-
-		nativeCommands.set(KEY_1, VALUE_2);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		connection.keyCommands().renameNX(KEY_1_BBUFFER, KEY_2_BBUFFER).as(StepVerifier::create).expectNext(false)
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void shouldDeleteKeyCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.keyCommands().del(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void shouldDeleteKeysCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		Flux<NumericResponse<KeyCommand, Long>> result = connection.keyCommands()
-				.del(Flux.fromIterable(Arrays.asList(new KeyCommand(KEY_1_BBUFFER), new KeyCommand(KEY_2_BBUFFER))));
-
-		result.as(StepVerifier::create).expectNextCount(2).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void shouldDeleteKeysInBatchCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		Mono<Long> result = connection.keyCommands().mDel(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER));
-
-		result.as(StepVerifier::create).expectNext(2L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void shouldDeleteKeysInMultipleBatchesCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		Flux<List<ByteBuffer>> input = Flux.just(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER),
-				Collections.singletonList(KEY_1_BBUFFER));
-
-		Flux<Long> result = connection.keyCommands().mDel(input).map(NumericResponse::getOutput);
-
-		result.as(StepVerifier::create).expectNextCount(2).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-693
-	@EnabledOnCommand("UNLINK")
-	void shouldUnlinkKeyCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.keyCommands().unlink(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-693
-	@EnabledOnCommand("UNLINK")
-	void shouldUnlinkKeysCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		Flux<NumericResponse<KeyCommand, Long>> result = connection.keyCommands()
-				.unlink(Flux.fromIterable(Arrays.asList(new KeyCommand(KEY_1_BBUFFER), new KeyCommand(KEY_2_BBUFFER))));
-
-		result.as(StepVerifier::create).expectNextCount(2).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-693
-	@EnabledOnCommand("UNLINK")
-	void shouldUnlinkKeysInBatchCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		Mono<Long> result = connection.keyCommands().mUnlink(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER));
-
-		result.as(StepVerifier::create).expectNext(2L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-693
-	@EnabledOnCommand("UNLINK")
-	void shouldUnlinkKeysInMultipleBatchesCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		Flux<List<ByteBuffer>> input = Flux.just(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER),
-				Collections.singletonList(KEY_1_BBUFFER));
-
-		Flux<Long> result = connection.keyCommands().mUnlink(input).map(NumericResponse::getOutput);
-
-		result.as(StepVerifier::create).expectNextCount(2).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void shouldExpireKeysCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.keyCommands().expire(KEY_1_BBUFFER, Duration.ofSeconds(10)).as(StepVerifier::create) //
-				.expectNext(true) //
-				.expectComplete() //
-				.verify();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8L);
-	}
-
-	@ParameterizedValkeyTest // GH-3114
-	@EnabledOnCommand("SPUBLISH") // Valkey 7.0
-	void shouldExpireWithOptionsKeysCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.keyCommands()
-				.applyExpiration(
-						Mono.just(ReactiveKeyCommands.ExpireCommand.expire(KEY_1_BBUFFER, Expiration.from(Duration.ofSeconds(10)))
-								.withOptions(ExpirationOptions.builder().xx().build())))
-				.map(ReactiveValkeyConnection.BooleanResponse::getOutput).as(StepVerifier::create) //
-				.expectNext(false) //
-				.expectComplete() //
-				.verify();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isEqualTo(-1L);
-
-		connection.keyCommands()
-				.applyExpiration(
-						Mono.just(ReactiveKeyCommands.ExpireCommand.expire(KEY_1_BBUFFER, Expiration.from(Duration.ofSeconds(10)))
-								.withOptions(ExpirationOptions.builder().nx().build())))
-				.map(ReactiveValkeyConnection.BooleanResponse::getOutput).as(StepVerifier::create) //
-				.expectNext(true) //
-				.expectComplete() //
-				.verify();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8L);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-1031
-	void shouldPreciseExpireKeysCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.keyCommands().pExpire(KEY_1_BBUFFER, Duration.ofSeconds(10)).as(StepVerifier::create) //
-				.expectNext(true) //
-				.expectComplete() //
-				.verify();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8).isLessThan(11);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-1031
-	void shouldExpireAtKeysCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		Instant expireAt = Instant.now().plus(Duration.ofSeconds(10));
-
-		connection.keyCommands().expireAt(KEY_1_BBUFFER, expireAt).as(StepVerifier::create) //
-				.expectNext(true) //
-				.expectComplete() //
-				.verify();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8).isLessThan(11);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-1031
-	void shouldPreciseExpireAtKeysCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		Instant expireAt = Instant.now().plus(Duration.ofSeconds(10));
-
-		connection.keyCommands().pExpireAt(KEY_1_BBUFFER, expireAt).as(StepVerifier::create) //
-				.expectNext(true) //
-				.expectComplete() //
-				.verify();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8).isLessThan(11);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void shouldReportTimeToLiveCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1, SetArgs.Builder.ex(10));
-
-		connection.keyCommands().ttl(KEY_1_BBUFFER).as(StepVerifier::create) //
-				.expectNextCount(1) //
-				.expectComplete() //
-				.verify();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8L);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void shouldReportPreciseTimeToLiveCorrectly() {
-
-		nativeCommands.set(KEY_1, VALUE_1, SetArgs.Builder.ex(10));
-
-		connection.keyCommands().pTtl(KEY_1_BBUFFER).as(StepVerifier::create) //
-				.expectNextMatches(actual -> {
-					assertThat(actual).isGreaterThan(8000L);
-					return true;
-				}) //
-				.expectComplete() //
-				.verify();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void shouldPersist() {
-
-		nativeCommands.set(KEY_1, VALUE_1, SetArgs.Builder.ex(10));
-
-		connection.keyCommands().persist(KEY_1_BBUFFER).as(StepVerifier::create) //
-				.expectNext(true) //
-				.expectComplete() //
-				.verify();
-
-		assertThat(nativeCommands.ttl(KEY_1)).isEqualTo(-1L);
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void shouldMoveToDatabase() {
-
-		assumeThat(connection).isNotInstanceOf(LettuceReactiveValkeyClusterConnection.class);
-
-		nativeCommands.set(KEY_1, VALUE_1);
-
-		connection.keyCommands().move(KEY_1_BBUFFER, 5).as(StepVerifier::create) //
-				.expectNext(true) //
-				.expectComplete() //
-				.verify();
-		assertThat(nativeCommands.exists(KEY_1)).isZero();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-694
-	void touchReturnsNrOfKeysTouched() {
-
-		nativeCommands.set(KEY_1, VALUE_1);
-		nativeCommands.set(KEY_2, VALUE_2);
-
-		connection.keyCommands().touch(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER)).as(StepVerifier::create)
-				.expectNext(2L) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-694
-	void touchReturnsZeroIfNoKeysTouched() {
-
-		connection.keyCommands().touch(Collections.singletonList(KEY_1_BBUFFER)).as(StepVerifier::create) //
-				.expectNext(0L) //
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-716
-	void encodingReturnsCorrectly() {
-
-		nativeCommands.set(KEY_1, "1000");
-
-		connection.keyCommands().encodingOf(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(ValkeyValueEncoding.INT)
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-716
-	void encodingReturnsVacantWhenKeyDoesNotExist() {
-
-		connection.keyCommands().encodingOf(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(ValkeyValueEncoding.VACANT)
-				.verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-716
-	void idletimeReturnsCorrectly() {
-
-		nativeCommands.set(KEY_1, "1000");
-		nativeCommands.get(KEY_1);
-
-		connection.keyCommands().idletime(KEY_1_BBUFFER).as(StepVerifier::create).assertNext(actual -> {
-			assertThat(actual).isLessThan(Duration.ofSeconds(5));
-		}).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-716
-	void idldetimeReturnsNullWhenKeyDoesNotExist() {
-		connection.keyCommands().idletime(KEY_1_BBUFFER).as(StepVerifier::create).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-716
-	void refcountReturnsCorrectly() {
-
-		nativeCommands.lpush(KEY_1, "1000");
-
-		connection.keyCommands().refcount(KEY_1_BBUFFER).as(StepVerifier::create).expectNext(1L).verifyComplete();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-716
-	void refcountReturnsNullWhenKeyDoesNotExist() {
-		connection.keyCommands().refcount(KEY_1_BBUFFER).as(StepVerifier::create).verifyComplete();
-	}
+    public LettuceReactiveKeyCommandsIntegrationTests(Fixture fixture) {
+        super(fixture);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void existsShouldReturnTrueForExistingKeys() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .keyCommands()
+                .exists(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void existsShouldReturnFalseForNonExistingKeys() {
+        connection
+                .keyCommands()
+                .exists(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // GH-2883
+    void existsKeyReturnsKeyCount() {
+
+        nativeCommands.set(KEY_1, "1000");
+        nativeCommands.set(KEY_2, "2000");
+        nativeCommands.set(KEY_3, "3000");
+
+        connection
+                .keyCommands()
+                .exists(List.of(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER))
+                .as(StepVerifier::create)
+                .expectNext(3L)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // GH-2883
+    void existsKeyReturnsZeroWhenKeysDoNotExist() {
+        connection
+                .keyCommands()
+                .exists(List.of(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER))
+                .as(StepVerifier::create)
+                .expectNext(0L)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void typeShouldReturnTypeCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_2);
+        nativeCommands.sadd(KEY_2, VALUE_2);
+        nativeCommands.hset(KEY_3, KEY_1, VALUE_1);
+
+        connection
+                .keyCommands()
+                .type(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(DataType.STRING)
+                .verifyComplete();
+        connection
+                .keyCommands()
+                .type(KEY_2_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(DataType.SET)
+                .verifyComplete();
+        connection
+                .keyCommands()
+                .type(KEY_3_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(DataType.HASH)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void keysShouldReturnCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_2);
+        nativeCommands.set(KEY_2, VALUE_2);
+        nativeCommands.set(KEY_3, VALUE_3);
+
+        nativeCommands.set(VALUE_1, KEY_1);
+        nativeCommands.set(VALUE_2, KEY_2);
+        nativeCommands.set(VALUE_3, KEY_3);
+
+        connection
+                .keyCommands()
+                .keys(ByteBuffer.wrap("*".getBytes()))
+                .flatMapIterable(it -> it)
+                .as(StepVerifier::create) //
+                .expectNextCount(6) //
+                .verifyComplete();
+
+        connection
+                .keyCommands()
+                .keys(ByteBuffer.wrap("key*".getBytes()))
+                .flatMapIterable(it -> it)
+                .as(StepVerifier::create) //
+                .expectNextCount(3)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-743
+    void scanShouldShouldIterateOverKeyspace() {
+
+        nativeCommands.set(KEY_1, VALUE_2);
+        nativeCommands.set(KEY_2, VALUE_2);
+        nativeCommands.set(KEY_3, VALUE_3);
+
+        nativeCommands.set(VALUE_1, KEY_1);
+        nativeCommands.set(VALUE_2, KEY_2);
+        nativeCommands.set(VALUE_3, KEY_3);
+
+        connection
+                .keyCommands()
+                .scan(ScanOptions.scanOptions().count(2).build())
+                .as(StepVerifier::create) //
+                .expectNextCount(6) //
+                .verifyComplete();
+
+        connection
+                .keyCommands()
+                .scan(ScanOptions.scanOptions().count(2).match("key*").build())
+                .as(StepVerifier::create) //
+                .expectNextCount(3) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // GH-2089
+    @EnabledOnValkeyVersion("6.0")
+    void scanWithType() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.lpush(KEY_2, VALUE_2);
+        nativeCommands.sadd(KEY_3, VALUE_3);
+
+        connection
+                .keyCommands()
+                .scan(KeyScanOptions.scanOptions(DataType.STRING).build()) //
+                .as(StepVerifier::create) //
+                .expectNext(KEY_1_BBUFFER) //
+                .verifyComplete();
+
+        connection
+                .keyCommands()
+                .scan(KeyScanOptions.scanOptions(DataType.SET).build()) //
+                .as(StepVerifier::create) //
+                .expectNext(KEY_3_BBUFFER) //
+                .verifyComplete();
+
+        connection
+                .keyCommands()
+                .scan(KeyScanOptions.scanOptions(DataType.NONE).build()) //
+                .as(StepVerifier::create) //
+                .expectNextCount(3) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void randomKeyShouldReturnAnyKey() {
+
+        nativeCommands.set(KEY_1, VALUE_2);
+        nativeCommands.set(KEY_2, VALUE_2);
+        nativeCommands.set(KEY_3, VALUE_3);
+
+        connection
+                .keyCommands()
+                .randomKey()
+                .as(StepVerifier::create)
+                .expectNextCount(1)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void randomKeyShouldReturnNullWhenNoKeyExists() {
+        connection.keyCommands().randomKey().as(StepVerifier::create).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void renameShouldAlterKeyNameCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_2);
+
+        connection
+                .keyCommands()
+                .rename(KEY_1_BBUFFER, KEY_2_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+        assertThat(nativeCommands.exists(KEY_2)).isEqualTo(1L);
+        assertThat(nativeCommands.exists(KEY_1)).isZero();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void renameShouldThrowErrorWhenKeyDoesNotExist() {
+
+        connection
+                .keyCommands()
+                .rename(KEY_1_BBUFFER, KEY_2_BBUFFER)
+                .as(StepVerifier::create)
+                .expectError(ValkeySystemException.class)
+                .verify();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void renameNXShouldAlterKeyNameCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_2);
+
+        connection
+                .keyCommands()
+                .renameNX(KEY_1_BBUFFER, KEY_2_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+
+        assertThat(nativeCommands.exists(KEY_2)).isEqualTo(1L);
+        assertThat(nativeCommands.exists(KEY_1)).isZero();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void renameNXShouldNotAlterExistingKeyName() {
+
+        nativeCommands.set(KEY_1, VALUE_2);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        connection
+                .keyCommands()
+                .renameNX(KEY_1_BBUFFER, KEY_2_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(false)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void shouldDeleteKeyCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .keyCommands()
+                .del(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void shouldDeleteKeysCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        Flux<NumericResponse<KeyCommand, Long>> result =
+                connection
+                        .keyCommands()
+                        .del(
+                                Flux.fromIterable(
+                                        Arrays.asList(new KeyCommand(KEY_1_BBUFFER), new KeyCommand(KEY_2_BBUFFER))));
+
+        result.as(StepVerifier::create).expectNextCount(2).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void shouldDeleteKeysInBatchCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        Mono<Long> result = connection.keyCommands().mDel(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER));
+
+        result.as(StepVerifier::create).expectNext(2L).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void shouldDeleteKeysInMultipleBatchesCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        Flux<List<ByteBuffer>> input =
+                Flux.just(
+                        Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), Collections.singletonList(KEY_1_BBUFFER));
+
+        Flux<Long> result = connection.keyCommands().mDel(input).map(NumericResponse::getOutput);
+
+        result.as(StepVerifier::create).expectNextCount(2).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-693
+    @EnabledOnCommand("UNLINK")
+    void shouldUnlinkKeyCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .keyCommands()
+                .unlink(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-693
+    @EnabledOnCommand("UNLINK")
+    void shouldUnlinkKeysCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        Flux<NumericResponse<KeyCommand, Long>> result =
+                connection
+                        .keyCommands()
+                        .unlink(
+                                Flux.fromIterable(
+                                        Arrays.asList(new KeyCommand(KEY_1_BBUFFER), new KeyCommand(KEY_2_BBUFFER))));
+
+        result.as(StepVerifier::create).expectNextCount(2).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-693
+    @EnabledOnCommand("UNLINK")
+    void shouldUnlinkKeysInBatchCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        Mono<Long> result =
+                connection.keyCommands().mUnlink(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER));
+
+        result.as(StepVerifier::create).expectNext(2L).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-693
+    @EnabledOnCommand("UNLINK")
+    void shouldUnlinkKeysInMultipleBatchesCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        Flux<List<ByteBuffer>> input =
+                Flux.just(
+                        Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), Collections.singletonList(KEY_1_BBUFFER));
+
+        Flux<Long> result = connection.keyCommands().mUnlink(input).map(NumericResponse::getOutput);
+
+        result.as(StepVerifier::create).expectNextCount(2).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void shouldExpireKeysCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .keyCommands()
+                .expire(KEY_1_BBUFFER, Duration.ofSeconds(10))
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .expectComplete() //
+                .verify();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8L);
+    }
+
+    @ParameterizedValkeyTest // GH-3114
+    @EnabledOnCommand("SPUBLISH") // Valkey 7.0
+    void shouldExpireWithOptionsKeysCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .keyCommands()
+                .applyExpiration(
+                        Mono.just(
+                                ReactiveKeyCommands.ExpireCommand.expire(
+                                                KEY_1_BBUFFER, Expiration.from(Duration.ofSeconds(10)))
+                                        .withOptions(ExpirationOptions.builder().xx().build())))
+                .map(ReactiveValkeyConnection.BooleanResponse::getOutput)
+                .as(StepVerifier::create) //
+                .expectNext(false) //
+                .expectComplete() //
+                .verify();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isEqualTo(-1L);
+
+        connection
+                .keyCommands()
+                .applyExpiration(
+                        Mono.just(
+                                ReactiveKeyCommands.ExpireCommand.expire(
+                                                KEY_1_BBUFFER, Expiration.from(Duration.ofSeconds(10)))
+                                        .withOptions(ExpirationOptions.builder().nx().build())))
+                .map(ReactiveValkeyConnection.BooleanResponse::getOutput)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .expectComplete() //
+                .verify();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-1031
+    void shouldPreciseExpireKeysCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .keyCommands()
+                .pExpire(KEY_1_BBUFFER, Duration.ofSeconds(10))
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .expectComplete() //
+                .verify();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8).isLessThan(11);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-1031
+    void shouldExpireAtKeysCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        Instant expireAt = Instant.now().plus(Duration.ofSeconds(10));
+
+        connection
+                .keyCommands()
+                .expireAt(KEY_1_BBUFFER, expireAt)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .expectComplete() //
+                .verify();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8).isLessThan(11);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602, DATAREDIS-1031
+    void shouldPreciseExpireAtKeysCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        Instant expireAt = Instant.now().plus(Duration.ofSeconds(10));
+
+        connection
+                .keyCommands()
+                .pExpireAt(KEY_1_BBUFFER, expireAt)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .expectComplete() //
+                .verify();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8).isLessThan(11);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void shouldReportTimeToLiveCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1, SetArgs.Builder.ex(10));
+
+        connection
+                .keyCommands()
+                .ttl(KEY_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNextCount(1) //
+                .expectComplete() //
+                .verify();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isGreaterThan(8L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void shouldReportPreciseTimeToLiveCorrectly() {
+
+        nativeCommands.set(KEY_1, VALUE_1, SetArgs.Builder.ex(10));
+
+        connection
+                .keyCommands()
+                .pTtl(KEY_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNextMatches(
+                        actual -> {
+                            assertThat(actual).isGreaterThan(8000L);
+                            return true;
+                        }) //
+                .expectComplete() //
+                .verify();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void shouldPersist() {
+
+        nativeCommands.set(KEY_1, VALUE_1, SetArgs.Builder.ex(10));
+
+        connection
+                .keyCommands()
+                .persist(KEY_1_BBUFFER)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .expectComplete() //
+                .verify();
+
+        assertThat(nativeCommands.ttl(KEY_1)).isEqualTo(-1L);
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void shouldMoveToDatabase() {
+
+        assumeThat(connection).isNotInstanceOf(LettuceReactiveValkeyClusterConnection.class);
+
+        nativeCommands.set(KEY_1, VALUE_1);
+
+        connection
+                .keyCommands()
+                .move(KEY_1_BBUFFER, 5)
+                .as(StepVerifier::create) //
+                .expectNext(true) //
+                .expectComplete() //
+                .verify();
+        assertThat(nativeCommands.exists(KEY_1)).isZero();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-694
+    void touchReturnsNrOfKeysTouched() {
+
+        nativeCommands.set(KEY_1, VALUE_1);
+        nativeCommands.set(KEY_2, VALUE_2);
+
+        connection
+                .keyCommands()
+                .touch(Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER, KEY_3_BBUFFER))
+                .as(StepVerifier::create)
+                .expectNext(2L) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-694
+    void touchReturnsZeroIfNoKeysTouched() {
+
+        connection
+                .keyCommands()
+                .touch(Collections.singletonList(KEY_1_BBUFFER))
+                .as(StepVerifier::create) //
+                .expectNext(0L) //
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-716
+    void encodingReturnsCorrectly() {
+
+        nativeCommands.set(KEY_1, "1000");
+
+        connection
+                .keyCommands()
+                .encodingOf(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(ValkeyValueEncoding.INT)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-716
+    void encodingReturnsVacantWhenKeyDoesNotExist() {
+
+        connection
+                .keyCommands()
+                .encodingOf(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(ValkeyValueEncoding.VACANT)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-716
+    void idletimeReturnsCorrectly() {
+
+        nativeCommands.set(KEY_1, "1000");
+        nativeCommands.get(KEY_1);
+
+        connection
+                .keyCommands()
+                .idletime(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .assertNext(
+                        actual -> {
+                            assertThat(actual).isLessThan(Duration.ofSeconds(5));
+                        })
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-716
+    void idldetimeReturnsNullWhenKeyDoesNotExist() {
+        connection.keyCommands().idletime(KEY_1_BBUFFER).as(StepVerifier::create).verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-716
+    void refcountReturnsCorrectly() {
+
+        nativeCommands.lpush(KEY_1, "1000");
+
+        connection
+                .keyCommands()
+                .refcount(KEY_1_BBUFFER)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+    }
+
+    @ParameterizedValkeyTest // DATAREDIS-716
+    void refcountReturnsNullWhenKeyDoesNotExist() {
+        connection.keyCommands().refcount(KEY_1_BBUFFER).as(StepVerifier::create).verifyComplete();
+    }
 }

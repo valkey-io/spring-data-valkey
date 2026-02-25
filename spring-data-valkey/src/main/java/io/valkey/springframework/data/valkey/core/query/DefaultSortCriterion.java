@@ -15,11 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.core.query;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import io.valkey.springframework.data.valkey.connection.SortParameters.Order;
 import io.valkey.springframework.data.valkey.connection.SortParameters.Range;
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.lang.Nullable;
 
 /**
@@ -30,51 +29,51 @@ import org.springframework.lang.Nullable;
  */
 class DefaultSortCriterion<K> implements SortCriterion<K> {
 
-	private final K key;
-	private @Nullable String by;
-	private final List<String> getKeys = new ArrayList<>(4);
+    private final K key;
+    private @Nullable String by;
+    private final List<String> getKeys = new ArrayList<>(4);
 
-	private @Nullable Range limit;
-	private @Nullable Order order;
-	private @Nullable Boolean alpha;
+    private @Nullable Range limit;
+    private @Nullable Order order;
+    private @Nullable Boolean alpha;
 
-	DefaultSortCriterion(K key) {
-		this.key = key;
-	}
+    DefaultSortCriterion(K key) {
+        this.key = key;
+    }
 
-	public SortCriterion<K> alphabetical(boolean alpha) {
-		this.alpha = alpha;
-		return this;
-	}
+    public SortCriterion<K> alphabetical(boolean alpha) {
+        this.alpha = alpha;
+        return this;
+    }
 
-	public SortQuery<K> build() {
-		return new DefaultSortQuery<>(key, order, alpha, limit, by, getKeys);
-	}
+    public SortQuery<K> build() {
+        return new DefaultSortQuery<>(key, order, alpha, limit, by, getKeys);
+    }
 
-	public SortCriterion<K> limit(long offset, long count) {
-		this.limit = new Range(offset, count);
-		return this;
-	}
+    public SortCriterion<K> limit(long offset, long count) {
+        this.limit = new Range(offset, count);
+        return this;
+    }
 
-	// TODO: check if we can use differnt range from SD commons here??
+    // TODO: check if we can use differnt range from SD commons here??
 
-	public SortCriterion<K> limit(Range range) {
-		this.limit = range;
-		return this;
-	}
+    public SortCriterion<K> limit(Range range) {
+        this.limit = range;
+        return this;
+    }
 
-	public SortCriterion<K> order(Order order) {
-		this.order = order;
-		return this;
-	}
+    public SortCriterion<K> order(Order order) {
+        this.order = order;
+        return this;
+    }
 
-	public SortCriterion<K> get(String getPattern) {
-		this.getKeys.add(getPattern);
-		return this;
-	}
+    public SortCriterion<K> get(String getPattern) {
+        this.getKeys.add(getPattern);
+        return this;
+    }
 
-	SortCriterion<K> addBy(String keyPattern) {
-		this.by = keyPattern;
-		return this;
-	}
+    SortCriterion<K> addBy(String keyPattern) {
+        this.by = keyPattern;
+        return this;
+    }
 }

@@ -15,59 +15,61 @@
  */
 package io.valkey.springframework.data.valkey.core.index;
 
-import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
+import org.springframework.data.geo.Point;
 import org.springframework.lang.Nullable;
 
 /**
  * @author Christoph Strobl
  * @since 1.8
  */
-public class GeoIndexDefinition extends ValkeyIndexDefinition implements PathBasedValkeyIndexDefinition {
+public class GeoIndexDefinition extends ValkeyIndexDefinition
+        implements PathBasedValkeyIndexDefinition {
 
-	/**
-	 * Creates new {@link GeoIndexDefinition}.
-	 *
-	 * @param keyspace must not be {@literal null}.
-	 * @param path
-	 */
-	public GeoIndexDefinition(String keyspace, String path) {
-		this(keyspace, path, path);
-	}
+    /**
+     * Creates new {@link GeoIndexDefinition}.
+     *
+     * @param keyspace must not be {@literal null}.
+     * @param path
+     */
+    public GeoIndexDefinition(String keyspace, String path) {
+        this(keyspace, path, path);
+    }
 
-	/**
-	 * Creates new {@link GeoIndexDefinition}.
-	 *
-	 * @param keyspace must not be {@literal null}.
-	 * @param path
-	 * @param name must not be {@literal null}.
-	 */
-	public GeoIndexDefinition(String keyspace, String path, String name) {
-		super(keyspace, path, name);
-		addCondition(new PathCondition(path));
-		setValueTransformer(new PointValueTransformer());
-	}
+    /**
+     * Creates new {@link GeoIndexDefinition}.
+     *
+     * @param keyspace must not be {@literal null}.
+     * @param path
+     * @param name must not be {@literal null}.
+     */
+    public GeoIndexDefinition(String keyspace, String path, String name) {
+        super(keyspace, path, name);
+        addCondition(new PathCondition(path));
+        setValueTransformer(new PointValueTransformer());
+    }
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.8
-	 */
-	static class PointValueTransformer implements IndexValueTransformer {
+    /**
+     * @author Christoph Strobl
+     * @since 1.8
+     */
+    static class PointValueTransformer implements IndexValueTransformer {
 
-		@Override
-		public Point convert(@Nullable Object source) {
+        @Override
+        public Point convert(@Nullable Object source) {
 
-			if (source == null || source instanceof Point) {
-				return (Point) source;
-			}
+            if (source == null || source instanceof Point) {
+                return (Point) source;
+            }
 
-			if (source instanceof GeoLocation<?>) {
-				return ((GeoLocation<?>) source).getPoint();
-			}
+            if (source instanceof GeoLocation<?>) {
+                return ((GeoLocation<?>) source).getPoint();
+            }
 
-			throw new IllegalArgumentException(
-					("Cannot convert %s to %s; GeoIndexed property needs to be of type Point" + " or GeoLocation")
-							.formatted(source.getClass(), Point.class));
-		}
-	}
+            throw new IllegalArgumentException(
+                    ("Cannot convert %s to %s; GeoIndexed property needs to be of type Point"
+                                    + " or GeoLocation")
+                            .formatted(source.getClass(), Point.class));
+        }
+    }
 }

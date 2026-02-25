@@ -24,25 +24,24 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
  * @author Thomas Darimont
  */
 public enum ValkeyDriver {
+    JEDIS {
+        @Override
+        public boolean matches(ValkeyConnectionFactory connectionFactory) {
+            return ConnectionUtils.isJedis(connectionFactory);
+        }
+    },
 
-	JEDIS {
-		@Override
-		public boolean matches(ValkeyConnectionFactory connectionFactory) {
-			return ConnectionUtils.isJedis(connectionFactory);
-		}
-	},
+    LETTUCE {
+        @Override
+        public boolean matches(ValkeyConnectionFactory connectionFactory) {
+            return ConnectionUtils.isLettuce(connectionFactory);
+        }
+    };
 
-	LETTUCE {
-		@Override
-		public boolean matches(ValkeyConnectionFactory connectionFactory) {
-			return ConnectionUtils.isLettuce(connectionFactory);
-		}
-
-	};
-
-	/**
-	 * @param connectionFactory
-	 * @return true of the given {@link ValkeyConnectionFactory} is supported by the current valkey driver.
-	 */
-	public abstract boolean matches(ValkeyConnectionFactory connectionFactory);
+    /**
+     * @param connectionFactory
+     * @return true of the given {@link ValkeyConnectionFactory} is supported by the current valkey
+     *     driver.
+     */
+    public abstract boolean matches(ValkeyConnectionFactory connectionFactory);
 }

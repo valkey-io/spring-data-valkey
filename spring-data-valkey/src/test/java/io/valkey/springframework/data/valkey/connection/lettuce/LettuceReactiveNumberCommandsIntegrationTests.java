@@ -23,46 +23,50 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 /**
  * @author Christoph Strobl
  */
-public class LettuceReactiveNumberCommandsIntegrationTests extends LettuceReactiveCommandsTestSupport {
+public class LettuceReactiveNumberCommandsIntegrationTests
+        extends LettuceReactiveCommandsTestSupport {
 
-	public LettuceReactiveNumberCommandsIntegrationTests(Fixture fixture) {
-		super(fixture);
-	}
+    public LettuceReactiveNumberCommandsIntegrationTests(Fixture fixture) {
+        super(fixture);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void incrByDoubleShouldIncreaseValueCorrectly() {
-		assertThat(connection.numberCommands().incrBy(KEY_1_BBUFFER, 1.5D).block()).isCloseTo(1.5D, offset(0D));
-	}
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void incrByDoubleShouldIncreaseValueCorrectly() {
+        assertThat(connection.numberCommands().incrBy(KEY_1_BBUFFER, 1.5D).block())
+                .isCloseTo(1.5D, offset(0D));
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void incrByIntegerShouldIncreaseValueCorrectly() {
-		assertThat(connection.numberCommands().incrBy(KEY_1_BBUFFER, 3).block()).isEqualTo(3);
-	}
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void incrByIntegerShouldIncreaseValueCorrectly() {
+        assertThat(connection.numberCommands().incrBy(KEY_1_BBUFFER, 3).block()).isEqualTo(3);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void decrByDoubleShouldDecreaseValueCorrectly() {
-		assertThat(connection.numberCommands().decrBy(KEY_1_BBUFFER, 1.5D).block()).isCloseTo(-1.5D, offset(0D));
-	}
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void decrByDoubleShouldDecreaseValueCorrectly() {
+        assertThat(connection.numberCommands().decrBy(KEY_1_BBUFFER, 1.5D).block())
+                .isCloseTo(-1.5D, offset(0D));
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void decrByIntegerShouldDecreaseValueCorrectly() {
-		assertThat(connection.numberCommands().decrBy(KEY_1_BBUFFER, 3).block()).isEqualTo(-3);
-	}
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void decrByIntegerShouldDecreaseValueCorrectly() {
+        assertThat(connection.numberCommands().decrBy(KEY_1_BBUFFER, 3).block()).isEqualTo(-3);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void hIncrByDoubleShouldIncreaseValueCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void hIncrByDoubleShouldIncreaseValueCorrectly() {
 
-		nativeCommands.hset(KEY_1, KEY_1, "2");
+        nativeCommands.hset(KEY_1, KEY_1, "2");
 
-		assertThat(connection.numberCommands().hIncrBy(KEY_1_BBUFFER, KEY_1_BBUFFER, 1.5D).block()).isCloseTo(3.5D,
-				offset(0D));
-	}
+        assertThat(connection.numberCommands().hIncrBy(KEY_1_BBUFFER, KEY_1_BBUFFER, 1.5D).block())
+                .isCloseTo(3.5D, offset(0D));
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-525
-	void hIncrByIntegerShouldIncreaseValueCorrectly() {
+    @ParameterizedValkeyTest // DATAREDIS-525
+    void hIncrByIntegerShouldIncreaseValueCorrectly() {
 
-		nativeCommands.hset(KEY_1, KEY_1, "2");
+        nativeCommands.hset(KEY_1, KEY_1, "2");
 
-		assertThat(connection.numberCommands().hIncrBy(KEY_1_BBUFFER, KEY_1_BBUFFER, 3).block()).isEqualTo(5);
-	}
+        assertThat(connection.numberCommands().hIncrBy(KEY_1_BBUFFER, KEY_1_BBUFFER, 3).block())
+                .isEqualTo(5);
+    }
 }

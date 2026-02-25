@@ -16,18 +16,16 @@
 
 package io.valkey.springframework.data.valkey.repository.cdi;
 
-import jakarta.enterprise.context.spi.CreationalContext;
-import jakarta.enterprise.inject.spi.Bean;
-import jakarta.enterprise.inject.spi.BeanManager;
-
-import java.lang.annotation.Annotation;
-import java.util.Set;
-
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.data.keyvalue.core.KeyValueOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
 import io.valkey.springframework.data.valkey.core.ValkeyKeyValueTemplate;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
+import jakarta.enterprise.context.spi.CreationalContext;
+import jakarta.enterprise.inject.spi.Bean;
+import jakarta.enterprise.inject.spi.BeanManager;
+import java.lang.annotation.Annotation;
+import java.util.Set;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.data.keyvalue.core.KeyValueOperations;
 import org.springframework.util.Assert;
 
 /**
@@ -38,47 +36,50 @@ import org.springframework.util.Assert;
  */
 public class ValkeyKeyValueTemplateBean extends CdiBean<KeyValueOperations> {
 
-	private final Bean<ValkeyKeyValueAdapter> keyValueAdapter;
+    private final Bean<ValkeyKeyValueAdapter> keyValueAdapter;
 
-	/**
-	 * Creates a new {@link ValkeyKeyValueTemplateBean}.
-	 *
-	 * @param keyValueAdapter must not be {@literal null}.
-	 * @param qualifiers must not be {@literal null}.
-	 * @param beanManager must not be {@literal null}.
-	 */
-	public ValkeyKeyValueTemplateBean(Bean<ValkeyKeyValueAdapter> keyValueAdapter, Set<Annotation> qualifiers,
-			BeanManager beanManager) {
+    /**
+     * Creates a new {@link ValkeyKeyValueTemplateBean}.
+     *
+     * @param keyValueAdapter must not be {@literal null}.
+     * @param qualifiers must not be {@literal null}.
+     * @param beanManager must not be {@literal null}.
+     */
+    public ValkeyKeyValueTemplateBean(
+            Bean<ValkeyKeyValueAdapter> keyValueAdapter,
+            Set<Annotation> qualifiers,
+            BeanManager beanManager) {
 
-		super(qualifiers, KeyValueOperations.class, beanManager);
-		Assert.notNull(keyValueAdapter, "KeyValueAdapter bean must not be null");
-		this.keyValueAdapter = keyValueAdapter;
-	}
+        super(qualifiers, KeyValueOperations.class, beanManager);
+        Assert.notNull(keyValueAdapter, "KeyValueAdapter bean must not be null");
+        this.keyValueAdapter = keyValueAdapter;
+    }
 
-	@Override
-	public KeyValueOperations create(CreationalContext<KeyValueOperations> creationalContext) {
+    @Override
+    public KeyValueOperations create(CreationalContext<KeyValueOperations> creationalContext) {
 
-		ValkeyKeyValueAdapter keyValueAdapter = getDependencyInstance(this.keyValueAdapter, ValkeyKeyValueAdapter.class);
+        ValkeyKeyValueAdapter keyValueAdapter =
+                getDependencyInstance(this.keyValueAdapter, ValkeyKeyValueAdapter.class);
 
-		ValkeyMappingContext valkeyMappingContext = new ValkeyMappingContext();
-		valkeyMappingContext.afterPropertiesSet();
+        ValkeyMappingContext valkeyMappingContext = new ValkeyMappingContext();
+        valkeyMappingContext.afterPropertiesSet();
 
-		return new ValkeyKeyValueTemplate(keyValueAdapter, valkeyMappingContext);
-	}
+        return new ValkeyKeyValueTemplate(keyValueAdapter, valkeyMappingContext);
+    }
 
-	@Override
-	public void destroy(KeyValueOperations instance, CreationalContext<KeyValueOperations> creationalContext) {
+    @Override
+    public void destroy(
+            KeyValueOperations instance, CreationalContext<KeyValueOperations> creationalContext) {
 
-		if (instance.getMappingContext() instanceof DisposableBean) {
-			try {
-				((DisposableBean) instance.getMappingContext()).destroy();
-				instance.destroy();
-			} catch (Exception ex) {
-				throw new IllegalStateException(ex);
-			}
-		}
+        if (instance.getMappingContext() instanceof DisposableBean) {
+            try {
+                ((DisposableBean) instance.getMappingContext()).destroy();
+                instance.destroy();
+            } catch (Exception ex) {
+                throw new IllegalStateException(ex);
+            }
+        }
 
-		super.destroy(instance, creationalContext);
-	}
-
+        super.destroy(instance, creationalContext);
+    }
 }

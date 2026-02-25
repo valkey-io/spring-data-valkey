@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.api.async.RedisHLLAsyncCommands;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyHyperLogLogCommands;
 import org.springframework.util.Assert;
 
@@ -27,37 +26,37 @@ import org.springframework.util.Assert;
  */
 class LettuceHyperLogLogCommands implements ValkeyHyperLogLogCommands {
 
-	private final LettuceConnection connection;
+    private final LettuceConnection connection;
 
-	LettuceHyperLogLogCommands(LettuceConnection connection) {
-		this.connection = connection;
-	}
+    LettuceHyperLogLogCommands(LettuceConnection connection) {
+        this.connection = connection;
+    }
 
-	@Override
-	public Long pfAdd(byte[] key, byte[]... values) {
+    @Override
+    public Long pfAdd(byte[] key, byte[]... values) {
 
-		Assert.notEmpty(values, "PFADD requires at least one non 'null' value.");
-		Assert.noNullElements(values, "Values for PFADD must not contain 'null'");
+        Assert.notEmpty(values, "PFADD requires at least one non 'null' value.");
+        Assert.noNullElements(values, "Values for PFADD must not contain 'null'");
 
-		return connection.invoke().just(RedisHLLAsyncCommands::pfadd, key, values);
-	}
+        return connection.invoke().just(RedisHLLAsyncCommands::pfadd, key, values);
+    }
 
-	@Override
-	public Long pfCount(byte[]... keys) {
+    @Override
+    public Long pfCount(byte[]... keys) {
 
-		Assert.notEmpty(keys, "PFCOUNT requires at least one non 'null' key.");
-		Assert.noNullElements(keys, "Keys for PFCOUNT must not contain 'null'");
+        Assert.notEmpty(keys, "PFCOUNT requires at least one non 'null' key.");
+        Assert.noNullElements(keys, "Keys for PFCOUNT must not contain 'null'");
 
-		return connection.invoke().just(RedisHLLAsyncCommands::pfcount, keys);
-	}
+        return connection.invoke().just(RedisHLLAsyncCommands::pfcount, keys);
+    }
 
-	@Override
-	public void pfMerge(byte[] destinationKey, byte[]... sourceKeys) {
+    @Override
+    public void pfMerge(byte[] destinationKey, byte[]... sourceKeys) {
 
-		Assert.notNull(destinationKey, "Destination key must not be null");
-		Assert.notNull(sourceKeys, "Source keys must not be null");
-		Assert.noNullElements(sourceKeys, "Keys for PFMERGE must not contain 'null'");
+        Assert.notNull(destinationKey, "Destination key must not be null");
+        Assert.notNull(sourceKeys, "Source keys must not be null");
+        Assert.noNullElements(sourceKeys, "Keys for PFMERGE must not contain 'null'");
 
-		connection.invoke().just(RedisHLLAsyncCommands::pfmerge, destinationKey, sourceKeys);
-	}
+        connection.invoke().just(RedisHLLAsyncCommands::pfmerge, destinationKey, sourceKeys);
+    }
 }

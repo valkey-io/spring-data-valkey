@@ -16,34 +16,32 @@
 package io.valkey.springframework.data.valkey.examples;
 
 // tag::file[]
-import reactor.core.publisher.Mono;
-
-import java.time.Duration;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ReactiveValkeyTemplate;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
+import java.time.Duration;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import reactor.core.publisher.Mono;
 
 public class ReactiveValkeyApplication {
 
-	private static final Log LOG = LogFactory.getLog(ReactiveValkeyApplication.class);
+    private static final Log LOG = LogFactory.getLog(ReactiveValkeyApplication.class);
 
-	public static void main(String[] args) {
+    public static void main(String[] args) {
 
-		LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory();
-		connectionFactory.afterPropertiesSet();
+        LettuceConnectionFactory connectionFactory = new LettuceConnectionFactory();
+        connectionFactory.afterPropertiesSet();
 
-		ReactiveValkeyTemplate<String, String> template = new ReactiveValkeyTemplate<>(connectionFactory,
-				ValkeySerializationContext.string());
+        ReactiveValkeyTemplate<String, String> template =
+                new ReactiveValkeyTemplate<>(connectionFactory, ValkeySerializationContext.string());
 
-		Mono<Boolean> set = template.opsForValue().set("foo", "bar");
-		set.block(Duration.ofSeconds(10));
+        Mono<Boolean> set = template.opsForValue().set("foo", "bar");
+        set.block(Duration.ofSeconds(10));
 
-		LOG.info("Value at foo:" + template.opsForValue().get("foo").block(Duration.ofSeconds(10)));
+        LOG.info("Value at foo:" + template.opsForValue().get("foo").block(Duration.ofSeconds(10)));
 
-		connectionFactory.destroy();
-	}
+        connectionFactory.destroy();
+    }
 }
 // end::file[]

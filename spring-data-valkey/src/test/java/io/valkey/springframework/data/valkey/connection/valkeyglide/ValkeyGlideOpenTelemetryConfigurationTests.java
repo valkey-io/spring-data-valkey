@@ -2,21 +2,20 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 
 /**
  * Unit tests for OpenTelemetry configuration in Valkey-Glide integration.
  *
- * Important: Validation + "init once" logic lives in ValkeyGlideConnectionFactory#useOpenTelemetry,
- * not in ValkeyGlideClientConfigurationBuilder#useOpenTelemetry (builder only stores config).
+ * <p>Important: Validation + "init once" logic lives in
+ * ValkeyGlideConnectionFactory#useOpenTelemetry, not in
+ * ValkeyGlideClientConfigurationBuilder#useOpenTelemetry (builder only stores config).
  */
 class ValkeyGlideOpenTelemetryConfigurationTests {
 
@@ -46,13 +45,12 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
                 new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(null, null, 10, 100L);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
+        assertThatIllegalArgumentException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
     }
 
     @Test
@@ -61,10 +59,10 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
                 new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(TRACES_ENDPOINT, null, 10, 100L);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
     }
@@ -73,12 +71,13 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
     void shouldInitializeWhenMetricsOnlyIsProvided() {
 
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
-                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(null, METRICS_ENDPOINT, null, null);
+                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
+                        null, METRICS_ENDPOINT, null, null);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
     }
@@ -88,13 +87,12 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
 
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
                 new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
-                        TRACES_ENDPOINT, METRICS_ENDPOINT, 10, 100L
-                );
+                        TRACES_ENDPOINT, METRICS_ENDPOINT, 10, 100L);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
@@ -108,13 +106,12 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
 
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide second =
                 new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
-                        "http://different-endpoint.com:4318/v1/traces", null, 10, 100L
-                );
+                        "http://different-endpoint.com:4318/v1/traces", null, 10, 100L);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(first).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(first).build());
 
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, first));
 
@@ -129,10 +126,10 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
                 new ValkeyGlideClientConfiguration.OpenTelemetryForGlide("   ", "\t", 10, 100L);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg))
@@ -143,12 +140,13 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
     void shouldInitializeWhenTracesEndpointIsBlankButMetricsIsProvided() {
 
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
-                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide("   ", METRICS_ENDPOINT, null, null);
+                new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
+                        "   ", METRICS_ENDPOINT, null, null);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
     }
@@ -159,10 +157,10 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
                 new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(TRACES_ENDPOINT, "   ", 10, 100L);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
         assertThatNoException().isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg));
     }
@@ -179,10 +177,10 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
                 new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(TRACES_ENDPOINT, null, 101, 100L);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg))
@@ -195,10 +193,10 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         ValkeyGlideClientConfiguration.OpenTelemetryForGlide cfg =
                 new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(TRACES_ENDPOINT, null, 10, 0L);
 
-        ValkeyGlideConnectionFactory factory = new ValkeyGlideConnectionFactory(
-                new ValkeyClusterConfiguration(),
-                ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build()
-        );
+        ValkeyGlideConnectionFactory factory =
+                new ValkeyGlideConnectionFactory(
+                        new ValkeyClusterConfiguration(),
+                        ValkeyGlideClientConfiguration.builder().useOpenTelemetry(cfg).build());
 
         assertThatIllegalArgumentException()
                 .isThrownBy(() -> invokeUseOpenTelemetry(factory, cfg))
@@ -209,7 +207,8 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
 
     private static boolean isOtelInitialized() {
         try {
-            Field initializedField = ValkeyGlideConnectionFactory.class.getDeclaredField("OTEL_INITIALIZED");
+            Field initializedField =
+                    ValkeyGlideConnectionFactory.class.getDeclaredField("OTEL_INITIALIZED");
             initializedField.setAccessible(true);
             AtomicBoolean initialized = (AtomicBoolean) initializedField.get(null);
             return initialized.get();
@@ -220,7 +219,8 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
 
     private static ValkeyGlideClientConfiguration.OpenTelemetryForGlide getInitializedConfig() {
         try {
-            Field configField = ValkeyGlideConnectionFactory.class.getDeclaredField("OTEL_INITIALIZED_CONFIG");
+            Field configField =
+                    ValkeyGlideConnectionFactory.class.getDeclaredField("OTEL_INITIALIZED_CONFIG");
             configField.setAccessible(true);
             return (ValkeyGlideClientConfiguration.OpenTelemetryForGlide) configField.get(null);
         } catch (Exception e) {
@@ -228,19 +228,15 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         }
     }
 
-    /**
-     * Invoke the private useOpenTelemetry method via reflection.
-     */
+    /** Invoke the private useOpenTelemetry method via reflection. */
     private static void invokeUseOpenTelemetry(
             ValkeyGlideConnectionFactory factory,
-            ValkeyGlideClientConfiguration.OpenTelemetryForGlide openTelemetryForGlide
-    ) throws Exception {
+            ValkeyGlideClientConfiguration.OpenTelemetryForGlide openTelemetryForGlide)
+            throws Exception {
 
-        Method m = ValkeyGlideConnectionFactory.class
-                .getDeclaredMethod(
-                        "useOpenTelemetry",
-                        ValkeyGlideClientConfiguration.OpenTelemetryForGlide.class
-                );
+        Method m =
+                ValkeyGlideConnectionFactory.class.getDeclaredMethod(
+                        "useOpenTelemetry", ValkeyGlideClientConfiguration.OpenTelemetryForGlide.class);
         m.setAccessible(true);
 
         try {
@@ -257,12 +253,10 @@ class ValkeyGlideOpenTelemetryConfigurationTests {
         }
     }
 
-    /**
-     * Reset the static OpenTelemetry initialization state in ValkeyGlideConnectionFactory.
-     */
+    /** Reset the static OpenTelemetry initialization state in ValkeyGlideConnectionFactory. */
     private static void resetFactoryStaticOpenTelemetryState() {
         try {
-        Class<?> factoryClass = ValkeyGlideConnectionFactory.class;
+            Class<?> factoryClass = ValkeyGlideConnectionFactory.class;
 
             Field initializedField = factoryClass.getDeclaredField("OTEL_INITIALIZED");
             initializedField.setAccessible(true);

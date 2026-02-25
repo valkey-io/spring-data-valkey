@@ -17,50 +17,47 @@ package io.valkey.springframework.data.valkey.connection;
 
 /**
  * Listener for subscription notifications.
- * <p>
- * Subscription notifications are reported by Valkey as confirmation for subscribe and unsubscribe operations for
- * channels and patterns.
+ *
+ * <p>Subscription notifications are reported by Valkey as confirmation for subscribe and
+ * unsubscribe operations for channels and patterns.
  *
  * @author Mark Paluch
  * @since 2.6
  */
 public interface SubscriptionListener {
 
-	/**
-	 * Empty {@link SubscriptionListener}.
-	 */
-	SubscriptionListener NO_OP_SUBSCRIPTION_LISTENER = new SubscriptionListener() {};
+    /** Empty {@link SubscriptionListener}. */
+    SubscriptionListener NO_OP_SUBSCRIPTION_LISTENER = new SubscriptionListener() {};
 
-	/**
-	 * Notification when Valkey has confirmed a channel subscription.
-	 *
-	 * @param channel name of the channel.
-	 * @param count subscriber count.
-	 */
-	default void onChannelSubscribed(byte[] channel, long count) {}
+    /**
+     * Notification when Valkey has confirmed a channel subscription.
+     *
+     * @param channel name of the channel.
+     * @param count subscriber count.
+     */
+    default void onChannelSubscribed(byte[] channel, long count) {}
 
-	/**
-	 * Notification when Valkey has confirmed a channel un-subscription.
-	 *
-	 * @param channel name of the channel.
-	 * @param count subscriber count.
-	 */
-	default void onChannelUnsubscribed(byte[] channel, long count) {}
+    /**
+     * Notification when Valkey has confirmed a channel un-subscription.
+     *
+     * @param channel name of the channel.
+     * @param count subscriber count.
+     */
+    default void onChannelUnsubscribed(byte[] channel, long count) {}
 
-	/**
-	 * Notification when Valkey has confirmed a pattern subscription.
-	 *
-	 * @param pattern the pattern.
-	 * @param count subscriber count.
-	 */
-	default void onPatternSubscribed(byte[] pattern, long count) {}
+    /**
+     * Notification when Valkey has confirmed a pattern subscription.
+     *
+     * @param pattern the pattern.
+     * @param count subscriber count.
+     */
+    default void onPatternSubscribed(byte[] pattern, long count) {}
 
-	/**
-	 * Notification when Valkey has confirmed a pattern un-subscription.
-	 *
-	 * @param pattern the pattern.
-	 * @param count subscriber count.
-	 */
-	default void onPatternUnsubscribed(byte[] pattern, long count) {}
-
+    /**
+     * Notification when Valkey has confirmed a pattern un-subscription.
+     *
+     * @param pattern the pattern.
+     * @param count subscriber count.
+     */
+    default void onPatternUnsubscribed(byte[] pattern, long count) {}
 }

@@ -17,14 +17,6 @@ package io.valkey.springframework.data.valkey.support.atomic;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.util.Collection;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.LongBinaryOperator;
-import java.util.function.LongUnaryOperator;
-
-import org.junit.jupiter.api.BeforeEach;
-
-import org.springframework.dao.DataRetrievalFailureException;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
@@ -32,6 +24,12 @@ import io.valkey.springframework.data.valkey.serializer.GenericToStringSerialize
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Collection;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.LongBinaryOperator;
+import java.util.function.LongUnaryOperator;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.dao.DataRetrievalFailureException;
 
 /**
  * Integration test of {@link ValkeyAtomicLong}
@@ -46,336 +44,338 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("testParams")
 public class ValkeyAtomicLongIntegrationTests {
 
-	private final ValkeyConnectionFactory factory;
-	private final ValkeyTemplate<String, Long> template;
+    private final ValkeyConnectionFactory factory;
+    private final ValkeyTemplate<String, Long> template;
 
-	private ValkeyAtomicLong longCounter;
+    private ValkeyAtomicLong longCounter;
 
-	public ValkeyAtomicLongIntegrationTests(ValkeyConnectionFactory factory) {
+    public ValkeyAtomicLongIntegrationTests(ValkeyConnectionFactory factory) {
 
-		this.factory = factory;
+        this.factory = factory;
 
-		this.template = new ValkeyTemplate<>();
-		this.template.setConnectionFactory(factory);
-		this.template.setKeySerializer(StringValkeySerializer.UTF_8);
-		this.template.setValueSerializer(new GenericToStringSerializer<>(Long.class));
-		this.template.afterPropertiesSet();
-	}
+        this.template = new ValkeyTemplate<>();
+        this.template.setConnectionFactory(factory);
+        this.template.setKeySerializer(StringValkeySerializer.UTF_8);
+        this.template.setValueSerializer(new GenericToStringSerializer<>(Long.class));
+        this.template.afterPropertiesSet();
+    }
 
-	public static Collection<Object[]> testParams() {
-		return AtomicCountersParam.testParams();
-	}
+    public static Collection<Object[]> testParams() {
+        return AtomicCountersParam.testParams();
+    }
 
-	@BeforeEach
-	void before() {
+    @BeforeEach
+    void before() {
 
-		ValkeyConnection connection = factory.getConnection();
-		connection.flushDb();
-		connection.close();
+        ValkeyConnection connection = factory.getConnection();
+        connection.flushDb();
+        connection.close();
 
-		this.longCounter = new ValkeyAtomicLong(getClass().getSimpleName() + ":long", factory);
-	}
+        this.longCounter = new ValkeyAtomicLong(getClass().getSimpleName() + ":long", factory);
+    }
 
-	@ParameterizedValkeyTest
-	void testCheckAndSet() {
+    @ParameterizedValkeyTest
+    void testCheckAndSet() {
 
-		longCounter.set(0);
-		assertThat(longCounter.compareAndSet(1, 10)).isFalse();
-		assertThat(longCounter.compareAndSet(0, 10)).isTrue();
-		assertThat(longCounter.compareAndSet(10, 0)).isTrue();
-	}
+        longCounter.set(0);
+        assertThat(longCounter.compareAndSet(1, 10)).isFalse();
+        assertThat(longCounter.compareAndSet(0, 10)).isTrue();
+        assertThat(longCounter.compareAndSet(10, 0)).isTrue();
+    }
 
-	@ParameterizedValkeyTest
-	void testIncrementAndGet() {
+    @ParameterizedValkeyTest
+    void testIncrementAndGet() {
 
-		longCounter.set(0);
-		assertThat(longCounter.incrementAndGet()).isOne();
-	}
+        longCounter.set(0);
+        assertThat(longCounter.incrementAndGet()).isOne();
+    }
 
-	@ParameterizedValkeyTest
-	void testAddAndGet() {
+    @ParameterizedValkeyTest
+    void testAddAndGet() {
 
-		longCounter.set(0);
-		long delta = 5;
-		assertThat(longCounter.addAndGet(delta)).isEqualTo(delta);
-	}
+        longCounter.set(0);
+        long delta = 5;
+        assertThat(longCounter.addAndGet(delta)).isEqualTo(delta);
+    }
 
-	@ParameterizedValkeyTest
-	void testDecrementAndGet() {
+    @ParameterizedValkeyTest
+    void testDecrementAndGet() {
 
-		longCounter.set(1);
-		assertThat(longCounter.decrementAndGet()).isZero();
-	}
+        longCounter.set(1);
+        assertThat(longCounter.decrementAndGet()).isZero();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-469
-	void testGetAndIncrement() {
+    @ParameterizedValkeyTest // DATAREDIS-469
+    void testGetAndIncrement() {
 
-		longCounter.set(1);
-		assertThat(longCounter.getAndIncrement()).isOne();
-		assertThat(longCounter.get()).isEqualTo(2);
-	}
+        longCounter.set(1);
+        assertThat(longCounter.getAndIncrement()).isOne();
+        assertThat(longCounter.get()).isEqualTo(2);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-469
-	void testGetAndAdd() {
+    @ParameterizedValkeyTest // DATAREDIS-469
+    void testGetAndAdd() {
 
-		longCounter.set(1);
-		assertThat(longCounter.getAndAdd(5)).isOne();
-		assertThat(longCounter.get()).isEqualTo(6);
-	}
+        longCounter.set(1);
+        assertThat(longCounter.getAndAdd(5)).isOne();
+        assertThat(longCounter.get()).isEqualTo(6);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-469
-	void testGetAndDecrement() {
+    @ParameterizedValkeyTest // DATAREDIS-469
+    void testGetAndDecrement() {
 
-		longCounter.set(1);
-		assertThat(longCounter.getAndDecrement()).isOne();
-		assertThat(longCounter.get()).isZero();
-	}
+        longCounter.set(1);
+        assertThat(longCounter.getAndDecrement()).isOne();
+        assertThat(longCounter.get()).isZero();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-469
-	void testGetAndSet() {
+    @ParameterizedValkeyTest // DATAREDIS-469
+    void testGetAndSet() {
 
-		longCounter.set(1);
-		assertThat(longCounter.getAndSet(5)).isOne();
-		assertThat(longCounter.get()).isEqualTo(5);
-	}
+        longCounter.set(1);
+        assertThat(longCounter.getAndSet(5)).isOne();
+        assertThat(longCounter.get()).isEqualTo(5);
+    }
 
-	@ParameterizedValkeyTest
-	void testGetExistingValue() {
+    @ParameterizedValkeyTest
+    void testGetExistingValue() {
 
-		longCounter.set(5);
-		ValkeyAtomicLong keyCopy = new ValkeyAtomicLong(longCounter.getKey(), factory);
-		assertThat(longCounter.get()).isEqualTo(keyCopy.get());
-	}
+        longCounter.set(5);
+        ValkeyAtomicLong keyCopy = new ValkeyAtomicLong(longCounter.getKey(), factory);
+        assertThat(longCounter.get()).isEqualTo(keyCopy.get());
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-317
-	void testShouldThrowExceptionIfAtomicLongIsUsedWithValkeyTemplateAndNoKeySerializer() {
+    @ParameterizedValkeyTest // DATAREDIS-317
+    void testShouldThrowExceptionIfAtomicLongIsUsedWithValkeyTemplateAndNoKeySerializer() {
 
-		assertThatExceptionOfType(IllegalArgumentException.class)
-				.isThrownBy(() -> new ValkeyAtomicLong("foo", new ValkeyTemplate<>()))
-				.withMessageContaining("a valid key serializer in template is required");
-	}
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> new ValkeyAtomicLong("foo", new ValkeyTemplate<>()))
+                .withMessageContaining("a valid key serializer in template is required");
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-317
-	void testShouldThrowExceptionIfAtomicLongIsUsedWithValkeyTemplateAndNoValueSerializer() {
+    @ParameterizedValkeyTest // DATAREDIS-317
+    void testShouldThrowExceptionIfAtomicLongIsUsedWithValkeyTemplateAndNoValueSerializer() {
 
-		ValkeyTemplate<String, Long> template = new ValkeyTemplate<>();
-		template.setKeySerializer(StringValkeySerializer.UTF_8);
+        ValkeyTemplate<String, Long> template = new ValkeyTemplate<>();
+        template.setKeySerializer(StringValkeySerializer.UTF_8);
 
-		assertThatExceptionOfType(IllegalArgumentException.class).isThrownBy(() -> new ValkeyAtomicLong("foo", template))
-				.withMessageContaining("a valid value serializer in template is required");
-	}
+        assertThatExceptionOfType(IllegalArgumentException.class)
+                .isThrownBy(() -> new ValkeyAtomicLong("foo", template))
+                .withMessageContaining("a valid value serializer in template is required");
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-317
-	void testShouldBeAbleToUseValkeyAtomicLongWithProperlyConfiguredValkeyTemplate() {
+    @ParameterizedValkeyTest // DATAREDIS-317
+    void testShouldBeAbleToUseValkeyAtomicLongWithProperlyConfiguredValkeyTemplate() {
 
-		ValkeyTemplate<String, Long> template = new ValkeyTemplate<>();
-		template.setConnectionFactory(factory);
-		template.setKeySerializer(StringValkeySerializer.UTF_8);
-		template.setValueSerializer(new GenericToStringSerializer<>(Long.class));
-		template.afterPropertiesSet();
+        ValkeyTemplate<String, Long> template = new ValkeyTemplate<>();
+        template.setConnectionFactory(factory);
+        template.setKeySerializer(StringValkeySerializer.UTF_8);
+        template.setValueSerializer(new GenericToStringSerializer<>(Long.class));
+        template.afterPropertiesSet();
 
-		ValkeyAtomicLong ral = new ValkeyAtomicLong("DATAREDIS-317.atomicLong", template);
-		ral.set(32L);
+        ValkeyAtomicLong ral = new ValkeyAtomicLong("DATAREDIS-317.atomicLong", template);
+        ral.set(32L);
 
-		assertThat(ral.get()).isEqualTo(32L);
-	}
+        assertThat(ral.get()).isEqualTo(32L);
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-469
-	void getThrowsExceptionWhenKeyHasBeenRemoved() {
+    @ParameterizedValkeyTest // DATAREDIS-469
+    void getThrowsExceptionWhenKeyHasBeenRemoved() {
 
-		// setup long
-		ValkeyAtomicLong test = new ValkeyAtomicLong("test", factory, 1);
-		assertThat(test.get()).isOne();
+        // setup long
+        ValkeyAtomicLong test = new ValkeyAtomicLong("test", factory, 1);
+        assertThat(test.get()).isOne();
 
-		template.delete("test");
+        template.delete("test");
 
-		assertThatExceptionOfType(DataRetrievalFailureException.class).isThrownBy(test::get)
-				.withMessageContaining("'test' seems to no longer exist");
-	}
+        assertThatExceptionOfType(DataRetrievalFailureException.class)
+                .isThrownBy(test::get)
+                .withMessageContaining("'test' seems to no longer exist");
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-469
-	void getAndSetReturnsZeroWhenKeyHasBeenRemoved() {
+    @ParameterizedValkeyTest // DATAREDIS-469
+    void getAndSetReturnsZeroWhenKeyHasBeenRemoved() {
 
-		// setup long
-		ValkeyAtomicLong test = new ValkeyAtomicLong("test", factory, 1);
-		assertThat(test.get()).isOne();
+        // setup long
+        ValkeyAtomicLong test = new ValkeyAtomicLong("test", factory, 1);
+        assertThat(test.get()).isOne();
 
-		template.delete("test");
+        template.delete("test");
 
-		assertThat(test.getAndSet(2)).isZero();
-	}
+        assertThat(test.getAndSet(2)).isZero();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-874
-	void updateAndGetAppliesGivenUpdateFunctionAndReturnsUpdatedValue() {
+    @ParameterizedValkeyTest // DATAREDIS-874
+    void updateAndGetAppliesGivenUpdateFunctionAndReturnsUpdatedValue() {
 
-		AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
-		long initialValue = 5;
-		long expectedNewValue = 10;
-		longCounter.set(initialValue);
+        AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
+        long initialValue = 5;
+        long expectedNewValue = 10;
+        longCounter.set(initialValue);
 
-		LongUnaryOperator updateFunction = input -> {
+        LongUnaryOperator updateFunction =
+                input -> {
+                    operatorHasBeenApplied.set(true);
 
-			operatorHasBeenApplied.set(true);
+                    return expectedNewValue;
+                };
 
-			return expectedNewValue;
-		};
+        long result = longCounter.updateAndGet(updateFunction);
 
-		long result = longCounter.updateAndGet(updateFunction);
+        assertThat(result).isEqualTo(expectedNewValue);
+        assertThat(longCounter.get()).isEqualTo(expectedNewValue);
+        assertThat(operatorHasBeenApplied).isTrue();
+    }
 
-		assertThat(result).isEqualTo(expectedNewValue);
-		assertThat(longCounter.get()).isEqualTo(expectedNewValue);
-		assertThat(operatorHasBeenApplied).isTrue();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-874
+    void updateAndGetUsesCorrectArguments() {
 
-	@ParameterizedValkeyTest // DATAREDIS-874
-	void updateAndGetUsesCorrectArguments() {
+        AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
+        long initialValue = 5;
+        longCounter.set(initialValue);
 
-		AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
-		long initialValue = 5;
-		longCounter.set(initialValue);
+        LongUnaryOperator updateFunction =
+                input -> {
+                    operatorHasBeenApplied.set(true);
 
-		LongUnaryOperator updateFunction = input -> {
+                    assertThat(input).isEqualTo(initialValue);
 
-			operatorHasBeenApplied.set(true);
+                    return -1;
+                };
 
-			assertThat(input).isEqualTo(initialValue);
+        longCounter.updateAndGet(updateFunction);
 
-			return -1;
-		};
+        assertThat(operatorHasBeenApplied).isTrue();
+    }
 
-		longCounter.updateAndGet(updateFunction);
+    @ParameterizedValkeyTest // DATAREDIS-874
+    void getAndUpdateAppliesGivenUpdateFunctionAndReturnsOriginalValue() {
 
-		assertThat(operatorHasBeenApplied).isTrue();
-	}
+        AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
+        long initialValue = 5;
+        long expectedNewValue = 10;
+        longCounter.set(initialValue);
 
-	@ParameterizedValkeyTest // DATAREDIS-874
-	void getAndUpdateAppliesGivenUpdateFunctionAndReturnsOriginalValue() {
+        LongUnaryOperator updateFunction =
+                input -> {
+                    operatorHasBeenApplied.set(true);
 
-		AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
-		long initialValue = 5;
-		long expectedNewValue = 10;
-		longCounter.set(initialValue);
+                    return expectedNewValue;
+                };
 
-		LongUnaryOperator updateFunction = input -> {
+        long result = longCounter.getAndUpdate(updateFunction);
 
-			operatorHasBeenApplied.set(true);
+        assertThat(result).isEqualTo(initialValue);
+        assertThat(longCounter.get()).isEqualTo(expectedNewValue);
+        assertThat(operatorHasBeenApplied).isTrue();
+    }
 
-			return expectedNewValue;
-		};
+    @ParameterizedValkeyTest // DATAREDIS-874
+    void getAndUpdateUsesCorrectArguments() {
 
-		long result = longCounter.getAndUpdate(updateFunction);
+        AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
+        long initialValue = 5;
+        longCounter.set(initialValue);
 
-		assertThat(result).isEqualTo(initialValue);
-		assertThat(longCounter.get()).isEqualTo(expectedNewValue);
-		assertThat(operatorHasBeenApplied).isTrue();
-	}
+        LongUnaryOperator updateFunction =
+                input -> {
+                    operatorHasBeenApplied.set(true);
 
-	@ParameterizedValkeyTest // DATAREDIS-874
-	void getAndUpdateUsesCorrectArguments() {
+                    assertThat(input).isEqualTo(initialValue);
 
-		AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
-		long initialValue = 5;
-		longCounter.set(initialValue);
+                    return -1;
+                };
 
-		LongUnaryOperator updateFunction = input -> {
+        longCounter.getAndUpdate(updateFunction);
 
-			operatorHasBeenApplied.set(true);
+        assertThat(operatorHasBeenApplied).isTrue();
+    }
 
-			assertThat(input).isEqualTo(initialValue);
+    @ParameterizedValkeyTest // DATAREDIS-874
+    void accumulateAndGetAppliesGivenAccumulatorFunctionAndReturnsUpdatedValue() {
 
-			return -1;
-		};
+        AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
+        long initialValue = 5;
+        long expectedNewValue = 10;
+        longCounter.set(initialValue);
 
-		longCounter.getAndUpdate(updateFunction);
+        LongBinaryOperator accumulatorFunction =
+                (x, y) -> {
+                    operatorHasBeenApplied.set(true);
 
-		assertThat(operatorHasBeenApplied).isTrue();
-	}
+                    return expectedNewValue;
+                };
 
-	@ParameterizedValkeyTest // DATAREDIS-874
-	void accumulateAndGetAppliesGivenAccumulatorFunctionAndReturnsUpdatedValue() {
+        long result = longCounter.accumulateAndGet(15L, accumulatorFunction);
 
-		AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
-		long initialValue = 5;
-		long expectedNewValue = 10;
-		longCounter.set(initialValue);
+        assertThat(result).isEqualTo(expectedNewValue);
+        assertThat(longCounter.get()).isEqualTo(expectedNewValue);
+        assertThat(operatorHasBeenApplied).isTrue();
+    }
 
-		LongBinaryOperator accumulatorFunction = (x, y) -> {
+    @ParameterizedValkeyTest // DATAREDIS-874
+    void accumulateAndGetUsesCorrectArguments() {
 
-			operatorHasBeenApplied.set(true);
+        AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
+        long initialValue = 5;
+        longCounter.set(initialValue);
 
-			return expectedNewValue;
-		};
+        LongBinaryOperator accumulatorFunction =
+                (x, y) -> {
+                    operatorHasBeenApplied.set(true);
 
-		long result = longCounter.accumulateAndGet(15L, accumulatorFunction);
+                    assertThat(x).isEqualTo(initialValue);
+                    assertThat(y).isEqualTo(15);
 
-		assertThat(result).isEqualTo(expectedNewValue);
-		assertThat(longCounter.get()).isEqualTo(expectedNewValue);
-		assertThat(operatorHasBeenApplied).isTrue();
-	}
+                    return -1;
+                };
 
-	@ParameterizedValkeyTest // DATAREDIS-874
-	void accumulateAndGetUsesCorrectArguments() {
+        longCounter.accumulateAndGet(15L, accumulatorFunction);
 
-		AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
-		long initialValue = 5;
-		longCounter.set(initialValue);
+        assertThat(operatorHasBeenApplied).isTrue();
+    }
 
-		LongBinaryOperator accumulatorFunction = (x, y) -> {
+    @ParameterizedValkeyTest // DATAREDIS-874
+    void getAndAccumulateAppliesGivenAccumulatorFunctionAndReturnsOriginalValue() {
 
-			operatorHasBeenApplied.set(true);
+        AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
+        long initialValue = 5;
+        long expectedNewValue = 10;
+        longCounter.set(initialValue);
 
-			assertThat(x).isEqualTo(initialValue);
-			assertThat(y).isEqualTo(15);
+        LongBinaryOperator accumulatorFunction =
+                (x, y) -> {
+                    operatorHasBeenApplied.set(true);
 
-			return -1;
-		};
+                    return expectedNewValue;
+                };
 
-		longCounter.accumulateAndGet(15L, accumulatorFunction);
+        long result = longCounter.getAndAccumulate(15L, accumulatorFunction);
 
-		assertThat(operatorHasBeenApplied).isTrue();
-	}
+        assertThat(result).isEqualTo(initialValue);
+        assertThat(longCounter.get()).isEqualTo(expectedNewValue);
+        assertThat(operatorHasBeenApplied).isTrue();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-874
-	void getAndAccumulateAppliesGivenAccumulatorFunctionAndReturnsOriginalValue() {
+    @ParameterizedValkeyTest // DATAREDIS-874
+    void getAndAccumulateUsesCorrectArguments() {
 
-		AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
-		long initialValue = 5;
-		long expectedNewValue = 10;
-		longCounter.set(initialValue);
+        AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
+        long initialValue = 5;
+        longCounter.set(initialValue);
 
-		LongBinaryOperator accumulatorFunction = (x, y) -> {
+        LongBinaryOperator accumulatorFunction =
+                (x, y) -> {
+                    operatorHasBeenApplied.set(true);
 
-			operatorHasBeenApplied.set(true);
+                    assertThat(x).isEqualTo(initialValue);
+                    assertThat(y).isEqualTo(15);
 
-			return expectedNewValue;
-		};
+                    return -1;
+                };
 
-		long result = longCounter.getAndAccumulate(15L, accumulatorFunction);
+        longCounter.getAndAccumulate(15L, accumulatorFunction);
 
-		assertThat(result).isEqualTo(initialValue);
-		assertThat(longCounter.get()).isEqualTo(expectedNewValue);
-		assertThat(operatorHasBeenApplied).isTrue();
-	}
-
-	@ParameterizedValkeyTest // DATAREDIS-874
-	void getAndAccumulateUsesCorrectArguments() {
-
-		AtomicBoolean operatorHasBeenApplied = new AtomicBoolean();
-		long initialValue = 5;
-		longCounter.set(initialValue);
-
-		LongBinaryOperator accumulatorFunction = (x, y) -> {
-
-			operatorHasBeenApplied.set(true);
-
-			assertThat(x).isEqualTo(initialValue);
-			assertThat(y).isEqualTo(15);
-
-			return -1;
-		};
-
-		longCounter.getAndAccumulate(15L, accumulatorFunction);
-
-		assertThat(operatorHasBeenApplied).isTrue();
-	}
+        assertThat(operatorHasBeenApplied).isTrue();
+    }
 }

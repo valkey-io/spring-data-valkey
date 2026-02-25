@@ -22,15 +22,12 @@ import io.lettuce.core.RedisFuture;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
 import io.lettuce.core.pubsub.api.async.RedisPubSubAsyncCommands;
 import io.lettuce.core.pubsub.api.sync.RedisPubSubCommands;
-
-import java.util.Collection;
-import java.util.concurrent.CompletableFuture;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.connection.MessageListener;
 import io.valkey.springframework.data.valkey.connection.ValkeyInvalidSubscriptionException;
+import java.util.Collection;
+import java.util.concurrent.CompletableFuture;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit test of {@link LettuceSubscription}
@@ -41,393 +38,393 @@ import io.valkey.springframework.data.valkey.connection.ValkeyInvalidSubscriptio
  */
 class LettuceSubscriptionUnitTests {
 
-	private LettuceSubscription subscription;
+    private LettuceSubscription subscription;
 
-	private StatefulRedisPubSubConnection<byte[], byte[]> pubsub;
+    private StatefulRedisPubSubConnection<byte[], byte[]> pubsub;
 
-	private RedisPubSubCommands<byte[], byte[]> syncCommands;
+    private RedisPubSubCommands<byte[], byte[]> syncCommands;
 
-	private RedisPubSubAsyncCommands<byte[], byte[]> asyncCommands;
+    private RedisPubSubAsyncCommands<byte[], byte[]> asyncCommands;
 
-	private LettuceConnectionProvider connectionProvider;
+    private LettuceConnectionProvider connectionProvider;
 
-	@SuppressWarnings("unchecked")
-	@BeforeEach
-	void setUp() {
+    @SuppressWarnings("unchecked")
+    @BeforeEach
+    void setUp() {
 
-		pubsub = mock(StatefulRedisPubSubConnection.class);
-		syncCommands = mock(RedisPubSubCommands.class);
-		asyncCommands = mock(RedisPubSubAsyncCommands.class);
-		connectionProvider = mock(LettuceConnectionProvider.class);
+        pubsub = mock(StatefulRedisPubSubConnection.class);
+        syncCommands = mock(RedisPubSubCommands.class);
+        asyncCommands = mock(RedisPubSubAsyncCommands.class);
+        connectionProvider = mock(LettuceConnectionProvider.class);
 
-		when(pubsub.sync()).thenReturn(syncCommands);
-		when(pubsub.async()).thenReturn(asyncCommands);
-		subscription = new LettuceSubscription(mock(MessageListener.class), pubsub, connectionProvider);
-	}
+        when(pubsub.sync()).thenReturn(syncCommands);
+        when(pubsub.async()).thenReturn(asyncCommands);
+        subscription = new LettuceSubscription(mock(MessageListener.class), pubsub, connectionProvider);
+    }
 
-	@Test
-	void testUnsubscribeAllAndClose() {
+    @Test
+    void testUnsubscribeAllAndClose() {
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.unsubscribe();
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.unsubscribe();
 
-		verify(syncCommands).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-		verify(connectionProvider).release(pubsub);
-		verify(pubsub).removeListener(any(LettuceMessageListener.class));
+        verify(syncCommands).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+        verify(connectionProvider).release(pubsub);
+        verify(pubsub).removeListener(any(LettuceMessageListener.class));
 
-		assertThat(subscription.isAlive()).isFalse();
-		assertThat(subscription.getChannels()).isEmpty();
-		assertThat(subscription.getPatterns()).isEmpty();
-	}
+        assertThat(subscription.isAlive()).isFalse();
+        assertThat(subscription.getChannels()).isEmpty();
+        assertThat(subscription.getPatterns()).isEmpty();
+    }
 
-	@Test
-	void testUnsubscribeAllChannelsWithPatterns() {
+    @Test
+    void testUnsubscribeAllChannelsWithPatterns() {
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-		subscription.unsubscribe();
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.pSubscribe(new byte[][] {"s*".getBytes()});
+        subscription.unsubscribe();
 
-		verify(syncCommands).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
+        verify(syncCommands).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
 
-		assertThat(subscription.isAlive()).isTrue();
-		assertThat(subscription.getChannels()).isEmpty();
+        assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.getChannels()).isEmpty();
 
-		Collection<byte[]> patterns = subscription.getPatterns();
-		assertThat(patterns).hasSize(1);
-		assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
-	}
+        Collection<byte[]> patterns = subscription.getPatterns();
+        assertThat(patterns).hasSize(1);
+        assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
+    }
 
-	@Test
-	void testUnsubscribeChannelAndClose() {
+    @Test
+    void testUnsubscribeChannelAndClose() {
 
-		byte[][] channel = new byte[][] { "a".getBytes() };
+        byte[][] channel = new byte[][] {"a".getBytes()};
 
-		subscription.subscribe(channel);
-		subscription.unsubscribe(channel);
+        subscription.subscribe(channel);
+        subscription.unsubscribe(channel);
 
-		verify(syncCommands).unsubscribe(channel);
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-		verify(connectionProvider).release(pubsub);
-		verify(pubsub).removeListener(any(LettuceMessageListener.class));
+        verify(syncCommands).unsubscribe(channel);
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+        verify(connectionProvider).release(pubsub);
+        verify(pubsub).removeListener(any(LettuceMessageListener.class));
 
-		assertThat(subscription.isAlive()).isFalse();
-		assertThat(subscription.getChannels()).isEmpty();
-		assertThat(subscription.getPatterns()).isEmpty();
-	}
+        assertThat(subscription.isAlive()).isFalse();
+        assertThat(subscription.getChannels()).isEmpty();
+        assertThat(subscription.getPatterns()).isEmpty();
+    }
 
-	@Test
-	void testUnsubscribeChannelSomeLeft() {
+    @Test
+    void testUnsubscribeChannelSomeLeft() {
 
-		byte[][] channels = new byte[][] { "a".getBytes(), "b".getBytes() };
+        byte[][] channels = new byte[][] {"a".getBytes(), "b".getBytes()};
 
-		subscription.subscribe(channels);
-		subscription.unsubscribe(new byte[][] { "a".getBytes() });
+        subscription.subscribe(channels);
+        subscription.unsubscribe(new byte[][] {"a".getBytes()});
 
-		verify(syncCommands).unsubscribe(new byte[][] { "a".getBytes() });
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
+        verify(syncCommands).unsubscribe(new byte[][] {"a".getBytes()});
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
 
-		assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.isAlive()).isTrue();
 
-		Collection<byte[]> subChannels = subscription.getChannels();
-		assertThat(subChannels).hasSize(1);
-		assertThat(subChannels.iterator().next()).isEqualTo("b".getBytes());
-		assertThat(subscription.getPatterns()).isEmpty();
-	}
+        Collection<byte[]> subChannels = subscription.getChannels();
+        assertThat(subChannels).hasSize(1);
+        assertThat(subChannels.iterator().next()).isEqualTo("b".getBytes());
+        assertThat(subscription.getPatterns()).isEmpty();
+    }
 
-	@Test
-	void testUnsubscribeChannelWithPatterns() {
+    @Test
+    void testUnsubscribeChannelWithPatterns() {
 
-		byte[][] channel = new byte[][] { "a".getBytes() };
+        byte[][] channel = new byte[][] {"a".getBytes()};
 
-		subscription.subscribe(channel);
-		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-		subscription.unsubscribe(channel);
+        subscription.subscribe(channel);
+        subscription.pSubscribe(new byte[][] {"s*".getBytes()});
+        subscription.unsubscribe(channel);
 
-		verify(syncCommands).unsubscribe(channel);
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
+        verify(syncCommands).unsubscribe(channel);
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
 
-		assertThat(subscription.isAlive()).isTrue();
-		assertThat(subscription.getChannels()).isEmpty();
+        assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.getChannels()).isEmpty();
 
-		Collection<byte[]> patterns = subscription.getPatterns();
-		assertThat(patterns).hasSize(1);
-		assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
-	}
+        Collection<byte[]> patterns = subscription.getPatterns();
+        assertThat(patterns).hasSize(1);
+        assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
+    }
 
-	@Test
-	void testUnsubscribeChannelWithPatternsSomeLeft() {
+    @Test
+    void testUnsubscribeChannelWithPatternsSomeLeft() {
 
-		byte[][] channel = new byte[][] { "a".getBytes() };
+        byte[][] channel = new byte[][] {"a".getBytes()};
 
-		subscription.subscribe("a".getBytes(), "b".getBytes());
-		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-		subscription.unsubscribe(channel);
+        subscription.subscribe("a".getBytes(), "b".getBytes());
+        subscription.pSubscribe(new byte[][] {"s*".getBytes()});
+        subscription.unsubscribe(channel);
 
-		verify(syncCommands).unsubscribe(channel);
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-		assertThat(subscription.isAlive()).isTrue();
+        verify(syncCommands).unsubscribe(channel);
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+        assertThat(subscription.isAlive()).isTrue();
 
-		Collection<byte[]> channels = subscription.getChannels();
-		assertThat(channels).hasSize(1);
-		assertThat(channels.iterator().next()).isEqualTo("b".getBytes());
+        Collection<byte[]> channels = subscription.getChannels();
+        assertThat(channels).hasSize(1);
+        assertThat(channels.iterator().next()).isEqualTo("b".getBytes());
 
-		Collection<byte[]> patterns = subscription.getPatterns();
-		assertThat(patterns).hasSize(1);
-		assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
-	}
+        Collection<byte[]> patterns = subscription.getPatterns();
+        assertThat(patterns).hasSize(1);
+        assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
+    }
 
-	@Test
-	void testUnsubscribeAllNoChannels() {
+    @Test
+    void testUnsubscribeAllNoChannels() {
 
-		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-		subscription.unsubscribe();
+        subscription.pSubscribe(new byte[][] {"s*".getBytes()});
+        subscription.unsubscribe();
 
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
 
-		assertThat(subscription.isAlive()).isTrue();
-		assertThat(subscription.getChannels()).isEmpty();
+        assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.getChannels()).isEmpty();
 
-		Collection<byte[]> patterns = subscription.getPatterns();
-		assertThat(patterns).hasSize(1);
-		assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
-	}
+        Collection<byte[]> patterns = subscription.getPatterns();
+        assertThat(patterns).hasSize(1);
+        assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
+    }
 
-	@Test
-	void testUnsubscribeNotAlive() {
+    @Test
+    void testUnsubscribeNotAlive() {
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.unsubscribe();
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.unsubscribe();
 
-		verify(connectionProvider).release(pubsub);
-		verify(pubsub).removeListener(any(LettuceMessageListener.class));
+        verify(connectionProvider).release(pubsub);
+        verify(pubsub).removeListener(any(LettuceMessageListener.class));
 
-		assertThat(subscription.isAlive()).isFalse();
+        assertThat(subscription.isAlive()).isFalse();
 
-		subscription.unsubscribe();
-		verify(syncCommands).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-	}
+        subscription.unsubscribe();
+        verify(syncCommands).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+    }
 
-	@Test
-	void testSubscribeNotAlive() {
+    @Test
+    void testSubscribeNotAlive() {
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.unsubscribe();
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.unsubscribe();
 
-		assertThat(subscription.isAlive()).isFalse();
+        assertThat(subscription.isAlive()).isFalse();
 
-		assertThatExceptionOfType(ValkeyInvalidSubscriptionException.class)
-				.isThrownBy(() -> subscription.subscribe(new byte[][] { "s".getBytes() }));
-	}
+        assertThatExceptionOfType(ValkeyInvalidSubscriptionException.class)
+                .isThrownBy(() -> subscription.subscribe(new byte[][] {"s".getBytes()}));
+    }
 
-	@Test
-	void testPUnsubscribeAllAndClose() {
+    @Test
+    void testPUnsubscribeAllAndClose() {
 
-		subscription.pSubscribe(new byte[][] { "a*".getBytes() });
-		subscription.pUnsubscribe();
+        subscription.pSubscribe(new byte[][] {"a*".getBytes()});
+        subscription.pUnsubscribe();
 
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands).punsubscribe();
-		verify(connectionProvider).release(pubsub);
-		verify(pubsub).removeListener(any(LettuceMessageListener.class));
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands).punsubscribe();
+        verify(connectionProvider).release(pubsub);
+        verify(pubsub).removeListener(any(LettuceMessageListener.class));
 
-		assertThat(subscription.isAlive()).isFalse();
-		assertThat(subscription.getChannels()).isEmpty();
-		assertThat(subscription.getPatterns()).isEmpty();
-	}
+        assertThat(subscription.isAlive()).isFalse();
+        assertThat(subscription.getChannels()).isEmpty();
+        assertThat(subscription.getPatterns()).isEmpty();
+    }
 
-	@Test
-	void testPUnsubscribeAllPatternsWithChannels() {
+    @Test
+    void testPUnsubscribeAllPatternsWithChannels() {
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-		subscription.pUnsubscribe();
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.pSubscribe(new byte[][] {"s*".getBytes()});
+        subscription.pUnsubscribe();
 
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands).punsubscribe();
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands).punsubscribe();
 
-		assertThat(subscription.isAlive()).isTrue();
-		assertThat(subscription.getPatterns()).isEmpty();
+        assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.getPatterns()).isEmpty();
 
-		Collection<byte[]> channels = subscription.getChannels();
-		assertThat(channels).hasSize(1);
-		assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
-	}
+        Collection<byte[]> channels = subscription.getChannels();
+        assertThat(channels).hasSize(1);
+        assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
+    }
 
-	@Test
-	void testPUnsubscribeAndClose() {
+    @Test
+    void testPUnsubscribeAndClose() {
 
-		byte[][] pattern = new byte[][] { "a*".getBytes() };
+        byte[][] pattern = new byte[][] {"a*".getBytes()};
 
-		subscription.pSubscribe(pattern);
-		subscription.pUnsubscribe(pattern);
+        subscription.pSubscribe(pattern);
+        subscription.pUnsubscribe(pattern);
 
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-		verify(syncCommands).punsubscribe(pattern);
-		verify(connectionProvider).release(pubsub);
-		verify(pubsub).removeListener(any(LettuceMessageListener.class));
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+        verify(syncCommands).punsubscribe(pattern);
+        verify(connectionProvider).release(pubsub);
+        verify(pubsub).removeListener(any(LettuceMessageListener.class));
 
-		assertThat(subscription.isAlive()).isFalse();
-		assertThat(subscription.getChannels()).isEmpty();
-		assertThat(subscription.getPatterns()).isEmpty();
-	}
+        assertThat(subscription.isAlive()).isFalse();
+        assertThat(subscription.getChannels()).isEmpty();
+        assertThat(subscription.getPatterns()).isEmpty();
+    }
 
-	@Test
-	void testPUnsubscribePatternSomeLeft() {
+    @Test
+    void testPUnsubscribePatternSomeLeft() {
 
-		byte[][] patterns = new byte[][] { "a*".getBytes(), "b*".getBytes() };
-		subscription.pSubscribe(patterns);
-		subscription.pUnsubscribe(new byte[][] { "a*".getBytes() });
+        byte[][] patterns = new byte[][] {"a*".getBytes(), "b*".getBytes()};
+        subscription.pSubscribe(patterns);
+        subscription.pUnsubscribe(new byte[][] {"a*".getBytes()});
 
-		verify(syncCommands).punsubscribe(new byte[][] { "a*".getBytes() });
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
+        verify(syncCommands).punsubscribe(new byte[][] {"a*".getBytes()});
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
 
-		assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.isAlive()).isTrue();
 
-		Collection<byte[]> subPatterns = subscription.getPatterns();
-		assertThat(subPatterns).hasSize(1);
-		assertThat(subPatterns.iterator().next()).isEqualTo("b*".getBytes());
-		assertThat(subscription.getChannels()).isEmpty();
-	}
+        Collection<byte[]> subPatterns = subscription.getPatterns();
+        assertThat(subPatterns).hasSize(1);
+        assertThat(subPatterns.iterator().next()).isEqualTo("b*".getBytes());
+        assertThat(subscription.getChannels()).isEmpty();
+    }
 
-	@Test
-	void testPUnsubscribePatternWithChannels() {
+    @Test
+    void testPUnsubscribePatternWithChannels() {
 
-		byte[][] pattern = new byte[][] { "s*".getBytes() };
+        byte[][] pattern = new byte[][] {"s*".getBytes()};
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.pSubscribe(pattern);
-		subscription.pUnsubscribe(pattern);
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.pSubscribe(pattern);
+        subscription.pUnsubscribe(pattern);
 
-		verify(syncCommands).punsubscribe(pattern);
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
+        verify(syncCommands).punsubscribe(pattern);
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
 
-		assertThat(subscription.isAlive()).isTrue();
-		assertThat(subscription.getPatterns()).isEmpty();
+        assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.getPatterns()).isEmpty();
 
-		Collection<byte[]> channels = subscription.getChannels();
-		assertThat(channels).hasSize(1);
-		assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
-	}
+        Collection<byte[]> channels = subscription.getChannels();
+        assertThat(channels).hasSize(1);
+        assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
+    }
 
-	@Test
-	void testUnsubscribePatternWithChannelsSomeLeft() {
+    @Test
+    void testUnsubscribePatternWithChannelsSomeLeft() {
 
-		byte[][] pattern = new byte[][] { "a*".getBytes() };
+        byte[][] pattern = new byte[][] {"a*".getBytes()};
 
-		subscription.pSubscribe("a*".getBytes(), "b*".getBytes());
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.pUnsubscribe(pattern);
+        subscription.pSubscribe("a*".getBytes(), "b*".getBytes());
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.pUnsubscribe(pattern);
 
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-		verify(syncCommands).punsubscribe(pattern);
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+        verify(syncCommands).punsubscribe(pattern);
 
-		assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.isAlive()).isTrue();
 
-		Collection<byte[]> channels = subscription.getChannels();
-		assertThat(channels).hasSize(1);
-		assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
+        Collection<byte[]> channels = subscription.getChannels();
+        assertThat(channels).hasSize(1);
+        assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
 
-		Collection<byte[]> patterns = subscription.getPatterns();
-		assertThat(patterns).hasSize(1);
-		assertThat(patterns.iterator().next()).isEqualTo("b*".getBytes());
-	}
+        Collection<byte[]> patterns = subscription.getPatterns();
+        assertThat(patterns).hasSize(1);
+        assertThat(patterns.iterator().next()).isEqualTo("b*".getBytes());
+    }
 
-	@Test
-	void testPUnsubscribeAllNoPatterns() {
+    @Test
+    void testPUnsubscribeAllNoPatterns() {
 
-		subscription.subscribe(new byte[][] { "s".getBytes() });
-		subscription.pUnsubscribe();
+        subscription.subscribe(new byte[][] {"s".getBytes()});
+        subscription.pUnsubscribe();
 
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-		assertThat(subscription.isAlive()).isTrue();
-		assertThat(subscription.getPatterns()).isEmpty();
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+        assertThat(subscription.isAlive()).isTrue();
+        assertThat(subscription.getPatterns()).isEmpty();
 
-		Collection<byte[]> channels = subscription.getChannels();
-		assertThat(channels).hasSize(1);
-		assertThat(channels.iterator().next()).isEqualTo("s".getBytes());
-	}
+        Collection<byte[]> channels = subscription.getChannels();
+        assertThat(channels).hasSize(1);
+        assertThat(channels.iterator().next()).isEqualTo("s".getBytes());
+    }
 
-	@Test
-	void testPUnsubscribeNotAlive() {
+    @Test
+    void testPUnsubscribeNotAlive() {
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.unsubscribe();
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.unsubscribe();
 
-		assertThat(subscription.isAlive()).isFalse();
+        assertThat(subscription.isAlive()).isFalse();
 
-		subscription.pUnsubscribe();
+        subscription.pUnsubscribe();
 
-		verify(connectionProvider).release(pubsub);
-		verify(pubsub).removeListener(any(LettuceMessageListener.class));
-		verify(syncCommands).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-	}
+        verify(connectionProvider).release(pubsub);
+        verify(pubsub).removeListener(any(LettuceMessageListener.class));
+        verify(syncCommands).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+    }
 
-	@Test
-	void testPSubscribeNotAlive() {
+    @Test
+    void testPSubscribeNotAlive() {
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.unsubscribe();
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.unsubscribe();
 
-		assertThat(subscription.isAlive()).isFalse();
+        assertThat(subscription.isAlive()).isFalse();
 
-		assertThatExceptionOfType(ValkeyInvalidSubscriptionException.class)
-				.isThrownBy(() -> subscription.pSubscribe(new byte[][] { "s*".getBytes() }));
-	}
+        assertThatExceptionOfType(ValkeyInvalidSubscriptionException.class)
+                .isThrownBy(() -> subscription.pSubscribe(new byte[][] {"s*".getBytes()}));
+    }
 
-	@Test
-	void testDoCloseNotSubscribed() {
+    @Test
+    void testDoCloseNotSubscribed() {
 
-		subscription.doClose();
+        subscription.doClose();
 
-		verify(syncCommands, never()).unsubscribe();
-		verify(syncCommands, never()).punsubscribe();
-	}
+        verify(syncCommands, never()).unsubscribe();
+        verify(syncCommands, never()).punsubscribe();
+    }
 
-	@Test
-	void testDoCloseSubscribedChannels() {
+    @Test
+    void testDoCloseSubscribedChannels() {
 
-		RedisFuture<Void> future = mock(RedisFuture.class);
-		when(future.toCompletableFuture()).thenReturn(CompletableFuture.completedFuture(null));
+        RedisFuture<Void> future = mock(RedisFuture.class);
+        when(future.toCompletableFuture()).thenReturn(CompletableFuture.completedFuture(null));
 
-		when(asyncCommands.unsubscribe()).thenReturn(future);
-		when(asyncCommands.ping()).thenReturn((RedisFuture) future);
+        when(asyncCommands.unsubscribe()).thenReturn(future);
+        when(asyncCommands.ping()).thenReturn((RedisFuture) future);
 
-		subscription.subscribe(new byte[][] { "a".getBytes() });
-		subscription.doClose();
+        subscription.subscribe(new byte[][] {"a".getBytes()});
+        subscription.doClose();
 
-		verify(asyncCommands).ping();
-		verify(asyncCommands).unsubscribe();
-		verifyNoMoreInteractions(asyncCommands);
-	}
+        verify(asyncCommands).ping();
+        verify(asyncCommands).unsubscribe();
+        verifyNoMoreInteractions(asyncCommands);
+    }
 
-	@Test
-	void testDoCloseSubscribedPatterns() {
+    @Test
+    void testDoCloseSubscribedPatterns() {
 
-		RedisFuture<Void> future = mock(RedisFuture.class);
-		when(future.toCompletableFuture()).thenReturn(CompletableFuture.completedFuture(null));
+        RedisFuture<Void> future = mock(RedisFuture.class);
+        when(future.toCompletableFuture()).thenReturn(CompletableFuture.completedFuture(null));
 
-		when(asyncCommands.punsubscribe()).thenReturn(future);
-		when(asyncCommands.ping()).thenReturn((RedisFuture) future);
+        when(asyncCommands.punsubscribe()).thenReturn(future);
+        when(asyncCommands.ping()).thenReturn((RedisFuture) future);
 
-		subscription.pSubscribe(new byte[][] { "a*".getBytes() });
-		subscription.doClose();
+        subscription.pSubscribe(new byte[][] {"a*".getBytes()});
+        subscription.doClose();
 
-		verify(asyncCommands).ping();
-		verify(asyncCommands).punsubscribe();
-		verifyNoMoreInteractions(asyncCommands);
-	}
+        verify(asyncCommands).ping();
+        verify(asyncCommands).punsubscribe();
+        verifyNoMoreInteractions(asyncCommands);
+    }
 }

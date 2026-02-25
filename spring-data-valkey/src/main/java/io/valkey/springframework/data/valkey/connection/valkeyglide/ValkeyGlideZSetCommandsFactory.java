@@ -15,8 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands;
-
 /**
  * Factory for ValkeyGlideZSetCommands.
  *

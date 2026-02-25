@@ -17,99 +17,105 @@ package io.valkey.springframework.data.valkey.connection.stream;
 
 import java.util.Iterator;
 import java.util.List;
-
 import org.springframework.data.domain.Range;
 import org.springframework.data.util.Streamable;
 import org.springframework.util.Assert;
 
 /**
- * Value object holding detailed information about pending messages in {@literal consumer group} for a given
- * {@link org.springframework.data.domain.Range} and offset.
+ * Value object holding detailed information about pending messages in {@literal consumer group} for
+ * a given {@link org.springframework.data.domain.Range} and offset.
  *
  * @author Christoph Strobl
  * @since 2.3
  */
 public class PendingMessages implements Streamable<PendingMessage> {
 
-	private final String groupName;
-	private final Range<?> range;
-	private final List<PendingMessage> pendingMessages;
+    private final String groupName;
+    private final Range<?> range;
+    private final List<PendingMessage> pendingMessages;
 
-	public PendingMessages(String groupName, List<PendingMessage> pendingMessages) {
-		this(groupName, Range.unbounded(), pendingMessages);
-	}
+    public PendingMessages(String groupName, List<PendingMessage> pendingMessages) {
+        this(groupName, Range.unbounded(), pendingMessages);
+    }
 
-	public PendingMessages(String groupName, Range<?> range, List<PendingMessage> pendingMessages) {
+    public PendingMessages(String groupName, Range<?> range, List<PendingMessage> pendingMessages) {
 
-		Assert.notNull(range, "Range must not be null");
-		Assert.notNull(pendingMessages, "Pending Messages must not be null");
+        Assert.notNull(range, "Range must not be null");
+        Assert.notNull(pendingMessages, "Pending Messages must not be null");
 
-		this.groupName = groupName;
-		this.range = range;
-		this.pendingMessages = pendingMessages;
-	}
+        this.groupName = groupName;
+        this.range = range;
+        this.pendingMessages = pendingMessages;
+    }
 
-	/**
-	 * Adds the range to the current {@link PendingMessages}.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @return new instance of {@link PendingMessages}.
-	 */
-	public PendingMessages withinRange(Range<?> range) {
-		return new PendingMessages(groupName, range, pendingMessages);
-	}
+    /**
+     * Adds the range to the current {@link PendingMessages}.
+     *
+     * @param range must not be {@literal null}.
+     * @return new instance of {@link PendingMessages}.
+     */
+    public PendingMessages withinRange(Range<?> range) {
+        return new PendingMessages(groupName, range, pendingMessages);
+    }
 
-	/**
-	 * The {@literal consumer group} name.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public String getGroupName() {
-		return groupName;
-	}
+    /**
+     * The {@literal consumer group} name.
+     *
+     * @return never {@literal null}.
+     */
+    public String getGroupName() {
+        return groupName;
+    }
 
-	/**
-	 * The {@link Range} pending messages have been loaded.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public Range<?> getRange() {
-		return range;
-	}
+    /**
+     * The {@link Range} pending messages have been loaded.
+     *
+     * @return never {@literal null}.
+     */
+    public Range<?> getRange() {
+        return range;
+    }
 
-	/**
-	 * @return {@literal true} if no messages pending within range.
-	 */
-	public boolean isEmpty() {
-		return pendingMessages.isEmpty();
-	}
+    /**
+     * @return {@literal true} if no messages pending within range.
+     */
+    public boolean isEmpty() {
+        return pendingMessages.isEmpty();
+    }
 
-	/**
-	 * @return the number of pending messages in range.
-	 */
-	public int size() {
-		return pendingMessages.size();
-	}
+    /**
+     * @return the number of pending messages in range.
+     */
+    public int size() {
+        return pendingMessages.size();
+    }
 
-	/**
-	 * Get the {@link PendingMessage} at the given position.
-	 *
-	 * @param index
-	 * @return the {@link PendingMessage} a the given index.
-	 * @throws IndexOutOfBoundsException if the index is out of range.
-	 */
-	public PendingMessage get(int index) {
-		return pendingMessages.get(index);
-	}
+    /**
+     * Get the {@link PendingMessage} at the given position.
+     *
+     * @param index
+     * @return the {@link PendingMessage} a the given index.
+     * @throws IndexOutOfBoundsException if the index is out of range.
+     */
+    public PendingMessage get(int index) {
+        return pendingMessages.get(index);
+    }
 
-	@Override
-	public Iterator<PendingMessage> iterator() {
-		return pendingMessages.iterator();
-	}
+    @Override
+    public Iterator<PendingMessage> iterator() {
+        return pendingMessages.iterator();
+    }
 
-	@Override
-	public String toString() {
-		return "PendingMessages{" + "groupName='" + groupName + '\'' + ", range=" + range + ", pendingMessages="
-				+ pendingMessages + '}';
-	}
+    @Override
+    public String toString() {
+        return "PendingMessages{"
+                + "groupName='"
+                + groupName
+                + '\''
+                + ", range="
+                + range
+                + ", pendingMessages="
+                + pendingMessages
+                + '}';
+    }
 }

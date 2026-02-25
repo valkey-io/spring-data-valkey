@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.domain.geo;
 
-import org.springframework.data.geo.Metric;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
+import org.springframework.data.geo.Metric;
 
 /**
  * {@link Metric}s supported by Valkey.
@@ -25,29 +25,31 @@ import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
  * @since 2.6
  */
 public enum Metrics implements Metric {
+    METERS(6378137, "m"),
+    KILOMETERS(6378.137, "km"),
+    MILES(3963.191, "mi"),
+    FEET(20925646.325, "ft");
 
-	METERS(6378137, "m"), KILOMETERS(6378.137, "km"), MILES(3963.191, "mi"), FEET(20925646.325, "ft");
+    private final double multiplier;
+    private final String abbreviation;
 
-	private final double multiplier;
-	private final String abbreviation;
+    /**
+     * Creates a new {@link ValkeyGeoCommands.DistanceUnit} using the given muliplier.
+     *
+     * @param multiplier the earth radius at equator.
+     */
+    Metrics(double multiplier, String abbreviation) {
 
-	/**
-	 * Creates a new {@link ValkeyGeoCommands.DistanceUnit} using the given muliplier.
-	 *
-	 * @param multiplier the earth radius at equator.
-	 */
-	Metrics(double multiplier, String abbreviation) {
+        this.multiplier = multiplier;
+        this.abbreviation = abbreviation;
+    }
 
-		this.multiplier = multiplier;
-		this.abbreviation = abbreviation;
-	}
+    public double getMultiplier() {
+        return multiplier;
+    }
 
-	public double getMultiplier() {
-		return multiplier;
-	}
-
-	@Override
-	public String getAbbreviation() {
-		return abbreviation;
-	}
+    @Override
+    public String getAbbreviation() {
+        return abbreviation;
+    }
 }

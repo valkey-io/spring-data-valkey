@@ -15,25 +15,23 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import glide.api.models.GlideString;
+import io.valkey.springframework.data.valkey.connection.DataType;
+import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
+import io.valkey.springframework.data.valkey.connection.SortParameters;
+import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
+import io.valkey.springframework.data.valkey.connection.ValueEncoding;
+import io.valkey.springframework.data.valkey.core.Cursor;
+import io.valkey.springframework.data.valkey.core.ScanOptions;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import io.valkey.springframework.data.valkey.connection.DataType;
-import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
-import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
-import io.valkey.springframework.data.valkey.connection.SortParameters;
-import io.valkey.springframework.data.valkey.connection.ValueEncoding;
-import io.valkey.springframework.data.valkey.core.Cursor;
-import io.valkey.springframework.data.valkey.core.ScanOptions;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-
-import glide.api.models.GlideString;
 
 /**
  * Implementation of {@link ValkeyKeyCommands} for Valkey-Glide.
@@ -60,16 +58,14 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     public Boolean copy(byte[] sourceKey, byte[] targetKey, boolean replace) {
         Assert.notNull(sourceKey, "Source key must not be null");
         Assert.notNull(targetKey, "Target key must not be null");
-        
+
         try {
             if (replace) {
-                return connection.execute("COPY",
-                    (Boolean glideResult) -> glideResult,
-                    sourceKey, targetKey, "REPLACE");
+                return connection.execute(
+                        "COPY", (Boolean glideResult) -> glideResult, sourceKey, targetKey, "REPLACE");
             } else {
-                return connection.execute("COPY",
-                    (Boolean glideResult) -> glideResult,
-                    sourceKey, targetKey);
+                return connection.execute(
+                        "COPY", (Boolean glideResult) -> glideResult, sourceKey, targetKey);
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -80,11 +76,10 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Boolean exists(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("EXISTS",
-                (Long glideResult) -> glideResult != null ? glideResult > 0 : null,
-                key);
+            return connection.execute(
+                    "EXISTS", (Long glideResult) -> glideResult != null ? glideResult > 0 : null, key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -99,9 +94,7 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
         try {
             Object[] args = new Object[keys.length];
             System.arraycopy(keys, 0, args, 0, keys.length);
-            return connection.execute("EXISTS",
-                (Long glideResult) -> glideResult,
-                args);
+            return connection.execute("EXISTS", (Long glideResult) -> glideResult, args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -116,9 +109,7 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
             Object[] args = new Object[keys.length];
             System.arraycopy(keys, 0, args, 0, keys.length);
 
-            return connection.execute("DEL",
-                (Long glideResult) -> glideResult,
-                args);
+            return connection.execute("DEL", (Long glideResult) -> glideResult, args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -134,9 +125,7 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
             Object[] args = new Object[keys.length];
             System.arraycopy(keys, 0, args, 0, keys.length);
 
-            return connection.execute("UNLINK",
-                (Long glideResult) -> glideResult,
-                args);
+            return connection.execute("UNLINK", (Long glideResult) -> glideResult, args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -146,11 +135,13 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public DataType type(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("TYPE",
-                (GlideString glideResult) -> glideResult != null ? ValkeyGlideConverters.toDataType(glideResult.getBytes()) : null,
-                key);
+            return connection.execute(
+                    "TYPE",
+                    (GlideString glideResult) ->
+                            glideResult != null ? ValkeyGlideConverters.toDataType(glideResult.getBytes()) : null,
+                    key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -165,9 +156,7 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
             Object[] args = new Object[keys.length];
             System.arraycopy(keys, 0, args, 0, keys.length);
 
-            return connection.execute("TOUCH",
-                (Long glideResult) -> glideResult,
-                args);
+            return connection.execute("TOUCH", (Long glideResult) -> glideResult, args);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -177,11 +166,10 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Set<byte[]> keys(byte[] pattern) {
         Assert.notNull(pattern, "Pattern must not be null");
-        
+
         try {
-            return connection.execute("KEYS",
-                (Object[] glideResult) -> ValkeyGlideConverters.toBytesSet(glideResult),
-                pattern);
+            return connection.execute(
+                    "KEYS", (Object[] glideResult) -> ValkeyGlideConverters.toBytesSet(glideResult), pattern);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -192,11 +180,9 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
         return new ValkeyGlideKeyScanCursor(connection, options != null ? options : ScanOptions.NONE);
     }
 
-    /**
-     * Simple implementation of a scan cursor for keys.
-     */
+    /** Simple implementation of a scan cursor for keys. */
     private static class ValkeyGlideKeyScanCursor implements Cursor<byte[]> {
-        
+
         private final ValkeyGlideConnection connection;
         private final ScanOptions scanOptions;
         private String cursor = "0";
@@ -228,15 +214,15 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
             if (currentBatch != null && currentBatch.hasNext()) {
                 return true;
             }
-            
+
             // If we're finished and no more items in current batch, return false
             if (finished) {
                 return false;
             }
-            
+
             // Try to load next batch
             loadNextBatch();
-            
+
             // Check if we have items after loading next batch
             return currentBatch != null && currentBatch.hasNext();
         }
@@ -267,31 +253,31 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
 
         private void loadNextBatch() {
             if (connection.isQueueing() || connection.isPipelined()) {
-                throw new InvalidDataAccessApiUsageException("'SCAN' cannot be called in pipeline / transaction mode");
+                throw new InvalidDataAccessApiUsageException(
+                        "'SCAN' cannot be called in pipeline / transaction mode");
             }
 
             try {
                 List<Object> args = new ArrayList<>();
                 args.add(cursor);
-                
+
                 if (scanOptions.getPattern() != null) {
                     args.add("MATCH");
                     args.add(scanOptions.getPattern());
                 }
-                
+
                 if (scanOptions.getCount() != null) {
                     args.add("COUNT");
                     args.add(scanOptions.getCount());
                 }
-                
-                Object[] scanResult = connection.execute("SCAN",
-                    (Object[] glideResult) -> glideResult,
-                    args.toArray());
-                
+
+                Object[] scanResult =
+                        connection.execute("SCAN", (Object[] glideResult) -> glideResult, args.toArray());
+
                 if (scanResult != null && scanResult.length >= 2) {
                     Object nextCursor = scanResult[0];
                     Object keysResult = scanResult[1];
-                    
+
                     // Handle cursor conversion
                     if (nextCursor instanceof GlideString) {
                         cursor = new String(((GlideString) nextCursor).getBytes(), StandardCharsets.UTF_8);
@@ -300,11 +286,11 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
                     } else {
                         cursor = nextCursor.toString();
                     }
-                    
+
                     if ("0".equals(cursor)) {
                         finished = true;
                     }
-                    
+
                     // Convert keys result
                     List<byte[]> keys = ValkeyGlideConverters.toBytesList(keysResult);
                     currentBatch = keys.iterator();
@@ -319,8 +305,9 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public byte[] randomKey() {
         try {
-            return connection.execute("RANDOMKEY",
-                (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null);
+            return connection.execute(
+                    "RANDOMKEY",
+                    (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -330,11 +317,14 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     public void rename(byte[] oldKey, byte[] newKey) {
         Assert.notNull(oldKey, "Old key must not be null");
         Assert.notNull(newKey, "New key must not be null");
-        
+
         try {
-            connection.execute("RENAME",
-                (String glideResult) -> glideResult, // Return the "OK" response for pipeline/transaction modes
-                oldKey, newKey);
+            connection.execute(
+                    "RENAME",
+                    (String glideResult) ->
+                            glideResult, // Return the "OK" response for pipeline/transaction modes
+                    oldKey,
+                    newKey);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -345,11 +335,9 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     public Boolean renameNX(byte[] oldKey, byte[] newKey) {
         Assert.notNull(oldKey, "Old key must not be null");
         Assert.notNull(newKey, "New key must not be null");
-        
+
         try {
-            return connection.execute("RENAMENX",
-                (Boolean glideResult) -> glideResult,
-                oldKey, newKey);
+            return connection.execute("RENAMENX", (Boolean glideResult) -> glideResult, oldKey, newKey);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -359,23 +347,23 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Boolean expire(byte[] key, long seconds, ExpirationOptions.Condition condition) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
             if (condition == ExpirationOptions.Condition.ALWAYS) {
-                return connection.execute("EXPIRE",
-                    (Boolean glideResult) -> glideResult,
-                    key, seconds);
+                return connection.execute("EXPIRE", (Boolean glideResult) -> glideResult, key, seconds);
             } else {
-                String conditionStr = switch (condition) {
-                    case XX -> "XX";
-                    case NX -> "NX";
-                    case GT -> "GT";
-                    case LT -> "LT";
-                    default -> throw new IllegalArgumentException("Unsupported expiration condition: " + condition);
-                };
-                return connection.execute("EXPIRE",
-                    (Boolean glideResult) -> glideResult,
-                    key, seconds, conditionStr);
+                String conditionStr =
+                        switch (condition) {
+                            case XX -> "XX";
+                            case NX -> "NX";
+                            case GT -> "GT";
+                            case LT -> "LT";
+                            default ->
+                                    throw new IllegalArgumentException(
+                                            "Unsupported expiration condition: " + condition);
+                        };
+                return connection.execute(
+                        "EXPIRE", (Boolean glideResult) -> glideResult, key, seconds, conditionStr);
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -386,23 +374,23 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Boolean pExpire(byte[] key, long millis, ExpirationOptions.Condition condition) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
             if (condition == ExpirationOptions.Condition.ALWAYS) {
-                return connection.execute("PEXPIRE",
-                    (Boolean glideResult) -> glideResult,
-                    key, millis);
+                return connection.execute("PEXPIRE", (Boolean glideResult) -> glideResult, key, millis);
             } else {
-                String conditionStr = switch (condition) {
-                    case XX -> "XX";
-                    case NX -> "NX";
-                    case GT -> "GT";
-                    case LT -> "LT";
-                    default -> throw new IllegalArgumentException("Unsupported expiration condition: " + condition);
-                };
-                return connection.execute("PEXPIRE",
-                    (Boolean glideResult) -> glideResult,
-                    key, millis, conditionStr);
+                String conditionStr =
+                        switch (condition) {
+                            case XX -> "XX";
+                            case NX -> "NX";
+                            case GT -> "GT";
+                            case LT -> "LT";
+                            default ->
+                                    throw new IllegalArgumentException(
+                                            "Unsupported expiration condition: " + condition);
+                        };
+                return connection.execute(
+                        "PEXPIRE", (Boolean glideResult) -> glideResult, key, millis, conditionStr);
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -413,23 +401,23 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Boolean expireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
             if (condition == ExpirationOptions.Condition.ALWAYS) {
-                return connection.execute("EXPIREAT",
-                    (Boolean glideResult) -> glideResult,
-                    key, unixTime);
+                return connection.execute("EXPIREAT", (Boolean glideResult) -> glideResult, key, unixTime);
             } else {
-                String conditionStr = switch (condition) {
-                    case XX -> "XX";
-                    case NX -> "NX";
-                    case GT -> "GT";
-                    case LT -> "LT";
-                    default -> throw new IllegalArgumentException("Unsupported expiration condition: " + condition);
-                };
-                return connection.execute("EXPIREAT",
-                    (Boolean glideResult) -> glideResult,
-                    key, unixTime, conditionStr);
+                String conditionStr =
+                        switch (condition) {
+                            case XX -> "XX";
+                            case NX -> "NX";
+                            case GT -> "GT";
+                            case LT -> "LT";
+                            default ->
+                                    throw new IllegalArgumentException(
+                                            "Unsupported expiration condition: " + condition);
+                        };
+                return connection.execute(
+                        "EXPIREAT", (Boolean glideResult) -> glideResult, key, unixTime, conditionStr);
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -438,25 +426,27 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
 
     @Override
     @Nullable
-    public Boolean pExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition) {
+    public Boolean pExpireAt(
+            byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
             if (condition == ExpirationOptions.Condition.ALWAYS) {
-                return connection.execute("PEXPIREAT",
-                    (Boolean glideResult) -> glideResult,
-                    key, unixTimeInMillis);
+                return connection.execute(
+                        "PEXPIREAT", (Boolean glideResult) -> glideResult, key, unixTimeInMillis);
             } else {
-                String conditionStr = switch (condition) {
-                    case XX -> "XX";
-                    case NX -> "NX";
-                    case GT -> "GT";
-                    case LT -> "LT";
-                    default -> throw new IllegalArgumentException("Unsupported expiration condition: " + condition);
-                };
-                return connection.execute("PEXPIREAT",
-                    (Boolean glideResult) -> glideResult,
-                    key, unixTimeInMillis, conditionStr);
+                String conditionStr =
+                        switch (condition) {
+                            case XX -> "XX";
+                            case NX -> "NX";
+                            case GT -> "GT";
+                            case LT -> "LT";
+                            default ->
+                                    throw new IllegalArgumentException(
+                                            "Unsupported expiration condition: " + condition);
+                        };
+                return connection.execute(
+                        "PEXPIREAT", (Boolean glideResult) -> glideResult, key, unixTimeInMillis, conditionStr);
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -467,11 +457,9 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Boolean persist(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("PERSIST",
-                (Boolean glideResult) -> glideResult,
-                key);
+            return connection.execute("PERSIST", (Boolean glideResult) -> glideResult, key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -481,11 +469,9 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Boolean move(byte[] key, int dbIndex) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("MOVE",
-                (Boolean glideResult) -> glideResult,
-                key, dbIndex);
+            return connection.execute("MOVE", (Boolean glideResult) -> glideResult, key, dbIndex);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -495,11 +481,9 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Long ttl(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("TTL",
-                (Long glideResult) -> glideResult,
-                key);
+            return connection.execute("TTL", (Long glideResult) -> glideResult, key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -510,23 +494,24 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     public Long ttl(byte[] key, TimeUnit timeUnit) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(timeUnit, "TimeUnit must not be null");
-        
+
         try {
-            return connection.execute("TTL",
-                (Long ttlSeconds) -> {
-                    if (ttlSeconds == null) {
-                        return null;
-                    }
-                    
-                    // Valkey TTL semantics: -2 = key doesn't exist, -1 = key exists but no expiration
-                    // These are special values, not actual time values, so don't convert them
-                    if (ttlSeconds < 0) {
-                        return ttlSeconds;
-                    }
-                    
-                    return timeUnit.convert(ttlSeconds, TimeUnit.SECONDS);
-                },
-                key);
+            return connection.execute(
+                    "TTL",
+                    (Long ttlSeconds) -> {
+                        if (ttlSeconds == null) {
+                            return null;
+                        }
+
+                        // Valkey TTL semantics: -2 = key doesn't exist, -1 = key exists but no expiration
+                        // These are special values, not actual time values, so don't convert them
+                        if (ttlSeconds < 0) {
+                            return ttlSeconds;
+                        }
+
+                        return timeUnit.convert(ttlSeconds, TimeUnit.SECONDS);
+                    },
+                    key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -536,11 +521,9 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Long pTtl(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("PTTL",
-                (Long glideResult) -> glideResult,
-                key);
+            return connection.execute("PTTL", (Long glideResult) -> glideResult, key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -551,23 +534,24 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     public Long pTtl(byte[] key, TimeUnit timeUnit) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(timeUnit, "TimeUnit must not be null");
-        
+
         try {
-            return connection.execute("PTTL",
-                (Long pTtlMillis) -> {
-                    if (pTtlMillis == null) {
-                        return null;
-                    }
-                    
-                    // Valkey PTTL semantics: -2 = key doesn't exist, -1 = key exists but no expiration
-                    // These are special values, not actual time values, so don't convert them
-                    if (pTtlMillis < 0) {
-                        return pTtlMillis;
-                    }
-                    
-                    return timeUnit.convert(pTtlMillis, TimeUnit.MILLISECONDS);
-                },
-                key);
+            return connection.execute(
+                    "PTTL",
+                    (Long pTtlMillis) -> {
+                        if (pTtlMillis == null) {
+                            return null;
+                        }
+
+                        // Valkey PTTL semantics: -2 = key doesn't exist, -1 = key exists but no expiration
+                        // These are special values, not actual time values, so don't convert them
+                        if (pTtlMillis < 0) {
+                            return pTtlMillis;
+                        }
+
+                        return timeUnit.convert(pTtlMillis, TimeUnit.MILLISECONDS);
+                    },
+                    key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -577,18 +561,19 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public List<byte[]> sort(byte[] key, SortParameters params) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
-            
+
             if (params != null) {
                 ValkeyGlideConverters.appendSortParameters(args, params);
             }
-            
-            return connection.execute("SORT",
-                (Object[] glideResult) -> ValkeyGlideConverters.toBytesList(glideResult),
-                args.toArray());
+
+            return connection.execute(
+                    "SORT",
+                    (Object[] glideResult) -> ValkeyGlideConverters.toBytesList(glideResult),
+                    args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -599,21 +584,19 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     public Long sort(byte[] key, SortParameters params, byte[] storeKey) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(storeKey, "Store key must not be null");
-        
+
         try {
             List<Object> args = new ArrayList<>();
             args.add(key);
-            
+
             if (params != null) {
                 ValkeyGlideConverters.appendSortParameters(args, params);
             }
-            
+
             args.add("STORE");
             args.add(storeKey);
-            
-            return connection.execute("SORT",
-                (Long glideResult) -> glideResult,
-                args.toArray());
+
+            return connection.execute("SORT", (Long glideResult) -> glideResult, args.toArray());
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -623,11 +606,12 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public byte[] dump(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("DUMP",
-                (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
-                key);
+            return connection.execute(
+                    "DUMP",
+                    (GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
+                    key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -637,16 +621,25 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     public void restore(byte[] key, long ttlInMillis, byte[] serializedValue, boolean replace) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(serializedValue, "Serialized value must not be null");
-        
+
         try {
             if (replace) {
-                connection.execute("RESTORE",
-                    (String glideResult) -> glideResult, // Return the "OK" response for pipeline/transaction modes
-                    key, ttlInMillis, serializedValue, "REPLACE");
+                connection.execute(
+                        "RESTORE",
+                        (String glideResult) ->
+                                glideResult, // Return the "OK" response for pipeline/transaction modes
+                        key,
+                        ttlInMillis,
+                        serializedValue,
+                        "REPLACE");
             } else {
-                connection.execute("RESTORE",
-                    (String glideResult) -> glideResult, // Return the "OK" response for pipeline/transaction modes
-                    key, ttlInMillis, serializedValue);
+                connection.execute(
+                        "RESTORE",
+                        (String glideResult) ->
+                                glideResult, // Return the "OK" response for pipeline/transaction modes
+                        key,
+                        ttlInMillis,
+                        serializedValue);
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -657,11 +650,13 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public ValueEncoding encodingOf(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("OBJECT",
-                (GlideString glideResult) -> ValkeyGlideConverters.toValueEncoding(glideResult),
-                "ENCODING", key);
+            return connection.execute(
+                    "OBJECT",
+                    (GlideString glideResult) -> ValkeyGlideConverters.toValueEncoding(glideResult),
+                    "ENCODING",
+                    key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -671,11 +666,13 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Duration idletime(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("OBJECT",
-                (Long glideResult) -> glideResult != null ? Duration.ofSeconds(glideResult) : null,
-                "IDLETIME", key);
+            return connection.execute(
+                    "OBJECT",
+                    (Long glideResult) -> glideResult != null ? Duration.ofSeconds(glideResult) : null,
+                    "IDLETIME",
+                    key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
@@ -685,11 +682,9 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
     @Nullable
     public Long refcount(byte[] key) {
         Assert.notNull(key, "Key must not be null");
-        
+
         try {
-            return connection.execute("OBJECT",
-                (Long glideResult) -> glideResult,
-                "REFCOUNT", key);
+            return connection.execute("OBJECT", (Long glideResult) -> glideResult, "REFCOUNT", key);
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }

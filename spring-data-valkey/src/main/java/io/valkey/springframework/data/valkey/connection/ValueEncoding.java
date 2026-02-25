@@ -16,26 +16,26 @@
 package io.valkey.springframework.data.valkey.connection;
 
 import java.util.Optional;
-
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
- * {@link ValueEncoding} is used for the Valkey internal data representation used in order to store the value associated
- * with a key. <br />
+ * {@link ValueEncoding} is used for the Valkey internal data representation used in order to store
+ * the value associated with a key. <br>
+ *
  * <dl>
- * <dt>Strings</dt>
- * <dd>{@link ValkeyValueEncoding#RAW} or {@link ValkeyValueEncoding#INT}</dd>
- * <dt>Lists</dt>
- * <dd>{@link ValkeyValueEncoding#ZIPLIST} or {@link ValkeyValueEncoding#LINKEDLIST}</dd>
- * <dt>Sets</dt>
- * <dd>{@link ValkeyValueEncoding#INTSET} or {@link ValkeyValueEncoding#HASHTABLE}</dd>
- * <dt>Hashes</dt>
- * <dd>{@link ValkeyValueEncoding#ZIPLIST} or {@link ValkeyValueEncoding#HASHTABLE}</dd>
- * <dt>Sorted Sets</dt>
- * <dd>{@link ValkeyValueEncoding#ZIPLIST} or {@link ValkeyValueEncoding#SKIPLIST}</dd>
- * <dt>Absent keys</dt>
- * <dd>{@link ValkeyValueEncoding#VACANT}</dd>
+ *   <dt>Strings
+ *   <dd>{@link ValkeyValueEncoding#RAW} or {@link ValkeyValueEncoding#INT}
+ *   <dt>Lists
+ *   <dd>{@link ValkeyValueEncoding#ZIPLIST} or {@link ValkeyValueEncoding#LINKEDLIST}
+ *   <dt>Sets
+ *   <dd>{@link ValkeyValueEncoding#INTSET} or {@link ValkeyValueEncoding#HASHTABLE}
+ *   <dt>Hashes
+ *   <dd>{@link ValkeyValueEncoding#ZIPLIST} or {@link ValkeyValueEncoding#HASHTABLE}
+ *   <dt>Sorted Sets
+ *   <dd>{@link ValkeyValueEncoding#ZIPLIST} or {@link ValkeyValueEncoding#SKIPLIST}
+ *   <dt>Absent keys
+ *   <dd>{@link ValkeyValueEncoding#VACANT}
  * </dl>
  *
  * @author Christoph Strobl
@@ -43,80 +43,64 @@ import org.springframework.util.ObjectUtils;
  */
 public interface ValueEncoding {
 
-	@Nullable
-	String raw();
+    @Nullable
+    String raw();
 
-	/**
-	 * Get the {@link ValueEncoding} for given {@code encoding}.
-	 *
-	 * @param encoding can be {@literal null}.
-	 * @return never {@literal null}.
-	 */
-	static ValueEncoding of(@Nullable String encoding) {
-		return ValkeyValueEncoding.lookup(encoding).orElse(() -> encoding);
-	}
+    /**
+     * Get the {@link ValueEncoding} for given {@code encoding}.
+     *
+     * @param encoding can be {@literal null}.
+     * @return never {@literal null}.
+     */
+    static ValueEncoding of(@Nullable String encoding) {
+        return ValkeyValueEncoding.lookup(encoding).orElse(() -> encoding);
+    }
 
-	/**
-	 * Default {@link ValueEncoding} implementation of encodings used in Valkey.
-	 *
-	 * @author Christoph Strobl
-	 * @since 2.1
-	 */
-	enum ValkeyValueEncoding implements ValueEncoding {
+    /**
+     * Default {@link ValueEncoding} implementation of encodings used in Valkey.
+     *
+     * @author Christoph Strobl
+     * @since 2.1
+     */
+    enum ValkeyValueEncoding implements ValueEncoding {
 
-		/**
-		 * Normal string encoding.
-		 */
-		RAW("raw"), //
-		/**
-		 * 64 bit signed interval String representing an integer.
-		 */
-		INT("int"), //
-		/**
-		 * Space saving representation for small lists, hashes and sorted sets.
-		 */
-		ZIPLIST("ziplist"), //
-		/**
-		 * Encoding for large lists.
-		 */
-		LINKEDLIST("linkedlist"), //
-		/**
-		 * Space saving representation for small sets that contain only integers.ø
-		 */
-		INTSET("intset"), //
-		/**
-		 * Encoding for large hashes.
-		 */
-		HASHTABLE("hashtable"), //
-		/**
-		 * Encoding for sorted sets of any size.
-		 */
-		SKIPLIST("skiplist"), //
-		/**
-		 * No encoding present due to non existing key.
-		 */
-		VACANT(null);
+        /** Normal string encoding. */
+        RAW("raw"), //
+        /** 64 bit signed interval String representing an integer. */
+        INT("int"), //
+        /** Space saving representation for small lists, hashes and sorted sets. */
+        ZIPLIST("ziplist"), //
+        /** Encoding for large lists. */
+        LINKEDLIST("linkedlist"), //
+        /** Space saving representation for small sets that contain only integers.ø */
+        INTSET("intset"), //
+        /** Encoding for large hashes. */
+        HASHTABLE("hashtable"), //
+        /** Encoding for sorted sets of any size. */
+        SKIPLIST("skiplist"), //
+        /** No encoding present due to non existing key. */
+        VACANT(null);
 
-		private final @Nullable String raw;
+        private final @Nullable String raw;
 
-		ValkeyValueEncoding(@Nullable String raw) {
-			this.raw = raw;
-		}
+        ValkeyValueEncoding(@Nullable String raw) {
+            this.raw = raw;
+        }
 
-		@Override
-		public String raw() {
-			return raw;
-		}
+        @Override
+        public String raw() {
+            return raw;
+        }
 
-		@Nullable
-		static Optional<ValueEncoding> lookup(@Nullable String encoding) {
+        @Nullable
+        static Optional<ValueEncoding> lookup(@Nullable String encoding) {
 
-			for (ValueEncoding valueEncoding : values()) {
-				if (ObjectUtils.nullSafeEquals(valueEncoding.raw(), encoding)) {
-					return Optional.of(valueEncoding);
-				}
-			}
-			return Optional.empty();
-		}
-	}
+            for (ValueEncoding valueEncoding : values()) {
+                if (ObjectUtils.nullSafeEquals(valueEncoding.raw(), encoding)) {
+                    return Optional.of(valueEncoding);
+                }
+            }
+            return Optional.empty();
+        }
+    }
 }

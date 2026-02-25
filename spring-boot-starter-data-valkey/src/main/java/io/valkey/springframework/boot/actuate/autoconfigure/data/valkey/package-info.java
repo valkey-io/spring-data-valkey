@@ -14,7 +14,5 @@
  * limitations under the License.
  */
 
-/**
- * Auto-configuration for Valkey actuator support.
- */
+/** Auto-configuration for Valkey actuator support. */
 package io.valkey.springframework.boot.actuate.autoconfigure.data.valkey;

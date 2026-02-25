@@ -20,7 +20,7 @@ import static org.mockito.Mockito.*;
 import io.lettuce.core.api.StatefulConnection;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
-
+import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration.LettucePoolingClientConfigurationBuilder;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration.LettucePoolingClientConfigurationBuilder;
 
 /**
  * Unit tests for {@link LettucePoolingConnectionProvider}.
@@ -41,54 +40,58 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingCl
 @MockitoSettings(strictness = Strictness.LENIENT)
 class LettucePoolingConnectionProviderUnitTests {
 
-	@Mock LettuceConnectionProvider connectionProviderMock;
-	@Mock StatefulRedisConnection<byte[], byte[]> connectionMock;
-	@Mock RedisAsyncCommands<byte[], byte[]> commandsMock;
+    @Mock LettuceConnectionProvider connectionProviderMock;
+    @Mock StatefulRedisConnection<byte[], byte[]> connectionMock;
+    @Mock RedisAsyncCommands<byte[], byte[]> commandsMock;
 
-	private LettucePoolingClientConfiguration config = LettucePoolingClientConfiguration.defaultConfiguration();
+    private LettucePoolingClientConfiguration config =
+            LettucePoolingClientConfiguration.defaultConfiguration();
 
-	@BeforeEach
-	void before() {
+    @BeforeEach
+    void before() {
 
-		when(connectionMock.async()).thenReturn(commandsMock);
-		when(connectionProviderMock.getConnection(any())).thenReturn(connectionMock);
-	}
+        when(connectionMock.async()).thenReturn(commandsMock);
+        when(connectionProviderMock.getConnection(any())).thenReturn(connectionMock);
+    }
 
-	@Test // DATAREDIS-988
-	void shouldReturnConnectionOnRelease() {
+    @Test // DATAREDIS-988
+    void shouldReturnConnectionOnRelease() {
 
-		LettucePoolingConnectionProvider provider = new LettucePoolingConnectionProvider(connectionProviderMock, config);
+        LettucePoolingConnectionProvider provider =
+                new LettucePoolingConnectionProvider(connectionProviderMock, config);
 
-		provider.release(provider.getConnection(StatefulRedisConnection.class));
+        provider.release(provider.getConnection(StatefulRedisConnection.class));
 
-		verifyNoInteractions(commandsMock);
-	}
+        verifyNoInteractions(commandsMock);
+    }
 
-	@Test // DATAREDIS-988
-	void shouldDiscardTransactionOnReleaseOnActiveTransaction() {
+    @Test // DATAREDIS-988
+    void shouldDiscardTransactionOnReleaseOnActiveTransaction() {
 
-		LettucePoolingConnectionProvider provider = new LettucePoolingConnectionProvider(connectionProviderMock, config);
-		when(connectionMock.isMulti()).thenReturn(true);
+        LettucePoolingConnectionProvider provider =
+                new LettucePoolingConnectionProvider(connectionProviderMock, config);
+        when(connectionMock.isMulti()).thenReturn(true);
 
-		provider.release(provider.getConnection(StatefulRedisConnection.class));
+        provider.release(provider.getConnection(StatefulRedisConnection.class));
 
-		verify(commandsMock).discard();
-	}
+        verify(commandsMock).discard();
+    }
 
-	@Test // GH-3072
-	void shouldPrepareThePool() {
+    @Test // GH-3072
+    void shouldPrepareThePool() {
 
-		GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig = new GenericObjectPoolConfig<>();
-		poolConfig.setMinIdle(5);
-		poolConfig.setMaxIdle(8);
-		poolConfig.setMaxTotal(10);
+        GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig = new GenericObjectPoolConfig<>();
+        poolConfig.setMinIdle(5);
+        poolConfig.setMaxIdle(8);
+        poolConfig.setMaxTotal(10);
 
-		LettucePoolingClientConfiguration config = new LettucePoolingClientConfigurationBuilder().poolConfig(poolConfig)
-				.build();
+        LettucePoolingClientConfiguration config =
+                new LettucePoolingClientConfigurationBuilder().poolConfig(poolConfig).build();
 
-		LettucePoolingConnectionProvider provider = new LettucePoolingConnectionProvider(connectionProviderMock, config);
+        LettucePoolingConnectionProvider provider =
+                new LettucePoolingConnectionProvider(connectionProviderMock, config);
 
-		provider.getConnection(StatefulRedisConnection.class);
-		verify(connectionProviderMock, times(5)).getConnection(any());
-	}
+        provider.getConnection(StatefulRedisConnection.class);
+        verify(connectionProviderMock, times(5)).getConnection(any());
+    }
 }

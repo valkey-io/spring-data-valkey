@@ -16,10 +16,9 @@
 
 package io.valkey.springframework.boot.testsupport.docker.compose;
 
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
@@ -34,60 +33,61 @@ import org.testcontainers.utility.DockerImageName;
  */
 public class DockerComposeTestExtension implements ParameterResolver {
 
-	@Override
-	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
-		Parameter parameter = parameterContext.getParameter();
-		return ValkeyConnectionDetails.class.isAssignableFrom(parameter.getType());
-	}
+    @Override
+    public boolean supportsParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext) {
+        Parameter parameter = parameterContext.getParameter();
+        return ValkeyConnectionDetails.class.isAssignableFrom(parameter.getType());
+    }
 
-	@Override
-	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {
-		Method testMethod = extensionContext.getRequiredTestMethod();
-		DockerComposeTest annotation = testMethod.getAnnotation(DockerComposeTest.class);
+    @Override
+    public Object resolveParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext) {
+        Method testMethod = extensionContext.getRequiredTestMethod();
+        DockerComposeTest annotation = testMethod.getAnnotation(DockerComposeTest.class);
 
-		@SuppressWarnings("resource")
-		GenericContainer<?> container = new GenericContainer<>(DockerImageName.parse(annotation.image()))
-				.withExposedPorts(6379);
+        @SuppressWarnings("resource")
+        GenericContainer<?> container =
+                new GenericContainer<>(DockerImageName.parse(annotation.image())).withExposedPorts(6379);
 
-		container.start();
+        container.start();
 
-		return new SimpleValkeyConnectionDetails(container.getHost(), container.getMappedPort(6379));
-	}
+        return new SimpleValkeyConnectionDetails(container.getHost(), container.getMappedPort(6379));
+    }
 
-	private static class SimpleValkeyConnectionDetails implements ValkeyConnectionDetails {
+    private static class SimpleValkeyConnectionDetails implements ValkeyConnectionDetails {
 
-		private final String host;
-		private final int port;
+        private final String host;
+        private final int port;
 
-		SimpleValkeyConnectionDetails(String host, int port) {
-			this.host = host;
-			this.port = port;
-		}
+        SimpleValkeyConnectionDetails(String host, int port) {
+            this.host = host;
+            this.port = port;
+        }
 
-		@Override
-		public String getUsername() {
-			return null;
-		}
+        @Override
+        public String getUsername() {
+            return null;
+        }
 
-		@Override
-		public String getPassword() {
-			return null;
-		}
+        @Override
+        public String getPassword() {
+            return null;
+        }
 
-		@Override
-		public Standalone getStandalone() {
-			return Standalone.of(host, port);
-		}
+        @Override
+        public Standalone getStandalone() {
+            return Standalone.of(host, port);
+        }
 
-		@Override
-		public Sentinel getSentinel() {
-			return null;
-		}
+        @Override
+        public Sentinel getSentinel() {
+            return null;
+        }
 
-		@Override
-		public Cluster getCluster() {
-			return null;
-		}
-	}
-
+        @Override
+        public Cluster getCluster() {
+            return null;
+        }
+    }
 }

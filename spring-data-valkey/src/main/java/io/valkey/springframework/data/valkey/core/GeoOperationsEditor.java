@@ -18,20 +18,22 @@ package io.valkey.springframework.data.valkey.core;
 import java.beans.PropertyEditorSupport;
 
 /**
- * PropertyEditor allowing for easy injection of {@link io.valkey.springframework.data.valkey.core.GeoOperations} from
- * {@link io.valkey.springframework.data.valkey.core.ValkeyOperations}.
+ * PropertyEditor allowing for easy injection of {@link
+ * io.valkey.springframework.data.valkey.core.GeoOperations} from {@link
+ * io.valkey.springframework.data.valkey.core.ValkeyOperations}.
  *
  * @author Ninad Divadkar
  * @author Christoph Strobl
  */
 class GeoOperationsEditor extends PropertyEditorSupport {
 
-	public void setValue(Object value) {
+    public void setValue(Object value) {
 
-		if (value instanceof ValkeyOperations<?, ?> valkeyOperations) {
-			super.setValue(valkeyOperations.opsForGeo());
-		} else {
-			throw new IllegalArgumentException("Editor supports only conversion of type " + ValkeyOperations.class);
-		}
-	}
+        if (value instanceof ValkeyOperations<?, ?> valkeyOperations) {
+            super.setValue(valkeyOperations.opsForGeo());
+        } else {
+            throw new IllegalArgumentException(
+                    "Editor supports only conversion of type " + ValkeyOperations.class);
+        }
+    }
 }

@@ -22,14 +22,14 @@ import io.valkey.springframework.data.valkey.connection.ReactiveClusterStreamCom
  * @since 2.2
  */
 class LettuceReactiveClusterStreamCommands extends LettuceReactiveStreamCommands
-		implements ReactiveClusterStreamCommands {
+        implements ReactiveClusterStreamCommands {
 
-	/**
-	 * Create new {@link LettuceReactiveClusterStreamCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveClusterStreamCommands(LettuceReactiveValkeyConnection connection) {
-		super(connection);
-	}
+    /**
+     * Create new {@link LettuceReactiveClusterStreamCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveClusterStreamCommands(LettuceReactiveValkeyConnection connection) {
+        super(connection);
+    }
 }

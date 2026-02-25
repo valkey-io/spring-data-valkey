@@ -17,18 +17,16 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.KeyScanCursor;
 import io.lettuce.core.ScanArgs;
-
-import java.util.List;
-import java.util.Set;
-
-import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.SortParameters;
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClusterConnection.LettuceClusterCommandCallback;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanCursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
+import java.util.List;
+import java.util.Set;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -39,123 +37,131 @@ import org.springframework.util.Assert;
  */
 class LettuceClusterKeyCommands extends LettuceKeyCommands {
 
-	private final LettuceClusterConnection connection;
+    private final LettuceClusterConnection connection;
 
-	LettuceClusterKeyCommands(LettuceClusterConnection connection) {
+    LettuceClusterKeyCommands(LettuceClusterConnection connection) {
 
-		super(connection);
-		this.connection = connection;
-	}
+        super(connection);
+        this.connection = connection;
+    }
 
-	@Override
-	public void rename(byte[] oldKey, byte[] newKey) {
+    @Override
+    public void rename(byte[] oldKey, byte[] newKey) {
 
-		Assert.notNull(oldKey, "Old key must not be null");
-		Assert.notNull(newKey, "New key must not be null");
+        Assert.notNull(oldKey, "Old key must not be null");
+        Assert.notNull(newKey, "New key must not be null");
 
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(oldKey, newKey)) {
-			super.rename(oldKey, newKey);
-			return;
-		}
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(oldKey, newKey)) {
+            super.rename(oldKey, newKey);
+            return;
+        }
 
-		byte[] value = dump(oldKey);
+        byte[] value = dump(oldKey);
 
-		if (value != null && value.length > 0) {
+        if (value != null && value.length > 0) {
 
-			restore(newKey, 0, value, true);
-			del(oldKey);
-		}
-	}
+            restore(newKey, 0, value, true);
+            del(oldKey);
+        }
+    }
 
-	@Override
-	public Boolean renameNX(byte[] sourceKey, byte[] targetKey) {
+    @Override
+    public Boolean renameNX(byte[] sourceKey, byte[] targetKey) {
 
-		Assert.notNull(sourceKey, "Source key must not be null");
-		Assert.notNull(targetKey, "Target key must not be null");
+        Assert.notNull(sourceKey, "Source key must not be null");
+        Assert.notNull(targetKey, "Target key must not be null");
 
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(sourceKey, targetKey)) {
-			return super.renameNX(sourceKey, targetKey);
-		}
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(sourceKey, targetKey)) {
+            return super.renameNX(sourceKey, targetKey);
+        }
 
-		byte[] value = dump(sourceKey);
+        byte[] value = dump(sourceKey);
 
-		if (value != null && value.length > 0 && !exists(targetKey)) {
+        if (value != null && value.length > 0 && !exists(targetKey)) {
 
-			restore(targetKey, 0, value);
-			del(sourceKey);
-			return Boolean.TRUE;
-		}
-		return Boolean.FALSE;
-	}
+            restore(targetKey, 0, value);
+            del(sourceKey);
+            return Boolean.TRUE;
+        }
+        return Boolean.FALSE;
+    }
 
-	@Override
-	public Boolean move(byte[] key, int dbIndex) {
-		throw new InvalidDataAccessApiUsageException("MOVE not supported in CLUSTER mode");
-	}
+    @Override
+    public Boolean move(byte[] key, int dbIndex) {
+        throw new InvalidDataAccessApiUsageException("MOVE not supported in CLUSTER mode");
+    }
 
-	@Nullable
-	public byte[] randomKey(ValkeyClusterNode node) {
+    @Nullable
+    public byte[] randomKey(ValkeyClusterNode node) {
 
-		return connection.getClusterCommandExecutor()
-				.executeCommandOnSingleNode((LettuceClusterCommandCallback<byte[]>) client -> client.randomkey(), node)
-				.getValue();
-	}
+        return connection
+                .getClusterCommandExecutor()
+                .executeCommandOnSingleNode(
+                        (LettuceClusterCommandCallback<byte[]>) client -> client.randomkey(), node)
+                .getValue();
+    }
 
-	@Nullable
-	public Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern) {
+    @Nullable
+    public Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern) {
 
-		Assert.notNull(pattern, "Pattern must not be null");
+        Assert.notNull(pattern, "Pattern must not be null");
 
-		return LettuceConverters.toBytesSet(connection.getClusterCommandExecutor()
-				.executeCommandOnSingleNode((LettuceClusterCommandCallback<List<byte[]>>) client -> client.keys(pattern), node)
-				.getValue());
-	}
+        return LettuceConverters.toBytesSet(
+                connection
+                        .getClusterCommandExecutor()
+                        .executeCommandOnSingleNode(
+                                (LettuceClusterCommandCallback<List<byte[]>>) client -> client.keys(pattern), node)
+                        .getValue());
+    }
 
-	/**
-	 * Use a {@link Cursor} to iterate over keys stored at the given {@link ValkeyClusterNode}.
-	 *
-	 * @param node must not be {@literal null}.
-	 * @param options must not be {@literal null}.
-	 * @return never {@literal null}.
-	 * @since 2.1
-	 */
-	Cursor<byte[]> scan(ValkeyClusterNode node, ScanOptions options) {
+    /**
+     * Use a {@link Cursor} to iterate over keys stored at the given {@link ValkeyClusterNode}.
+     *
+     * @param node must not be {@literal null}.
+     * @param options must not be {@literal null}.
+     * @return never {@literal null}.
+     * @since 2.1
+     */
+    Cursor<byte[]> scan(ValkeyClusterNode node, ScanOptions options) {
 
-		Assert.notNull(node, "ValkeyClusterNode must not be null");
-		Assert.notNull(options, "Options must not be null");
+        Assert.notNull(node, "ValkeyClusterNode must not be null");
+        Assert.notNull(options, "Options must not be null");
 
-		return connection.getClusterCommandExecutor()
-				.executeCommandOnSingleNode((LettuceClusterCommandCallback<ScanCursor<byte[]>>) client -> {
+        return connection
+                .getClusterCommandExecutor()
+                .executeCommandOnSingleNode(
+                        (LettuceClusterCommandCallback<ScanCursor<byte[]>>)
+                                client -> {
+                                    return new LettuceScanCursor<byte[]>(options) {
 
-					return new LettuceScanCursor<byte[]>(options) {
+                                        @Override
+                                        protected LettuceScanIteration<byte[]> doScan(
+                                                io.lettuce.core.ScanCursor cursor, ScanOptions options) {
 
-						@Override
-						protected LettuceScanIteration<byte[]> doScan(io.lettuce.core.ScanCursor cursor, ScanOptions options) {
+                                            ScanArgs scanArgs = LettuceConverters.toScanArgs(options);
 
-							ScanArgs scanArgs = LettuceConverters.toScanArgs(options);
+                                            KeyScanCursor<byte[]> keyScanCursor = client.scan(cursor, scanArgs);
+                                            return new LettuceScanIteration<>(keyScanCursor, keyScanCursor.getKeys());
+                                        }
+                                    }.open();
+                                },
+                        node)
+                .getValue();
+    }
 
-							KeyScanCursor<byte[]> keyScanCursor = client.scan(cursor, scanArgs);
-							return new LettuceScanIteration<>(keyScanCursor, keyScanCursor.getKeys());
-						}
+    @Override
+    public Long sort(byte[] key, SortParameters params, byte[] storeKey) {
 
-					}.open();
+        Assert.notNull(key, "Key must not be null");
 
-				}, node).getValue();
-	}
+        if (ClusterSlotHashUtil.isSameSlotForAllKeys(key, storeKey)) {
+            return super.sort(key, params, storeKey);
+        }
 
-	@Override
-	public Long sort(byte[] key, SortParameters params, byte[] storeKey) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		if (ClusterSlotHashUtil.isSameSlotForAllKeys(key, storeKey)) {
-			return super.sort(key, params, storeKey);
-		}
-
-		List<byte[]> sorted = sort(key, params);
-		byte[][] arr = new byte[sorted.size()][];
-		connection.keyCommands().unlink(storeKey);
-		connection.listCommands().lPush(storeKey, sorted.toArray(arr));
-		return (long) sorted.size();
-	}
+        List<byte[]> sorted = sort(key, params);
+        byte[][] arr = new byte[sorted.size()][];
+        connection.keyCommands().unlink(storeKey);
+        connection.listCommands().lPush(storeKey, sorted.toArray(arr));
+        return (long) sorted.size();
+    }
 }

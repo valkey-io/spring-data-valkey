@@ -19,11 +19,11 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 
 /**
  * A {@link BatchStrategy} to be used with {@link ValkeyCacheWriter}.
- * <p>
- * Mainly used to clear the cache.
- * <p>
- * Predefined strategies using the {@link BatchStrategies#keys() KEYS} or {@link BatchStrategies#scan(int) SCAN}
- * commands can be found in {@link BatchStrategies}.
+ *
+ * <p>Mainly used to clear the cache.
+ *
+ * <p>Predefined strategies using the {@link BatchStrategies#keys() KEYS} or {@link
+ * BatchStrategies#scan(int) SCAN} commands can be found in {@link BatchStrategies}.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -31,14 +31,13 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
  */
 public interface BatchStrategy {
 
-	/**
-	 * Remove all keys following the given pattern.
-	 *
-	 * @param connection the connection to use. Must not be {@literal null}.
-	 * @param name The cache name. Must not be {@literal null}.
-	 * @param pattern The pattern for the keys to remove. Must not be {@literal null}.
-	 * @return number of removed keys.
-	 */
-	long cleanCache(ValkeyConnection connection, String name, byte[] pattern);
-
+    /**
+     * Remove all keys following the given pattern.
+     *
+     * @param connection the connection to use. Must not be {@literal null}.
+     * @param name The cache name. Must not be {@literal null}.
+     * @param pattern The pattern for the keys to remove. Must not be {@literal null}.
+     * @return number of removed keys.
+     */
+    long cleanCache(ValkeyConnection connection, String name, byte[] pattern);
 }

@@ -26,58 +26,64 @@ import org.junit.jupiter.api.Test;
  */
 class ValkeyElastiCacheConfigurationUnitTests {
 
-	@Test // DATAREDIS-762
-	void shouldCreateSingleHostConfiguration() {
+    @Test // DATAREDIS-762
+    void shouldCreateSingleHostConfiguration() {
 
-		ValkeyStaticMasterReplicaConfiguration singleHost = new ValkeyStaticMasterReplicaConfiguration("localhost");
+        ValkeyStaticMasterReplicaConfiguration singleHost =
+                new ValkeyStaticMasterReplicaConfiguration("localhost");
 
-		assertThat(singleHost.getNodes()).hasSize(1);
+        assertThat(singleHost.getNodes()).hasSize(1);
 
-		ValkeyStandaloneConfiguration node = singleHost.getNodes().get(0);
+        ValkeyStandaloneConfiguration node = singleHost.getNodes().get(0);
 
-		assertThat(node.getHostName()).isEqualToIgnoringCase("localhost");
-		assertThat(node.getPort()).isEqualTo(6379);
-	}
+        assertThat(node.getHostName()).isEqualToIgnoringCase("localhost");
+        assertThat(node.getPort()).isEqualTo(6379);
+    }
 
-	@Test // DATAREDIS-762
-	void shouldCreateMultiHostConfiguration() {
+    @Test // DATAREDIS-762
+    void shouldCreateMultiHostConfiguration() {
 
-		ValkeyStaticMasterReplicaConfiguration multiHost = new ValkeyStaticMasterReplicaConfiguration("localhost");
-		multiHost.node("other-host", 6479);
+        ValkeyStaticMasterReplicaConfiguration multiHost =
+                new ValkeyStaticMasterReplicaConfiguration("localhost");
+        multiHost.node("other-host", 6479);
 
-		assertThat(multiHost.getNodes()).hasSize(2);
+        assertThat(multiHost.getNodes()).hasSize(2);
 
-		ValkeyStandaloneConfiguration firstNode = multiHost.getNodes().get(0);
+        ValkeyStandaloneConfiguration firstNode = multiHost.getNodes().get(0);
 
-		assertThat(firstNode.getHostName()).isEqualToIgnoringCase("localhost");
-		assertThat(firstNode.getPort()).isEqualTo(6379);
+        assertThat(firstNode.getHostName()).isEqualToIgnoringCase("localhost");
+        assertThat(firstNode.getPort()).isEqualTo(6379);
 
-		ValkeyStandaloneConfiguration secondNode = multiHost.getNodes().get(1);
+        ValkeyStandaloneConfiguration secondNode = multiHost.getNodes().get(1);
 
-		assertThat(secondNode.getHostName()).isEqualToIgnoringCase("other-host");
-		assertThat(secondNode.getPort()).isEqualTo(6479);
-	}
+        assertThat(secondNode.getHostName()).isEqualToIgnoringCase("other-host");
+        assertThat(secondNode.getPort()).isEqualTo(6479);
+    }
 
-	@Test // DATAREDIS-762
-	void shouldApplyPasswordToNodes() {
+    @Test // DATAREDIS-762
+    void shouldApplyPasswordToNodes() {
 
-		ValkeyStaticMasterReplicaConfiguration multiHost = new ValkeyStaticMasterReplicaConfiguration("localhost").node("other-host", 6479);
+        ValkeyStaticMasterReplicaConfiguration multiHost =
+                new ValkeyStaticMasterReplicaConfiguration("localhost").node("other-host", 6479);
 
-		multiHost.setPassword(ValkeyPassword.of("foobar"));
-		multiHost.node("third", 1234);
+        multiHost.setPassword(ValkeyPassword.of("foobar"));
+        multiHost.node("third", 1234);
 
-		assertThat(multiHost.getNodes()).extracting("password").containsExactly(ValkeyPassword.of("foobar"),
-				ValkeyPassword.of("foobar"), ValkeyPassword.of("foobar"));
-	}
+        assertThat(multiHost.getNodes())
+                .extracting("password")
+                .containsExactly(
+                        ValkeyPassword.of("foobar"), ValkeyPassword.of("foobar"), ValkeyPassword.of("foobar"));
+    }
 
-	@Test // DATAREDIS-762
-	void shouldApplyDatabaseToNodes() {
+    @Test // DATAREDIS-762
+    void shouldApplyDatabaseToNodes() {
 
-		ValkeyStaticMasterReplicaConfiguration multiHost = new ValkeyStaticMasterReplicaConfiguration("localhost").node("other-host", 6479);
+        ValkeyStaticMasterReplicaConfiguration multiHost =
+                new ValkeyStaticMasterReplicaConfiguration("localhost").node("other-host", 6479);
 
-		multiHost.setDatabase(4);
-		multiHost.node("third", 1234);
+        multiHost.setDatabase(4);
+        multiHost.node("third", 1234);
 
-		assertThat(multiHost.getNodes()).extracting("database").containsExactly(4, 4, 4);
-	}
+        assertThat(multiHost.getNodes()).extracting("database").containsExactly(4, 4, 4);
+    }
 }

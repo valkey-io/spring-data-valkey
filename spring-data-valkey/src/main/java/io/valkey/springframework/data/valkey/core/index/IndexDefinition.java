@@ -16,16 +16,15 @@
 package io.valkey.springframework.data.valkey.core.index;
 
 import java.util.Collection;
-
 import org.springframework.data.util.TypeInformation;
 import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
- * {@link IndexDefinition} allow to set up a blueprint for creating secondary index structures in Valkey. Setting up
- * conditions allows to define {@link Condition} that have to be passed in order to add a value to the index. This
- * allows to fine-grained tune the index structure. {@link IndexValueTransformer} gets applied to the raw value for
- * creating the actual index entry.
+ * {@link IndexDefinition} allow to set up a blueprint for creating secondary index structures in
+ * Valkey. Setting up conditions allows to define {@link Condition} that have to be passed in order
+ * to add a value to the index. This allows to fine-grained tune the index structure. {@link
+ * IndexValueTransformer} gets applied to the raw value for creating the actual index entry.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -33,95 +32,98 @@ import org.springframework.util.ObjectUtils;
  */
 public interface IndexDefinition {
 
-	/**
-	 * @return never {@literal null}.
-	 */
-	String getKeyspace();
+    /**
+     * @return never {@literal null}.
+     */
+    String getKeyspace();
 
-	/**
-	 * @return never {@literal null}.
-	 */
-	Collection<Condition<?>> getConditions();
+    /**
+     * @return never {@literal null}.
+     */
+    Collection<Condition<?>> getConditions();
 
-	/**
-	 * @return never {@literal null}.
-	 */
-	IndexValueTransformer valueTransformer();
+    /**
+     * @return never {@literal null}.
+     */
+    IndexValueTransformer valueTransformer();
 
-	/**
-	 * @return never {@literal null}.
-	 */
-	String getIndexName();
+    /**
+     * @return never {@literal null}.
+     */
+    String getIndexName();
 
-	/**
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 * @param <T>
-	 */
-	interface Condition<T> {
-		boolean matches(T value, IndexingContext context);
-	}
+    /**
+     * @author Christoph Strobl
+     * @since 1.7
+     * @param <T>
+     */
+    interface Condition<T> {
+        boolean matches(T value, IndexingContext context);
+    }
 
-	/**
-	 * Context in which a particular value is about to get indexed.
-	 *
-	 * @author Christoph Strobl
-	 * @since 1.7
-	 */
-	final class IndexingContext {
+    /**
+     * Context in which a particular value is about to get indexed.
+     *
+     * @author Christoph Strobl
+     * @since 1.7
+     */
+    final class IndexingContext {
 
-		private final String keyspace;
-		private final String path;
-		private final TypeInformation<?> typeInformation;
+        private final String keyspace;
+        private final String path;
+        private final TypeInformation<?> typeInformation;
 
-		public IndexingContext(String keyspace, String path, TypeInformation<?> typeInformation) {
+        public IndexingContext(String keyspace, String path, TypeInformation<?> typeInformation) {
 
-			this.keyspace = keyspace;
-			this.path = path;
-			this.typeInformation = typeInformation;
-		}
+            this.keyspace = keyspace;
+            this.path = path;
+            this.typeInformation = typeInformation;
+        }
 
-		public String getKeyspace() {
-			return this.keyspace;
-		}
+        public String getKeyspace() {
+            return this.keyspace;
+        }
 
-		public String getPath() {
-			return this.path;
-		}
+        public String getPath() {
+            return this.path;
+        }
 
-		public TypeInformation<?> getTypeInformation() {
-			return this.typeInformation;
-		}
+        public TypeInformation<?> getTypeInformation() {
+            return this.typeInformation;
+        }
 
-		@Override
-		public boolean equals(@Nullable Object o) {
-			if (this == o)
-				return true;
-			if (o == null || getClass() != o.getClass())
-				return false;
+        @Override
+        public boolean equals(@Nullable Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
 
-			IndexingContext that = (IndexingContext) o;
+            IndexingContext that = (IndexingContext) o;
 
-			if (!ObjectUtils.nullSafeEquals(keyspace, that.keyspace)) {
-				return false;
-			}
-			if (!ObjectUtils.nullSafeEquals(path, that.path)) {
-				return false;
-			}
-			return ObjectUtils.nullSafeEquals(typeInformation, that.typeInformation);
-		}
+            if (!ObjectUtils.nullSafeEquals(keyspace, that.keyspace)) {
+                return false;
+            }
+            if (!ObjectUtils.nullSafeEquals(path, that.path)) {
+                return false;
+            }
+            return ObjectUtils.nullSafeEquals(typeInformation, that.typeInformation);
+        }
 
-		@Override
-		public int hashCode() {
-			int result = ObjectUtils.nullSafeHashCode(keyspace);
-			result = 31 * result + ObjectUtils.nullSafeHashCode(path);
-			result = 31 * result + ObjectUtils.nullSafeHashCode(typeInformation);
-			return result;
-		}
+        @Override
+        public int hashCode() {
+            int result = ObjectUtils.nullSafeHashCode(keyspace);
+            result = 31 * result + ObjectUtils.nullSafeHashCode(path);
+            result = 31 * result + ObjectUtils.nullSafeHashCode(typeInformation);
+            return result;
+        }
 
-		public String toString() {
-			return "IndexDefinition.IndexingContext(keyspace=" + this.getKeyspace() + ", path=" + this.getPath()
-					+ ", typeInformation=" + this.getTypeInformation() + ")";
-		}
-	}
+        public String toString() {
+            return "IndexDefinition.IndexingContext(keyspace="
+                    + this.getKeyspace()
+                    + ", path="
+                    + this.getPath()
+                    + ", typeInformation="
+                    + this.getTypeInformation()
+                    + ")";
+        }
+    }
 }

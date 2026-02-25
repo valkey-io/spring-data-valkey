@@ -29,78 +29,76 @@ import org.junit.jupiter.params.provider.ValueSource;
  */
 class ValkeyNodeUnitTests {
 
-	@Test // GH-2928
-	void shouldParseIPv4AddressWithPort() {
+    @Test // GH-2928
+    void shouldParseIPv4AddressWithPort() {
 
-		ValkeyNode node = ValkeyNode.fromString("127.0.0.1:1234");
+        ValkeyNode node = ValkeyNode.fromString("127.0.0.1:1234");
 
-		assertThat(node.getHost()).isEqualTo("127.0.0.1");
-		assertThat(node.getPort()).isEqualTo(1234);
-	}
+        assertThat(node.getHost()).isEqualTo("127.0.0.1");
+        assertThat(node.getPort()).isEqualTo(1234);
+    }
 
-	@ParameterizedTest // GH-2928
-	@ValueSource(strings = { "127.0.0.1", "127.0.0.1:" })
-	void shouldParseIPv4AddressWithoutPort(String source) {
+    @ParameterizedTest // GH-2928
+    @ValueSource(strings = {"127.0.0.1", "127.0.0.1:"})
+    void shouldParseIPv4AddressWithoutPort(String source) {
 
-		ValkeyNode node = ValkeyNode.fromString(source);
+        ValkeyNode node = ValkeyNode.fromString(source);
 
-		assertThat(node.getHost()).isEqualTo("127.0.0.1");
-		assertThat(node.getPort()).isEqualTo(ValkeyNode.DEFAULT_PORT);
-	}
+        assertThat(node.getHost()).isEqualTo("127.0.0.1");
+        assertThat(node.getPort()).isEqualTo(ValkeyNode.DEFAULT_PORT);
+    }
 
-	@Test // GH-2928
-	void shouldParseIPv6AddressWithPort() {
+    @Test // GH-2928
+    void shouldParseIPv6AddressWithPort() {
 
-		ValkeyNode node = ValkeyNode.fromString("[aaaa:bbbb::dddd:eeee]:1234");
+        ValkeyNode node = ValkeyNode.fromString("[aaaa:bbbb::dddd:eeee]:1234");
 
-		assertThat(node.getHost()).isEqualTo("aaaa:bbbb::dddd:eeee");
-		assertThat(node.getPort()).isEqualTo(1234);
-	}
+        assertThat(node.getHost()).isEqualTo("aaaa:bbbb::dddd:eeee");
+        assertThat(node.getPort()).isEqualTo(1234);
+    }
 
-	@ParameterizedTest // GH-2928
-	@ValueSource(strings = { "[aaaa:bbbb::dddd:eeee]", "[aaaa:bbbb::dddd:eeee]:" })
-	void shouldParseIPv6AddressWithoutPort(String source) {
+    @ParameterizedTest // GH-2928
+    @ValueSource(strings = {"[aaaa:bbbb::dddd:eeee]", "[aaaa:bbbb::dddd:eeee]:"})
+    void shouldParseIPv6AddressWithoutPort(String source) {
 
-		ValkeyNode node = ValkeyNode.fromString(source);
+        ValkeyNode node = ValkeyNode.fromString(source);
 
-		assertThat(node.getHost()).isEqualTo("aaaa:bbbb::dddd:eeee");
-		assertThat(node.getPort()).isEqualTo(ValkeyNode.DEFAULT_PORT);
-	}
+        assertThat(node.getHost()).isEqualTo("aaaa:bbbb::dddd:eeee");
+        assertThat(node.getPort()).isEqualTo(ValkeyNode.DEFAULT_PORT);
+    }
 
-	@Test // GH-2928
-	void shouldParseBareHostnameWithPort() {
+    @Test // GH-2928
+    void shouldParseBareHostnameWithPort() {
 
-		ValkeyNode node = ValkeyNode.fromString("my.valkey.server:6379");
+        ValkeyNode node = ValkeyNode.fromString("my.valkey.server:6379");
 
-		assertThat(node.getHost()).isEqualTo("my.valkey.server");
-		assertThat(node.getPort()).isEqualTo(6379);
-	}
+        assertThat(node.getHost()).isEqualTo("my.valkey.server");
+        assertThat(node.getPort()).isEqualTo(6379);
+    }
 
-	@ParameterizedTest // GH-2928
-	@ValueSource(strings = { "my.valkey.server", "[my.valkey.server:" })
-	void shouldParseBareHostnameWithoutPort(String source) {
+    @ParameterizedTest // GH-2928
+    @ValueSource(strings = {"my.valkey.server", "[my.valkey.server:"})
+    void shouldParseBareHostnameWithoutPort(String source) {
 
-		ValkeyNode node = ValkeyNode.fromString("my.valkey.server");
+        ValkeyNode node = ValkeyNode.fromString("my.valkey.server");
 
-		assertThat(node.getHost()).isEqualTo("my.valkey.server");
-		assertThat(node.getPort()).isEqualTo(ValkeyNode.DEFAULT_PORT);
-	}
+        assertThat(node.getHost()).isEqualTo("my.valkey.server");
+        assertThat(node.getPort()).isEqualTo(ValkeyNode.DEFAULT_PORT);
+    }
 
-	@Test // GH-2928
-	void shouldThrowExceptionForInvalidPort() {
+    @Test // GH-2928
+    void shouldThrowExceptionForInvalidPort() {
 
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> ValkeyNode.fromString("127.0.0.1:invalidPort"));
-	}
+        assertThatIllegalArgumentException()
+                .isThrownBy(() -> ValkeyNode.fromString("127.0.0.1:invalidPort"));
+    }
 
-	@Test // GH-2928
-	void shouldParseBareIPv6WithoutPort() {
+    @Test // GH-2928
+    void shouldParseBareIPv6WithoutPort() {
 
-		ValkeyNode node = ValkeyNode.fromString("2001:0db8:85a3:0000:0000:8a2e:0370:7334");
+        ValkeyNode node = ValkeyNode.fromString("2001:0db8:85a3:0000:0000:8a2e:0370:7334");
 
-		assertThat(node.getHost()).isEqualTo("2001:0db8:85a3:0000:0000:8a2e:0370");
-		assertThat(node.getPort()).isEqualTo(7334);
-	}
-
+        assertThat(node.getHost()).isEqualTo("2001:0db8:85a3:0000:0000:8a2e:0370");
+        assertThat(node.getPort()).isEqualTo(7334);
+    }
 }
-

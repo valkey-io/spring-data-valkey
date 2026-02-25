@@ -16,10 +16,6 @@
 
 package io.valkey.springframework.data.valkey.repository.cdi;
 
-import jakarta.enterprise.inject.Disposes;
-import jakarta.enterprise.inject.Produces;
-
-import org.springframework.beans.factory.DisposableBean;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
@@ -28,55 +24,56 @@ import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import jakarta.enterprise.inject.Disposes;
+import jakarta.enterprise.inject.Produces;
+import org.springframework.beans.factory.DisposableBean;
 
 /**
  * @author Mark Paluch
  */
 public class ValkeyCdiDependenciesProducer {
 
-	/**
-	 * Provides a producer method for {@link ValkeyConnectionFactory}.
-	 */
-	@Produces
-	public ValkeyConnectionFactory valkeyConnectionFactory() {
-		return ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
-	}
+    /** Provides a producer method for {@link ValkeyConnectionFactory}. */
+    @Produces
+    public ValkeyConnectionFactory valkeyConnectionFactory() {
+        return ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+    }
 
-	/**
-	 * Provides a producer method for {@link ValkeyOperations}.
-	 */
-	@Produces
-	public ValkeyOperations<byte[], byte[]> valkeyOperationsProducer(ValkeyConnectionFactory valkeyConnectionFactory) {
+    /** Provides a producer method for {@link ValkeyOperations}. */
+    @Produces
+    public ValkeyOperations<byte[], byte[]> valkeyOperationsProducer(
+            ValkeyConnectionFactory valkeyConnectionFactory) {
 
-		ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
-		template.setConnectionFactory(valkeyConnectionFactory);
-		template.afterPropertiesSet();
-		return template;
-	}
+        ValkeyTemplate<byte[], byte[]> template = new ValkeyTemplate<>();
+        template.setConnectionFactory(valkeyConnectionFactory);
+        template.afterPropertiesSet();
+        return template;
+    }
 
-	// shortcut for managed KeyValueAdapter/Template.
-	@Produces
-	@PersonDB
-	public ValkeyOperations<byte[], byte[]> valkeyOperationsProducerQualified(ValkeyOperations<byte[], byte[]> instance) {
-		return instance;
-	}
+    // shortcut for managed KeyValueAdapter/Template.
+    @Produces
+    @PersonDB
+    public ValkeyOperations<byte[], byte[]> valkeyOperationsProducerQualified(
+            ValkeyOperations<byte[], byte[]> instance) {
+        return instance;
+    }
 
-	public void closeValkeyOperations(@Disposes ValkeyOperations<byte[], byte[]> valkeyOperations) throws Exception {
+    public void closeValkeyOperations(@Disposes ValkeyOperations<byte[], byte[]> valkeyOperations)
+            throws Exception {
 
-		if (valkeyOperations instanceof DisposableBean disposableBean) {
-			disposableBean.destroy();
-		}
-	}
+        if (valkeyOperations instanceof DisposableBean disposableBean) {
+            disposableBean.destroy();
+        }
+    }
 
-	/**
-	 * Provides a producer method for {@link ValkeyKeyValueTemplate}.
-	 */
-	@Produces
-	public ValkeyKeyValueTemplate valkeyKeyValueAdapterDefault(ValkeyOperations<?, ?> valkeyOperations) {
+    /** Provides a producer method for {@link ValkeyKeyValueTemplate}. */
+    @Produces
+    public ValkeyKeyValueTemplate valkeyKeyValueAdapterDefault(
+            ValkeyOperations<?, ?> valkeyOperations) {
 
-		ValkeyKeyValueAdapter valkeyKeyValueAdapter = new ValkeyKeyValueAdapter(valkeyOperations);
-		ValkeyKeyValueTemplate keyValueTemplate = new ValkeyKeyValueTemplate(valkeyKeyValueAdapter, new ValkeyMappingContext());
-		return keyValueTemplate;
-	}
-
+        ValkeyKeyValueAdapter valkeyKeyValueAdapter = new ValkeyKeyValueAdapter(valkeyOperations);
+        ValkeyKeyValueTemplate keyValueTemplate =
+                new ValkeyKeyValueTemplate(valkeyKeyValueAdapter, new ValkeyMappingContext());
+        return keyValueTemplate;
+    }
 }

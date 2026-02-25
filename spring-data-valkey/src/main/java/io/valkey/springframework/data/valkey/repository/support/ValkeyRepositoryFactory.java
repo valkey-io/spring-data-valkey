@@ -15,13 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.repository.support;
 
-import org.springframework.data.keyvalue.core.KeyValueOperations;
-import org.springframework.data.keyvalue.repository.support.KeyValueRepositoryFactory;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 import io.valkey.springframework.data.valkey.repository.core.MappingValkeyEntityInformation;
 import io.valkey.springframework.data.valkey.repository.query.ValkeyPartTreeQuery;
 import io.valkey.springframework.data.valkey.repository.query.ValkeyQueryCreator;
+import org.springframework.data.keyvalue.core.KeyValueOperations;
+import org.springframework.data.keyvalue.repository.support.KeyValueRepositoryFactory;
 import org.springframework.data.repository.core.EntityInformation;
 import org.springframework.data.repository.core.RepositoryMetadata;
 import org.springframework.data.repository.core.support.RepositoryComposition.RepositoryFragments;
@@ -32,8 +32,8 @@ import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.query.parser.AbstractQueryCreator;
 
 /**
- * {@link RepositoryFactorySupport} specific of handing Valkey
- * {@link org.springframework.data.keyvalue.repository.KeyValueRepository}.
+ * {@link RepositoryFactorySupport} specific of handing Valkey {@link
+ * org.springframework.data.keyvalue.repository.KeyValueRepository}.
  *
  * @author Christoph Strobl
  * @author Oliver Gierke
@@ -42,64 +42,75 @@ import org.springframework.data.repository.query.parser.AbstractQueryCreator;
  */
 public class ValkeyRepositoryFactory extends KeyValueRepositoryFactory {
 
-	private final KeyValueOperations operations;
+    private final KeyValueOperations operations;
 
-	/**
-	 * @param keyValueOperations
-	 * @see KeyValueRepositoryFactory#KeyValueRepositoryFactory(KeyValueOperations)
-	 */
-	public ValkeyRepositoryFactory(KeyValueOperations keyValueOperations) {
-		this(keyValueOperations, ValkeyQueryCreator.class);
-	}
+    /**
+     * @param keyValueOperations
+     * @see KeyValueRepositoryFactory#KeyValueRepositoryFactory(KeyValueOperations)
+     */
+    public ValkeyRepositoryFactory(KeyValueOperations keyValueOperations) {
+        this(keyValueOperations, ValkeyQueryCreator.class);
+    }
 
-	/**
-	 * @param keyValueOperations
-	 * @param queryCreator
-	 * @see KeyValueRepositoryFactory#KeyValueRepositoryFactory(KeyValueOperations, Class)
-	 */
-	public ValkeyRepositoryFactory(KeyValueOperations keyValueOperations,
-			Class<? extends AbstractQueryCreator<?, ?>> queryCreator) {
-		this(keyValueOperations, queryCreator, ValkeyPartTreeQuery.class);
-	}
+    /**
+     * @param keyValueOperations
+     * @param queryCreator
+     * @see KeyValueRepositoryFactory#KeyValueRepositoryFactory(KeyValueOperations, Class)
+     */
+    public ValkeyRepositoryFactory(
+            KeyValueOperations keyValueOperations,
+            Class<? extends AbstractQueryCreator<?, ?>> queryCreator) {
+        this(keyValueOperations, queryCreator, ValkeyPartTreeQuery.class);
+    }
 
-	/**
-	 * @param keyValueOperations
-	 * @param queryCreator
-	 * @param repositoryQueryType
-	 * @see KeyValueRepositoryFactory#KeyValueRepositoryFactory(KeyValueOperations, Class, Class)
-	 */
-	public ValkeyRepositoryFactory(KeyValueOperations keyValueOperations,
-			Class<? extends AbstractQueryCreator<?, ?>> queryCreator, Class<? extends RepositoryQuery> repositoryQueryType) {
-		super(keyValueOperations, queryCreator, repositoryQueryType);
+    /**
+     * @param keyValueOperations
+     * @param queryCreator
+     * @param repositoryQueryType
+     * @see KeyValueRepositoryFactory#KeyValueRepositoryFactory(KeyValueOperations, Class, Class)
+     */
+    public ValkeyRepositoryFactory(
+            KeyValueOperations keyValueOperations,
+            Class<? extends AbstractQueryCreator<?, ?>> queryCreator,
+            Class<? extends RepositoryQuery> repositoryQueryType) {
+        super(keyValueOperations, queryCreator, repositoryQueryType);
 
-		this.operations = keyValueOperations;
-	}
+        this.operations = keyValueOperations;
+    }
 
-	@Override
-	protected RepositoryFragments getRepositoryFragments(RepositoryMetadata metadata) {
+    @Override
+    protected RepositoryFragments getRepositoryFragments(RepositoryMetadata metadata) {
 
-		RepositoryFragments fragments = RepositoryFragments.empty();
+        RepositoryFragments fragments = RepositoryFragments.empty();
 
-		if (QueryByExampleExecutor.class.isAssignableFrom(metadata.getRepositoryInterface())) {
+        if (QueryByExampleExecutor.class.isAssignableFrom(metadata.getRepositoryInterface())) {
 
-			ValkeyMappingContext mappingContext = (ValkeyMappingContext) this.operations.getMappingContext();
-			ValkeyPersistentEntity<?> persistentEntity = mappingContext.getRequiredPersistentEntity(metadata.getDomainType());
-			MappingValkeyEntityInformation<?, ?> entityInformation = new MappingValkeyEntityInformation<>(persistentEntity);
+            ValkeyMappingContext mappingContext =
+                    (ValkeyMappingContext) this.operations.getMappingContext();
+            ValkeyPersistentEntity<?> persistentEntity =
+                    mappingContext.getRequiredPersistentEntity(metadata.getDomainType());
+            MappingValkeyEntityInformation<?, ?> entityInformation =
+                    new MappingValkeyEntityInformation<>(persistentEntity);
 
-			fragments = fragments.append(RepositoryFragment.implemented(QueryByExampleExecutor.class,
-					instantiateClass(QueryByExampleValkeyExecutor.class, entityInformation, operations)));
-		}
+            fragments =
+                    fragments.append(
+                            RepositoryFragment.implemented(
+                                    QueryByExampleExecutor.class,
+                                    instantiateClass(
+                                            QueryByExampleValkeyExecutor.class, entityInformation, operations)));
+        }
 
-		return fragments;
-	}
+        return fragments;
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T, ID> EntityInformation<T, ID> getEntityInformation(Class<T> domainClass) {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T, ID> EntityInformation<T, ID> getEntityInformation(Class<T> domainClass) {
 
-		ValkeyPersistentEntity<T> entity = (ValkeyPersistentEntity<T>) operations.getMappingContext()
-				.getRequiredPersistentEntity(domainClass);
+        ValkeyPersistentEntity<T> entity =
+                (ValkeyPersistentEntity<T>)
+                        operations.getMappingContext().getRequiredPersistentEntity(domainClass);
 
-		return new MappingValkeyEntityInformation<>(entity);
-	}
+        return new MappingValkeyEntityInformation<>(entity);
+    }
 }

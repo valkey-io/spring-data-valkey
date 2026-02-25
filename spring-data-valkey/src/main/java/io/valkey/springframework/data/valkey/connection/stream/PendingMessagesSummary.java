@@ -17,112 +17,128 @@ package io.valkey.springframework.data.valkey.connection.stream;
 
 import java.util.Collections;
 import java.util.Map;
-
 import org.springframework.data.domain.Range;
 import org.springframework.util.Assert;
 
 /**
- * Value Object summarizing pending messages in a {@literal consumer group}. It contains the total number and ID range
- * of pending messages for this consumer group, as well as a collection of total pending messages per consumer.
+ * Value Object summarizing pending messages in a {@literal consumer group}. It contains the total
+ * number and ID range of pending messages for this consumer group, as well as a collection of total
+ * pending messages per consumer.
  *
  * @since 2.3
  * @author Christoph Strobl
  */
 public class PendingMessagesSummary {
 
-	private final String groupName;
-	private final Long totalPendingMessages;
-	private final Range<String> idRange;
-	private final Map<String, Long> pendingMessagesPerConsumer;
+    private final String groupName;
+    private final Long totalPendingMessages;
+    private final Range<String> idRange;
+    private final Map<String, Long> pendingMessagesPerConsumer;
 
-	public PendingMessagesSummary(String groupName, long totalPendingMessages, Range<String> idRange,
-			Map<String, Long> pendingMessagesPerConsumer) {
+    public PendingMessagesSummary(
+            String groupName,
+            long totalPendingMessages,
+            Range<String> idRange,
+            Map<String, Long> pendingMessagesPerConsumer) {
 
-		Assert.notNull(idRange, "ID Range must not be null");
-		Assert.notNull(pendingMessagesPerConsumer, "Pending Messages must not be null");
+        Assert.notNull(idRange, "ID Range must not be null");
+        Assert.notNull(pendingMessagesPerConsumer, "Pending Messages must not be null");
 
-		this.groupName = groupName;
-		this.totalPendingMessages = totalPendingMessages;
-		this.idRange = idRange;
-		this.pendingMessagesPerConsumer = pendingMessagesPerConsumer;
-	}
+        this.groupName = groupName;
+        this.totalPendingMessages = totalPendingMessages;
+        this.idRange = idRange;
+        this.pendingMessagesPerConsumer = pendingMessagesPerConsumer;
+    }
 
-	/**
-	 * Get the range between the smallest and greatest ID among the pending messages.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public Range<String> getIdRange() {
-		return idRange;
-	}
+    /**
+     * Get the range between the smallest and greatest ID among the pending messages.
+     *
+     * @return never {@literal null}.
+     */
+    public Range<String> getIdRange() {
+        return idRange;
+    }
 
-	/**
-	 * Get the smallest ID among the pending messages.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public RecordId minRecordId() {
-		return RecordId.of(minMessageId());
-	}
+    /**
+     * Get the smallest ID among the pending messages.
+     *
+     * @return never {@literal null}.
+     */
+    public RecordId minRecordId() {
+        return RecordId.of(minMessageId());
+    }
 
-	/**
-	 * Get the greatest ID among the pending messages.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public RecordId maxRecordId() {
-		return RecordId.of(maxMessageId());
-	}
+    /**
+     * Get the greatest ID among the pending messages.
+     *
+     * @return never {@literal null}.
+     */
+    public RecordId maxRecordId() {
+        return RecordId.of(maxMessageId());
+    }
 
-	/**
-	 * Get the smallest ID as {@link String} among the pending messages.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public String minMessageId() {
-		return idRange.getLowerBound().getValue().get();
-	}
+    /**
+     * Get the smallest ID as {@link String} among the pending messages.
+     *
+     * @return never {@literal null}.
+     */
+    public String minMessageId() {
+        return idRange.getLowerBound().getValue().get();
+    }
 
-	/**
-	 * Get the greatest ID as {@link String} among the pending messages.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public String maxMessageId() {
-		return idRange.getUpperBound().getValue().get();
-	}
+    /**
+     * Get the greatest ID as {@link String} among the pending messages.
+     *
+     * @return never {@literal null}.
+     */
+    public String maxMessageId() {
+        return idRange.getUpperBound().getValue().get();
+    }
 
-	/**
-	 * Get the number of total pending messages within the {@literal consumer group}.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public long getTotalPendingMessages() {
-		return totalPendingMessages;
-	}
+    /**
+     * Get the number of total pending messages within the {@literal consumer group}.
+     *
+     * @return never {@literal null}.
+     */
+    public long getTotalPendingMessages() {
+        return totalPendingMessages;
+    }
 
-	/**
-	 * @return the {@literal consumer group} name.
-	 */
-	public String getGroupName() {
-		return groupName;
-	}
+    /**
+     * @return the {@literal consumer group} name.
+     */
+    public String getGroupName() {
+        return groupName;
+    }
 
-	/**
-	 * Obtain a map of every {@literal consumer} in the {@literal consumer group} with at least one pending message, and
-	 * the number of pending messages.
-	 *
-	 * @return never {@literal null}.
-	 */
-	public Map<String, Long> getPendingMessagesPerConsumer() {
-		return Collections.unmodifiableMap(pendingMessagesPerConsumer);
-	}
+    /**
+     * Obtain a map of every {@literal consumer} in the {@literal consumer group} with at least one
+     * pending message, and the number of pending messages.
+     *
+     * @return never {@literal null}.
+     */
+    public Map<String, Long> getPendingMessagesPerConsumer() {
+        return Collections.unmodifiableMap(pendingMessagesPerConsumer);
+    }
 
-	@Override
-	public String toString() {
+    @Override
+    public String toString() {
 
-		return "PendingMessagesSummary{" + "groupName='" + groupName + '\'' + ", totalPendingMessages='"
-				+ getTotalPendingMessages() + '\'' + ", minMessageId='" + minMessageId() + '\'' + ", maxMessageId='"
-				+ maxMessageId() + '\'' + ", pendingMessagesPerConsumer=" + pendingMessagesPerConsumer + '}';
-	}
+        return "PendingMessagesSummary{"
+                + "groupName='"
+                + groupName
+                + '\''
+                + ", totalPendingMessages='"
+                + getTotalPendingMessages()
+                + '\''
+                + ", minMessageId='"
+                + minMessageId()
+                + '\''
+                + ", maxMessageId='"
+                + maxMessageId()
+                + '\''
+                + ", pendingMessagesPerConsumer="
+                + pendingMessagesPerConsumer
+                + '}';
+    }
 }

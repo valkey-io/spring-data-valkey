@@ -15,18 +15,17 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-
-import org.springframework.context.expression.BeanFactoryResolver;
 import io.valkey.springframework.data.valkey.core.index.ConfigurableIndexDefinitionProvider;
 import io.valkey.springframework.data.valkey.core.index.IndexDefinition;
 import io.valkey.springframework.data.valkey.core.index.SpelIndexDefinition;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import org.springframework.context.expression.BeanFactoryResolver;
 import org.springframework.data.util.TypeInformation;
 import org.springframework.expression.BeanResolver;
 import org.springframework.expression.Expression;
@@ -44,101 +43,102 @@ import org.springframework.util.Assert;
  */
 public class SpelIndexResolver implements IndexResolver {
 
-	private final ConfigurableIndexDefinitionProvider settings;
-	private final SpelExpressionParser parser;
-	private final ValkeyMappingContext mappingContext;
-	private final Map<SpelIndexDefinition, Expression> expressionCache;
-	private @Nullable BeanResolver beanResolver;
+    private final ConfigurableIndexDefinitionProvider settings;
+    private final SpelExpressionParser parser;
+    private final ValkeyMappingContext mappingContext;
+    private final Map<SpelIndexDefinition, Expression> expressionCache;
+    private @Nullable BeanResolver beanResolver;
 
-	/**
-	 * Creates a new instance using a default {@link SpelExpressionParser}.
-	 *
-	 * @param mappingContext the {@link ValkeyMappingContext} to use. Cannot be null.
-	 */
-	public SpelIndexResolver(ValkeyMappingContext mappingContext) {
-		this(mappingContext, new SpelExpressionParser());
-	}
+    /**
+     * Creates a new instance using a default {@link SpelExpressionParser}.
+     *
+     * @param mappingContext the {@link ValkeyMappingContext} to use. Cannot be null.
+     */
+    public SpelIndexResolver(ValkeyMappingContext mappingContext) {
+        this(mappingContext, new SpelExpressionParser());
+    }
 
-	/**
-	 * Creates a new instance
-	 *
-	 * @param mappingContext the {@link ValkeyMappingContext} to use. Cannot be null.
-	 * @param parser the {@link SpelExpressionParser} to use. Cannot be null.
-	 */
-	public SpelIndexResolver(ValkeyMappingContext mappingContext, SpelExpressionParser parser) {
+    /**
+     * Creates a new instance
+     *
+     * @param mappingContext the {@link ValkeyMappingContext} to use. Cannot be null.
+     * @param parser the {@link SpelExpressionParser} to use. Cannot be null.
+     */
+    public SpelIndexResolver(ValkeyMappingContext mappingContext, SpelExpressionParser parser) {
 
-		Assert.notNull(mappingContext, "ValkeyMappingContext must not be null");
-		Assert.notNull(parser, "SpelExpressionParser must not be null");
-		this.mappingContext = mappingContext;
-		this.settings = mappingContext.getMappingConfiguration().getIndexConfiguration();
-		this.expressionCache = new HashMap<>();
-		this.parser = parser;
-	}
+        Assert.notNull(mappingContext, "ValkeyMappingContext must not be null");
+        Assert.notNull(parser, "SpelExpressionParser must not be null");
+        this.mappingContext = mappingContext;
+        this.settings = mappingContext.getMappingConfiguration().getIndexConfiguration();
+        this.expressionCache = new HashMap<>();
+        this.parser = parser;
+    }
 
-	public Set<IndexedData> resolveIndexesFor(TypeInformation<?> typeInformation, @Nullable Object value) {
+    public Set<IndexedData> resolveIndexesFor(
+            TypeInformation<?> typeInformation, @Nullable Object value) {
 
-		if (value == null) {
-			return Collections.emptySet();
-		}
+        if (value == null) {
+            return Collections.emptySet();
+        }
 
-		ValkeyPersistentEntity<?> entity = mappingContext.getPersistentEntity(typeInformation);
+        ValkeyPersistentEntity<?> entity = mappingContext.getPersistentEntity(typeInformation);
 
-		if (entity == null) {
-			return Collections.emptySet();
-		}
+        if (entity == null) {
+            return Collections.emptySet();
+        }
 
-		String keyspace = entity.getKeySpace();
+        String keyspace = entity.getKeySpace();
 
-		Set<IndexedData> indexes = new HashSet<>();
+        Set<IndexedData> indexes = new HashSet<>();
 
-		for (IndexDefinition setting : settings.getIndexDefinitionsFor(keyspace)) {
+        for (IndexDefinition setting : settings.getIndexDefinitionsFor(keyspace)) {
 
-			if (setting instanceof SpelIndexDefinition spel) {
+            if (setting instanceof SpelIndexDefinition spel) {
 
-				Expression expression = getAndCacheIfAbsent(spel);
+                Expression expression = getAndCacheIfAbsent(spel);
 
-				StandardEvaluationContext context = new StandardEvaluationContext();
-				context.setRootObject(value);
-				context.setVariable("this", value);
+                StandardEvaluationContext context = new StandardEvaluationContext();
+                context.setRootObject(value);
+                context.setVariable("this", value);
 
-				if (beanResolver != null) {
-					context.setBeanResolver(beanResolver);
-				}
+                if (beanResolver != null) {
+                    context.setBeanResolver(beanResolver);
+                }
 
-				Object index = expression.getValue(context);
-				if (index != null) {
-					indexes.add(new SimpleIndexedPropertyValue(keyspace, setting.getIndexName(), index));
-				}
-			}
-		}
+                Object index = expression.getValue(context);
+                if (index != null) {
+                    indexes.add(new SimpleIndexedPropertyValue(keyspace, setting.getIndexName(), index));
+                }
+            }
+        }
 
-		return indexes;
-	}
+        return indexes;
+    }
 
-	@Override
-	public Set<IndexedData> resolveIndexesFor(String keyspace, String path, TypeInformation<?> typeInformation,
-			Object value) {
-		return Collections.emptySet();
-	}
+    @Override
+    public Set<IndexedData> resolveIndexesFor(
+            String keyspace, String path, TypeInformation<?> typeInformation, Object value) {
+        return Collections.emptySet();
+    }
 
-	private Expression getAndCacheIfAbsent(SpelIndexDefinition indexDefinition) {
+    private Expression getAndCacheIfAbsent(SpelIndexDefinition indexDefinition) {
 
-		if (expressionCache.containsKey(indexDefinition)) {
-			return expressionCache.get(indexDefinition);
-		}
+        if (expressionCache.containsKey(indexDefinition)) {
+            return expressionCache.get(indexDefinition);
+        }
 
-		Expression expression = parser.parseExpression(indexDefinition.getExpression());
-		expressionCache.put(indexDefinition, expression);
-		return expression;
-	}
+        Expression expression = parser.parseExpression(indexDefinition.getExpression());
+        expressionCache.put(indexDefinition, expression);
+        return expression;
+    }
 
-	/**
-	 * Allows setting the BeanResolver
-	 *
-	 * @param beanResolver can be {@literal null}.
-	 * @see BeanFactoryResolver
-	 */
-	public void setBeanResolver(BeanResolver beanResolver) {
-		this.beanResolver = beanResolver;
-	}
+    /**
+     * Allows setting the BeanResolver
+     *
+     * @param beanResolver can be {@literal null}.
+     * @see BeanFactoryResolver
+     */
+    public void setBeanResolver(BeanResolver beanResolver) {
+        this.beanResolver = beanResolver;
+    }
 }

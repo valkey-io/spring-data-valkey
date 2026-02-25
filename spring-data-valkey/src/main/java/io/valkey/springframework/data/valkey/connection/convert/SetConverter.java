@@ -19,7 +19,6 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.util.Assert;
 
@@ -33,24 +32,28 @@ import org.springframework.util.Assert;
  */
 public class SetConverter<S, T> implements Converter<Set<S>, Set<T>> {
 
-	private final Converter<S, T> itemConverter;
+    private final Converter<S, T> itemConverter;
 
-	/**
-	 * @param itemConverter The {@link Converter} to use for converting individual Set items. Must not be {@literal null}.
-	 */
-	public SetConverter(Converter<S, T> itemConverter) {
+    /**
+     * @param itemConverter The {@link Converter} to use for converting individual Set items. Must not
+     *     be {@literal null}.
+     */
+    public SetConverter(Converter<S, T> itemConverter) {
 
-		Assert.notNull(itemConverter, "ItemConverter must not be null");
-		this.itemConverter = itemConverter;
-	}
+        Assert.notNull(itemConverter, "ItemConverter must not be null");
+        this.itemConverter = itemConverter;
+    }
 
-	@Override
-	public Set<T> convert(Set<S> source) {
-		return source.stream().map(itemConverter::convert).collect(Collectors.toCollection(LinkedHashSet::new));
-	}
+    @Override
+    public Set<T> convert(Set<S> source) {
+        return source.stream()
+                .map(itemConverter::convert)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
 
-	public Set<T> convert(Collection<S> source) {
-		return source.stream().map(itemConverter::convert).collect(Collectors.toCollection(LinkedHashSet::new));
-	}
-
+    public Set<T> convert(Collection<S> source) {
+        return source.stream()
+                .map(itemConverter::convert)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+    }
 }

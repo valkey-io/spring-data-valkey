@@ -16,21 +16,20 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import io.lettuce.core.api.reactive.RedisScriptingReactiveCommands;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
+import io.valkey.springframework.data.valkey.connection.ReactiveScriptingCommands;
+import io.valkey.springframework.data.valkey.connection.ReturnType;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.List;
-
-import io.valkey.springframework.data.valkey.connection.ReactiveScriptingCommands;
-import io.valkey.springframework.data.valkey.connection.ReturnType;
-import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.util.Assert;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 /**
- * {@link ReactiveScriptingCommands} implementation for the <a href="https://lettuce.io/">Lettuce</a> Valkey driver.
+ * {@link ReactiveScriptingCommands} implementation for the <a
+ * href="https://lettuce.io/">Lettuce</a> Valkey driver.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -38,100 +37,112 @@ import org.springframework.util.Assert;
  */
 class LettuceReactiveScriptingCommands implements ReactiveScriptingCommands {
 
-	private static final ByteBuffer[] EMPTY_BUFFER_ARRAY = new ByteBuffer[0];
+    private static final ByteBuffer[] EMPTY_BUFFER_ARRAY = new ByteBuffer[0];
 
-	private final LettuceReactiveValkeyConnection connection;
+    private final LettuceReactiveValkeyConnection connection;
 
-	/**
-	 * Create new {@link LettuceReactiveScriptingCommands}.
-	 *
-	 * @param connection must not be {@literal null}.
-	 */
-	LettuceReactiveScriptingCommands(LettuceReactiveValkeyConnection connection) {
+    /**
+     * Create new {@link LettuceReactiveScriptingCommands}.
+     *
+     * @param connection must not be {@literal null}.
+     */
+    LettuceReactiveScriptingCommands(LettuceReactiveValkeyConnection connection) {
 
-		Assert.notNull(connection, "Connection must not be null");
+        Assert.notNull(connection, "Connection must not be null");
 
-		this.connection = connection;
-	}
+        this.connection = connection;
+    }
 
-	@Override
-	public Mono<String> scriptFlush() {
-		return connection.execute(RedisScriptingReactiveCommands::scriptFlush).next();
-	}
+    @Override
+    public Mono<String> scriptFlush() {
+        return connection.execute(RedisScriptingReactiveCommands::scriptFlush).next();
+    }
 
-	@Override
-	public Mono<String> scriptKill() {
-		return connection.execute(RedisScriptingReactiveCommands::scriptKill).next();
-	}
+    @Override
+    public Mono<String> scriptKill() {
+        return connection.execute(RedisScriptingReactiveCommands::scriptKill).next();
+    }
 
-	@Override
-	public Mono<String> scriptLoad(ByteBuffer script) {
+    @Override
+    public Mono<String> scriptLoad(ByteBuffer script) {
 
-		Assert.notNull(script, "Script must not be null");
+        Assert.notNull(script, "Script must not be null");
 
-		return connection.execute(cmd -> cmd.scriptLoad(ByteUtils.getBytes(script))).next();
-	}
+        return connection.execute(cmd -> cmd.scriptLoad(ByteUtils.getBytes(script))).next();
+    }
 
-	@Override
-	public Flux<Boolean> scriptExists(List<String> scriptShas) {
+    @Override
+    public Flux<Boolean> scriptExists(List<String> scriptShas) {
 
-		Assert.notEmpty(scriptShas, "Script digests must not be empty");
+        Assert.notEmpty(scriptShas, "Script digests must not be empty");
 
-		return connection.execute(cmd -> cmd.scriptExists(scriptShas.toArray(new String[scriptShas.size()])));
-	}
+        return connection.execute(
+                cmd -> cmd.scriptExists(scriptShas.toArray(new String[scriptShas.size()])));
+    }
 
-	@Override
-	public <T> Flux<T> eval(ByteBuffer script, ReturnType returnType, int numKeys, ByteBuffer... keysAndArgs) {
+    @Override
+    public <T> Flux<T> eval(
+            ByteBuffer script, ReturnType returnType, int numKeys, ByteBuffer... keysAndArgs) {
 
-		Assert.notNull(script, "Script must not be null");
-		Assert.notNull(returnType, "ReturnType must not be null");
-		Assert.notNull(keysAndArgs, "Keys and args must not be null");
+        Assert.notNull(script, "Script must not be null");
+        Assert.notNull(returnType, "ReturnType must not be null");
+        Assert.notNull(keysAndArgs, "Keys and args must not be null");
 
-		ByteBuffer[] keys = extractScriptKeys(numKeys, keysAndArgs);
-		ByteBuffer[] args = extractScriptArgs(numKeys, keysAndArgs);
+        ByteBuffer[] keys = extractScriptKeys(numKeys, keysAndArgs);
+        ByteBuffer[] args = extractScriptArgs(numKeys, keysAndArgs);
 
-		String scriptBody = Charset.defaultCharset().decode(script).toString();
+        String scriptBody = Charset.defaultCharset().decode(script).toString();
 
-		return convertIfNecessary(
-				connection.execute(cmd -> cmd.eval(scriptBody, LettuceConverters.toScriptOutputType(returnType), keys, args)),
-				returnType);
-	}
+        return convertIfNecessary(
+                connection.execute(
+                        cmd ->
+                                cmd.eval(scriptBody, LettuceConverters.toScriptOutputType(returnType), keys, args)),
+                returnType);
+    }
 
-	@Override
-	public <T> Flux<T> evalSha(String scriptSha, ReturnType returnType, int numKeys, ByteBuffer... keysAndArgs) {
+    @Override
+    public <T> Flux<T> evalSha(
+            String scriptSha, ReturnType returnType, int numKeys, ByteBuffer... keysAndArgs) {
 
-		Assert.notNull(scriptSha, "Script digest must not be null");
-		Assert.notNull(returnType, "ReturnType must not be null");
-		Assert.notNull(keysAndArgs, "Keys and args must not be null");
+        Assert.notNull(scriptSha, "Script digest must not be null");
+        Assert.notNull(returnType, "ReturnType must not be null");
+        Assert.notNull(keysAndArgs, "Keys and args must not be null");
 
-		ByteBuffer[] keys = extractScriptKeys(numKeys, keysAndArgs);
-		ByteBuffer[] args = extractScriptArgs(numKeys, keysAndArgs);
+        ByteBuffer[] keys = extractScriptKeys(numKeys, keysAndArgs);
+        ByteBuffer[] args = extractScriptArgs(numKeys, keysAndArgs);
 
-		return convertIfNecessary(
-				connection.execute(cmd -> cmd.evalsha(scriptSha, LettuceConverters.toScriptOutputType(returnType), keys, args)),
-				returnType);
-	}
+        return convertIfNecessary(
+                connection.execute(
+                        cmd ->
+                                cmd.evalsha(
+                                        scriptSha, LettuceConverters.toScriptOutputType(returnType), keys, args)),
+                returnType);
+    }
 
-	@SuppressWarnings("unchecked")
-	private <T> Flux<T> convertIfNecessary(Flux<T> eval, ReturnType returnType) {
+    @SuppressWarnings("unchecked")
+    private <T> Flux<T> convertIfNecessary(Flux<T> eval, ReturnType returnType) {
 
-		if (returnType == ReturnType.MULTI) {
+        if (returnType == ReturnType.MULTI) {
 
-			return eval.concatMap(t -> {
-				return t instanceof Exception ? Flux.error(connection.translateException().apply((Exception) t)) : Flux.just(t);
-			});
-		}
+            return eval.concatMap(
+                    t -> {
+                        return t instanceof Exception
+                                ? Flux.error(connection.translateException().apply((Exception) t))
+                                : Flux.just(t);
+                    });
+        }
 
-		return eval;
-	}
+        return eval;
+    }
 
-	private static ByteBuffer[] extractScriptKeys(int numKeys, ByteBuffer... keysAndArgs) {
-		return numKeys > 0 ? Arrays.copyOfRange(keysAndArgs, 0, numKeys) : EMPTY_BUFFER_ARRAY;
-	}
+    private static ByteBuffer[] extractScriptKeys(int numKeys, ByteBuffer... keysAndArgs) {
+        return numKeys > 0 ? Arrays.copyOfRange(keysAndArgs, 0, numKeys) : EMPTY_BUFFER_ARRAY;
+    }
 
-	private static ByteBuffer[] extractScriptArgs(int numKeys, ByteBuffer... keysAndArgs) {
+    private static ByteBuffer[] extractScriptArgs(int numKeys, ByteBuffer... keysAndArgs) {
 
-		return keysAndArgs.length > numKeys ? Arrays.copyOfRange(keysAndArgs, numKeys, keysAndArgs.length)
-				: EMPTY_BUFFER_ARRAY;
-	}
+        return keysAndArgs.length > numKeys
+                ? Arrays.copyOfRange(keysAndArgs, numKeys, keysAndArgs.length)
+                : EMPTY_BUFFER_ARRAY;
+    }
 }

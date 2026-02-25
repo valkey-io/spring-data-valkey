@@ -17,10 +17,6 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 
 import static org.assertj.core.api.Assertions.*;
 
-import java.io.IOException;
-import java.util.Collections;
-
-import org.junit.jupiter.api.Test;
 import io.valkey.springframework.data.valkey.ConnectionFactoryTracker;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
@@ -29,6 +25,9 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyAvail
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeySentinelAvailable;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 import io.valkey.springframework.data.valkey.util.ConnectionVerifier;
+import java.io.IOException;
+import java.util.Collections;
+import org.junit.jupiter.api.Test;
 
 /**
  * Integration tests for Valkey 6 ACL.
@@ -40,68 +39,76 @@ import io.valkey.springframework.data.valkey.util.ConnectionVerifier;
 @EnabledOnValkeyAvailable(6382)
 class JedisAclIntegrationTests {
 
-	@Test
-	void shouldConnectWithDefaultAuthentication() {
+    @Test
+    void shouldConnectWithDefaultAuthentication() {
 
-		ValkeyStandaloneConfiguration standaloneConfiguration = new ValkeyStandaloneConfiguration("localhost", 6382);
-		standaloneConfiguration.setPassword("foobared");
+        ValkeyStandaloneConfiguration standaloneConfiguration =
+                new ValkeyStandaloneConfiguration("localhost", 6382);
+        standaloneConfiguration.setPassword("foobared");
 
-		ConnectionVerifier.create(new JedisConnectionFactory(standaloneConfiguration)) //
-				.execute(connection -> {
-					assertThat(connection.ping()).isEqualTo("PONG");
-				}) //
-				.verifyAndClose();
-	}
+        ConnectionVerifier.create(new JedisConnectionFactory(standaloneConfiguration)) //
+                .execute(
+                        connection -> {
+                            assertThat(connection.ping()).isEqualTo("PONG");
+                        }) //
+                .verifyAndClose();
+    }
 
-	@Test // DATAREDIS-1046
-	void shouldConnectStandaloneWithAclAuthentication() {
+    @Test // DATAREDIS-1046
+    void shouldConnectStandaloneWithAclAuthentication() {
 
-		ValkeyStandaloneConfiguration standaloneConfiguration = new ValkeyStandaloneConfiguration("localhost", 6382);
-		standaloneConfiguration.setUsername("spring");
-		standaloneConfiguration.setPassword("data");
+        ValkeyStandaloneConfiguration standaloneConfiguration =
+                new ValkeyStandaloneConfiguration("localhost", 6382);
+        standaloneConfiguration.setUsername("spring");
+        standaloneConfiguration.setPassword("data");
 
-		ConnectionVerifier.create(new JedisConnectionFactory(standaloneConfiguration)) //
-				.execute(connection -> {
-					assertThat(connection.ping()).isEqualTo("PONG");
-				}) //
-				.verifyAndClose();
-	}
+        ConnectionVerifier.create(new JedisConnectionFactory(standaloneConfiguration)) //
+                .execute(
+                        connection -> {
+                            assertThat(connection.ping()).isEqualTo("PONG");
+                        }) //
+                .verifyAndClose();
+    }
 
-	@Test // DATAREDIS-1145
-	@EnabledOnValkeySentinelAvailable(26382)
-	void shouldConnectSentinelWithAclAuthentication() throws IOException {
+    @Test // DATAREDIS-1145
+    @EnabledOnValkeySentinelAvailable(26382)
+    void shouldConnectSentinelWithAclAuthentication() throws IOException {
 
-		// Note: As per https://github.com/valkey/valkey/issues/7708, Sentinel does not support ACL authentication yet.
+        // Note: As per https://github.com/valkey/valkey/issues/7708, Sentinel does not support ACL
+        // authentication yet.
 
-		ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration("mymaster",
-				Collections.singleton("localhost:26382"));
-		sentinelConfiguration.setSentinelPassword("foobared");
+        ValkeySentinelConfiguration sentinelConfiguration =
+                new ValkeySentinelConfiguration("mymaster", Collections.singleton("localhost:26382"));
+        sentinelConfiguration.setSentinelPassword("foobared");
 
-		JedisConnectionFactory connectionFactory = new JedisConnectionFactory(sentinelConfiguration);
-		connectionFactory.afterPropertiesSet();
-		ConnectionFactoryTracker.add(connectionFactory);
+        JedisConnectionFactory connectionFactory = new JedisConnectionFactory(sentinelConfiguration);
+        connectionFactory.afterPropertiesSet();
+        ConnectionFactoryTracker.add(connectionFactory);
 
-		try (ValkeySentinelConnection connection = connectionFactory.getSentinelConnection()) {
-			assertThat(connection.masters()).isNotEmpty();
-		}
+        try (ValkeySentinelConnection connection = connectionFactory.getSentinelConnection()) {
+            assertThat(connection.masters()).isNotEmpty();
+        }
 
-		connectionFactory.destroy();
-	}
+        connectionFactory.destroy();
+    }
 
-	@Test // DATAREDIS-1046
-	void shouldConnectStandaloneWithAclAuthenticationAndPooling() {
+    @Test // DATAREDIS-1046
+    void shouldConnectStandaloneWithAclAuthenticationAndPooling() {
 
-		ValkeyStandaloneConfiguration standaloneConfiguration = new ValkeyStandaloneConfiguration("localhost", 6382);
-		standaloneConfiguration.setUsername("spring");
-		standaloneConfiguration.setPassword("data");
+        ValkeyStandaloneConfiguration standaloneConfiguration =
+                new ValkeyStandaloneConfiguration("localhost", 6382);
+        standaloneConfiguration.setUsername("spring");
+        standaloneConfiguration.setPassword("data");
 
-		JedisConnectionFactory connectionFactory = new JedisConnectionFactory(standaloneConfiguration,
-				JedisClientConfiguration.builder().usePooling().build());
+        JedisConnectionFactory connectionFactory =
+                new JedisConnectionFactory(
+                        standaloneConfiguration, JedisClientConfiguration.builder().usePooling().build());
 
-		ConnectionVerifier.create(connectionFactory) //
-				.execute(connection -> {
-					assertThat(connection.ping()).isEqualTo("PONG");
-				}) //
-				.verifyAndClose();
-	}
+        ConnectionVerifier.create(connectionFactory) //
+                .execute(
+                        connection -> {
+                            assertThat(connection.ping()).isEqualTo("PONG");
+                        }) //
+                .verifyAndClose();
+    }
 }

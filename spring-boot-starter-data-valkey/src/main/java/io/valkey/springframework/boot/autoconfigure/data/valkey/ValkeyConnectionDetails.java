@@ -17,7 +17,6 @@
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
 import java.util.List;
-
 import org.springframework.boot.autoconfigure.service.connection.ConnectionDetails;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.util.Assert;
@@ -31,230 +30,239 @@ import org.springframework.util.Assert;
  */
 public interface ValkeyConnectionDetails extends ConnectionDetails {
 
-	/**
-	 * Login username of the valkey server.
-	 * @return the login username of the valkey server
-	 */
-	default String getUsername() {
-		return null;
-	}
+    /**
+     * Login username of the valkey server.
+     *
+     * @return the login username of the valkey server
+     */
+    default String getUsername() {
+        return null;
+    }
 
-	/**
-	 * Login password of the valkey server.
-	 * @return the login password of the valkey server
-	 */
-	default String getPassword() {
-		return null;
-	}
+    /**
+     * Login password of the valkey server.
+     *
+     * @return the login password of the valkey server
+     */
+    default String getPassword() {
+        return null;
+    }
 
-	/**
-	 * Valkey standalone configuration. Mutually exclusive with {@link #getSentinel()} and
-	 * {@link #getCluster()}.
-	 * @return the Valkey standalone configuration
-	 */
-	default Standalone getStandalone() {
-		return null;
-	}
+    /**
+     * Valkey standalone configuration. Mutually exclusive with {@link #getSentinel()} and {@link
+     * #getCluster()}.
+     *
+     * @return the Valkey standalone configuration
+     */
+    default Standalone getStandalone() {
+        return null;
+    }
 
-	/**
-	 * Valkey sentinel configuration. Mutually exclusive with {@link #getStandalone()} and
-	 * {@link #getCluster()}.
-	 * @return the Valkey sentinel configuration
-	 */
-	default Sentinel getSentinel() {
-		return null;
-	}
+    /**
+     * Valkey sentinel configuration. Mutually exclusive with {@link #getStandalone()} and {@link
+     * #getCluster()}.
+     *
+     * @return the Valkey sentinel configuration
+     */
+    default Sentinel getSentinel() {
+        return null;
+    }
 
-	/**
-	 * Valkey cluster configuration. Mutually exclusive with {@link #getStandalone()} and
-	 * {@link #getSentinel()}.
-	 * @return the Valkey cluster configuration
-	 */
-	default Cluster getCluster() {
-		return null;
-	}
+    /**
+     * Valkey cluster configuration. Mutually exclusive with {@link #getStandalone()} and {@link
+     * #getSentinel()}.
+     *
+     * @return the Valkey cluster configuration
+     */
+    default Cluster getCluster() {
+        return null;
+    }
 
-	/**
-	 * Valkey standalone configuration.
-	 */
-	interface Standalone {
+    /** Valkey standalone configuration. */
+    interface Standalone {
 
-		/**
-		 * Valkey server host.
-		 * @return the valkey server host
-		 */
-		String getHost();
+        /**
+         * Valkey server host.
+         *
+         * @return the valkey server host
+         */
+        String getHost();
 
-		/**
-		 * Valkey server port.
-		 * @return the valkey server port
-		 */
-		int getPort();
+        /**
+         * Valkey server port.
+         *
+         * @return the valkey server port
+         */
+        int getPort();
 
-		/**
-		 * Database index used by the connection factory.
-		 * @return the database index used by the connection factory
-		 */
-		default int getDatabase() {
-			return 0;
-		}
+        /**
+         * Database index used by the connection factory.
+         *
+         * @return the database index used by the connection factory
+         */
+        default int getDatabase() {
+            return 0;
+        }
 
-		/**
-		 * SSL bundle to use.
-		 * @return the SSL bundle to use
-		 * @since 3.5.0
-		 */
-		default SslBundle getSslBundle() {
-			return null;
-		}
+        /**
+         * SSL bundle to use.
+         *
+         * @return the SSL bundle to use
+         * @since 3.5.0
+         */
+        default SslBundle getSslBundle() {
+            return null;
+        }
 
-		/**
-		 * Creates a new instance with the given host and port.
-		 * @param host the host
-		 * @param port the port
-		 * @return the new instance
-		 */
-		static Standalone of(String host, int port) {
-			return of(host, port, 0, null);
-		}
+        /**
+         * Creates a new instance with the given host and port.
+         *
+         * @param host the host
+         * @param port the port
+         * @return the new instance
+         */
+        static Standalone of(String host, int port) {
+            return of(host, port, 0, null);
+        }
 
-		/**
-		 * Creates a new instance with the given host, port and SSL bundle.
-		 * @param host the host
-		 * @param port the port
-		 * @param sslBundle the SSL bundle
-		 * @return the new instance
-		 * @since 3.5.0
-		 */
-		static Standalone of(String host, int port, SslBundle sslBundle) {
-			return of(host, port, 0, sslBundle);
-		}
+        /**
+         * Creates a new instance with the given host, port and SSL bundle.
+         *
+         * @param host the host
+         * @param port the port
+         * @param sslBundle the SSL bundle
+         * @return the new instance
+         * @since 3.5.0
+         */
+        static Standalone of(String host, int port, SslBundle sslBundle) {
+            return of(host, port, 0, sslBundle);
+        }
 
-		/**
-		 * Creates a new instance with the given host, port and database.
-		 * @param host the host
-		 * @param port the port
-		 * @param database the database
-		 * @return the new instance
-		 */
-		static Standalone of(String host, int port, int database) {
-			return of(host, port, database, null);
-		}
+        /**
+         * Creates a new instance with the given host, port and database.
+         *
+         * @param host the host
+         * @param port the port
+         * @param database the database
+         * @return the new instance
+         */
+        static Standalone of(String host, int port, int database) {
+            return of(host, port, database, null);
+        }
 
-		/**
-		 * Creates a new instance with the given host, port, database and SSL bundle.
-		 * @param host the host
-		 * @param port the port
-		 * @param database the database
-		 * @param sslBundle the SSL bundle
-		 * @return the new instance
-		 * @since 3.5.0
-		 */
-		static Standalone of(String host, int port, int database, SslBundle sslBundle) {
-			Assert.hasLength(host, "'host' must not be empty");
-			return new Standalone() {
+        /**
+         * Creates a new instance with the given host, port, database and SSL bundle.
+         *
+         * @param host the host
+         * @param port the port
+         * @param database the database
+         * @param sslBundle the SSL bundle
+         * @return the new instance
+         * @since 3.5.0
+         */
+        static Standalone of(String host, int port, int database, SslBundle sslBundle) {
+            Assert.hasLength(host, "'host' must not be empty");
+            return new Standalone() {
 
-				@Override
-				public String getHost() {
-					return host;
-				}
+                @Override
+                public String getHost() {
+                    return host;
+                }
 
-				@Override
-				public int getPort() {
-					return port;
-				}
+                @Override
+                public int getPort() {
+                    return port;
+                }
 
-				@Override
-				public int getDatabase() {
-					return database;
-				}
+                @Override
+                public int getDatabase() {
+                    return database;
+                }
 
-				@Override
-				public SslBundle getSslBundle() {
-					return sslBundle;
-				}
-			};
-		}
+                @Override
+                public SslBundle getSslBundle() {
+                    return sslBundle;
+                }
+            };
+        }
+    }
 
-	}
+    /** Valkey sentinel configuration. */
+    interface Sentinel {
 
-	/**
-	 * Valkey sentinel configuration.
-	 */
-	interface Sentinel {
+        /**
+         * Database index used by the connection factory.
+         *
+         * @return the database index used by the connection factory
+         */
+        int getDatabase();
 
-		/**
-		 * Database index used by the connection factory.
-		 * @return the database index used by the connection factory
-		 */
-		int getDatabase();
+        /**
+         * Name of the Valkey server.
+         *
+         * @return the name of the Valkey server
+         */
+        String getMaster();
 
-		/**
-		 * Name of the Valkey server.
-		 * @return the name of the Valkey server
-		 */
-		String getMaster();
+        /**
+         * List of nodes.
+         *
+         * @return the list of nodes
+         */
+        List<Node> getNodes();
 
-		/**
-		 * List of nodes.
-		 * @return the list of nodes
-		 */
-		List<Node> getNodes();
+        /**
+         * Login username for authenticating with sentinel(s).
+         *
+         * @return the login username for authenticating with sentinel(s) or {@code null}
+         */
+        String getUsername();
 
-		/**
-		 * Login username for authenticating with sentinel(s).
-		 * @return the login username for authenticating with sentinel(s) or {@code null}
-		 */
-		String getUsername();
+        /**
+         * Password for authenticating with sentinel(s).
+         *
+         * @return the password for authenticating with sentinel(s) or {@code null}
+         */
+        String getPassword();
 
-		/**
-		 * Password for authenticating with sentinel(s).
-		 * @return the password for authenticating with sentinel(s) or {@code null}
-		 */
-		String getPassword();
+        /**
+         * SSL bundle to use.
+         *
+         * @return the SSL bundle to use
+         * @since 3.5.0
+         */
+        default SslBundle getSslBundle() {
+            return null;
+        }
+    }
 
-		/**
-		 * SSL bundle to use.
-		 * @return the SSL bundle to use
-		 * @since 3.5.0
-		 */
-		default SslBundle getSslBundle() {
-			return null;
-		}
+    /** Valkey cluster configuration. */
+    interface Cluster {
 
-	}
+        /**
+         * Nodes to bootstrap from. This represents an "initial" list of cluster nodes and is required
+         * to have at least one entry.
+         *
+         * @return nodes to bootstrap from
+         */
+        List<Node> getNodes();
 
-	/**
-	 * Valkey cluster configuration.
-	 */
-	interface Cluster {
+        /**
+         * SSL bundle to use.
+         *
+         * @return the SSL bundle to use
+         * @since 3.5.0
+         */
+        default SslBundle getSslBundle() {
+            return null;
+        }
+    }
 
-		/**
-		 * Nodes to bootstrap from. This represents an "initial" list of cluster nodes and
-		 * is required to have at least one entry.
-		 * @return nodes to bootstrap from
-		 */
-		List<Node> getNodes();
-
-		/**
-		 * SSL bundle to use.
-		 * @return the SSL bundle to use
-		 * @since 3.5.0
-		 */
-		default SslBundle getSslBundle() {
-			return null;
-		}
-
-	}
-
-	/**
-	 * A node in a sentinel or cluster configuration.
-	 *
-	 * @param host the hostname of the node
-	 * @param port the port of the node
-	 */
-	record Node(String host, int port) {
-
-	}
-
+    /**
+     * A node in a sentinel or cluster configuration.
+     *
+     * @param host the hostname of the node
+     * @param port the port of the node
+     */
+    record Node(String host, int port) {}
 }

@@ -15,10 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import org.junit.jupiter.api.Test;
-
 import static org.assertj.core.api.Assertions.*;
 
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ValkeyKeyExpiredEvent}.
@@ -27,19 +26,24 @@ import static org.assertj.core.api.Assertions.*;
  */
 class ValkeyKeyExpiredEventUnitTests {
 
-	@Test // DATAREDIS-744
-	void shouldReturnKeyspace() {
+    @Test // DATAREDIS-744
+    void shouldReturnKeyspace() {
 
-		assertThat(new ValkeyKeyExpiredEvent<>("foo".getBytes(), "").getKeyspace()).isNull();
-		assertThat(new ValkeyKeyExpiredEvent<>("foo:bar".getBytes(), "").getKeyspace()).isEqualTo("foo");
-		assertThat(new ValkeyKeyExpiredEvent<>("foo:bar:baz".getBytes(), "").getKeyspace()).isEqualTo("foo");
-	}
+        assertThat(new ValkeyKeyExpiredEvent<>("foo".getBytes(), "").getKeyspace()).isNull();
+        assertThat(new ValkeyKeyExpiredEvent<>("foo:bar".getBytes(), "").getKeyspace())
+                .isEqualTo("foo");
+        assertThat(new ValkeyKeyExpiredEvent<>("foo:bar:baz".getBytes(), "").getKeyspace())
+                .isEqualTo("foo");
+    }
 
-	@Test // DATAREDIS-744
-	void shouldReturnId() {
+    @Test // DATAREDIS-744
+    void shouldReturnId() {
 
-		assertThat(new ValkeyKeyExpiredEvent<>("foo".getBytes(), "").getId()).isEqualTo("foo".getBytes());
-		assertThat(new ValkeyKeyExpiredEvent<>("foo:bar".getBytes(), "").getId()).isEqualTo("bar".getBytes());
-		assertThat(new ValkeyKeyExpiredEvent<>("foo:bar:baz".getBytes(), "").getId()).isEqualTo("bar:baz".getBytes());
-	}
+        assertThat(new ValkeyKeyExpiredEvent<>("foo".getBytes(), "").getId())
+                .isEqualTo("foo".getBytes());
+        assertThat(new ValkeyKeyExpiredEvent<>("foo:bar".getBytes(), "").getId())
+                .isEqualTo("bar".getBytes());
+        assertThat(new ValkeyKeyExpiredEvent<>("foo:bar:baz".getBytes(), "").getId())
+                .isEqualTo("bar:baz".getBytes());
+    }
 }

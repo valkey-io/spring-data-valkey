@@ -17,23 +17,20 @@ package io.valkey.springframework.data.valkey.connection;
 
 import static org.assertj.core.api.Assertions.*;
 
+import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
+import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.List;
-
 import javax.sql.DataSource;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mockito;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -52,125 +49,130 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(transactionManager = "transactionManager")
 public abstract class AbstractTransactionalTestBase {
 
-	@Configuration
-	public abstract static class ValkeyContextConfiguration {
+    @Configuration
+    public abstract static class ValkeyContextConfiguration {
 
-		@Bean
-		public StringValkeyTemplate valkeyTemplate() {
+        @Bean
+        public StringValkeyTemplate valkeyTemplate() {
 
-			StringValkeyTemplate template = new StringValkeyTemplate(valkeyConnectionFactory());
+            StringValkeyTemplate template = new StringValkeyTemplate(valkeyConnectionFactory());
 
-			// explicitly enable transaction support
-			template.setEnableTransactionSupport(true);
-			return template;
-		}
+            // explicitly enable transaction support
+            template.setEnableTransactionSupport(true);
+            return template;
+        }
 
-		@Bean
-		public abstract ValkeyConnectionFactory valkeyConnectionFactory();
+        @Bean
+        public abstract ValkeyConnectionFactory valkeyConnectionFactory();
 
-		@Bean
-		public PlatformTransactionManager transactionManager() throws SQLException {
-			return new DataSourceTransactionManager(dataSource());
-		}
+        @Bean
+        public PlatformTransactionManager transactionManager() throws SQLException {
+            return new DataSourceTransactionManager(dataSource());
+        }
 
-		@Bean
-		public DataSource dataSource() throws SQLException {
+        @Bean
+        public DataSource dataSource() throws SQLException {
 
-			DataSource ds = Mockito.mock(DataSource.class);
-			Mockito.when(ds.getConnection()).thenReturn(Mockito.mock(Connection.class));
-			return ds;
-		}
-	}
+            DataSource ds = Mockito.mock(DataSource.class);
+            Mockito.when(ds.getConnection()).thenReturn(Mockito.mock(Connection.class));
+            return ds;
+        }
+    }
 
-	private @Autowired StringValkeyTemplate template;
+    private @Autowired StringValkeyTemplate template;
 
-	private @Autowired ValkeyConnectionFactory factory;
+    private @Autowired ValkeyConnectionFactory factory;
 
-	private List<String> KEYS = Arrays.asList("spring", "data", "valkey");
-	private boolean valuesShouldHaveBeenPersisted = false;
+    private List<String> KEYS = Arrays.asList("spring", "data", "valkey");
+    private boolean valuesShouldHaveBeenPersisted = false;
 
-	@BeforeEach
-	public void setUp() {
-		valuesShouldHaveBeenPersisted = false;
-		cleanDataStore();
-	}
+    @BeforeEach
+    public void setUp() {
+        valuesShouldHaveBeenPersisted = false;
+        cleanDataStore();
+    }
 
-	private void cleanDataStore() {
+    private void cleanDataStore() {
 
-		ValkeyConnection connection = factory.getConnection();
-		connection.flushDb();
-		connection.close();
-	}
+        ValkeyConnection connection = factory.getConnection();
+        connection.flushDb();
+        connection.close();
+    }
 
-	@AfterTransaction
-	public void verifyTransactionResult() {
+    @AfterTransaction
+    public void verifyTransactionResult() {
 
-		ValkeyConnection connection = factory.getConnection();
-		for (String key : KEYS) {
-			assertThat(connection.exists(key.getBytes()))
-					.as("Values for " + key + " should " + (valuesShouldHaveBeenPersisted ? "" : "NOT ") + "have been found.")
-					.isEqualTo(valuesShouldHaveBeenPersisted);
-		}
-		connection.close();
-	}
+        ValkeyConnection connection = factory.getConnection();
+        for (String key : KEYS) {
+            assertThat(connection.exists(key.getBytes()))
+                    .as(
+                            "Values for "
+                                    + key
+                                    + " should "
+                                    + (valuesShouldHaveBeenPersisted ? "" : "NOT ")
+                                    + "have been found.")
+                    .isEqualTo(valuesShouldHaveBeenPersisted);
+        }
+        connection.close();
+    }
 
-	@Rollback(true)
-	@Test // DATAREDIS-73
-	public void valueOperationSetShouldBeRolledBackCorrectly() {
+    @Rollback(true)
+    @Test // DATAREDIS-73
+    public void valueOperationSetShouldBeRolledBackCorrectly() {
 
-		for (String key : KEYS) {
-			template.opsForValue().set(key, key + "-value");
-		}
-	}
+        for (String key : KEYS) {
+            template.opsForValue().set(key, key + "-value");
+        }
+    }
 
-	@Rollback(false)
-	@Test // DATAREDIS-73
-	public void valueOperationSetShouldBeCommittedCorrectly() {
+    @Rollback(false)
+    @Test // DATAREDIS-73
+    public void valueOperationSetShouldBeCommittedCorrectly() {
 
-		this.valuesShouldHaveBeenPersisted = true;
-		for (String key : KEYS) {
-			template.opsForValue().set(key, key + "-value");
-		}
-	}
+        this.valuesShouldHaveBeenPersisted = true;
+        for (String key : KEYS) {
+            template.opsForValue().set(key, key + "-value");
+        }
+    }
 
-	@Rollback(false)
-	@Test // GH-2886
-	public void shouldReturnReadOnlyCommandResultInTransaction() {
+    @Rollback(false)
+    @Test // GH-2886
+    public void shouldReturnReadOnlyCommandResultInTransaction() {
 
-		ValkeyTemplate<String, String> template = new ValkeyTemplate<>();
-		template.setConnectionFactory(factory);
-		template.setEnableTransactionSupport(true);
-		template.afterPropertiesSet();
+        ValkeyTemplate<String, String> template = new ValkeyTemplate<>();
+        template.setConnectionFactory(factory);
+        template.setEnableTransactionSupport(true);
+        template.afterPropertiesSet();
 
-		assertThat(template.hasKey("foo")).isFalse();
-	}
+        assertThat(template.hasKey("foo")).isFalse();
+    }
 
-	@Test // DATAREDIS-548
-	@Transactional(readOnly = true)
-	public void valueOperationShouldWorkWithReadOnlyTransactions() {
+    @Test // DATAREDIS-548
+    @Transactional(readOnly = true)
+    public void valueOperationShouldWorkWithReadOnlyTransactions() {
 
-		this.valuesShouldHaveBeenPersisted = false;
-		for (String key : KEYS) {
-			template.opsForValue().get(key);
-		}
-	}
+        this.valuesShouldHaveBeenPersisted = false;
+        for (String key : KEYS) {
+            template.opsForValue().get(key);
+        }
+    }
 
-	@Rollback
-	@Test // DATAREDIS-73, DATAREDIS-1063
-	public void listOperationLPushShoudBeRolledBackCorrectly() {
+    @Rollback
+    @Test // DATAREDIS-73, DATAREDIS-1063
+    public void listOperationLPushShoudBeRolledBackCorrectly() {
 
-		for (String key : KEYS) {
-			template.opsForList().leftPushAll(key, KEYS.toArray(new String[0]));
-		}
-	}
+        for (String key : KEYS) {
+            template.opsForList().leftPushAll(key, KEYS.toArray(new String[0]));
+        }
+    }
 
-	@Rollback(false)
-	@Test // DATAREDIS-73, DATAREDIS-1063
-	public void listOperationLPushShouldBeCommittedCorrectly() {
+    @Rollback(false)
+    @Test // DATAREDIS-73, DATAREDIS-1063
+    public void listOperationLPushShouldBeCommittedCorrectly() {
 
-		this.valuesShouldHaveBeenPersisted = true;
-		for (String key : KEYS) {
-			template.opsForList().leftPushAll(key, KEYS.toArray(new String[0]));
-		}
-	}
+        this.valuesShouldHaveBeenPersisted = true;
+        for (String key : KEYS) {
+            template.opsForList().leftPushAll(key, KEYS.toArray(new String[0]));
+        }
+    }
 }

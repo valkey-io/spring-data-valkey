@@ -25,9 +25,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link ValkeyAccessor}.
@@ -36,52 +35,51 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
  */
 class ValkeyAccessorUnitTests {
 
-	@Test
-	void setAndGetConnectionFactory() {
+    @Test
+    void setAndGetConnectionFactory() {
 
-		ValkeyConnectionFactory mockConnectionFactory = mock(ValkeyConnectionFactory.class);
+        ValkeyConnectionFactory mockConnectionFactory = mock(ValkeyConnectionFactory.class);
 
-		ValkeyAccessor valkeyAccessor = new TestValkeyAccessor();
+        ValkeyAccessor valkeyAccessor = new TestValkeyAccessor();
 
-		assertThat(valkeyAccessor.getConnectionFactory()).isNull();
+        assertThat(valkeyAccessor.getConnectionFactory()).isNull();
 
-		valkeyAccessor.setConnectionFactory(mockConnectionFactory);
+        valkeyAccessor.setConnectionFactory(mockConnectionFactory);
 
-		assertThat(valkeyAccessor.getConnectionFactory()).isSameAs(mockConnectionFactory);
-		assertThat(valkeyAccessor.getRequiredConnectionFactory()).isSameAs(mockConnectionFactory);
+        assertThat(valkeyAccessor.getConnectionFactory()).isSameAs(mockConnectionFactory);
+        assertThat(valkeyAccessor.getRequiredConnectionFactory()).isSameAs(mockConnectionFactory);
 
-		valkeyAccessor.setConnectionFactory(null);
+        valkeyAccessor.setConnectionFactory(null);
 
-		assertThat(valkeyAccessor.getConnectionFactory()).isNull();
+        assertThat(valkeyAccessor.getConnectionFactory()).isNull();
 
-		verifyNoInteractions(mockConnectionFactory);
-	}
+        verifyNoInteractions(mockConnectionFactory);
+    }
 
-	@Test
-	void getRequiredConnectionFactoryWhenNull() {
+    @Test
+    void getRequiredConnectionFactoryWhenNull() {
 
-		assertThatIllegalStateException()
-			.isThrownBy(() -> new TestValkeyAccessor().getRequiredConnectionFactory())
-			.withMessage("ValkeyConnectionFactory is required")
-			.withNoCause();
-	}
+        assertThatIllegalStateException()
+                .isThrownBy(() -> new TestValkeyAccessor().getRequiredConnectionFactory())
+                .withMessage("ValkeyConnectionFactory is required")
+                .withNoCause();
+    }
 
-	@Test
-	void afterPropertiesSetCallsGetRequiredConnectionFactory() {
+    @Test
+    void afterPropertiesSetCallsGetRequiredConnectionFactory() {
 
-		ValkeyConnectionFactory mockConnectionFactory = mock(ValkeyConnectionFactory.class);
+        ValkeyConnectionFactory mockConnectionFactory = mock(ValkeyConnectionFactory.class);
 
-		ValkeyAccessor valkeyAccessor = spy(new TestValkeyAccessor());
+        ValkeyAccessor valkeyAccessor = spy(new TestValkeyAccessor());
 
-		doReturn(mockConnectionFactory).when(valkeyAccessor).getRequiredConnectionFactory();
+        doReturn(mockConnectionFactory).when(valkeyAccessor).getRequiredConnectionFactory();
 
-		valkeyAccessor.afterPropertiesSet();
+        valkeyAccessor.afterPropertiesSet();
 
-		verify(valkeyAccessor, times(1)).afterPropertiesSet();
-		verify(valkeyAccessor, times(1)).getRequiredConnectionFactory();
-		verifyNoMoreInteractions(valkeyAccessor);
-	}
+        verify(valkeyAccessor, times(1)).afterPropertiesSet();
+        verify(valkeyAccessor, times(1)).getRequiredConnectionFactory();
+        verifyNoMoreInteractions(valkeyAccessor);
+    }
 
-	static class TestValkeyAccessor extends ValkeyAccessor { }
-
+    static class TestValkeyAccessor extends ValkeyAccessor {}
 }

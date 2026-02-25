@@ -22,18 +22,15 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.codec.ByteArrayCodec;
 import io.lettuce.core.masterreplica.StatefulRedisMasterReplicaConnection;
-
+import io.valkey.springframework.data.valkey.SettingsUtils;
+import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
 import java.util.Collections;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import io.valkey.springframework.data.valkey.SettingsUtils;
-import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
 
 /**
  * Integration test for {@link StaticMasterReplicaConnectionProvider}.
@@ -43,36 +40,45 @@ import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
 @ExtendWith(LettuceExtension.class)
 class StaticMasterReplicaConnectionProviderIntegrationTest {
 
-	RedisURI uri = RedisURI.create(SettingsUtils.getHost(), SettingsUtils.getPort());
+    RedisURI uri = RedisURI.create(SettingsUtils.getHost(), SettingsUtils.getPort());
 
-	@Test
-	void shouldConnectToMasterReplicaSynchronously(RedisClient valkeyClient) {
+    @Test
+    void shouldConnectToMasterReplicaSynchronously(RedisClient valkeyClient) {
 
-		StaticMasterReplicaConnectionProvider connectionProvider = new StaticMasterReplicaConnectionProvider(valkeyClient,
-				ByteArrayCodec.INSTANCE, Collections.singletonList(uri), ReadFrom.REPLICA);
+        StaticMasterReplicaConnectionProvider connectionProvider =
+                new StaticMasterReplicaConnectionProvider(
+                        valkeyClient,
+                        ByteArrayCodec.INSTANCE,
+                        Collections.singletonList(uri),
+                        ReadFrom.REPLICA);
 
-		StatefulRedisMasterReplicaConnection<?, ?> connection = connectionProvider
-				.getConnection(StatefulRedisMasterReplicaConnection.class);
+        StatefulRedisMasterReplicaConnection<?, ?> connection =
+                connectionProvider.getConnection(StatefulRedisMasterReplicaConnection.class);
 
-		assertThat(connection.getReadFrom()).isEqualTo(ReadFrom.REPLICA);
+        assertThat(connection.getReadFrom()).isEqualTo(ReadFrom.REPLICA);
 
-		connectionProvider.release(connection);
-	}
+        connectionProvider.release(connection);
+    }
 
-	@Test
-	@SuppressWarnings("rawtypes")
-	void shouldConnectToMasterReplicaAsync(RedisClient valkeyClient)
-			throws ExecutionException, InterruptedException, TimeoutException {
+    @Test
+    @SuppressWarnings("rawtypes")
+    void shouldConnectToMasterReplicaAsync(RedisClient valkeyClient)
+            throws ExecutionException, InterruptedException, TimeoutException {
 
-		StaticMasterReplicaConnectionProvider connectionProvider = new StaticMasterReplicaConnectionProvider(valkeyClient,
-				ByteArrayCodec.INSTANCE, Collections.singletonList(uri), ReadFrom.REPLICA);
+        StaticMasterReplicaConnectionProvider connectionProvider =
+                new StaticMasterReplicaConnectionProvider(
+                        valkeyClient,
+                        ByteArrayCodec.INSTANCE,
+                        Collections.singletonList(uri),
+                        ReadFrom.REPLICA);
 
-		CompletionStage<StatefulRedisMasterReplicaConnection> future = connectionProvider
-				.getConnectionAsync(StatefulRedisMasterReplicaConnection.class);
+        CompletionStage<StatefulRedisMasterReplicaConnection> future =
+                connectionProvider.getConnectionAsync(StatefulRedisMasterReplicaConnection.class);
 
-		StatefulRedisMasterReplicaConnection<?, ?> connection = future.toCompletableFuture().get(5, TimeUnit.SECONDS);
-		assertThat(connection.getReadFrom()).isEqualTo(ReadFrom.REPLICA);
+        StatefulRedisMasterReplicaConnection<?, ?> connection =
+                future.toCompletableFuture().get(5, TimeUnit.SECONDS);
+        assertThat(connection.getReadFrom()).isEqualTo(ReadFrom.REPLICA);
 
-		connectionProvider.release(connection);
-	}
+        connectionProvider.release(connection);
+    }
 }

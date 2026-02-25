@@ -16,11 +16,10 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.ValkeyGlide;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link ValkeyProperties}.
@@ -29,17 +28,16 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ValkeyPropertiesTests {
 
-	@Test
-	void valkeyGlideDefaultsAreConsistent() {
-		ValkeyGlide valkeyGlide = new ValkeyProperties().getValkeyGlide();
-		assertThat(valkeyGlide.getConnectionTimeout()).isNull();
-		assertThat(valkeyGlide.getReadFrom()).isNull();
-		assertThat(valkeyGlide.getInflightRequestsLimit()).isNull();
-		assertThat(valkeyGlide.getClientAZ()).isNull();
-		assertThat(valkeyGlide.getCluster()).isNotNull();
-		assertThat(valkeyGlide.getMaxPoolSize()).isEqualTo(8);
-		assertThat(valkeyGlide.getOpenTelemetry()).isNotNull();
-		assertThat(valkeyGlide.getOpenTelemetry().isEnabled()).isEqualTo(false);
-	}
-
+    @Test
+    void valkeyGlideDefaultsAreConsistent() {
+        ValkeyGlide valkeyGlide = new ValkeyProperties().getValkeyGlide();
+        assertThat(valkeyGlide.getConnectionTimeout()).isNull();
+        assertThat(valkeyGlide.getReadFrom()).isNull();
+        assertThat(valkeyGlide.getInflightRequestsLimit()).isNull();
+        assertThat(valkeyGlide.getClientAZ()).isNull();
+        assertThat(valkeyGlide.getCluster()).isNotNull();
+        assertThat(valkeyGlide.getMaxPoolSize()).isEqualTo(8);
+        assertThat(valkeyGlide.getOpenTelemetry()).isNotNull();
+        assertThat(valkeyGlide.getOpenTelemetry().isEnabled()).isEqualTo(false);
+    }
 }

@@ -15,21 +15,21 @@
  */
 package io.valkey.springframework.data.valkey.support.atomic;
 
+import io.valkey.springframework.data.valkey.core.SessionCallback;
+import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import java.util.Collection;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-
 import org.springframework.dao.DataAccessException;
-import io.valkey.springframework.data.valkey.core.ValkeyOperations;
-import io.valkey.springframework.data.valkey.core.SessionCallback;
 import org.springframework.util.CollectionUtils;
 
 /**
- * Compare-and-set (CAS) operation using Valkey Transactions ({@literal WATCH} and {@literal MULTI}) to atomically update
- * the value at {@code key}.
- * <p>
- * The CAS block registers a {@literal WATCH} on the key holding the expected value which guarantees that changes after
- * watching and comparing the key will rollback the transaction. The {@literal WATCH} is reset if the comparison fails.
+ * Compare-and-set (CAS) operation using Valkey Transactions ({@literal WATCH} and {@literal MULTI})
+ * to atomically update the value at {@code key}.
+ *
+ * <p>The CAS block registers a {@literal WATCH} on the key holding the expected value which
+ * guarantees that changes after watching and comparing the key will rollback the transaction. The
+ * {@literal WATCH} is reset if the comparison fails.
  *
  * @author Mark Paluch
  * @since 2.0.8
@@ -39,42 +39,42 @@ import org.springframework.util.CollectionUtils;
  */
 class CompareAndSet<T> implements SessionCallback<Boolean> {
 
-	private final Supplier<T> getter;
-	private final Consumer<T> setter;
-	private final Object key;
-	private final T expect;
-	private final T update;
+    private final Supplier<T> getter;
+    private final Consumer<T> setter;
+    private final Object key;
+    private final T expect;
+    private final T update;
 
-	CompareAndSet(Supplier<T> getter, Consumer<T> setter, Object key, T expect, T update) {
+    CompareAndSet(Supplier<T> getter, Consumer<T> setter, Object key, T expect, T update) {
 
-		this.getter = getter;
-		this.setter = setter;
-		this.key = key;
-		this.expect = expect;
-		this.update = update;
-	}
+        this.getter = getter;
+        this.setter = setter;
+        this.key = key;
+        this.expect = expect;
+        this.update = update;
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public <K, V> Boolean execute(ValkeyOperations<K, V> operations) throws DataAccessException {
+    @Override
+    @SuppressWarnings("unchecked")
+    public <K, V> Boolean execute(ValkeyOperations<K, V> operations) throws DataAccessException {
 
-		operations.watch((K) key);
+        operations.watch((K) key);
 
-		if (expect.equals(getter.get())) {
+        if (expect.equals(getter.get())) {
 
-			operations.multi();
-			setter.accept(update);
+            operations.multi();
+            setter.accept(update);
 
-			if (updateSuccessful(operations.exec())) {
-				return true;
-			}
-		}
+            if (updateSuccessful(operations.exec())) {
+                return true;
+            }
+        }
 
-		operations.unwatch();
-		return false;
-	}
+        operations.unwatch();
+        return false;
+    }
 
-	private static boolean updateSuccessful(Collection<?> exec) {
-		return !CollectionUtils.isEmpty(exec);
-	}
+    private static boolean updateSuccessful(Collection<?> exec) {
+        return !CollectionUtils.isEmpty(exec);
+    }
 }

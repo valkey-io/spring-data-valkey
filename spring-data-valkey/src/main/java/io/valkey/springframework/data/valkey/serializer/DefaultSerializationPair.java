@@ -26,23 +26,24 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializationConte
  */
 class DefaultSerializationPair<T> implements SerializationPair<T> {
 
-	private final ValkeyElementReader<T> reader;
-	private final ValkeyElementWriter<T> writer;
+    private final ValkeyElementReader<T> reader;
+    private final ValkeyElementWriter<T> writer;
 
-	@SuppressWarnings("unchecked")
-	DefaultSerializationPair(ValkeyElementReader<? extends T> reader, ValkeyElementWriter<? extends T> writer) {
+    @SuppressWarnings("unchecked")
+    DefaultSerializationPair(
+            ValkeyElementReader<? extends T> reader, ValkeyElementWriter<? extends T> writer) {
 
-		this.reader = (ValkeyElementReader) reader;
-		this.writer = (ValkeyElementWriter) writer;
-	}
+        this.reader = (ValkeyElementReader) reader;
+        this.writer = (ValkeyElementWriter) writer;
+    }
 
-	@Override
-	public ValkeyElementReader<T> getReader() {
-		return this.reader;
-	}
+    @Override
+    public ValkeyElementReader<T> getReader() {
+        return this.reader;
+    }
 
-	@Override
-	public ValkeyElementWriter<T> getWriter() {
-		return this.writer;
-	}
+    @Override
+    public ValkeyElementWriter<T> getWriter() {
+        return this.writer;
+    }
 }

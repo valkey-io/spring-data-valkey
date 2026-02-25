@@ -20,15 +20,13 @@ import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.async.RedisKeyAsyncCommands;
 import io.lettuce.core.api.async.RedisServerAsyncCommands;
 import io.lettuce.core.cluster.api.sync.RedisClusterCommands;
-
+import io.valkey.springframework.data.valkey.connection.ValkeyNode;
+import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands;
+import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-
-import io.valkey.springframework.data.valkey.connection.ValkeyNode;
-import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands;
-import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
@@ -39,208 +37,244 @@ import org.springframework.util.Assert;
  */
 class LettuceServerCommands implements ValkeyServerCommands {
 
-	private final LettuceConnection connection;
+    private final LettuceConnection connection;
 
-	LettuceServerCommands(LettuceConnection connection) {
-		this.connection = connection;
-	}
+    LettuceServerCommands(LettuceConnection connection) {
+        this.connection = connection;
+    }
 
-	@Override
-	public void bgReWriteAof() {
-		connection.invokeStatus().just(RedisServerAsyncCommands::bgrewriteaof);
-	}
+    @Override
+    public void bgReWriteAof() {
+        connection.invokeStatus().just(RedisServerAsyncCommands::bgrewriteaof);
+    }
 
-	@Override
-	public void bgSave() {
-		connection.invokeStatus().just(RedisServerAsyncCommands::bgsave);
-	}
+    @Override
+    public void bgSave() {
+        connection.invokeStatus().just(RedisServerAsyncCommands::bgsave);
+    }
 
-	@Override
-	public Long lastSave() {
-		return connection.invoke().from(RedisServerAsyncCommands::lastsave).get(LettuceConverters::toLong);
-	}
+    @Override
+    public Long lastSave() {
+        return connection
+                .invoke()
+                .from(RedisServerAsyncCommands::lastsave)
+                .get(LettuceConverters::toLong);
+    }
 
-	@Override
-	public void save() {
-		connection.invokeStatus().just(RedisServerAsyncCommands::save);
-	}
+    @Override
+    public void save() {
+        connection.invokeStatus().just(RedisServerAsyncCommands::save);
+    }
 
-	@Override
-	public Long dbSize() {
-		return connection.invoke().just(RedisServerAsyncCommands::dbsize);
-	}
+    @Override
+    public Long dbSize() {
+        return connection.invoke().just(RedisServerAsyncCommands::dbsize);
+    }
 
-	@Override
-	public void flushDb() {
-		connection.invokeStatus().just(RedisServerAsyncCommands::flushdb);
-	}
+    @Override
+    public void flushDb() {
+        connection.invokeStatus().just(RedisServerAsyncCommands::flushdb);
+    }
 
-	@Override
-	public void flushDb(FlushOption option) {
-		connection.invokeStatus().just(RedisServerAsyncCommands::flushdb, LettuceConverters.toFlushMode(option));
-	}
+    @Override
+    public void flushDb(FlushOption option) {
+        connection
+                .invokeStatus()
+                .just(RedisServerAsyncCommands::flushdb, LettuceConverters.toFlushMode(option));
+    }
 
-	@Override
-	public void flushAll() {
-		connection.invokeStatus().just(RedisServerAsyncCommands::flushall);
-	}
+    @Override
+    public void flushAll() {
+        connection.invokeStatus().just(RedisServerAsyncCommands::flushall);
+    }
 
-	@Override
-	public void flushAll(FlushOption option) {
-		connection.invokeStatus().just(RedisServerAsyncCommands::flushall, LettuceConverters.toFlushMode(option));
-	}
+    @Override
+    public void flushAll(FlushOption option) {
+        connection
+                .invokeStatus()
+                .just(RedisServerAsyncCommands::flushall, LettuceConverters.toFlushMode(option));
+    }
 
-	@Override
-	public Properties info() {
-		return connection.invoke().from(RedisServerAsyncCommands::info).get(LettuceConverters.stringToProps());
-	}
+    @Override
+    public Properties info() {
+        return connection
+                .invoke()
+                .from(RedisServerAsyncCommands::info)
+                .get(LettuceConverters.stringToProps());
+    }
 
-	@Override
-	public Properties info(String section) {
+    @Override
+    public Properties info(String section) {
 
-		Assert.hasText(section, "Section must not be null or empty");
+        Assert.hasText(section, "Section must not be null or empty");
 
-		return connection.invoke().from(RedisServerAsyncCommands::info, section).get(LettuceConverters.stringToProps());
-	}
+        return connection
+                .invoke()
+                .from(RedisServerAsyncCommands::info, section)
+                .get(LettuceConverters.stringToProps());
+    }
 
-	@Override
-	public void shutdown() {
-		connection.invokeStatus().just(it -> {
+    @Override
+    public void shutdown() {
+        connection
+                .invokeStatus()
+                .just(
+                        it -> {
+                            it.shutdown(true);
 
-			it.shutdown(true);
+                            return new CompletedValkeyFuture<>(null);
+                        });
+    }
 
-			return new CompletedValkeyFuture<>(null);
-		});
-	}
+    @Override
+    public void shutdown(ShutdownOption option) {
 
-	@Override
-	public void shutdown(ShutdownOption option) {
+        if (option == null) {
+            shutdown();
+            return;
+        }
 
-		if (option == null) {
-			shutdown();
-			return;
-		}
+        boolean save = ShutdownOption.SAVE.equals(option);
 
-		boolean save = ShutdownOption.SAVE.equals(option);
+        connection
+                .invokeStatus()
+                .just(
+                        it -> {
+                            it.shutdown(save);
 
-		connection.invokeStatus().just(it -> {
+                            return new CompletedValkeyFuture<>(null);
+                        });
+    }
 
-			it.shutdown(save);
+    @Override
+    public Properties getConfig(String pattern) {
 
-			return new CompletedValkeyFuture<>(null);
-		});
-	}
+        Assert.hasText(pattern, "Pattern must not be null or empty");
 
-	@Override
-	public Properties getConfig(String pattern) {
+        return connection
+                .invoke()
+                .from(RedisServerAsyncCommands::configGet, pattern)
+                .get(LettuceConverters.mapToPropertiesConverter());
+    }
 
-		Assert.hasText(pattern, "Pattern must not be null or empty");
+    @Override
+    public void setConfig(String param, String value) {
 
-		return connection.invoke().from(RedisServerAsyncCommands::configGet, pattern)
-				.get(LettuceConverters.mapToPropertiesConverter());
-	}
+        Assert.hasText(param, "Parameter must not be null or empty");
+        Assert.notNull(value, "Value must not be null");
 
-	@Override
-	public void setConfig(String param, String value) {
+        connection.invokeStatus().just(RedisServerAsyncCommands::configSet, param, value);
+    }
 
-		Assert.hasText(param, "Parameter must not be null or empty");
-		Assert.notNull(value, "Value must not be null");
+    @Override
+    public void resetConfigStats() {
+        connection.invokeStatus().just(RedisServerAsyncCommands::configResetstat);
+    }
 
-		connection.invokeStatus().just(RedisServerAsyncCommands::configSet, param, value);
-	}
+    @Override
+    public void rewriteConfig() {
+        connection.invokeStatus().just(RedisServerAsyncCommands::configRewrite);
+    }
 
-	@Override
-	public void resetConfigStats() {
-		connection.invokeStatus().just(RedisServerAsyncCommands::configResetstat);
-	}
+    @Override
+    public Long time(TimeUnit timeUnit) {
 
-	@Override
-	public void rewriteConfig() {
-		connection.invokeStatus().just(RedisServerAsyncCommands::configRewrite);
-	}
+        Assert.notNull(timeUnit, "TimeUnit must not be null");
 
-	@Override
-	public Long time(TimeUnit timeUnit) {
+        return connection
+                .invoke()
+                .from(RedisServerAsyncCommands::time)
+                .get(LettuceConverters.toTimeConverter(timeUnit));
+    }
 
-		Assert.notNull(timeUnit, "TimeUnit must not be null");
+    @Override
+    public void killClient(String host, int port) {
 
-		return connection.invoke().from(RedisServerAsyncCommands::time).get(LettuceConverters.toTimeConverter(timeUnit));
-	}
+        Assert.hasText(host, "Host for 'CLIENT KILL' must not be 'null' or 'empty'");
 
-	@Override
-	public void killClient(String host, int port) {
+        String client = "%s:%d".formatted(host, port);
 
-		Assert.hasText(host, "Host for 'CLIENT KILL' must not be 'null' or 'empty'");
+        connection.invoke().just(RedisServerAsyncCommands::clientKill, client);
+    }
 
-		String client = "%s:%d".formatted(host, port);
+    @Override
+    public void setClientName(byte[] name) {
 
-		connection.invoke().just(RedisServerAsyncCommands::clientKill, client);
-	}
+        Assert.notNull(name, "Name must not be null");
 
-	@Override
-	public void setClientName(byte[] name) {
+        connection.invoke().just(RedisServerAsyncCommands::clientSetname, name);
+    }
 
-		Assert.notNull(name, "Name must not be null");
+    @Override
+    public String getClientName() {
+        return connection
+                .invoke()
+                .from(RedisServerAsyncCommands::clientGetname)
+                .get(LettuceConverters::toString);
+    }
 
-		connection.invoke().just(RedisServerAsyncCommands::clientSetname, name);
-	}
+    @Override
+    public List<ValkeyClientInfo> getClientList() {
+        return connection
+                .invoke()
+                .from(RedisServerAsyncCommands::clientList)
+                .get(LettuceConverters.stringToValkeyClientListConverter());
+    }
 
-	@Override
-	public String getClientName() {
-		return connection.invoke().from(RedisServerAsyncCommands::clientGetname).get(LettuceConverters::toString);
-	}
+    @Override
+    public void replicaOf(String host, int port) {
 
-	@Override
-	public List<ValkeyClientInfo> getClientList() {
-		return connection.invoke().from(RedisServerAsyncCommands::clientList)
-				.get(LettuceConverters.stringToValkeyClientListConverter());
-	}
+        Assert.hasText(host, "Host must not be null for 'REPLICAOF' command");
 
-	@Override
-	public void replicaOf(String host, int port) {
+        connection.invoke().just(RedisServerAsyncCommands::slaveof, host, port);
+    }
 
-		Assert.hasText(host, "Host must not be null for 'REPLICAOF' command");
+    @Override
+    public void replicaOfNoOne() {
+        connection.invoke().just(RedisServerAsyncCommands::slaveofNoOne);
+    }
 
-		connection.invoke().just(RedisServerAsyncCommands::slaveof, host, port);
-	}
+    @Override
+    public void migrate(byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option) {
+        migrate(key, target, dbIndex, option, Long.MAX_VALUE);
+    }
 
-	@Override
-	public void replicaOfNoOne() {
-		connection.invoke().just(RedisServerAsyncCommands::slaveofNoOne);
-	}
+    @Override
+    public void migrate(
+            byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option, long timeout) {
 
-	@Override
-	public void migrate(byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option) {
-		migrate(key, target, dbIndex, option, Long.MAX_VALUE);
-	}
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(target, "Target node must not be null");
 
-	@Override
-	public void migrate(byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option, long timeout) {
+        connection
+                .invoke()
+                .just(
+                        RedisKeyAsyncCommands::migrate,
+                        target.getHost(),
+                        target.getPort(),
+                        key,
+                        dbIndex,
+                        timeout);
+    }
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(target, "Target node must not be null");
+    public RedisClusterCommands<byte[], byte[]> getConnection() {
+        return connection.getConnection();
+    }
 
-		connection.invoke().just(RedisKeyAsyncCommands::migrate, target.getHost(), target.getPort(), key, dbIndex, timeout);
-	}
+    static class CompletedValkeyFuture<T> extends CompletableFuture<T> implements RedisFuture<T> {
 
-	public RedisClusterCommands<byte[], byte[]> getConnection() {
-		return connection.getConnection();
-	}
+        public CompletedValkeyFuture(T value) {
+            complete(value);
+        }
 
-	static class CompletedValkeyFuture<T> extends CompletableFuture<T> implements RedisFuture<T> {
+        @Override
+        public String getError() {
+            return "";
+        }
 
-		public CompletedValkeyFuture(T value) {
-			complete(value);
-		}
-
-		@Override
-		public String getError() {
-			return "";
-		}
-
-		@Override
-		public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
-			return LettuceFutures.awaitAll(timeout, unit, this);
-		}
-	}
+        @Override
+        public boolean await(long timeout, TimeUnit unit) throws InterruptedException {
+            return LettuceFutures.awaitAll(timeout, unit, this);
+        }
+    }
 }

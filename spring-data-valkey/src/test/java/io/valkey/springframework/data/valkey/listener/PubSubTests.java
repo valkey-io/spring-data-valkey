@@ -19,17 +19,6 @@ import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.api.Assumptions.*;
 import static org.awaitility.Awaitility.*;
 
-import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.LinkedBlockingDeque;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
@@ -40,6 +29,15 @@ import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAda
 import io.valkey.springframework.data.valkey.test.condition.EnabledIfLongRunningTest;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * Base test class for PubSub integration tests
@@ -52,131 +50,137 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("testParams")
 public class PubSubTests<T> {
 
-	private static final String CHANNEL = "pubsub::test";
+    private static final String CHANNEL = "pubsub::test";
 
-	protected ValkeyMessageListenerContainer container;
-	protected ObjectFactory<T> factory;
-	@SuppressWarnings("rawtypes") protected ValkeyTemplate template;
+    protected ValkeyMessageListenerContainer container;
+    protected ObjectFactory<T> factory;
 
-	private final BlockingDeque<Object> bag = new LinkedBlockingDeque<>(99);
+    @SuppressWarnings("rawtypes")
+    protected ValkeyTemplate template;
 
-	private final Object handler = new Object() {
-		@SuppressWarnings("unused")
-		public void handleMessage(Object message) {
-			bag.add(message);
-		}
-	};
+    private final BlockingDeque<Object> bag = new LinkedBlockingDeque<>(99);
 
-	private final MessageListenerAdapter adapter = new MessageListenerAdapter(handler);
+    private final Object handler =
+            new Object() {
+                @SuppressWarnings("unused")
+                public void handleMessage(Object message) {
+                    bag.add(message);
+                }
+            };
 
-	@SuppressWarnings("rawtypes")
-	public PubSubTests(ObjectFactory<T> factory, ValkeyTemplate template) {
-		this.factory = factory;
-		this.template = template;
-	}
+    private final MessageListenerAdapter adapter = new MessageListenerAdapter(handler);
 
-	public static Collection<Object[]> testParams() {
-		return PubSubTestParams.testParams();
-	}
+    @SuppressWarnings("rawtypes")
+    public PubSubTests(ObjectFactory<T> factory, ValkeyTemplate template) {
+        this.factory = factory;
+        this.template = template;
+    }
 
-	@BeforeEach
-	void setUp() {
-		bag.clear();
+    public static Collection<Object[]> testParams() {
+        return PubSubTestParams.testParams();
+    }
 
-		adapter.setSerializer(template.getValueSerializer());
-		adapter.afterPropertiesSet();
+    @BeforeEach
+    void setUp() {
+        bag.clear();
 
-		container = new ValkeyMessageListenerContainer();
-		container.setConnectionFactory(template.getConnectionFactory());
-		container.setBeanName("container");
-		container.addMessageListener(adapter, Arrays.asList(new ChannelTopic(CHANNEL)));
-		container.afterPropertiesSet();
-		container.start();
-	}
+        adapter.setSerializer(template.getValueSerializer());
+        adapter.afterPropertiesSet();
 
-	@AfterEach
-	void tearDown() throws Exception {
-		container.destroy();
-	}
+        container = new ValkeyMessageListenerContainer();
+        container.setConnectionFactory(template.getConnectionFactory());
+        container.setBeanName("container");
+        container.addMessageListener(adapter, Arrays.asList(new ChannelTopic(CHANNEL)));
+        container.afterPropertiesSet();
+        container.start();
+    }
 
-	/**
-	 * Return a new instance of T
-	 *
-	 * @return
-	 */
-	T getT() {
-		return factory.instance();
-	}
+    @AfterEach
+    void tearDown() throws Exception {
+        container.destroy();
+    }
 
-	@ParameterizedValkeyTest
-	void testContainerSubscribe() {
-		T payload1 = getT();
-		T payload2 = getT();
+    /**
+     * Return a new instance of T
+     *
+     * @return
+     */
+    T getT() {
+        return factory.instance();
+    }
 
-		template.convertAndSend(CHANNEL, payload1);
-		template.convertAndSend(CHANNEL, payload2);
+    @ParameterizedValkeyTest
+    void testContainerSubscribe() {
+        T payload1 = getT();
+        T payload2 = getT();
 
-		await().atMost(Duration.ofSeconds(2)).until(() -> bag.contains(payload1) && bag.contains(payload2));
-	}
+        template.convertAndSend(CHANNEL, payload1);
+        template.convertAndSend(CHANNEL, payload2);
 
-	@ParameterizedValkeyTest
-	void testMessageBatch() throws Exception {
+        await()
+                .atMost(Duration.ofSeconds(2))
+                .until(() -> bag.contains(payload1) && bag.contains(payload2));
+    }
 
-		int COUNT = 10;
-		for (int i = 0; i < COUNT; i++) {
-			template.convertAndSend(CHANNEL, getT());
-		}
+    @ParameterizedValkeyTest
+    void testMessageBatch() throws Exception {
 
-		for (int i = 0; i < COUNT; i++) {
-			assertThat(bag.poll(1, TimeUnit.SECONDS)).as("message #" + i).isNotNull();
-		}
-	}
+        int COUNT = 10;
+        for (int i = 0; i < COUNT; i++) {
+            template.convertAndSend(CHANNEL, getT());
+        }
 
-	@ParameterizedValkeyTest
-	@EnabledIfLongRunningTest
-	void testContainerUnsubscribe() throws Exception {
-		T payload1 = getT();
-		T payload2 = getT();
+        for (int i = 0; i < COUNT; i++) {
+            assertThat(bag.poll(1, TimeUnit.SECONDS)).as("message #" + i).isNotNull();
+        }
+    }
 
-		container.removeMessageListener(adapter, new ChannelTopic(CHANNEL));
-		template.convertAndSend(CHANNEL, payload1);
-		template.convertAndSend(CHANNEL, payload2);
+    @ParameterizedValkeyTest
+    @EnabledIfLongRunningTest
+    void testContainerUnsubscribe() throws Exception {
+        T payload1 = getT();
+        T payload2 = getT();
 
-		assertThat(bag.poll(200, TimeUnit.MILLISECONDS)).isNull();
-	}
+        container.removeMessageListener(adapter, new ChannelTopic(CHANNEL));
+        template.convertAndSend(CHANNEL, payload1);
+        template.convertAndSend(CHANNEL, payload2);
 
-	@ParameterizedValkeyTest
-	void testStartNoListeners() {
-		container.removeMessageListener(adapter, new ChannelTopic(CHANNEL));
-		container.stop();
-		// DATVALKEY-207 This test previously took 5 seconds on start due to monitor wait
-		container.start();
-	}
+        assertThat(bag.poll(200, TimeUnit.MILLISECONDS)).isNull();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-251, GH-964
-	void testStartListenersToNoSpecificChannelTest() {
+    @ParameterizedValkeyTest
+    void testStartNoListeners() {
+        container.removeMessageListener(adapter, new ChannelTopic(CHANNEL));
+        container.stop();
+        // DATVALKEY-207 This test previously took 5 seconds on start due to monitor wait
+        container.start();
+    }
 
-		assumeThat(isClusterAware(template.getConnectionFactory())).isFalse();
+    @ParameterizedValkeyTest // DATAREDIS-251, GH-964
+    void testStartListenersToNoSpecificChannelTest() {
 
-		container.removeMessageListener(adapter, new ChannelTopic(CHANNEL));
-		container.addMessageListener(adapter, Collections.singletonList(new PatternTopic(CHANNEL + "*")));
-		container.start();
+        assumeThat(isClusterAware(template.getConnectionFactory())).isFalse();
 
-		T payload = getT();
+        container.removeMessageListener(adapter, new ChannelTopic(CHANNEL));
+        container.addMessageListener(
+                adapter, Collections.singletonList(new PatternTopic(CHANNEL + "*")));
+        container.start();
 
-		assertThat(template.convertAndSend(CHANNEL, payload)).isEqualTo(1L);
+        T payload = getT();
 
-		await().atMost(Duration.ofSeconds(2)).until(() -> bag.contains(payload));
-	}
+        assertThat(template.convertAndSend(CHANNEL, payload)).isEqualTo(1L);
 
-	private static boolean isClusterAware(ValkeyConnectionFactory connectionFactory) {
-		if (connectionFactory instanceof LettuceConnectionFactory lettuce) {
-			return lettuce.isClusterAware();
-		} else if (connectionFactory instanceof JedisConnectionFactory jedis) {
-			return jedis.isValkeyClusterAware();
-		} else if (connectionFactory instanceof ValkeyGlideConnectionFactory glide) {
-			return glide.isClusterAware();
-		}
-		return false;
-	}
+        await().atMost(Duration.ofSeconds(2)).until(() -> bag.contains(payload));
+    }
+
+    private static boolean isClusterAware(ValkeyConnectionFactory connectionFactory) {
+        if (connectionFactory instanceof LettuceConnectionFactory lettuce) {
+            return lettuce.isClusterAware();
+        } else if (connectionFactory instanceof JedisConnectionFactory jedis) {
+            return jedis.isValkeyClusterAware();
+        } else if (connectionFactory instanceof ValkeyGlideConnectionFactory glide) {
+            return glide.isClusterAware();
+        }
+        return false;
+    }
 }

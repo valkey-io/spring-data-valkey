@@ -24,11 +24,10 @@ package io.valkey.springframework.data.valkey.connection;
  */
 public interface DecoratedValkeyConnection {
 
-	/**
-	 * Gets the underlying {@link ValkeyConnection}.
-	 *
-	 * @return never {@literal null}.
-	 */
-	ValkeyConnection getDelegate();
-
+    /**
+     * Gets the underlying {@link ValkeyConnection}.
+     *
+     * @return never {@literal null}.
+     */
+    ValkeyConnection getDelegate();
 }

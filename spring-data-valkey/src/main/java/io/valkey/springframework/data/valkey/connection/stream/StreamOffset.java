@@ -21,106 +21,104 @@ import org.springframework.util.ObjectUtils;
 
 /**
  * Value object representing a Stream Id with its offset.
- * 
+ *
  * @author Mark Paluch
  * @see 2.2
  */
 public final class StreamOffset<K> {
 
-	private final K key;
-	private final ReadOffset offset;
+    private final K key;
+    private final ReadOffset offset;
 
-	private StreamOffset(K key, ReadOffset offset) {
+    private StreamOffset(K key, ReadOffset offset) {
 
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(offset, "ReadOffset must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(offset, "ReadOffset must not be null");
 
-		this.key = key;
-		this.offset = offset;
-	}
+        this.key = key;
+        this.offset = offset;
+    }
 
-	/**
-	 * Create a {@link StreamOffset} given {@code key} and {@link ReadOffset}.
-	 *
-	 * @param stream the stream key.
-	 * @param readOffset the {@link ReadOffset} to use.
-	 * @return new instance of {@link StreamOffset}.
-	 */
-	public static <K> StreamOffset<K> create(K stream, ReadOffset readOffset) {
-		return new StreamOffset<>(stream, readOffset);
-	}
+    /**
+     * Create a {@link StreamOffset} given {@code key} and {@link ReadOffset}.
+     *
+     * @param stream the stream key.
+     * @param readOffset the {@link ReadOffset} to use.
+     * @return new instance of {@link StreamOffset}.
+     */
+    public static <K> StreamOffset<K> create(K stream, ReadOffset readOffset) {
+        return new StreamOffset<>(stream, readOffset);
+    }
 
-	/**
-	 * Create a {@link StreamOffset} given {@code key} starting at {@link ReadOffset#latest()}.
-	 *
-	 * @param stream the stream key.
-	 * @param <K>
-	 * @return new instance of {@link StreamOffset}.
-	 */
-	public static <K> StreamOffset<K> latest(K stream) {
-		return new StreamOffset<>(stream, ReadOffset.latest());
-	}
+    /**
+     * Create a {@link StreamOffset} given {@code key} starting at {@link ReadOffset#latest()}.
+     *
+     * @param stream the stream key.
+     * @param <K>
+     * @return new instance of {@link StreamOffset}.
+     */
+    public static <K> StreamOffset<K> latest(K stream) {
+        return new StreamOffset<>(stream, ReadOffset.latest());
+    }
 
-	/**
-	 * Create a {@link StreamOffset} given {@code stream} starting at {@link ReadOffset#from(String)
-	 * ReadOffset#from("0-0")}.
-	 *
-	 * @param stream the stream key.
-	 * @param <K>
-	 * @return new instance of {@link StreamOffset}.
-	 */
-	public static <K> StreamOffset<K> fromStart(K stream) {
-		return new StreamOffset<>(stream, ReadOffset.from("0-0"));
-	}
+    /**
+     * Create a {@link StreamOffset} given {@code stream} starting at {@link ReadOffset#from(String)
+     * ReadOffset#from("0-0")}.
+     *
+     * @param stream the stream key.
+     * @param <K>
+     * @return new instance of {@link StreamOffset}.
+     */
+    public static <K> StreamOffset<K> fromStart(K stream) {
+        return new StreamOffset<>(stream, ReadOffset.from("0-0"));
+    }
 
-	/**
-	 * Create a {@link StreamOffset} from the given {@link Record#getId() record id} as reference to create the
-	 * {@link ReadOffset#from(String)}.
-	 * 
-	 * @param reference the record to be used as reference point.
-	 * @param <K>
-	 * @return new instance of {@link StreamOffset}.
-	 */
-	public static <K> StreamOffset<K> from(Record<K, ?> reference) {
+    /**
+     * Create a {@link StreamOffset} from the given {@link Record#getId() record id} as reference to
+     * create the {@link ReadOffset#from(String)}.
+     *
+     * @param reference the record to be used as reference point.
+     * @param <K>
+     * @return new instance of {@link StreamOffset}.
+     */
+    public static <K> StreamOffset<K> from(Record<K, ?> reference) {
 
-		Assert.notNull(reference, "Reference record must not be null");
+        Assert.notNull(reference, "Reference record must not be null");
 
-		return create(reference.getStream(), ReadOffset.from(reference.getId()));
-	}
+        return create(reference.getStream(), ReadOffset.from(reference.getId()));
+    }
 
-	public K getKey() {
-		return this.key;
-	}
+    public K getKey() {
+        return this.key;
+    }
 
-	public ReadOffset getOffset() {
-		return this.offset;
-	}
+    public ReadOffset getOffset() {
+        return this.offset;
+    }
 
-	@Override
-	public String toString() {
-		return "StreamOffset{" + "key=" + key + ", offset=" + offset + '}';
-	}
+    @Override
+    public String toString() {
+        return "StreamOffset{" + "key=" + key + ", offset=" + offset + '}';
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
+    @Override
+    public boolean equals(@Nullable Object o) {
 
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-		StreamOffset<?> that = (StreamOffset<?>) o;
+        StreamOffset<?> that = (StreamOffset<?>) o;
 
-		if (!ObjectUtils.nullSafeEquals(key, that.key)) {
-			return false;
-		}
-		return ObjectUtils.nullSafeEquals(offset, that.offset);
-	}
+        if (!ObjectUtils.nullSafeEquals(key, that.key)) {
+            return false;
+        }
+        return ObjectUtils.nullSafeEquals(offset, that.offset);
+    }
 
-	@Override
-	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(key);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(offset);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = ObjectUtils.nullSafeHashCode(key);
+        result = 31 * result + ObjectUtils.nullSafeHashCode(offset);
+        return result;
+    }
 }

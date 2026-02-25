@@ -17,18 +17,15 @@ package io.valkey.springframework.data.valkey.core;
 
 import static org.assertj.core.api.Assertions.*;
 
-import reactor.test.StepVerifier;
-
-import java.util.Collection;
-
-import org.junit.jupiter.api.BeforeEach;
-
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ReactiveOperationsTestParams.Fixture;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.Collection;
+import org.junit.jupiter.api.BeforeEach;
+import reactor.test.StepVerifier;
 
 /**
  * Integration tests for {@link DefaultReactiveHyperLogLogOperations}.
@@ -40,77 +37,102 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @SuppressWarnings("unchecked")
 public class DefaultReactiveHyperLogLogOperationsIntegrationTests<K, V> {
 
-	private final ReactiveValkeyTemplate<K, V> valkeyTemplate;
-	private final ReactiveHyperLogLogOperations<K, V> hyperLogLogOperations;
+    private final ReactiveValkeyTemplate<K, V> valkeyTemplate;
+    private final ReactiveHyperLogLogOperations<K, V> hyperLogLogOperations;
 
-	private final ObjectFactory<K> keyFactory;
-	private final ObjectFactory<V> valueFactory;
+    private final ObjectFactory<K> keyFactory;
+    private final ObjectFactory<V> valueFactory;
 
-	public static Collection<Fixture<?, ?>> testParams() {
-		return ReactiveOperationsTestParams.testParams();
-	}
+    public static Collection<Fixture<?, ?>> testParams() {
+        return ReactiveOperationsTestParams.testParams();
+    }
 
-	public DefaultReactiveHyperLogLogOperationsIntegrationTests(Fixture<K, V> fixture) {
+    public DefaultReactiveHyperLogLogOperationsIntegrationTests(Fixture<K, V> fixture) {
 
-		this.valkeyTemplate = fixture.getTemplate();
-		this.hyperLogLogOperations = valkeyTemplate.opsForHyperLogLog();
-		this.keyFactory = fixture.getKeyFactory();
-		this.valueFactory = fixture.getValueFactory();
-	}
+        this.valkeyTemplate = fixture.getTemplate();
+        this.hyperLogLogOperations = valkeyTemplate.opsForHyperLogLog();
+        this.keyFactory = fixture.getKeyFactory();
+        this.valueFactory = fixture.getValueFactory();
+    }
 
-	@BeforeEach
-	void before() {
+    @BeforeEach
+    void before() {
 
-		ValkeyConnectionFactory connectionFactory = (ValkeyConnectionFactory) valkeyTemplate.getConnectionFactory();
-		ValkeyConnection connection = connectionFactory.getConnection();
-		connection.flushAll();
-		connection.close();
-	}
+        ValkeyConnectionFactory connectionFactory =
+                (ValkeyConnectionFactory) valkeyTemplate.getConnectionFactory();
+        ValkeyConnection connection = connectionFactory.getConnection();
+        connection.flushAll();
+        connection.close();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void add() {
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void add() {
 
-		K key = keyFactory.instance();
-		V value1 = valueFactory.instance();
-		V value2 = valueFactory.instance();
+        K key = keyFactory.instance();
+        V value1 = valueFactory.instance();
+        V value2 = valueFactory.instance();
 
-		hyperLogLogOperations.add(key, value1, value2).as(StepVerifier::create).expectNext(1L).verifyComplete();
+        hyperLogLogOperations
+                .add(key, value1, value2)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
 
-		hyperLogLogOperations.size(key).as(StepVerifier::create).expectNext(2L).verifyComplete();
-	}
+        hyperLogLogOperations.size(key).as(StepVerifier::create).expectNext(2L).verifyComplete();
+    }
 
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void union() {
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void union() {
 
-		K mergedKey = keyFactory.instance();
-		V sharedValue = valueFactory.instance();
+        K mergedKey = keyFactory.instance();
+        V sharedValue = valueFactory.instance();
 
-		K key1 = keyFactory.instance();
-		V value1 = valueFactory.instance();
+        K key1 = keyFactory.instance();
+        V value1 = valueFactory.instance();
 
-		K key2 = keyFactory.instance();
-		V value2 = valueFactory.instance();
+        K key2 = keyFactory.instance();
+        V value2 = valueFactory.instance();
 
-		hyperLogLogOperations.add(key1, value1, sharedValue).as(StepVerifier::create).expectNext(1L).verifyComplete();
-		hyperLogLogOperations.add(key2, value2, sharedValue).as(StepVerifier::create).expectNext(1L).verifyComplete();
+        hyperLogLogOperations
+                .add(key1, value1, sharedValue)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+        hyperLogLogOperations
+                .add(key2, value2, sharedValue)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
 
-		hyperLogLogOperations.union(mergedKey, key1, key2).as(StepVerifier::create).expectNext(true).verifyComplete();
-		hyperLogLogOperations.size(mergedKey).as(StepVerifier::create).assertNext(actual -> {
+        hyperLogLogOperations
+                .union(mergedKey, key1, key2)
+                .as(StepVerifier::create)
+                .expectNext(true)
+                .verifyComplete();
+        hyperLogLogOperations
+                .size(mergedKey)
+                .as(StepVerifier::create)
+                .assertNext(
+                        actual -> {
+                            assertThat(actual).isBetween(2L, 3L);
+                        })
+                .verifyComplete();
+    }
 
-			assertThat(actual).isBetween(2L, 3L);
-		}).verifyComplete();
-	}
+    @ParameterizedValkeyTest // DATAREDIS-602
+    void delete() {
 
-	@ParameterizedValkeyTest // DATAREDIS-602
-	void delete() {
+        K key = keyFactory.instance();
+        V value1 = valueFactory.instance();
+        V value2 = valueFactory.instance();
 
-		K key = keyFactory.instance();
-		V value1 = valueFactory.instance();
-		V value2 = valueFactory.instance();
+        hyperLogLogOperations
+                .add(key, value1, value2)
+                .as(StepVerifier::create)
+                .expectNext(1L)
+                .verifyComplete();
+        hyperLogLogOperations.delete(key).as(StepVerifier::create).expectNext(true).verifyComplete();
 
-		hyperLogLogOperations.add(key, value1, value2).as(StepVerifier::create).expectNext(1L).verifyComplete();
-		hyperLogLogOperations.delete(key).as(StepVerifier::create).expectNext(true).verifyComplete();
-
-		hyperLogLogOperations.size(key).as(StepVerifier::create).expectNext(0L).verifyComplete();
-	}
+        hyperLogLogOperations.size(key).as(StepVerifier::create).expectNext(0L).verifyComplete();
+    }
 }

@@ -16,16 +16,14 @@
 
 package io.valkey.springframework.boot.actuate.metrics.cache;
 
-import java.util.Collections;
-
-import io.micrometer.core.instrument.binder.MeterBinder;
-import org.junit.jupiter.api.Test;
-
-import io.valkey.springframework.data.valkey.cache.ValkeyCache;
-
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+
+import io.micrometer.core.instrument.binder.MeterBinder;
+import io.valkey.springframework.data.valkey.cache.ValkeyCache;
+import java.util.Collections;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for {@link ValkeyCacheMeterBinderProvider}.
@@ -34,12 +32,12 @@ import static org.mockito.Mockito.mock;
  */
 class ValkeyCacheMeterBinderProviderTests {
 
-	@Test
-	void valkeyCacheProvider() {
-		ValkeyCache cache = mock(ValkeyCache.class);
-		given(cache.getName()).willReturn("test");
-		MeterBinder meterBinder = new ValkeyCacheMeterBinderProvider().getMeterBinder(cache, Collections.emptyList());
-		assertThat(meterBinder).isInstanceOf(ValkeyCacheMetrics.class);
-	}
-
+    @Test
+    void valkeyCacheProvider() {
+        ValkeyCache cache = mock(ValkeyCache.class);
+        given(cache.getName()).willReturn("test");
+        MeterBinder meterBinder =
+                new ValkeyCacheMeterBinderProvider().getMeterBinder(cache, Collections.emptyList());
+        assertThat(meterBinder).isInstanceOf(ValkeyCacheMetrics.class);
+    }
 }

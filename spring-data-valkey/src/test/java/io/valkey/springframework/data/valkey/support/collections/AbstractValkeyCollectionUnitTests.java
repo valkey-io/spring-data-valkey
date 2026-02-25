@@ -17,10 +17,13 @@ package io.valkey.springframework.data.valkey.support.collections;
 
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.connection.DataType;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,11 +33,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
-import io.valkey.springframework.data.valkey.connection.DataType;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-
 /**
  * @author Christoph Strobl
  */
@@ -42,76 +40,80 @@ import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class AbstractValkeyCollectionUnitTests {
 
-	private AbstractValkeyCollection<String> collection;
+    private AbstractValkeyCollection<String> collection;
 
-	@SuppressWarnings("rawtypes")//
-	private ValkeyTemplate valkeyTemplateSpy;
-	private @Mock ValkeyConnectionFactory connectionFactoryMock;
-	private @Mock(answer = Answers.RETURNS_MOCKS) ValkeyConnection connectionMock;
+    @SuppressWarnings("rawtypes") //
+    private ValkeyTemplate valkeyTemplateSpy;
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@BeforeEach
-	void setUp() {
+    private @Mock ValkeyConnectionFactory connectionFactoryMock;
+    private @Mock(answer = Answers.RETURNS_MOCKS) ValkeyConnection connectionMock;
 
-		valkeyTemplateSpy = spy(new ValkeyTemplate() {
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    @BeforeEach
+    void setUp() {
 
-			public Boolean hasKey(Object key) {
-				return false;
-			}
-		});
-		valkeyTemplateSpy.setConnectionFactory(connectionFactoryMock);
-		valkeyTemplateSpy.afterPropertiesSet();
+        valkeyTemplateSpy =
+                spy(
+                        new ValkeyTemplate() {
 
-		collection = new AbstractValkeyCollection<String>("key", valkeyTemplateSpy) {
+                            public Boolean hasKey(Object key) {
+                                return false;
+                            }
+                        });
+        valkeyTemplateSpy.setConnectionFactory(connectionFactoryMock);
+        valkeyTemplateSpy.afterPropertiesSet();
 
-			private List<String> delegate = new ArrayList<>();
+        collection =
+                new AbstractValkeyCollection<String>("key", valkeyTemplateSpy) {
 
-			@Override
-			public boolean add(String value) {
-				return this.delegate.add(value);
-			};
+                    private List<String> delegate = new ArrayList<>();
 
-			@Override
-			public DataType getType() {
-				return DataType.LIST;
-			}
+                    @Override
+                    public boolean add(String value) {
+                        return this.delegate.add(value);
+                    }
+                    ;
 
-			@Override
-			public Iterator<String> iterator() {
-				return this.delegate.iterator();
-			}
+                    @Override
+                    public DataType getType() {
+                        return DataType.LIST;
+                    }
 
-			@Override
-			public int size() {
-				return this.delegate.size();
-			}
+                    @Override
+                    public Iterator<String> iterator() {
+                        return this.delegate.iterator();
+                    }
 
-			@Override
-			public boolean isEmpty() {
-				return this.delegate.isEmpty();
-			}
+                    @Override
+                    public int size() {
+                        return this.delegate.size();
+                    }
 
-		};
+                    @Override
+                    public boolean isEmpty() {
+                        return this.delegate.isEmpty();
+                    }
+                };
 
-		when(connectionFactoryMock.getConnection()).thenReturn(connectionMock);
-	}
+        when(connectionFactoryMock.getConnection()).thenReturn(connectionMock);
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test // DATAREDIS-188
-	void testRenameOfEmptyCollectionShouldNotTriggerValkeyOperation() {
+    @SuppressWarnings("unchecked")
+    @Test // DATAREDIS-188
+    void testRenameOfEmptyCollectionShouldNotTriggerValkeyOperation() {
 
-		collection.rename("new-key");
-		verify(valkeyTemplateSpy, never()).rename(eq("key"), eq("new-key"));
-	}
+        collection.rename("new-key");
+        verify(valkeyTemplateSpy, never()).rename(eq("key"), eq("new-key"));
+    }
 
-	@SuppressWarnings("unchecked")
-	@Test // DATAREDIS-188
-	void testRenameCollectionShouldTriggerValkeyOperation() {
+    @SuppressWarnings("unchecked")
+    @Test // DATAREDIS-188
+    void testRenameCollectionShouldTriggerValkeyOperation() {
 
-		when(valkeyTemplateSpy.hasKey(any())).thenReturn(Boolean.TRUE);
+        when(valkeyTemplateSpy.hasKey(any())).thenReturn(Boolean.TRUE);
 
-		collection.add("spring-data-valkey");
-		collection.rename("new-key");
-		verify(valkeyTemplateSpy, times(1)).rename(eq("key"), eq("new-key"));
-	}
+        collection.add("spring-data-valkey");
+        collection.rename("new-key");
+        verify(valkeyTemplateSpy, times(1)).rename(eq("key"), eq("new-key"));
+    }
 }

@@ -18,18 +18,20 @@ package io.valkey.springframework.data.valkey.core;
 import java.beans.PropertyEditorSupport;
 
 /**
- * PropertyEditor allowing for easy injection of {@link ClusterOperations} from {@link ValkeyOperations}.
+ * PropertyEditor allowing for easy injection of {@link ClusterOperations} from {@link
+ * ValkeyOperations}.
  *
  * @author Mark Paluch
  */
 class ClusterOperationsEditor extends PropertyEditorSupport {
 
-	public void setValue(Object value) {
+    public void setValue(Object value) {
 
-		if (value instanceof ValkeyOperations<?, ?> valkeyOperations) {
-			super.setValue(valkeyOperations.opsForCluster());
-		} else {
-			throw new IllegalArgumentException("Editor supports only conversion of type " + ValkeyOperations.class);
-		}
-	}
+        if (value instanceof ValkeyOperations<?, ?> valkeyOperations) {
+            super.setValue(valkeyOperations.opsForCluster());
+        } else {
+            throw new IllegalArgumentException(
+                    "Editor supports only conversion of type " + ValkeyOperations.class);
+        }
+    }
 }

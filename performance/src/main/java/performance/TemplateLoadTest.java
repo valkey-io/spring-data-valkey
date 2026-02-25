@@ -20,17 +20,17 @@ import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFac
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
-import org.springframework.beans.factory.DisposableBean;
-import org.springframework.beans.factory.InitializingBean;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
+import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
 
 /**
- * Parameterized load test for ValkeyTemplate using different clients and under various concurrency levels.
+ * Parameterized load test for ValkeyTemplate using different clients and under various concurrency
+ * levels.
  */
 public class TemplateLoadTest {
 
@@ -70,8 +70,9 @@ public class TemplateLoadTest {
         };
     }
 
-    private static void runLoadTest(ValkeyConnectionFactory factory, int threads, 
-            int operations, int totalExpected) throws InterruptedException {
+    private static void runLoadTest(
+            ValkeyConnectionFactory factory, int threads, int operations, int totalExpected)
+            throws InterruptedException {
         long startTime = System.currentTimeMillis();
 
         ExecutorService executorService = Executors.newFixedThreadPool(threads);
@@ -81,29 +82,34 @@ public class TemplateLoadTest {
         AtomicInteger getOperations = new AtomicInteger(0);
 
         try {
-            Runnable task = () -> IntStream.range(0, operations).forEach(i -> {
-                String key = Thread.currentThread().getName() + ":" + i;
-                String value = "value" + i;
+            Runnable task =
+                    () ->
+                            IntStream.range(0, operations)
+                                    .forEach(
+                                            i -> {
+                                                String key = Thread.currentThread().getName() + ":" + i;
+                                                String value = "value" + i;
 
-                // SET operation
-                try {
-                    valkeyTemplate.opsForValue().set(key, value);
-                    setOperations.incrementAndGet();
-                } catch (Exception e) {
-                    System.err.println("SET error: " + e.getMessage());
-                }
+                                                // SET operation
+                                                try {
+                                                    valkeyTemplate.opsForValue().set(key, value);
+                                                    setOperations.incrementAndGet();
+                                                } catch (Exception e) {
+                                                    System.err.println("SET error: " + e.getMessage());
+                                                }
 
-                // GET operation
-                try {
-                    String result = valkeyTemplate.opsForValue().get(key);
-                    getOperations.incrementAndGet();
-                    if (result != null && !result.equals(value)) {
-                        System.err.println("Data mismatch! Expected: " + value + ", Got: " + result);
-                    }
-                } catch (Exception e) {
-                    System.err.println("GET error: " + e.getMessage());
-                }
-            });
+                                                // GET operation
+                                                try {
+                                                    String result = valkeyTemplate.opsForValue().get(key);
+                                                    getOperations.incrementAndGet();
+                                                    if (result != null && !result.equals(value)) {
+                                                        System.err.println(
+                                                                "Data mismatch! Expected: " + value + ", Got: " + result);
+                                                    }
+                                                } catch (Exception e) {
+                                                    System.err.println("GET error: " + e.getMessage());
+                                                }
+                                            });
 
             IntStream.range(0, threads).forEach(i -> executorService.submit(task));
 
@@ -120,8 +126,11 @@ public class TemplateLoadTest {
             System.out.println("GET operations: " + getOperations.get());
             System.out.println("Total operations: " + totalActual);
             System.out.println("Dropped operations: " + dropped);
-            System.out.println("Success rate: " + String.format("%.2f%%", (totalActual * 100.0 / totalExpected)));
-            System.out.println("Operations per second: " + String.format("%,d", (long) (totalActual * 1000.0 / duration)));
+            System.out.println(
+                    "Success rate: " + String.format("%.2f%%", (totalActual * 100.0 / totalExpected)));
+            System.out.println(
+                    "Operations per second: "
+                            + String.format("%,d", (long) (totalActual * 1000.0 / duration)));
         } finally {
             executorService.shutdown();
         }

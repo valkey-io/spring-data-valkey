@@ -15,10 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.connection.stream;
 
-import java.nio.ByteBuffer;
-
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
+import java.nio.ByteBuffer;
 import org.springframework.lang.Nullable;
 
 /**
@@ -29,44 +28,48 @@ import org.springframework.lang.Nullable;
  */
 class StreamSerialization {
 
-	/**
-	 * Serialize the {@code value} using the optional {@link ValkeySerializer}. If no conversion is possible, {@code value}
-	 * is assumed to be a byte array.
-	 *
-	 * @param serializer the serializer. Can be {@literal null}.
-	 * @param value the value to serialize.
-	 * @return the serialized (binary) representation of {@code value}.
-	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	static byte[] serialize(@Nullable ValkeySerializer<?> serializer, Object value) {
-		return canSerialize(serializer, value) ? ((ValkeySerializer) serializer).serialize(value) : (byte[]) value;
-	}
+    /**
+     * Serialize the {@code value} using the optional {@link ValkeySerializer}. If no conversion is
+     * possible, {@code value} is assumed to be a byte array.
+     *
+     * @param serializer the serializer. Can be {@literal null}.
+     * @param value the value to serialize.
+     * @return the serialized (binary) representation of {@code value}.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    static byte[] serialize(@Nullable ValkeySerializer<?> serializer, Object value) {
+        return canSerialize(serializer, value)
+                ? ((ValkeySerializer) serializer).serialize(value)
+                : (byte[]) value;
+    }
 
-	/**
-	 * Deserialize the {@code value using the optional {@link ValkeySerializer}. If no conversion is possible, return
-	 * {@code value}. @param serializer @param value @param <T> @return
-	 */
-	static <T> T deserialize(@Nullable ValkeySerializer<? extends T> serializer, ByteBuffer value) {
-		return deserialize(serializer, ByteUtils.getBytes(value));
-	}
+    /**
+     * Deserialize the {@code value using the optional {@link ValkeySerializer}. If no conversion is possible, return
+     * {@code value}. @param serializer @param value @param <T> @return
+     */
+    static <T> T deserialize(@Nullable ValkeySerializer<? extends T> serializer, ByteBuffer value) {
+        return deserialize(serializer, ByteUtils.getBytes(value));
+    }
 
-	/**
-	 * Deserialize the {@code value using the optional {@link ValkeySerializer}. If no conversion is possible, return
-	 * {@code value}. @param serializer @param value @param <T> @return
-	 */
-	static <T> T deserialize(@Nullable ValkeySerializer<? extends T> serializer, byte[] value) {
-		return serializer != null ? serializer.deserialize(value) : (T) value;
-	}
+    /**
+     * Deserialize the {@code value using the optional {@link ValkeySerializer}. If no conversion is possible, return
+     * {@code value}. @param serializer @param value @param <T> @return
+     */
+    static <T> T deserialize(@Nullable ValkeySerializer<? extends T> serializer, byte[] value) {
+        return serializer != null ? serializer.deserialize(value) : (T) value;
+    }
 
-	/**
-	 * Returns whether the given {@link ValkeySerializer} is capable of serializing the {@code value} to {@code byte[]}.
-	 *
-	 * @param serializer the serializer. Can be {@literal null}.
-	 * @param value the value to serialize.
-	 * @return {@literal true} if the given {@link ValkeySerializer} is capable of serializing the {@code value} to
-	 *         {@code byte[]}.
-	 */
-	private static boolean canSerialize(@Nullable ValkeySerializer<?> serializer, @Nullable Object value) {
-		return serializer != null && (value == null || serializer.canSerialize(value.getClass()));
-	}
+    /**
+     * Returns whether the given {@link ValkeySerializer} is capable of serializing the {@code value}
+     * to {@code byte[]}.
+     *
+     * @param serializer the serializer. Can be {@literal null}.
+     * @param value the value to serialize.
+     * @return {@literal true} if the given {@link ValkeySerializer} is capable of serializing the
+     *     {@code value} to {@code byte[]}.
+     */
+    private static boolean canSerialize(
+            @Nullable ValkeySerializer<?> serializer, @Nullable Object value) {
+        return serializer != null && (value == null || serializer.canSerialize(value.getClass()));
+    }
 }

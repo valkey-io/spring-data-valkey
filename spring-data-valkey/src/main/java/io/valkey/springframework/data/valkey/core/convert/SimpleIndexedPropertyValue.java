@@ -27,72 +27,78 @@ import org.springframework.util.ObjectUtils;
  */
 public class SimpleIndexedPropertyValue implements IndexedData {
 
-	private final String keyspace;
-	private final String indexName;
-	private final Object value;
+    private final String keyspace;
+    private final String indexName;
+    private final Object value;
 
-	/**
-	 * Creates new {@link SimpleIndexedPropertyValue}.
-	 *
-	 * @param keyspace must not be {@literal null}.
-	 * @param indexName must not be {@literal null}.
-	 * @param value can be {@literal null}.
-	 */
-	public SimpleIndexedPropertyValue(String keyspace, String indexName, Object value) {
+    /**
+     * Creates new {@link SimpleIndexedPropertyValue}.
+     *
+     * @param keyspace must not be {@literal null}.
+     * @param indexName must not be {@literal null}.
+     * @param value can be {@literal null}.
+     */
+    public SimpleIndexedPropertyValue(String keyspace, String indexName, Object value) {
 
-		this.keyspace = keyspace;
-		this.indexName = indexName;
-		this.value = value;
-	}
+        this.keyspace = keyspace;
+        this.indexName = indexName;
+        this.value = value;
+    }
 
-	/**
-	 * Get the value to index.
-	 *
-	 * @return can be {@literal null}.
-	 */
-	public Object getValue() {
-		return value;
-	}
+    /**
+     * Get the value to index.
+     *
+     * @return can be {@literal null}.
+     */
+    public Object getValue() {
+        return value;
+    }
 
-	@Override
-	public String getIndexName() {
-		return indexName;
-	}
+    @Override
+    public String getIndexName() {
+        return indexName;
+    }
 
-	@Override
-	public String getKeyspace() {
-		return this.keyspace;
-	}
+    @Override
+    public String getKeyspace() {
+        return this.keyspace;
+    }
 
-	@Override
-	public String toString() {
-		return "SimpleIndexedPropertyValue{" + "keyspace='" + keyspace + '\'' + ", indexName='" + indexName + '\''
-				+ ", value=" + value + '}';
-	}
+    @Override
+    public String toString() {
+        return "SimpleIndexedPropertyValue{"
+                + "keyspace='"
+                + keyspace
+                + '\''
+                + ", indexName='"
+                + indexName
+                + '\''
+                + ", value="
+                + value
+                + '}';
+    }
 
-	@Override
-	public boolean equals(@Nullable Object o) {
-		if (this == o)
-			return true;
-		if (o == null || getClass() != o.getClass())
-			return false;
+    @Override
+    public boolean equals(@Nullable Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
 
-		SimpleIndexedPropertyValue that = (SimpleIndexedPropertyValue) o;
+        SimpleIndexedPropertyValue that = (SimpleIndexedPropertyValue) o;
 
-		if (!ObjectUtils.nullSafeEquals(keyspace, that.keyspace)) {
-			return false;
-		}
-		if (!ObjectUtils.nullSafeEquals(indexName, that.indexName)) {
-			return false;
-		}
-		return ObjectUtils.nullSafeEquals(value, that.value);
-	}
+        if (!ObjectUtils.nullSafeEquals(keyspace, that.keyspace)) {
+            return false;
+        }
+        if (!ObjectUtils.nullSafeEquals(indexName, that.indexName)) {
+            return false;
+        }
+        return ObjectUtils.nullSafeEquals(value, that.value);
+    }
 
-	@Override
-	public int hashCode() {
-		int result = ObjectUtils.nullSafeHashCode(keyspace);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(indexName);
-		result = 31 * result + ObjectUtils.nullSafeHashCode(value);
-		return result;
-	}
+    @Override
+    public int hashCode() {
+        int result = ObjectUtils.nullSafeHashCode(keyspace);
+        result = 31 * result + ObjectUtils.nullSafeHashCode(indexName);
+        result = 31 * result + ObjectUtils.nullSafeHashCode(value);
+        return result;
+    }
 }

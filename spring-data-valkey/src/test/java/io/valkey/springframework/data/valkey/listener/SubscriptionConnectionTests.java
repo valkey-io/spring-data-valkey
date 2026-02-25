@@ -15,18 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.listener;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.junit.jupiter.api.AfterEach;
-
-import org.springframework.core.task.SimpleAsyncTaskExecutor;
-import org.springframework.core.task.SyncTaskExecutor;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -40,9 +28,20 @@ import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAda
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.SyncTaskExecutor;
 
 /**
- * Integration tests confirming that {@link ValkeyMessageListenerContainer} closes connections after unsubscribing
+ * Integration tests confirming that {@link ValkeyMessageListenerContainer} closes connections after
+ * unsubscribing
  *
  * @author Jennifer Hickey
  * @author Thomas Darimont
@@ -52,124 +51,126 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
 @MethodSource("testParams")
 public class SubscriptionConnectionTests {
 
-	private static final Log logger = LogFactory.getLog(SubscriptionConnectionTests.class);
-	private static final String CHANNEL = "pubsub::test";
+    private static final Log logger = LogFactory.getLog(SubscriptionConnectionTests.class);
+    private static final String CHANNEL = "pubsub::test";
 
-	private ValkeyConnectionFactory connectionFactory;
+    private ValkeyConnectionFactory connectionFactory;
 
-	private List<ValkeyMessageListenerContainer> containers = new ArrayList<>();
+    private List<ValkeyMessageListenerContainer> containers = new ArrayList<>();
 
-	private final Object handler = new Object() {
-		@SuppressWarnings("unused")
-		public void handleMessage(String message) {
-			logger.debug(message);
-		}
-	};
+    private final Object handler =
+            new Object() {
+                @SuppressWarnings("unused")
+                public void handleMessage(String message) {
+                    logger.debug(message);
+                }
+            };
 
-	public SubscriptionConnectionTests(ValkeyConnectionFactory connectionFactory) {
-		this.connectionFactory = connectionFactory;
-	}
+    public SubscriptionConnectionTests(ValkeyConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory;
+    }
 
-	public static Collection<Object[]> testParams() {
+    public static Collection<Object[]> testParams() {
 
-		// Jedis
-		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // Jedis
+        JedisConnectionFactory jedisConnFactory =
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		// Lettuce
-		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // Lettuce
+        LettuceConnectionFactory lettuceConnFactory =
+                LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		// Valkey-GLIDE
-		ValkeyGlideConnectionFactory glideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+        // Valkey-GLIDE
+        ValkeyGlideConnectionFactory glideConnFactory =
+                ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		return Arrays.asList(new Object[][] { { jedisConnFactory }, { lettuceConnFactory }, { glideConnFactory } });
-	}
+        return Arrays.asList(
+                new Object[][] {{jedisConnFactory}, {lettuceConnFactory}, {glideConnFactory}});
+    }
 
-	@AfterEach
-	void tearDown() throws Exception {
-		for (ValkeyMessageListenerContainer container : containers) {
-			if (container.isActive()) {
-				container.destroy();
-			}
-		}
-	}
+    @AfterEach
+    void tearDown() throws Exception {
+        for (ValkeyMessageListenerContainer container : containers) {
+            if (container.isActive()) {
+                container.destroy();
+            }
+        }
+    }
 
-	@ParameterizedValkeyTest // GH-964
-	void testStopMessageListenerContainers() throws Exception {
+    @ParameterizedValkeyTest // GH-964
+    void testStopMessageListenerContainers() throws Exception {
 
-		// Grab all 8 connections from the pool. They should be released on
-		// container stop
-		for (int i = 0; i < 8; i++) {
-			ValkeyMessageListenerContainer container = new ValkeyMessageListenerContainer();
-			container.setConnectionFactory(connectionFactory);
-			container.setBeanName("container" + i);
-			container.addMessageListener(new MessageListenerAdapter(handler),
-					Collections.singletonList(new ChannelTopic(CHANNEL)));
-			container.setTaskExecutor(new SyncTaskExecutor());
-			container.setSubscriptionExecutor(new SimpleAsyncTaskExecutor());
-			container.afterPropertiesSet();
-			container.start();
+        // Grab all 8 connections from the pool. They should be released on
+        // container stop
+        for (int i = 0; i < 8; i++) {
+            ValkeyMessageListenerContainer container = new ValkeyMessageListenerContainer();
+            container.setConnectionFactory(connectionFactory);
+            container.setBeanName("container" + i);
+            container.addMessageListener(
+                    new MessageListenerAdapter(handler),
+                    Collections.singletonList(new ChannelTopic(CHANNEL)));
+            container.setTaskExecutor(new SyncTaskExecutor());
+            container.setSubscriptionExecutor(new SimpleAsyncTaskExecutor());
+            container.afterPropertiesSet();
+            container.start();
 
-			container.stop();
-			containers.add(container);
-		}
+            container.stop();
+            containers.add(container);
+        }
 
-		// verify we can now get a connection from the pool
-		ValkeyConnection connection = connectionFactory.getConnection();
-		connection.close();
-	}
+        // verify we can now get a connection from the pool
+        ValkeyConnection connection = connectionFactory.getConnection();
+        connection.close();
+    }
 
-	@ParameterizedValkeyTest
-	void testRemoveLastListener() throws Exception {
+    @ParameterizedValkeyTest
+    void testRemoveLastListener() throws Exception {
 
-		// Grab all 8 connections from the pool
-		MessageListener listener = new MessageListenerAdapter(handler);
-		for (int i = 0; i < 8; i++) {
-			ValkeyMessageListenerContainer container = new ValkeyMessageListenerContainer();
-			container.setConnectionFactory(connectionFactory);
-			container.setBeanName("container" + i);
-			container.addMessageListener(listener, Arrays.asList(new ChannelTopic(CHANNEL)));
-			container.setTaskExecutor(new SyncTaskExecutor());
-			container.setSubscriptionExecutor(new SimpleAsyncTaskExecutor());
-			container.afterPropertiesSet();
-			container.start();
-			containers.add(container);
-		}
+        // Grab all 8 connections from the pool
+        MessageListener listener = new MessageListenerAdapter(handler);
+        for (int i = 0; i < 8; i++) {
+            ValkeyMessageListenerContainer container = new ValkeyMessageListenerContainer();
+            container.setConnectionFactory(connectionFactory);
+            container.setBeanName("container" + i);
+            container.addMessageListener(listener, Arrays.asList(new ChannelTopic(CHANNEL)));
+            container.setTaskExecutor(new SyncTaskExecutor());
+            container.setSubscriptionExecutor(new SimpleAsyncTaskExecutor());
+            container.afterPropertiesSet();
+            container.start();
+            containers.add(container);
+        }
 
-		// Removing the sole listener from the container should free up a
-		// connection
-		containers.get(0).removeMessageListener(listener);
+        // Removing the sole listener from the container should free up a
+        // connection
+        containers.get(0).removeMessageListener(listener);
 
-		// verify we can now get a connection from the pool
-		ValkeyConnection connection = connectionFactory.getConnection();
-		connection.close();
-	}
+        // verify we can now get a connection from the pool
+        ValkeyConnection connection = connectionFactory.getConnection();
+        connection.close();
+    }
 
-	@ParameterizedValkeyTest
-	void testStopListening() throws InterruptedException {
+    @ParameterizedValkeyTest
+    void testStopListening() throws InterruptedException {
 
-		// Grab all 8 connections from the pool.
-		MessageListener listener = new MessageListenerAdapter(handler);
-		for (int i = 0; i < 8; i++) {
-			ValkeyMessageListenerContainer container = new ValkeyMessageListenerContainer();
-			container.setConnectionFactory(connectionFactory);
-			container.setBeanName("container" + i);
-			container.addMessageListener(listener, Arrays.asList(new ChannelTopic(CHANNEL)));
-			container.setTaskExecutor(new SyncTaskExecutor());
-			container.setSubscriptionExecutor(new SimpleAsyncTaskExecutor());
-			container.afterPropertiesSet();
-			container.start();
-			containers.add(container);
-		}
+        // Grab all 8 connections from the pool.
+        MessageListener listener = new MessageListenerAdapter(handler);
+        for (int i = 0; i < 8; i++) {
+            ValkeyMessageListenerContainer container = new ValkeyMessageListenerContainer();
+            container.setConnectionFactory(connectionFactory);
+            container.setBeanName("container" + i);
+            container.addMessageListener(listener, Arrays.asList(new ChannelTopic(CHANNEL)));
+            container.setTaskExecutor(new SyncTaskExecutor());
+            container.setSubscriptionExecutor(new SimpleAsyncTaskExecutor());
+            container.afterPropertiesSet();
+            container.start();
+            containers.add(container);
+        }
 
-		// Unsubscribe all listeners from all topics, freeing up a connection
-		containers.get(0).stop();
+        // Unsubscribe all listeners from all topics, freeing up a connection
+        containers.get(0).stop();
 
-		// verify we can now get a connection from the pool
-		ValkeyConnection connection = connectionFactory.getConnection();
-		connection.close();
-	}
-
+        // verify we can now get a connection from the pool
+        ValkeyConnection connection = connectionFactory.getConnection();
+        connection.close();
+    }
 }

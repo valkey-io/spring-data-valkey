@@ -29,8 +29,8 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
  */
 public class LettuceDefaultScriptExecutorTests extends AbstractDefaultScriptExecutorTests {
 
-	@Override
-	protected ValkeyConnectionFactory getConnectionFactory() {
-		return LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
-	}
+    @Override
+    protected ValkeyConnectionFactory getConnectionFactory() {
+        return LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+    }
 }

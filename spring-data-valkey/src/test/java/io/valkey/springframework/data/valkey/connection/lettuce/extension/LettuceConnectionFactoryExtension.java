@@ -15,17 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce.extension;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.lang.annotation.Annotation;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
-
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolutionException;
-import org.junit.jupiter.api.extension.ParameterResolver;
 import io.valkey.springframework.data.valkey.ConnectionFactoryTracker;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
@@ -38,16 +27,27 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectio
 import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration.LettucePoolingClientConfigurationBuilder;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
+import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
-import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
+import java.io.Closeable;
+import java.io.IOException;
+import java.lang.annotation.Annotation;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
 import org.springframework.data.util.Lazy;
 
 /**
- * JUnit {@link ParameterResolver} providing pre-cached {@link LettuceConnectionFactory} instances. Connection factories
- * can be qualified with {@code @ValkeyStanalone} (default), {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a
- * specific factory instance. Instances are managed by this extension and will be shut down on JVM shutdown.
+ * JUnit {@link ParameterResolver} providing pre-cached {@link LettuceConnectionFactory} instances.
+ * Connection factories can be qualified with {@code @ValkeyStanalone} (default),
+ * {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a specific factory instance.
+ * Instances are managed by this extension and will be shut down on JVM shutdown.
  *
  * @author Mark Paluch
  * @see ValkeyStanalone
@@ -56,224 +56,250 @@ import org.springframework.data.util.Lazy;
  */
 public class LettuceConnectionFactoryExtension implements ParameterResolver {
 
-	private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace
-			.create(LettuceConnectionFactoryExtension.class);
+    private static final ExtensionContext.Namespace NAMESPACE =
+            ExtensionContext.Namespace.create(LettuceConnectionFactoryExtension.class);
 
-	private static final Lazy<LettuceConnectionFactory> STANDALONE = Lazy.of(() -> {
+    private static final Lazy<LettuceConnectionFactory> STANDALONE =
+            Lazy.of(
+                    () -> {
+                        LettuceClientConfiguration configuration = defaultPoolConfigBuilder().build();
 
-		LettuceClientConfiguration configuration = defaultPoolConfigBuilder().build();
+                        ManagedLettuceConnectionFactory factory =
+                                new ManagedLettuceConnectionFactory(
+                                        SettingsUtils.standaloneConfiguration(), configuration);
+                        factory.afterPropertiesSet();
+                        factory.start();
 
-		ManagedLettuceConnectionFactory factory = new ManagedLettuceConnectionFactory(
-				SettingsUtils.standaloneConfiguration(), configuration);
-		factory.afterPropertiesSet();
-		factory.start();
+                        ShutdownQueue.register(factory);
 
-		ShutdownQueue.register(factory);
+                        return factory;
+                    });
 
-		return factory;
-	});
+    private static final Lazy<LettuceConnectionFactory> SENTINEL =
+            Lazy.of(
+                    () -> {
+                        LettuceClientConfiguration configuration = defaultPoolConfigBuilder().build();
 
-	private static final Lazy<LettuceConnectionFactory> SENTINEL = Lazy.of(() -> {
+                        ManagedLettuceConnectionFactory factory =
+                                new ManagedLettuceConnectionFactory(
+                                        SettingsUtils.sentinelConfiguration(), configuration);
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-		LettuceClientConfiguration configuration = defaultPoolConfigBuilder().build();
+                        return factory;
+                    });
 
-		ManagedLettuceConnectionFactory factory = new ManagedLettuceConnectionFactory(SettingsUtils.sentinelConfiguration(),
-				configuration);
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+    private static final Lazy<LettuceConnectionFactory> CLUSTER =
+            Lazy.of(
+                    () -> {
+                        LettuceClientConfiguration configuration = defaultPoolConfigBuilder().build();
 
-		return factory;
-	});
+                        ManagedLettuceConnectionFactory factory =
+                                new ManagedLettuceConnectionFactory(
+                                        SettingsUtils.clusterConfiguration(), configuration);
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-	private static final Lazy<LettuceConnectionFactory> CLUSTER = Lazy.of(() -> {
+                        return factory;
+                    });
 
-		LettuceClientConfiguration configuration = defaultPoolConfigBuilder().build();
+    private static final Lazy<LettuceConnectionFactory> STANDALONE_UNPOOLED =
+            Lazy.of(
+                    () -> {
+                        LettuceClientConfiguration configuration = defaultClientConfiguration();
 
-		ManagedLettuceConnectionFactory factory = new ManagedLettuceConnectionFactory(SettingsUtils.clusterConfiguration(),
-				configuration);
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+                        ManagedLettuceConnectionFactory factory =
+                                new ManagedLettuceConnectionFactory(
+                                        SettingsUtils.standaloneConfiguration(), configuration);
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-		return factory;
-	});
+                        return factory;
+                    });
 
-	private static final Lazy<LettuceConnectionFactory> STANDALONE_UNPOOLED = Lazy.of(() -> {
+    private static final Lazy<LettuceConnectionFactory> SENTINEL_UNPOOLED =
+            Lazy.of(
+                    () -> {
+                        LettuceClientConfiguration configuration = defaultClientConfiguration();
 
-		LettuceClientConfiguration configuration = defaultClientConfiguration();
+                        ManagedLettuceConnectionFactory factory =
+                                new ManagedLettuceConnectionFactory(
+                                        SettingsUtils.sentinelConfiguration(), configuration);
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-		ManagedLettuceConnectionFactory factory = new ManagedLettuceConnectionFactory(
-				SettingsUtils.standaloneConfiguration(), configuration);
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+                        return factory;
+                    });
 
-		return factory;
-	});
+    private static final Lazy<LettuceConnectionFactory> CLUSTER_UNPOOLED =
+            Lazy.of(
+                    () -> {
+                        LettuceClientConfiguration configuration = defaultClientConfiguration();
 
-	private static final Lazy<LettuceConnectionFactory> SENTINEL_UNPOOLED = Lazy.of(() -> {
+                        ManagedLettuceConnectionFactory factory =
+                                new ManagedLettuceConnectionFactory(
+                                        SettingsUtils.clusterConfiguration(), configuration);
+                        factory.afterPropertiesSet();
+                        factory.start();
+                        ShutdownQueue.register(factory);
 
-		LettuceClientConfiguration configuration = defaultClientConfiguration();
+                        return factory;
+                    });
 
-		ManagedLettuceConnectionFactory factory = new ManagedLettuceConnectionFactory(SettingsUtils.sentinelConfiguration(),
-				configuration);
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+    private static LettucePoolingClientConfigurationBuilder defaultPoolConfigBuilder() {
+        return LettucePoolingClientConfiguration.builder()
+                .clientResources(LettuceTestClientResources.getSharedClientResources())
+                .shutdownTimeout(Duration.ZERO)
+                .shutdownQuietPeriod(Duration.ZERO);
+    }
 
-		return factory;
-	});
+    private static LettuceClientConfiguration defaultClientConfiguration() {
+        return LettuceClientConfiguration.builder()
+                .clientResources(LettuceTestClientResources.getSharedClientResources())
+                .shutdownQuietPeriod(Duration.ZERO)
+                .shutdownQuietPeriod(Duration.ZERO)
+                .build();
+    }
 
-	private static final Lazy<LettuceConnectionFactory> CLUSTER_UNPOOLED = Lazy.of(() -> {
+    private static final Map<Class<?>, Lazy<LettuceConnectionFactory>> pooledFactories;
+    private static final Map<Class<?>, Lazy<LettuceConnectionFactory>> unpooledFactories;
 
-		LettuceClientConfiguration configuration = defaultClientConfiguration();
+    static {
+        pooledFactories = new HashMap<>();
+        pooledFactories.put(ValkeyStanalone.class, STANDALONE);
+        pooledFactories.put(ValkeySentinel.class, SENTINEL);
+        pooledFactories.put(ValkeyCluster.class, CLUSTER);
 
-		ManagedLettuceConnectionFactory factory = new ManagedLettuceConnectionFactory(SettingsUtils.clusterConfiguration(),
-				configuration);
-		factory.afterPropertiesSet();
-		factory.start();
-		ShutdownQueue.register(factory);
+        unpooledFactories = new HashMap<>();
+        unpooledFactories.put(ValkeyStanalone.class, STANDALONE_UNPOOLED);
+        unpooledFactories.put(ValkeySentinel.class, SENTINEL_UNPOOLED);
+        unpooledFactories.put(ValkeyCluster.class, CLUSTER_UNPOOLED);
+    }
 
-		return factory;
-	});
+    /**
+     * Obtain a {@link LettuceConnectionFactory} described by {@code qualifier}. Instances are managed
+     * by this extension and will be shut down on JVM shutdown.
+     *
+     * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link
+     *     ValkeyCluster}.
+     * @return the managed {@link LettuceConnectionFactory}.
+     */
+    public static LettuceConnectionFactory getConnectionFactory(
+            Class<? extends Annotation> qualifier) {
+        return getConnectionFactory(qualifier, true);
+    }
 
-	private static LettucePoolingClientConfigurationBuilder defaultPoolConfigBuilder() {
-		return LettucePoolingClientConfiguration.builder()
-				.clientResources(LettuceTestClientResources.getSharedClientResources()).shutdownTimeout(Duration.ZERO)
-				.shutdownQuietPeriod(Duration.ZERO);
-	}
+    /**
+     * Obtain a {@link LettuceConnectionFactory} described by {@code qualifier}. Instances are managed
+     * by this extension and will be shut down on JVM shutdown.
+     *
+     * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link
+     *     ValkeyCluster}.
+     * @return the managed {@link LettuceConnectionFactory}.
+     */
+    public static LettuceConnectionFactory getConnectionFactory(
+            Class<? extends Annotation> qualifier, boolean pooled) {
+        return pooled ? pooledFactories.get(qualifier).get() : unpooledFactories.get(qualifier).get();
+    }
 
-	private static LettuceClientConfiguration defaultClientConfiguration() {
-		return LettuceClientConfiguration.builder().clientResources(LettuceTestClientResources.getSharedClientResources())
-				.shutdownQuietPeriod(Duration.ZERO).shutdownQuietPeriod(Duration.ZERO).build();
-	}
+    @Override
+    public boolean supportsParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
+        return ValkeyConnectionFactory.class.isAssignableFrom(parameterContext.getParameter().getType())
+                || ReactiveValkeyConnectionFactory.class.isAssignableFrom(
+                        parameterContext.getParameter().getType());
+    }
 
-	private static final Map<Class<?>, Lazy<LettuceConnectionFactory>> pooledFactories;
-	private static final Map<Class<?>, Lazy<LettuceConnectionFactory>> unpooledFactories;
+    @Override
+    public Object resolveParameter(
+            ParameterContext parameterContext, ExtensionContext extensionContext)
+            throws ParameterResolutionException {
 
-	static {
+        ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
 
-		pooledFactories = new HashMap<>();
-		pooledFactories.put(ValkeyStanalone.class, STANDALONE);
-		pooledFactories.put(ValkeySentinel.class, SENTINEL);
-		pooledFactories.put(ValkeyCluster.class, CLUSTER);
+        Class<? extends Annotation> qualifier = getQualifier(parameterContext);
 
-		unpooledFactories = new HashMap<>();
-		unpooledFactories.put(ValkeyStanalone.class, STANDALONE_UNPOOLED);
-		unpooledFactories.put(ValkeySentinel.class, SENTINEL_UNPOOLED);
-		unpooledFactories.put(ValkeyCluster.class, CLUSTER_UNPOOLED);
-	}
+        return store.getOrComputeIfAbsent(
+                qualifier, LettuceConnectionFactoryExtension::getConnectionFactory);
+    }
 
-	/**
-	 * Obtain a {@link LettuceConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
-	 * and will be shut down on JVM shutdown.
-	 *
-	 * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
-	 * @return the managed {@link LettuceConnectionFactory}.
-	 */
-	public static LettuceConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier) {
-		return getConnectionFactory(qualifier, true);
-	}
+    private static Class<? extends Annotation> getQualifier(ParameterContext parameterContext) {
 
-	/**
-	 * Obtain a {@link LettuceConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
-	 * and will be shut down on JVM shutdown.
-	 *
-	 * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
-	 * @return the managed {@link LettuceConnectionFactory}.
-	 */
-	public static LettuceConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier, boolean pooled) {
-		return pooled ? pooledFactories.get(qualifier).get() : unpooledFactories.get(qualifier).get();
-	}
+        if (parameterContext.isAnnotated(ValkeySentinel.class)) {
+            return ValkeySentinel.class;
+        }
 
-	@Override
-	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-			throws ParameterResolutionException {
-		return ValkeyConnectionFactory.class.isAssignableFrom(parameterContext.getParameter().getType())
-				|| ReactiveValkeyConnectionFactory.class.isAssignableFrom(parameterContext.getParameter().getType());
-	}
+        if (parameterContext.isAnnotated(ValkeyCluster.class)) {
+            return ValkeyCluster.class;
+        }
 
-	@Override
-	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
-			throws ParameterResolutionException {
+        return ValkeyStanalone.class;
+    }
 
-		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
+    static class ManagedLettuceConnectionFactory extends LettuceConnectionFactory
+            implements ConnectionFactoryTracker.Managed, Closeable {
 
-		Class<? extends Annotation> qualifier = getQualifier(parameterContext);
+        private volatile boolean mayClose;
 
-		return store.getOrComputeIfAbsent(qualifier, LettuceConnectionFactoryExtension::getConnectionFactory);
-	}
+        ManagedLettuceConnectionFactory(
+                ValkeyStandaloneConfiguration standaloneConfig, LettuceClientConfiguration clientConfig) {
+            super(standaloneConfig, clientConfig);
+        }
 
-	private static Class<? extends Annotation> getQualifier(ParameterContext parameterContext) {
+        ManagedLettuceConnectionFactory(
+                ValkeySentinelConfiguration sentinelConfiguration,
+                LettuceClientConfiguration clientConfig) {
+            super(sentinelConfiguration, clientConfig);
+        }
 
-		if (parameterContext.isAnnotated(ValkeySentinel.class)) {
-			return ValkeySentinel.class;
-		}
+        ManagedLettuceConnectionFactory(
+                ValkeyClusterConfiguration clusterConfiguration, LettuceClientConfiguration clientConfig) {
+            super(clusterConfiguration, clientConfig);
+        }
 
-		if (parameterContext.isAnnotated(ValkeyCluster.class)) {
-			return ValkeyCluster.class;
-		}
+        @Override
+        public void destroy() {
 
-		return ValkeyStanalone.class;
-	}
+            if (!mayClose) {
+                throw new IllegalStateException(
+                        "Prematurely attempted to close ManagedLettuceConnectionFactory; Shutdown hook didn't"
+                                + " run yet which means that the test run isn't finished yet; Please fix the tests"
+                                + " so that they don't close this connection factory.");
+            }
 
-	static class ManagedLettuceConnectionFactory extends LettuceConnectionFactory
-			implements ConnectionFactoryTracker.Managed, Closeable {
+            super.destroy();
+        }
 
-		private volatile boolean mayClose;
+        @Override
+        public String toString() {
 
-		ManagedLettuceConnectionFactory(ValkeyStandaloneConfiguration standaloneConfig,
-				LettuceClientConfiguration clientConfig) {
-			super(standaloneConfig, clientConfig);
-		}
+            StringBuilder builder = new StringBuilder("Lettuce");
 
-		ManagedLettuceConnectionFactory(ValkeySentinelConfiguration sentinelConfiguration,
-				LettuceClientConfiguration clientConfig) {
-			super(sentinelConfiguration, clientConfig);
-		}
+            if (isClusterAware()) {
+                builder.append(" Cluster");
+            }
 
-		ManagedLettuceConnectionFactory(ValkeyClusterConfiguration clusterConfiguration,
-				LettuceClientConfiguration clientConfig) {
-			super(clusterConfiguration, clientConfig);
-		}
+            if (isValkeySentinelAware()) {
+                builder.append(" Sentinel");
+            }
 
-		@Override
-		public void destroy() {
+            if (this.getClientConfiguration() instanceof LettucePoolingClientConfiguration) {
+                builder.append(" [pool]");
+            }
 
-			if (!mayClose) {
-				throw new IllegalStateException(
-						"Prematurely attempted to close ManagedLettuceConnectionFactory; Shutdown hook didn't run yet which means that the test run isn't finished yet; Please fix the tests so that they don't close this connection factory.");
-			}
+            return builder.toString();
+        }
 
-			super.destroy();
-		}
+        @Override
+        public void close() throws IOException {
 
-		@Override
-		public String toString() {
-
-			StringBuilder builder = new StringBuilder("Lettuce");
-
-			if (isClusterAware()) {
-				builder.append(" Cluster");
-			}
-
-			if (isValkeySentinelAware()) {
-				builder.append(" Sentinel");
-			}
-
-			if (this.getClientConfiguration() instanceof LettucePoolingClientConfiguration) {
-				builder.append(" [pool]");
-			}
-
-			return builder.toString();
-		}
-
-		@Override
-		public void close() throws IOException {
-
-			mayClose = true;
-			destroy();
-		}
-	}
+            mayClose = true;
+            destroy();
+        }
+    }
 }

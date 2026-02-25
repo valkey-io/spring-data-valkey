@@ -27,62 +27,62 @@ import org.junit.jupiter.api.Test;
  */
 class DefaultCacheStatisticsCollectorUnitTests {
 
-	static final String CACHE_1 = "cache:1";
-	static final String CACHE_2 = "cache:2";
+    static final String CACHE_1 = "cache:1";
+    static final String CACHE_2 = "cache:2";
 
-	DefaultCacheStatisticsCollector collector;
+    DefaultCacheStatisticsCollector collector;
 
-	@BeforeEach
-	void beforeEach() {
-		collector = new DefaultCacheStatisticsCollector();
-	}
+    @BeforeEach
+    void beforeEach() {
+        collector = new DefaultCacheStatisticsCollector();
+    }
 
-	@Test // DATAREDIS-1082
-	void collectsStatsPerCache() {
+    @Test // DATAREDIS-1082
+    void collectsStatsPerCache() {
 
-		collector.incGets(CACHE_1);
-		collector.incPuts(CACHE_2);
+        collector.incGets(CACHE_1);
+        collector.incPuts(CACHE_2);
 
-		assertThat(collector.getCacheStatistics(CACHE_1).getGets()).isOne();
-		assertThat(collector.getCacheStatistics(CACHE_1).getPuts()).isZero();
+        assertThat(collector.getCacheStatistics(CACHE_1).getGets()).isOne();
+        assertThat(collector.getCacheStatistics(CACHE_1).getPuts()).isZero();
 
-		assertThat(collector.getCacheStatistics(CACHE_2).getGets()).isZero();
-		assertThat(collector.getCacheStatistics(CACHE_2).getPuts()).isOne();
-	}
+        assertThat(collector.getCacheStatistics(CACHE_2).getGets()).isZero();
+        assertThat(collector.getCacheStatistics(CACHE_2).getPuts()).isOne();
+    }
 
-	@Test // DATAREDIS-1082
-	void returnsEmptyStatsForCacheWithoutStatsSet() {
+    @Test // DATAREDIS-1082
+    void returnsEmptyStatsForCacheWithoutStatsSet() {
 
-		assertThat(collector.getCacheStatistics(CACHE_1).getGets()).isZero();
-		assertThat(collector.getCacheStatistics(CACHE_1).getPuts()).isZero();
-		assertThat(collector.getCacheStatistics(CACHE_1).getDeletes()).isZero();
-	}
+        assertThat(collector.getCacheStatistics(CACHE_1).getGets()).isZero();
+        assertThat(collector.getCacheStatistics(CACHE_1).getPuts()).isZero();
+        assertThat(collector.getCacheStatistics(CACHE_1).getDeletes()).isZero();
+    }
 
-	@Test // DATAREDIS-1082
-	void returnsSnapshotOnGet() {
+    @Test // DATAREDIS-1082
+    void returnsSnapshotOnGet() {
 
-		collector.incGets(CACHE_1);
+        collector.incGets(CACHE_1);
 
-		CacheStatistics stats = collector.getCacheStatistics(CACHE_1);
-		assertThat(stats.getGets()).isOne();
+        CacheStatistics stats = collector.getCacheStatistics(CACHE_1);
+        assertThat(stats.getGets()).isOne();
 
-		collector.incGets(CACHE_1);
+        collector.incGets(CACHE_1);
 
-		assertThat(stats.getGets()).isOne();
-		assertThat(collector.getCacheStatistics(CACHE_1).getGets()).isEqualTo(2);
-	}
+        assertThat(stats.getGets()).isOne();
+        assertThat(collector.getCacheStatistics(CACHE_1).getGets()).isEqualTo(2);
+    }
 
-	@Test // DATAREDIS-1082
-	void resetClearsData() {
+    @Test // DATAREDIS-1082
+    void resetClearsData() {
 
-		collector.incGets(CACHE_1);
+        collector.incGets(CACHE_1);
 
-		CacheStatistics stats = collector.getCacheStatistics(CACHE_1);
-		assertThat(stats.getGets()).isOne();
+        CacheStatistics stats = collector.getCacheStatistics(CACHE_1);
+        assertThat(stats.getGets()).isOne();
 
-		collector.reset(CACHE_1);
+        collector.reset(CACHE_1);
 
-		assertThat(stats.getGets()).isOne();
-		assertThat(collector.getCacheStatistics(CACHE_1).getGets()).isZero();
-	}
+        assertThat(stats.getGets()).isOne();
+        assertThat(collector.getCacheStatistics(CACHE_1).getGets()).isZero();
+    }
 }

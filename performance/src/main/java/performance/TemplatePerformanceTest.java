@@ -20,78 +20,77 @@ import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFac
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
-import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.DisposableBean;
+import org.springframework.beans.factory.InitializingBean;
 
-/**
- * Performance test for ValkeyTemplate operations across different clients.
- */
+/** Performance test for ValkeyTemplate operations across different clients. */
 public class TemplatePerformanceTest {
 
-	private static final int OPERATIONS = 10000;
-	private static final String KEY_PREFIX = "perf:test:";
+    private static final int OPERATIONS = 10000;
+    private static final String KEY_PREFIX = "perf:test:";
 
-	public static void main(String[] args) throws Exception {
-		String clientType = System.getProperty("client", "valkeyglide");
-		
-		System.out.println("Running ValkeyTemplate Performance Test");
-		System.out.println("Client: " + clientType);
-		System.out.println("Operations: " + OPERATIONS);
-		System.out.println("----------------------------------------");
+    public static void main(String[] args) throws Exception {
+        String clientType = System.getProperty("client", "valkeyglide");
 
-		ValkeyConnectionFactory factory = createConnectionFactory(clientType);
-		if (factory instanceof InitializingBean) {
-			((InitializingBean) factory).afterPropertiesSet();
-		}
+        System.out.println("Running ValkeyTemplate Performance Test");
+        System.out.println("Client: " + clientType);
+        System.out.println("Operations: " + OPERATIONS);
+        System.out.println("----------------------------------------");
 
-		try {
-			StringValkeyTemplate template = new StringValkeyTemplate(factory);
-			runPerformanceTest(template);
-		} finally {
-			if (factory instanceof DisposableBean) {
-				((DisposableBean) factory).destroy();
-			}
-		}
-	}
+        ValkeyConnectionFactory factory = createConnectionFactory(clientType);
+        if (factory instanceof InitializingBean) {
+            ((InitializingBean) factory).afterPropertiesSet();
+        }
 
-	private static ValkeyConnectionFactory createConnectionFactory(String clientType) {
-		return switch (clientType.toLowerCase()) {
-			case "lettuce" -> new LettuceConnectionFactory();
-			case "jedis" -> new JedisConnectionFactory();
-			case "valkeyglide" -> new ValkeyGlideConnectionFactory();
-			default -> throw new IllegalArgumentException("Unknown client: " + clientType);
-		};
-	}
+        try {
+            StringValkeyTemplate template = new StringValkeyTemplate(factory);
+            runPerformanceTest(template);
+        } finally {
+            if (factory instanceof DisposableBean) {
+                ((DisposableBean) factory).destroy();
+            }
+        }
+    }
 
-	private static void runPerformanceTest(StringValkeyTemplate template) {
-		// SET operations
-		long start = System.nanoTime();
-		for (int i = 0; i < OPERATIONS; i++) {
-			template.opsForValue().set(KEY_PREFIX + i, "value" + i);
-		}
-		long setTime = System.nanoTime() - start;
-		printResult("SET", setTime);
+    private static ValkeyConnectionFactory createConnectionFactory(String clientType) {
+        return switch (clientType.toLowerCase()) {
+            case "lettuce" -> new LettuceConnectionFactory();
+            case "jedis" -> new JedisConnectionFactory();
+            case "valkeyglide" -> new ValkeyGlideConnectionFactory();
+            default -> throw new IllegalArgumentException("Unknown client: " + clientType);
+        };
+    }
 
-		// GET operations
-		start = System.nanoTime();
-		for (int i = 0; i < OPERATIONS; i++) {
-			template.opsForValue().get(KEY_PREFIX + i);
-		}
-		long getTime = System.nanoTime() - start;
-		printResult("GET", getTime);
+    private static void runPerformanceTest(StringValkeyTemplate template) {
+        // SET operations
+        long start = System.nanoTime();
+        for (int i = 0; i < OPERATIONS; i++) {
+            template.opsForValue().set(KEY_PREFIX + i, "value" + i);
+        }
+        long setTime = System.nanoTime() - start;
+        printResult("SET", setTime);
 
-		// DELETE operations
-		start = System.nanoTime();
-		for (int i = 0; i < OPERATIONS; i++) {
-			template.delete(KEY_PREFIX + i);
-		}
-		long deleteTime = System.nanoTime() - start;
-		printResult("DELETE", deleteTime);
-	}
+        // GET operations
+        start = System.nanoTime();
+        for (int i = 0; i < OPERATIONS; i++) {
+            template.opsForValue().get(KEY_PREFIX + i);
+        }
+        long getTime = System.nanoTime() - start;
+        printResult("GET", getTime);
 
-	private static void printResult(String operation, long durationNanos) {
-		long durationMs = durationNanos / 1_000_000;
-		System.out.printf("%s:    %,d ops/sec (%.2f ms total)%n", 
-			operation, (long) (OPERATIONS * 1000.0 / durationMs), durationMs / 1.0);
-	}
+        // DELETE operations
+        start = System.nanoTime();
+        for (int i = 0; i < OPERATIONS; i++) {
+            template.delete(KEY_PREFIX + i);
+        }
+        long deleteTime = System.nanoTime() - start;
+        printResult("DELETE", deleteTime);
+    }
+
+    private static void printResult(String operation, long durationNanos) {
+        long durationMs = durationNanos / 1_000_000;
+        System.out.printf(
+                "%s:    %,d ops/sec (%.2f ms total)%n",
+                operation, (long) (OPERATIONS * 1000.0 / durationMs), durationMs / 1.0);
+    }
 }

@@ -24,10 +24,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class LongAsStringObjectFactory implements ObjectFactory<String> {
 
-	private AtomicLong counter = new AtomicLong();
+    private AtomicLong counter = new AtomicLong();
 
-	public String instance() {
-		return String.valueOf(counter.getAndIncrement());
-	}
-
+    public String instance() {
+        return String.valueOf(counter.getAndIncrement());
+    }
 }

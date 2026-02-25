@@ -15,24 +15,21 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import org.springframework.lang.Nullable;
-
-import java.nio.charset.StandardCharsets;
+import glide.api.models.GlideString;
+import io.valkey.springframework.data.valkey.connection.DataType;
+import io.valkey.springframework.data.valkey.connection.SortParameters;
+import io.valkey.springframework.data.valkey.connection.ValueEncoding;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.HashSet;
-import java.util.Collection;
-import java.util.HashMap;
-
-import io.valkey.springframework.data.valkey.connection.DataType;
-import io.valkey.springframework.data.valkey.connection.SortParameters;
-import io.valkey.springframework.data.valkey.connection.ValueEncoding;
-
-import glide.api.models.GlideString;
+import org.springframework.lang.Nullable;
 
 /**
  * Converter utilities for mapping between Spring Data Valkey types and Valkey-Glide types.
@@ -43,11 +40,11 @@ import glide.api.models.GlideString;
 public abstract class ValkeyGlideConverters {
 
     /**
-     * A functional interface used to convert raw driver results
-     * (returned as {@link I}) into a strongly typed result {@code R}.
+     * A functional interface used to convert raw driver results (returned as {@link I}) into a
+     * strongly typed result {@code R}.
      *
-     * <p>This is intended to be supplied by the higher-level API
-     * that knows the correct decoding strategy for a specific Valkey command.
+     * <p>This is intended to be supplied by the higher-level API that knows the correct decoding
+     * strategy for a specific Valkey command.
      *
      * @param <I> The type of the raw driver result.
      * @param <R> The target type that the raw driver result should be mapped to.
@@ -55,11 +52,11 @@ public abstract class ValkeyGlideConverters {
     @FunctionalInterface
     public interface ResultMapper<I, R> {
         /**
-         * Maps the raw result object of type {@code I} returned by the driver into
-         * a strongly typed value of type {@code R}.
+         * Maps the raw result object of type {@code I} returned by the driver into a strongly typed
+         * value of type {@code R}.
          *
-         * @param item The raw driver result, typically a low-level
-         *                     representation like Number, byte[], or {@code List<Object>}.
+         * @param item The raw driver result, typically a low-level representation like Number, byte[],
+         *     or {@code List<Object>}.
          * @return The mapped, higher-level type I.
          */
         R map(I item);
@@ -75,7 +72,7 @@ public abstract class ValkeyGlideConverters {
         if (arg == null) {
             return null;
         }
-        
+
         if (arg instanceof byte[]) {
             // Convert byte array to ByteBuffer as Glide might expect ByteBuffer
             return ByteBuffer.wrap((byte[]) arg);
@@ -93,7 +90,7 @@ public abstract class ValkeyGlideConverters {
             // Simple types can be passed as-is
             return arg;
         }
-        
+
         // Default: return as is
         return arg;
     }
@@ -109,12 +106,12 @@ public abstract class ValkeyGlideConverters {
         if (result == null) {
             return null;
         }
-        
+
         if (result instanceof GlideString) {
             GlideString glideResult = (GlideString) result;
             // Handle special Valkey responses - check if GlideString represents "OK"
             if ("OK".equals(glideResult.toString())) {
-                // Valkey SET, SETEX, PSETEX commands return "OK" on success, 
+                // Valkey SET, SETEX, PSETEX commands return "OK" on success,
                 // but Spring Data Valkey expects Boolean true
                 return Boolean.TRUE;
             }
@@ -155,14 +152,15 @@ public abstract class ValkeyGlideConverters {
             Map<?, ?> map = (Map<?, ?>) result;
             Map<Object, Object> converted = new java.util.HashMap<>(map.size());
             for (Map.Entry<?, ?> entry : map.entrySet()) {
-                converted.put(defaultFromGlideResult(entry.getKey()), defaultFromGlideResult(entry.getValue()));
+                converted.put(
+                        defaultFromGlideResult(entry.getKey()), defaultFromGlideResult(entry.getValue()));
             }
             return converted;
         } else if (result instanceof String) {
             // Handle special Valkey responses
             String strResult = (String) result;
             if ("OK".equals(strResult)) {
-                // Valkey SET, SETEX, PSETEX commands return "OK" on success, 
+                // Valkey SET, SETEX, PSETEX commands return "OK" on success,
                 // but Spring Data Valkey expects Boolean true
                 return Boolean.TRUE;
             }
@@ -176,11 +174,11 @@ public abstract class ValkeyGlideConverters {
             // byte[] should be passed as-is (already in Spring format)
             return result;
         }
-        
+
         // Default: return as is
         return result;
     }
-    
+
     /**
      * Convert a byte array to a string using the UTF-8 charset.
      *
@@ -204,9 +202,8 @@ public abstract class ValkeyGlideConverters {
     }
 
     /**
-     * Convert a Valkey command result to a Boolean value.
-     * Valkey SET command returns "OK" on success, null on failure with conditions.
-     * Valkey conditional commands return 1/0 for true/false.
+     * Convert a Valkey command result to a Boolean value. Valkey SET command returns "OK" on success,
+     * null on failure with conditions. Valkey conditional commands return 1/0 for true/false.
      *
      * @param result The command result
      * @return Boolean representation of the result
@@ -220,8 +217,8 @@ public abstract class ValkeyGlideConverters {
     }
 
     /**
-     * Convert a numeric Valkey command result to a Boolean value.
-     * Valkey conditional commands return 1/0 for true/false.
+     * Convert a numeric Valkey command result to a Boolean value. Valkey conditional commands return
+     * 1/0 for true/false.
      *
      * @param result The numeric command result
      * @return Boolean representation of the result
@@ -241,7 +238,6 @@ public abstract class ValkeyGlideConverters {
         if (result == null) {
             return DataType.NONE;
         }
-        
 
         // Convert byte[] to String using UTF-8 encoding
         String resultStr = new String(result, StandardCharsets.UTF_8);
@@ -282,7 +278,7 @@ public abstract class ValkeyGlideConverters {
             resultSet.add(glideString != null ? glideString.getBytes() : null);
         }
         return resultSet;
-        
+
         // if (result instanceof Collection) {
         //     Set<byte[]> set = new HashSet<>();
         //     for (Object item : (Collection<?>) result) {
@@ -296,7 +292,7 @@ public abstract class ValkeyGlideConverters {
         //     }
         //     return set;
         // }
-        
+
         // Handle array types (Object[] and specific array types)
         // if (result instanceof Object[]) {
         //     Set<byte[]> set = new HashSet<>();
@@ -311,7 +307,7 @@ public abstract class ValkeyGlideConverters {
         //     }
         //     return set;
         // }
-        
+
         // // Handle byte[][] specifically
         // if (result instanceof byte[][]) {
         //     Set<byte[]> set = new HashSet<>();
@@ -322,7 +318,7 @@ public abstract class ValkeyGlideConverters {
         //     }
         //     return set;
         // }
-        
+
         // // Handle String[] specifically
         // if (result instanceof String[]) {
         //     Set<byte[]> set = new HashSet<>();
@@ -333,7 +329,7 @@ public abstract class ValkeyGlideConverters {
         //     }
         //     return set;
         // }
-        
+
         // return new HashSet<>();
     }
 
@@ -342,7 +338,7 @@ public abstract class ValkeyGlideConverters {
         if (result == null) {
             return new HashSet<>();
         }
-        
+
         if (result instanceof Collection) {
             Set<byte[]> set = new HashSet<>();
             for (Object item : (Collection<?>) result) {
@@ -356,7 +352,7 @@ public abstract class ValkeyGlideConverters {
             }
             return set;
         }
-        
+
         // Handle array types (Object[] and specific array types)
         if (result instanceof Object[]) {
             Set<byte[]> set = new HashSet<>();
@@ -371,7 +367,7 @@ public abstract class ValkeyGlideConverters {
             }
             return set;
         }
-        
+
         // Handle byte[][] specifically
         if (result instanceof byte[][]) {
             Set<byte[]> set = new HashSet<>();
@@ -382,7 +378,7 @@ public abstract class ValkeyGlideConverters {
             }
             return set;
         }
-        
+
         // Handle String[] specifically
         if (result instanceof String[]) {
             Set<byte[]> set = new HashSet<>();
@@ -393,7 +389,7 @@ public abstract class ValkeyGlideConverters {
             }
             return set;
         }
-        
+
         return new HashSet<>();
     }
 
@@ -469,7 +465,7 @@ public abstract class ValkeyGlideConverters {
         if (result == null) {
             return new ArrayList<>();
         }
-        
+
         if (result instanceof Collection) {
             List<byte[]> list = new ArrayList<>();
             for (Object item : (Collection<?>) result) {
@@ -483,7 +479,7 @@ public abstract class ValkeyGlideConverters {
             }
             return list;
         }
-        
+
         // Handle array types (Object[] and specific array types)
         if (result instanceof Object[]) {
             List<byte[]> list = new ArrayList<>();
@@ -501,7 +497,7 @@ public abstract class ValkeyGlideConverters {
             }
             return list;
         }
-        
+
         // Handle byte[][] specifically
         if (result instanceof byte[][]) {
             List<byte[]> list = new ArrayList<>();
@@ -512,7 +508,7 @@ public abstract class ValkeyGlideConverters {
             }
             return list;
         }
-        
+
         // Handle String[] specifically
         if (result instanceof String[]) {
             List<byte[]> list = new ArrayList<>();
@@ -523,12 +519,12 @@ public abstract class ValkeyGlideConverters {
             }
             return list;
         }
-        
+
         return new ArrayList<>();
     }
 
     @Nullable
-    public static Map<byte[],  byte[]> toBytesMap(@Nullable Object glideResult) {
+    public static Map<byte[], byte[]> toBytesMap(@Nullable Object glideResult) {
         if (glideResult == null) {
             return null;
         }
@@ -542,7 +538,7 @@ public abstract class ValkeyGlideConverters {
     }
 
     @Nullable
-    public static Map.Entry<byte[],  byte[]> toBytesMapEntry(@Nullable Object glideResult) {
+    public static Map.Entry<byte[], byte[]> toBytesMapEntry(@Nullable Object glideResult) {
         if (glideResult == null) {
             return null;
         }
@@ -558,6 +554,7 @@ public abstract class ValkeyGlideConverters {
         GlideString valueObj = (GlideString) keyValuePair[1];
         return new HashMap.SimpleEntry<>(keyObj.getBytes(), valueObj.getBytes());
     }
+
     /**
      * Append sort parameters to the command arguments.
      *
@@ -568,20 +565,20 @@ public abstract class ValkeyGlideConverters {
         if (params == null) {
             return;
         }
-        
+
         // Add BY pattern if specified
         if (params.getByPattern() != null) {
             args.add("BY");
             args.add(params.getByPattern());
         }
-        
+
         // Add LIMIT if specified
         if (params.getLimit() != null) {
             args.add("LIMIT");
             args.add(params.getLimit().getStart());
             args.add(params.getLimit().getCount());
         }
-        
+
         // Add GET patterns if specified
         if (params.getGetPattern() != null) {
             for (byte[] pattern : params.getGetPattern()) {
@@ -589,12 +586,12 @@ public abstract class ValkeyGlideConverters {
                 args.add(pattern);
             }
         }
-        
+
         // Add ORDER if specified
         if (params.getOrder() != null) {
             args.add(params.getOrder().name());
         }
-        
+
         // Add ALPHA if specified - check for null safely
         Boolean isAlphabetic = params.isAlphabetic();
         if (isAlphabetic != null && isAlphabetic) {
@@ -642,20 +639,20 @@ public abstract class ValkeyGlideConverters {
 
     /**
      * Parses the TIME command response into a Long value in the specified TimeUnit.
-     * 
+     *
      * @param result the result from the TIME command (Object[] from Glide)
      * @param timeUnit the desired time unit
      * @return the time in the specified unit
      */
     public static Long parseTimeResponse(Object[] result, TimeUnit timeUnit) {
-        
+
         // TIME returns [GlideString seconds, GlideString microseconds] as Object[]
         Long seconds = Long.parseLong(((GlideString) result[0]).getString());
         Long microseconds = Long.parseLong(((GlideString) result[1]).getString());
-        
+
         // Convert to milliseconds first
         long milliseconds = seconds * 1000 + microseconds / 1000;
-        
+
         return timeUnit.convert(milliseconds, TimeUnit.MILLISECONDS);
     }
 }

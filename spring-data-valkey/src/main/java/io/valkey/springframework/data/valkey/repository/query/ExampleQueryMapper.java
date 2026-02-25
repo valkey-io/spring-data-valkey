@@ -15,13 +15,16 @@
  */
 package io.valkey.springframework.data.valkey.repository.query;
 
+import io.valkey.springframework.data.valkey.core.convert.IndexResolver;
+import io.valkey.springframework.data.valkey.core.convert.IndexedData;
+import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
+import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentProperty;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher.MatchMode;
@@ -29,10 +32,6 @@ import org.springframework.data.domain.ExampleMatcher.PropertyValueTransformer;
 import org.springframework.data.domain.ExampleMatcher.StringMatcher;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
 import org.springframework.data.mapping.context.MappingContext;
-import io.valkey.springframework.data.valkey.core.convert.IndexResolver;
-import io.valkey.springframework.data.valkey.core.convert.IndexedData;
-import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
-import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentProperty;
 import org.springframework.data.support.ExampleMatcherAccessor;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
@@ -40,139 +39,179 @@ import org.springframework.util.StringUtils;
 
 /**
  * Mapper for Query-by-Example examples to an actual query.
- * <p>
- * This mapper creates a {@link ValkeyOperationChain} for a given {@link Example} considering exact matches,
- * {@link PropertyValueTransformer value transformations} and {@link MatchMode} for indexed simple and nested type
- * properties. {@link java.util.Map} and {@link java.util.Collection} properties are not considered.
- * <p>
- * Example matching is limited to case-sensitive and exact matches only.
+ *
+ * <p>This mapper creates a {@link ValkeyOperationChain} for a given {@link Example} considering
+ * exact matches, {@link PropertyValueTransformer value transformations} and {@link MatchMode} for
+ * indexed simple and nested type properties. {@link java.util.Map} and {@link java.util.Collection}
+ * properties are not considered.
+ *
+ * <p>Example matching is limited to case-sensitive and exact matches only.
  *
  * @author Mark Paluch
  * @since 2.1
  */
 public class ExampleQueryMapper {
 
-	private final Set<StringMatcher> SUPPORTED_MATCHERS = EnumSet.of(StringMatcher.DEFAULT, StringMatcher.EXACT);
+    private final Set<StringMatcher> SUPPORTED_MATCHERS =
+            EnumSet.of(StringMatcher.DEFAULT, StringMatcher.EXACT);
 
-	private final MappingContext<ValkeyPersistentEntity<?>, ValkeyPersistentProperty> mappingContext;
-	private final IndexResolver indexResolver;
+    private final MappingContext<ValkeyPersistentEntity<?>, ValkeyPersistentProperty> mappingContext;
+    private final IndexResolver indexResolver;
 
-	/**
-	 * Creates a new {@link ExampleQueryMapper} given {@link MappingContext} and {@link IndexResolver}.
-	 *
-	 * @param mappingContext must not be {@literal null}.
-	 * @param indexResolver must not be {@literal null}.
-	 */
-	public ExampleQueryMapper(MappingContext<ValkeyPersistentEntity<?>, ValkeyPersistentProperty> mappingContext,
-			IndexResolver indexResolver) {
+    /**
+     * Creates a new {@link ExampleQueryMapper} given {@link MappingContext} and {@link
+     * IndexResolver}.
+     *
+     * @param mappingContext must not be {@literal null}.
+     * @param indexResolver must not be {@literal null}.
+     */
+    public ExampleQueryMapper(
+            MappingContext<ValkeyPersistentEntity<?>, ValkeyPersistentProperty> mappingContext,
+            IndexResolver indexResolver) {
 
-		Assert.notNull(mappingContext, "MappingContext must not be null");
-		Assert.notNull(indexResolver, "IndexResolver must not be null");
+        Assert.notNull(mappingContext, "MappingContext must not be null");
+        Assert.notNull(indexResolver, "IndexResolver must not be null");
 
-		this.mappingContext = mappingContext;
-		this.indexResolver = indexResolver;
-	}
+        this.mappingContext = mappingContext;
+        this.indexResolver = indexResolver;
+    }
 
-	/**
-	 * Retrieve a mapped {@link ValkeyOperationChain} to query secondary indexes given {@link Example}.
-	 *
-	 * @param example must not be {@literal null}.
-	 * @return the mapped {@link ValkeyOperationChain}.
-	 */
-	public ValkeyOperationChain getMappedExample(Example<?> example) {
+    /**
+     * Retrieve a mapped {@link ValkeyOperationChain} to query secondary indexes given {@link
+     * Example}.
+     *
+     * @param example must not be {@literal null}.
+     * @return the mapped {@link ValkeyOperationChain}.
+     */
+    public ValkeyOperationChain getMappedExample(Example<?> example) {
 
-		ValkeyOperationChain chain = new ValkeyOperationChain();
+        ValkeyOperationChain chain = new ValkeyOperationChain();
 
-		ExampleMatcherAccessor matcherAccessor = new ExampleMatcherAccessor(example.getMatcher());
+        ExampleMatcherAccessor matcherAccessor = new ExampleMatcherAccessor(example.getMatcher());
 
-		applyPropertySpecs("", example.getProbe(), mappingContext.getRequiredPersistentEntity(example.getProbeType()),
-				matcherAccessor, example.getMatcher().getMatchMode(), chain);
+        applyPropertySpecs(
+                "",
+                example.getProbe(),
+                mappingContext.getRequiredPersistentEntity(example.getProbeType()),
+                matcherAccessor,
+                example.getMatcher().getMatchMode(),
+                chain);
 
-		return chain;
-	}
+        return chain;
+    }
 
-	private void applyPropertySpecs(String path, @Nullable Object probe, ValkeyPersistentEntity<?> persistentEntity,
-			ExampleMatcherAccessor exampleSpecAccessor, MatchMode matchMode, ValkeyOperationChain chain) {
+    private void applyPropertySpecs(
+            String path,
+            @Nullable Object probe,
+            ValkeyPersistentEntity<?> persistentEntity,
+            ExampleMatcherAccessor exampleSpecAccessor,
+            MatchMode matchMode,
+            ValkeyOperationChain chain) {
 
-		if (probe == null) {
-			return;
-		}
+        if (probe == null) {
+            return;
+        }
 
-		PersistentPropertyAccessor propertyAccessor = persistentEntity.getPropertyAccessor(probe);
+        PersistentPropertyAccessor propertyAccessor = persistentEntity.getPropertyAccessor(probe);
 
-		Set<IndexedData> indexedData = getIndexedData(path, probe, persistentEntity);
-		Set<String> indexNames = indexedData.stream().map(IndexedData::getIndexName).distinct().collect(Collectors.toSet());
+        Set<IndexedData> indexedData = getIndexedData(path, probe, persistentEntity);
+        Set<String> indexNames =
+                indexedData.stream().map(IndexedData::getIndexName).distinct().collect(Collectors.toSet());
 
-		persistentEntity.forEach(property -> {
+        persistentEntity.forEach(
+                property -> {
+                    if (property.isIdProperty()) {
+                        return;
+                    }
 
-			if (property.isIdProperty()) {
-				return;
-			}
+                    String propertyPath =
+                            StringUtils.hasText(path) ? path + "." + property.getName() : property.getName();
 
-			String propertyPath = StringUtils.hasText(path) ? path + "." + property.getName() : property.getName();
+                    if (exampleSpecAccessor.isIgnoredPath(propertyPath)
+                            || property.isCollectionLike()
+                            || property.isMap()) {
+                        return;
+                    }
 
-			if (exampleSpecAccessor.isIgnoredPath(propertyPath) || property.isCollectionLike() || property.isMap()) {
-				return;
-			}
+                    applyPropertySpec(
+                            propertyPath,
+                            indexNames::contains,
+                            exampleSpecAccessor,
+                            propertyAccessor,
+                            property,
+                            matchMode,
+                            chain);
+                });
+    }
 
-			applyPropertySpec(propertyPath, indexNames::contains, exampleSpecAccessor, propertyAccessor, property, matchMode,
-					chain);
-		});
-	}
+    private void applyPropertySpec(
+            String path,
+            Predicate<String> hasIndex,
+            ExampleMatcherAccessor exampleSpecAccessor,
+            PersistentPropertyAccessor propertyAccessor,
+            ValkeyPersistentProperty property,
+            MatchMode matchMode,
+            ValkeyOperationChain chain) {
 
-	private void applyPropertySpec(String path, Predicate<String> hasIndex, ExampleMatcherAccessor exampleSpecAccessor,
-			PersistentPropertyAccessor propertyAccessor, ValkeyPersistentProperty property, MatchMode matchMode,
-			ValkeyOperationChain chain) {
+        StringMatcher stringMatcher = exampleSpecAccessor.getDefaultStringMatcher();
+        boolean ignoreCase = exampleSpecAccessor.isIgnoreCaseEnabled();
+        Object value = propertyAccessor.getProperty(property);
 
-		StringMatcher stringMatcher = exampleSpecAccessor.getDefaultStringMatcher();
-		boolean ignoreCase = exampleSpecAccessor.isIgnoreCaseEnabled();
-		Object value = propertyAccessor.getProperty(property);
+        if (exampleSpecAccessor.hasPropertySpecifiers()) {
+            stringMatcher = exampleSpecAccessor.getStringMatcherForPath(path);
+            ignoreCase = exampleSpecAccessor.isIgnoreCaseForPath(path);
+        }
 
-		if (exampleSpecAccessor.hasPropertySpecifiers()) {
-			stringMatcher = exampleSpecAccessor.getStringMatcherForPath(path);
-			ignoreCase = exampleSpecAccessor.isIgnoreCaseForPath(path);
-		}
+        if (ignoreCase) {
+            throw new InvalidDataAccessApiUsageException(
+                    "Valkey Query-by-Example supports only case-sensitive matching.");
+        }
 
-		if (ignoreCase) {
-			throw new InvalidDataAccessApiUsageException("Valkey Query-by-Example supports only case-sensitive matching.");
-		}
+        if (!SUPPORTED_MATCHERS.contains(stringMatcher)) {
+            throw new InvalidDataAccessApiUsageException(
+                    ("Valkey Query-by-Example does not support string matcher %s;"
+                                    + " Supported matchers are: %s.")
+                            .formatted(stringMatcher, SUPPORTED_MATCHERS));
+        }
 
-		if (!SUPPORTED_MATCHERS.contains(stringMatcher)) {
-			throw new InvalidDataAccessApiUsageException(
-					("Valkey Query-by-Example does not support string matcher %s;" + " Supported matchers are: %s.")
-							.formatted(stringMatcher, SUPPORTED_MATCHERS));
-		}
+        if (exampleSpecAccessor.hasPropertySpecifier(path)) {
 
-		if (exampleSpecAccessor.hasPropertySpecifier(path)) {
+            PropertyValueTransformer valueTransformer =
+                    exampleSpecAccessor.getValueTransformerForPath(path);
+            value = valueTransformer.apply(Optional.ofNullable(value)).orElse(null);
+        }
 
-			PropertyValueTransformer valueTransformer = exampleSpecAccessor.getValueTransformerForPath(path);
-			value = valueTransformer.apply(Optional.ofNullable(value)).orElse(null);
-		}
+        if (value == null) {
+            return;
+        }
 
-		if (value == null) {
-			return;
-		}
+        if (property.isEntity()) {
+            applyPropertySpecs(
+                    path,
+                    value,
+                    mappingContext.getRequiredPersistentEntity(property),
+                    exampleSpecAccessor,
+                    matchMode,
+                    chain);
+        } else {
 
-		if (property.isEntity()) {
-			applyPropertySpecs(path, value, mappingContext.getRequiredPersistentEntity(property), exampleSpecAccessor,
-					matchMode, chain);
-		} else {
+            if (matchMode == MatchMode.ALL) {
+                if (hasIndex.test(path)) {
+                    chain.sismember(path, value);
+                }
+            } else {
+                chain.orSismember(path, value);
+            }
+        }
+    }
 
-			if (matchMode == MatchMode.ALL) {
-				if (hasIndex.test(path)) {
-					chain.sismember(path, value);
-				}
-			} else {
-				chain.orSismember(path, value);
-			}
-		}
-	}
+    private Set<IndexedData> getIndexedData(
+            String path, Object probe, ValkeyPersistentEntity<?> persistentEntity) {
 
-	private Set<IndexedData> getIndexedData(String path, Object probe, ValkeyPersistentEntity<?> persistentEntity) {
-
-		String keySpace = persistentEntity.getKeySpace();
-		return keySpace == null ? Collections.emptySet()
-				: indexResolver.resolveIndexesFor(persistentEntity.getKeySpace(), path, persistentEntity.getTypeInformation(),
-						probe);
-	}
+        String keySpace = persistentEntity.getKeySpace();
+        return keySpace == null
+                ? Collections.emptySet()
+                : indexResolver.resolveIndexesFor(
+                        persistentEntity.getKeySpace(), path, persistentEntity.getTypeInformation(), probe);
+    }
 }

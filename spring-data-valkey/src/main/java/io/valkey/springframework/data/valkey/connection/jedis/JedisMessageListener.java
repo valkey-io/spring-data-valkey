@@ -15,12 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.BinaryJedisPubSub;
-
 import io.valkey.springframework.data.valkey.connection.DefaultMessage;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
 import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 import org.springframework.util.Assert;
+import redis.clients.jedis.BinaryJedisPubSub;
 
 /**
  * MessageListener adapter on top of Jedis.
@@ -30,39 +29,41 @@ import org.springframework.util.Assert;
  */
 class JedisMessageListener extends BinaryJedisPubSub {
 
-	private final MessageListener listener;
-	private final SubscriptionListener subscriptionListener;
+    private final MessageListener listener;
+    private final SubscriptionListener subscriptionListener;
 
-	JedisMessageListener(MessageListener listener) {
+    JedisMessageListener(MessageListener listener) {
 
-		Assert.notNull(listener, "MessageListener is required");
+        Assert.notNull(listener, "MessageListener is required");
 
-		this.listener = listener;
-		this.subscriptionListener = listener instanceof SubscriptionListener ? (SubscriptionListener) listener
-				: SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER;
-	}
+        this.listener = listener;
+        this.subscriptionListener =
+                listener instanceof SubscriptionListener
+                        ? (SubscriptionListener) listener
+                        : SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER;
+    }
 
-	public void onMessage(byte[] channel, byte[] message) {
-		listener.onMessage(new DefaultMessage(channel, message), null);
-	}
+    public void onMessage(byte[] channel, byte[] message) {
+        listener.onMessage(new DefaultMessage(channel, message), null);
+    }
 
-	public void onPMessage(byte[] pattern, byte[] channel, byte[] message) {
-		listener.onMessage(new DefaultMessage(channel, message), pattern);
-	}
+    public void onPMessage(byte[] pattern, byte[] channel, byte[] message) {
+        listener.onMessage(new DefaultMessage(channel, message), pattern);
+    }
 
-	public void onPSubscribe(byte[] pattern, int subscribedChannels) {
-		subscriptionListener.onPatternSubscribed(pattern, subscribedChannels);
-	}
+    public void onPSubscribe(byte[] pattern, int subscribedChannels) {
+        subscriptionListener.onPatternSubscribed(pattern, subscribedChannels);
+    }
 
-	public void onPUnsubscribe(byte[] pattern, int subscribedChannels) {
-		subscriptionListener.onPatternUnsubscribed(pattern, subscribedChannels);
-	}
+    public void onPUnsubscribe(byte[] pattern, int subscribedChannels) {
+        subscriptionListener.onPatternUnsubscribed(pattern, subscribedChannels);
+    }
 
-	public void onSubscribe(byte[] channel, int subscribedChannels) {
-		subscriptionListener.onChannelSubscribed(channel, subscribedChannels);
-	}
+    public void onSubscribe(byte[] channel, int subscribedChannels) {
+        subscriptionListener.onChannelSubscribed(channel, subscribedChannels);
+    }
 
-	public void onUnsubscribe(byte[] channel, int subscribedChannels) {
-		subscriptionListener.onChannelUnsubscribed(channel, subscribedChannels);
-	}
+    public void onUnsubscribe(byte[] channel, int subscribedChannels) {
+        subscriptionListener.onChannelUnsubscribed(channel, subscribedChannels);
+    }
 }

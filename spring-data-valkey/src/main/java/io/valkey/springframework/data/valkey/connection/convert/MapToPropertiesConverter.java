@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.connection.convert;
 
 import java.util.Map;
 import java.util.Properties;
-
 import org.springframework.core.convert.converter.Converter;
 
 /**
@@ -25,15 +24,13 @@ import org.springframework.core.convert.converter.Converter;
  * @since 1.4
  */
 public enum MapToPropertiesConverter implements Converter<Map<?, ?>, Properties> {
+    INSTANCE;
 
-	INSTANCE;
+    @Override
+    public Properties convert(Map<?, ?> source) {
 
-	@Override
-	public Properties convert(Map<?, ?> source) {
-
-		Properties target = new Properties();
-		target.putAll(source);
-		return target;
-	}
-
+        Properties target = new Properties();
+        target.putAll(source);
+        return target;
+    }
 }

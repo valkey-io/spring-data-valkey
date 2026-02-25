@@ -15,10 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.core.mapping;
 
+import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
 import org.springframework.data.keyvalue.core.mapping.KeyValuePersistentEntity;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
-import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
 import org.springframework.lang.Nullable;
 
 /**
@@ -28,47 +28,51 @@ import org.springframework.lang.Nullable;
  * @param <T>
  * @since 1.7
  */
-public interface ValkeyPersistentEntity<T> extends KeyValuePersistentEntity<T, ValkeyPersistentProperty> {
+public interface ValkeyPersistentEntity<T>
+        extends KeyValuePersistentEntity<T, ValkeyPersistentProperty> {
 
-	/**
-	 * Get the {@link TimeToLiveAccessor} associated with the entity.
-	 *
-	 * @return never {@literal null}.
-	 */
-	TimeToLiveAccessor getTimeToLiveAccessor();
+    /**
+     * Get the {@link TimeToLiveAccessor} associated with the entity.
+     *
+     * @return never {@literal null}.
+     */
+    TimeToLiveAccessor getTimeToLiveAccessor();
 
-	/**
-	 * @return {@literal true} when a property is annotated with {@link io.valkey.springframework.data.valkey.core.TimeToLive}.
-	 * @since 1.8
-	 * @deprecated in favor of {@link #hasExplicitTimeToLiveProperty()}.
-	 */
-	@Deprecated(forRemoval = true)
-	default boolean hasExplictTimeToLiveProperty() {
-		return hasExplicitTimeToLiveProperty();
-	}
+    /**
+     * @return {@literal true} when a property is annotated with {@link
+     *     io.valkey.springframework.data.valkey.core.TimeToLive}.
+     * @since 1.8
+     * @deprecated in favor of {@link #hasExplicitTimeToLiveProperty()}.
+     */
+    @Deprecated(forRemoval = true)
+    default boolean hasExplictTimeToLiveProperty() {
+        return hasExplicitTimeToLiveProperty();
+    }
 
-	/**
-	 * @return {@literal true} when a property is annotated with {@link io.valkey.springframework.data.valkey.core.TimeToLive}.
-	 * @since 3.4
-	 */
-	default boolean hasExplicitTimeToLiveProperty() {
-		return getExplicitTimeToLiveProperty() != null;
-	}
+    /**
+     * @return {@literal true} when a property is annotated with {@link
+     *     io.valkey.springframework.data.valkey.core.TimeToLive}.
+     * @since 3.4
+     */
+    default boolean hasExplicitTimeToLiveProperty() {
+        return getExplicitTimeToLiveProperty() != null;
+    }
 
-	/**
-	 * Get the {@link PersistentProperty} that is annotated with {@link io.valkey.springframework.data.valkey.core.TimeToLive}.
-	 *
-	 * @return can be {@literal null}.
-	 * @since 1.8
-	 */
-	@Nullable
-	ValkeyPersistentProperty getExplicitTimeToLiveProperty();
+    /**
+     * Get the {@link PersistentProperty} that is annotated with {@link
+     * io.valkey.springframework.data.valkey.core.TimeToLive}.
+     *
+     * @return can be {@literal null}.
+     * @since 1.8
+     */
+    @Nullable
+    ValkeyPersistentProperty getExplicitTimeToLiveProperty();
 
-	/**
-	 * @return {@literal true} if the entity could potentially expire.
-	 * @since 2.3
-	 */
-	default boolean isExpiring() {
-		return getTimeToLiveAccessor().isExpiringEntity(getType());
-	}
+    /**
+     * @return {@literal true} if the entity could potentially expire.
+     * @since 2.3
+     */
+    default boolean isExpiring() {
+        return getTimeToLiveAccessor().isExpiringEntity(getType());
+    }
 }

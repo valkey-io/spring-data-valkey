@@ -15,17 +15,15 @@
  */
 package io.valkey.springframework.data.valkey.repository.cdi;
 
+import io.valkey.springframework.data.valkey.repository.query.ValkeyQueryCreator;
+import io.valkey.springframework.data.valkey.repository.support.ValkeyRepositoryFactory;
 import jakarta.enterprise.context.spi.CreationalContext;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanManager;
-
 import java.lang.annotation.Annotation;
 import java.util.Optional;
 import java.util.Set;
-
 import org.springframework.data.keyvalue.core.KeyValueOperations;
-import io.valkey.springframework.data.valkey.repository.query.ValkeyQueryCreator;
-import io.valkey.springframework.data.valkey.repository.support.ValkeyRepositoryFactory;
 import org.springframework.data.repository.cdi.CdiRepositoryBean;
 import org.springframework.data.repository.config.CustomRepositoryImplementationDetector;
 import org.springframework.lang.Nullable;
@@ -39,32 +37,39 @@ import org.springframework.util.Assert;
  */
 public class ValkeyRepositoryBean<T> extends CdiRepositoryBean<T> {
 
-	private final Bean<KeyValueOperations> keyValueTemplate;
+    private final Bean<KeyValueOperations> keyValueTemplate;
 
-	/**
-	 * Creates a new {@link CdiRepositoryBean}.
-	 *
-	 * @param keyValueTemplate must not be {@literal null}.
-	 * @param qualifiers must not be {@literal null}.
-	 * @param repositoryType must not be {@literal null}.
-	 * @param beanManager must not be {@literal null}.
-	 * @param detector detector for the custom {@link org.springframework.data.repository.Repository} implementations
-	 *          {@link CustomRepositoryImplementationDetector}, can be {@literal null}.
-	 */
-	public ValkeyRepositoryBean(Bean<KeyValueOperations> keyValueTemplate, Set<Annotation> qualifiers,
-			Class<T> repositoryType, BeanManager beanManager, @Nullable CustomRepositoryImplementationDetector detector) {
+    /**
+     * Creates a new {@link CdiRepositoryBean}.
+     *
+     * @param keyValueTemplate must not be {@literal null}.
+     * @param qualifiers must not be {@literal null}.
+     * @param repositoryType must not be {@literal null}.
+     * @param beanManager must not be {@literal null}.
+     * @param detector detector for the custom {@link org.springframework.data.repository.Repository}
+     *     implementations {@link CustomRepositoryImplementationDetector}, can be {@literal null}.
+     */
+    public ValkeyRepositoryBean(
+            Bean<KeyValueOperations> keyValueTemplate,
+            Set<Annotation> qualifiers,
+            Class<T> repositoryType,
+            BeanManager beanManager,
+            @Nullable CustomRepositoryImplementationDetector detector) {
 
-		super(qualifiers, repositoryType, beanManager, Optional.ofNullable(detector));
+        super(qualifiers, repositoryType, beanManager, Optional.ofNullable(detector));
 
-		Assert.notNull(keyValueTemplate, "Bean holding keyvalue template must not be null");
-		this.keyValueTemplate = keyValueTemplate;
-	}
+        Assert.notNull(keyValueTemplate, "Bean holding keyvalue template must not be null");
+        this.keyValueTemplate = keyValueTemplate;
+    }
 
-	@Override
-	protected T create(CreationalContext<T> creationalContext, Class<T> repositoryType) {
+    @Override
+    protected T create(CreationalContext<T> creationalContext, Class<T> repositoryType) {
 
-		KeyValueOperations keyValueTemplate = getDependencyInstance(this.keyValueTemplate, KeyValueOperations.class);
+        KeyValueOperations keyValueTemplate =
+                getDependencyInstance(this.keyValueTemplate, KeyValueOperations.class);
 
-		return create(() -> new ValkeyRepositoryFactory(keyValueTemplate, ValkeyQueryCreator.class), repositoryType);
-	}
+        return create(
+                () -> new ValkeyRepositoryFactory(keyValueTemplate, ValkeyQueryCreator.class),
+                repositoryType);
+    }
 }

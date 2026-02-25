@@ -15,18 +15,18 @@
  */
 package io.valkey.springframework.data.valkey.connection.convert;
 
+import io.valkey.springframework.data.valkey.ValkeySystemException;
+import io.valkey.springframework.data.valkey.connection.FutureResult;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
-
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataAccessException;
-import io.valkey.springframework.data.valkey.ValkeySystemException;
-import io.valkey.springframework.data.valkey.connection.FutureResult;
 
 /**
- * Converts the results of transaction exec using a supplied Queue of {@link FutureResult}s. Converts any Exception
- * objects returned in the list as well, using the supplied Exception {@link Converter}
+ * Converts the results of transaction exec using a supplied Queue of {@link FutureResult}s.
+ * Converts any Exception objects returned in the list as well, using the supplied Exception {@link
+ * Converter}
  *
  * @author Jennifer Hickey
  * @author Christoph Strobl
@@ -35,40 +35,46 @@ import io.valkey.springframework.data.valkey.connection.FutureResult;
  */
 public class TransactionResultConverter<T> implements Converter<List<Object>, List<Object>> {
 
-	private final Queue<FutureResult<T>> txResults;
-	private final Converter<Exception, DataAccessException> exceptionConverter;
+    private final Queue<FutureResult<T>> txResults;
+    private final Converter<Exception, DataAccessException> exceptionConverter;
 
-	public TransactionResultConverter(Queue<FutureResult<T>> txResults,
-			Converter<Exception, DataAccessException> exceptionConverter) {
+    public TransactionResultConverter(
+            Queue<FutureResult<T>> txResults,
+            Converter<Exception, DataAccessException> exceptionConverter) {
 
-		this.txResults = txResults;
-		this.exceptionConverter = exceptionConverter;
-	}
+        this.txResults = txResults;
+        this.exceptionConverter = exceptionConverter;
+    }
 
-	@Override
-	public List<Object> convert(List<Object> execResults) {
+    @Override
+    public List<Object> convert(List<Object> execResults) {
 
-		if (execResults.size() != txResults.size()) {
+        if (execResults.size() != txResults.size()) {
 
-			throw new IllegalArgumentException(
-					"Incorrect number of transaction results; Expected: " + txResults.size() + " Actual: " + execResults.size());
-		}
+            throw new IllegalArgumentException(
+                    "Incorrect number of transaction results; Expected: "
+                            + txResults.size()
+                            + " Actual: "
+                            + execResults.size());
+        }
 
-		List<Object> convertedResults = new ArrayList<>();
+        List<Object> convertedResults = new ArrayList<>();
 
-		for (Object result : execResults) {
-			FutureResult<T> futureResult = txResults.remove();
-			if (result instanceof Exception source) {
+        for (Object result : execResults) {
+            FutureResult<T> futureResult = txResults.remove();
+            if (result instanceof Exception source) {
 
-				DataAccessException convertedException = exceptionConverter.convert(source);
-				throw convertedException != null ? convertedException
-						: new ValkeySystemException("Error reading future result", source);
-			}
-			if (!(futureResult.isStatus())) {
-				convertedResults.add(futureResult.conversionRequired() ? futureResult.convert(result) : result);
-			}
-		}
+                DataAccessException convertedException = exceptionConverter.convert(source);
+                throw convertedException != null
+                        ? convertedException
+                        : new ValkeySystemException("Error reading future result", source);
+            }
+            if (!(futureResult.isStatus())) {
+                convertedResults.add(
+                        futureResult.conversionRequired() ? futureResult.convert(result) : result);
+            }
+        }
 
-		return convertedResults;
-	}
+        return convertedResults;
+    }
 }

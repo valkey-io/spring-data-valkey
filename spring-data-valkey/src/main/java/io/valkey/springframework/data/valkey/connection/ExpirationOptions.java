@@ -16,7 +16,6 @@
 package io.valkey.springframework.data.valkey.connection;
 
 import java.util.Objects;
-
 import org.springframework.lang.Contract;
 import org.springframework.util.ObjectUtils;
 
@@ -29,129 +28,104 @@ import org.springframework.util.ObjectUtils;
  */
 public class ExpirationOptions {
 
-	private static final ExpirationOptions NONE = new ExpirationOptions(Condition.ALWAYS);
-	private final Condition condition;
+    private static final ExpirationOptions NONE = new ExpirationOptions(Condition.ALWAYS);
+    private final Condition condition;
 
-	ExpirationOptions(Condition condition) {
-		this.condition = condition;
-	}
+    ExpirationOptions(Condition condition) {
+        this.condition = condition;
+    }
 
-	/**
-	 * @return an empty expiration options object.
-	 */
-	public static ExpirationOptions none() {
-		return NONE;
-	}
+    /**
+     * @return an empty expiration options object.
+     */
+    public static ExpirationOptions none() {
+        return NONE;
+    }
 
-	/**
-	 * @return builder for creating {@code FieldExpireOptionsBuilder}.
-	 */
-	public static ExpirationOptionsBuilder builder() {
-		return new ExpirationOptionsBuilder();
-	}
+    /**
+     * @return builder for creating {@code FieldExpireOptionsBuilder}.
+     */
+    public static ExpirationOptionsBuilder builder() {
+        return new ExpirationOptionsBuilder();
+    }
 
-	public Condition getCondition() {
-		return condition;
-	}
+    public Condition getCondition() {
+        return condition;
+    }
 
-	@Override
-	public boolean equals(Object o) {
-		if (o == this) {
-			return true;
-		}
-		if (o == null || getClass() != o.getClass()) {
-			return false;
-		}
-		ExpirationOptions that = (ExpirationOptions) o;
-		return ObjectUtils.nullSafeEquals(this.condition, that.condition);
-	}
+    @Override
+    public boolean equals(Object o) {
+        if (o == this) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        ExpirationOptions that = (ExpirationOptions) o;
+        return ObjectUtils.nullSafeEquals(this.condition, that.condition);
+    }
 
-	@Override
-	public int hashCode() {
-		return Objects.hash(condition);
-	}
+    @Override
+    public int hashCode() {
+        return Objects.hash(condition);
+    }
 
-	/**
-	 * Builder to build {@link ExpirationOptions}
-	 */
-	public static class ExpirationOptionsBuilder {
+    /** Builder to build {@link ExpirationOptions} */
+    public static class ExpirationOptionsBuilder {
 
-		private Condition condition = Condition.ALWAYS;
+        private Condition condition = Condition.ALWAYS;
 
-		private ExpirationOptionsBuilder() {}
+        private ExpirationOptionsBuilder() {}
 
-		/**
-		 * Apply to fields that have no expiration.
-		 */
-		@Contract("-> this")
-		public ExpirationOptionsBuilder nx() {
-			this.condition = Condition.NX;
-			return this;
-		}
+        /** Apply to fields that have no expiration. */
+        @Contract("-> this")
+        public ExpirationOptionsBuilder nx() {
+            this.condition = Condition.NX;
+            return this;
+        }
 
-		/**
-		 * Apply to fields that have an existing expiration.
-		 */
-		@Contract("-> this")
-		public ExpirationOptionsBuilder xx() {
-			this.condition = Condition.XX;
-			return this;
-		}
+        /** Apply to fields that have an existing expiration. */
+        @Contract("-> this")
+        public ExpirationOptionsBuilder xx() {
+            this.condition = Condition.XX;
+            return this;
+        }
 
-		/**
-		 * Apply to fields when the new expiration is greater than the current one.
-		 */
-		@Contract("-> this")
-		public ExpirationOptionsBuilder gt() {
-			this.condition = Condition.GT;
-			return this;
-		}
+        /** Apply to fields when the new expiration is greater than the current one. */
+        @Contract("-> this")
+        public ExpirationOptionsBuilder gt() {
+            this.condition = Condition.GT;
+            return this;
+        }
 
-		/**
-		 * Apply to fields when the new expiration is lower than the current one.
-		 */
-		@Contract("-> this")
-		public ExpirationOptionsBuilder lt() {
-			this.condition = Condition.LT;
-			return this;
-		}
+        /** Apply to fields when the new expiration is lower than the current one. */
+        @Contract("-> this")
+        public ExpirationOptionsBuilder lt() {
+            this.condition = Condition.LT;
+            return this;
+        }
 
-		public ExpirationOptions build() {
-			return condition == Condition.ALWAYS ? NONE : new ExpirationOptions(condition);
-		}
+        public ExpirationOptions build() {
+            return condition == Condition.ALWAYS ? NONE : new ExpirationOptions(condition);
+        }
+    }
 
-	}
+    /** Conditions to apply when changing expiration. */
+    public enum Condition {
 
-	/**
-	 * Conditions to apply when changing expiration.
-	 */
-	public enum Condition {
+        /** Always apply expiration. */
+        ALWAYS,
 
-		/**
-		 * Always apply expiration.
-		 */
-		ALWAYS,
+        /** Set expiration only when the field has no expiration. */
+        NX,
 
-		/**
-		 * Set expiration only when the field has no expiration.
-		 */
-		NX,
+        /** Set expiration only when the field has an existing expiration. */
+        XX,
 
-		/**
-		 * Set expiration only when the field has an existing expiration.
-		 */
-		XX,
+        /** Set expiration only when the new expiration is greater than current one. */
+        GT,
 
-		/**
-		 * Set expiration only when the new expiration is greater than current one.
-		 */
-		GT,
-
-		/**
-		 * Set expiration only when the new expiration is greater than current one.
-		 */
-		LT
-
-	}
-
+        /** Set expiration only when the new expiration is greater than current one. */
+        LT
+    }
 }

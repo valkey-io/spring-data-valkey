@@ -18,23 +18,19 @@ package io.valkey.springframework.data.valkey.listener;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 import org.awaitility.Awaitility;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-
-import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationEvent;
 import org.springframework.context.ApplicationEventPublisher;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
 
 /**
  * @author Christoph Strobl
@@ -42,76 +38,80 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
  */
 class KeyExpirationEventMessageListenerIntegrationTests {
 
-	private ValkeyMessageListenerContainer container;
-	private ValkeyConnectionFactory connectionFactory;
-	private KeyExpirationEventMessageListener listener;
+    private ValkeyMessageListenerContainer container;
+    private ValkeyConnectionFactory connectionFactory;
+    private KeyExpirationEventMessageListener listener;
 
-	ApplicationEventPublisher publisherMock;
+    ApplicationEventPublisher publisherMock;
 
-	@BeforeEach
-	void setUp() {
+    @BeforeEach
+    void setUp() {
 
-		publisherMock = mock(ApplicationEventPublisher.class);
+        publisherMock = mock(ApplicationEventPublisher.class);
 
-		this.connectionFactory = JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+        this.connectionFactory =
+                JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
 
-		container = new ValkeyMessageListenerContainer();
-		container.setConnectionFactory(connectionFactory);
-		container.afterPropertiesSet();
-		container.start();
+        container = new ValkeyMessageListenerContainer();
+        container.setConnectionFactory(connectionFactory);
+        container.afterPropertiesSet();
+        container.start();
 
-		listener = new KeyExpirationEventMessageListener(container);
-		listener.setApplicationEventPublisher(publisherMock);
-		listener.init();
+        listener = new KeyExpirationEventMessageListener(container);
+        listener.setApplicationEventPublisher(publisherMock);
+        listener.init();
 
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
-			connection.flushAll();
-		}
-	}
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
+            connection.flushAll();
+        }
+    }
 
-	@AfterEach
-	void tearDown() throws Exception {
+    @AfterEach
+    void tearDown() throws Exception {
 
-		listener.destroy();
-		container.destroy();
-	}
+        listener.destroy();
+        container.destroy();
+    }
 
-	@Test // DATAREDIS-425
-	void listenerShouldPublishEventCorrectly() {
+    @Test // DATAREDIS-425
+    void listenerShouldPublishEventCorrectly() {
 
-		byte[] key = ("to-expire:" + UUID.randomUUID().toString()).getBytes();
-		AtomicBoolean called = new AtomicBoolean();
-		doAnswer(invocation -> {
-			called.set(true);
-			return null;
-		}).when(publisherMock).publishEvent(any(ApplicationEvent.class));
+        byte[] key = ("to-expire:" + UUID.randomUUID().toString()).getBytes();
+        AtomicBoolean called = new AtomicBoolean();
+        doAnswer(
+                        invocation -> {
+                            called.set(true);
+                            return null;
+                        })
+                .when(publisherMock)
+                .publishEvent(any(ApplicationEvent.class));
 
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
 
-			connection.pSetEx(key, 1, key);
-			Awaitility.await().until(() -> !connection.exists(key));
-		}
+            connection.pSetEx(key, 1, key);
+            Awaitility.await().until(() -> !connection.exists(key));
+        }
 
-		Awaitility.await().untilTrue(called);
+        Awaitility.await().untilTrue(called);
 
-		ArgumentCaptor<ApplicationEvent> captor = ArgumentCaptor.forClass(ApplicationEvent.class);
+        ArgumentCaptor<ApplicationEvent> captor = ArgumentCaptor.forClass(ApplicationEvent.class);
 
-		verify(publisherMock, times(1)).publishEvent(captor.capture());
-		assertThat((byte[]) captor.getValue().getSource()).isEqualTo(key);
-	}
+        verify(publisherMock, times(1)).publishEvent(captor.capture());
+        assertThat((byte[]) captor.getValue().getSource()).isEqualTo(key);
+    }
 
-	@Test // DATAREDIS-425
-	void listenerShouldNotReactToDeleteEvents() throws InterruptedException {
+    @Test // DATAREDIS-425
+    void listenerShouldNotReactToDeleteEvents() throws InterruptedException {
 
-		byte[] key = ("to-delete:" + UUID.randomUUID().toString()).getBytes();
+        byte[] key = ("to-delete:" + UUID.randomUUID().toString()).getBytes();
 
-		try (ValkeyConnection connection = connectionFactory.getConnection()) {
+        try (ValkeyConnection connection = connectionFactory.getConnection()) {
 
-			connection.setEx(key, 10, "foo".getBytes());
-			connection.del(key);
-		}
+            connection.setEx(key, 10, "foo".getBytes());
+            connection.del(key);
+        }
 
-		Thread.sleep(500);
-		verifyNoInteractions(publisherMock);
-	}
+        Thread.sleep(500);
+        verifyNoInteractions(publisherMock);
+    }
 }

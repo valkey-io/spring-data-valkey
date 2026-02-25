@@ -15,101 +15,99 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import java.util.Collection;
-import java.util.Set;
-
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
+import java.util.Collection;
+import java.util.Set;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
  * {@link ValkeyClusterConnection} allows sending commands to dedicated nodes within the cluster. A
- * {@link ValkeyClusterNode} can be obtained from {@link #clusterGetNodes()} or it can be constructed using either
- * {@link ValkeyClusterNode#getHost() host} and {@link ValkeyClusterNode#getPort()} or the {@link ValkeyClusterNode#getId()
- * node Id}.
- * <p>
- * {@link ValkeyClusterConnection Valkey connections}, unlike perhaps their underlying native connection are not
- * Thread-safe and should not be shared across multiple threads.
+ * {@link ValkeyClusterNode} can be obtained from {@link #clusterGetNodes()} or it can be
+ * constructed using either {@link ValkeyClusterNode#getHost() host} and {@link
+ * ValkeyClusterNode#getPort()} or the {@link ValkeyClusterNode#getId() node Id}.
+ *
+ * <p>{@link ValkeyClusterConnection Valkey connections}, unlike perhaps their underlying native
+ * connection are not Thread-safe and should not be shared across multiple threads.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
  * @since 1.7
  */
 public interface ValkeyClusterConnection
-		extends ValkeyConnection, DefaultedValkeyClusterConnection, ValkeyClusterCommandsProvider {
+        extends ValkeyConnection, DefaultedValkeyClusterConnection, ValkeyClusterCommandsProvider {
 
-	/**
-	 * @param node must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see ValkeyConnectionCommands#ping()
-	 */
-	@Nullable
-	String ping(ValkeyClusterNode node);
+    /**
+     * @param node must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see ValkeyConnectionCommands#ping()
+     */
+    @Nullable
+    String ping(ValkeyClusterNode node);
 
-	/**
-	 * @param node must not be {@literal null}.
-	 * @param pattern must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see ValkeyKeyCommands#keys(byte[])
-	 */
-	@Nullable
-	Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern);
+    /**
+     * @param node must not be {@literal null}.
+     * @param pattern must not be {@literal null}.
+     * @return {@literal null} when used in pipeline / transaction.
+     * @see ValkeyKeyCommands#keys(byte[])
+     */
+    @Nullable
+    Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern);
 
-	/**
-	 * Use a {@link Cursor} to iterate over keys.
-	 *
-	 * @param node must not be {@literal null}.
-	 * @param options must not be {@literal null}.
-	 * @return never {@literal null}.
-	 * @since 2.1
-	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
-	 */
-	Cursor<byte[]> scan(ValkeyClusterNode node, ScanOptions options);
+    /**
+     * Use a {@link Cursor} to iterate over keys.
+     *
+     * @param node must not be {@literal null}.
+     * @param options must not be {@literal null}.
+     * @return never {@literal null}.
+     * @since 2.1
+     * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
+     */
+    Cursor<byte[]> scan(ValkeyClusterNode node, ScanOptions options);
 
-	/**
-	 * @param node must not be {@literal null}.
-	 * @return {@literal null} when no keys stored at node or when used in pipeline / transaction.
-	 * @see ValkeyKeyCommands#randomKey()
-	 */
-	@Nullable
-	byte[] randomKey(ValkeyClusterNode node);
+    /**
+     * @param node must not be {@literal null}.
+     * @return {@literal null} when no keys stored at node or when used in pipeline / transaction.
+     * @see ValkeyKeyCommands#randomKey()
+     */
+    @Nullable
+    byte[] randomKey(ValkeyClusterNode node);
 
-	/**
-	 * Execute the given command for the {@code key} provided potentially appending args. <br />
-	 * This method, other than {@link #execute(String, byte[]...)}, dispatches the command to the {@code key} serving
-	 * master node.
-	 *
-	 * <pre>
-	 * <code>
-	 * // SET foo bar EX 10 NX
-	 * execute("SET", "foo".getBytes(), asBinaryList("bar", "EX", 10, "NX"))
-	 * </code>
-	 * </pre>
-	 *
-	 * @param command must not be {@literal null}.
-	 * @param key must not be {@literal null}.
-	 * @param args must not be {@literal null}.
-	 * @return command result as delivered by the underlying Valkey driver. Can be {@literal null}.
-	 * @since 2.1
-	 */
-	@Nullable
-	default <T> T execute(String command, byte[] key, Collection<byte[]> args) {
+    /**
+     * Execute the given command for the {@code key} provided potentially appending args. <br>
+     * This method, other than {@link #execute(String, byte[]...)}, dispatches the command to the
+     * {@code key} serving master node.
+     *
+     * <pre>
+     * <code>
+     * // SET foo bar EX 10 NX
+     * execute("SET", "foo".getBytes(), asBinaryList("bar", "EX", 10, "NX"))
+     * </code>
+     * </pre>
+     *
+     * @param command must not be {@literal null}.
+     * @param key must not be {@literal null}.
+     * @param args must not be {@literal null}.
+     * @return command result as delivered by the underlying Valkey driver. Can be {@literal null}.
+     * @since 2.1
+     */
+    @Nullable
+    default <T> T execute(String command, byte[] key, Collection<byte[]> args) {
 
-		Assert.notNull(command, "Command must not be null");
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(args, "Args must not be null");
+        Assert.notNull(command, "Command must not be null");
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(args, "Args must not be null");
 
-		byte[][] commandArgs = new byte[args.size() + 1][];
+        byte[][] commandArgs = new byte[args.size() + 1][];
 
-		commandArgs[0] = key;
-		int targetIndex = 1;
+        commandArgs[0] = key;
+        int targetIndex = 1;
 
-		for (byte[] binaryArgument : args) {
-			commandArgs[targetIndex++] = binaryArgument;
-		}
+        for (byte[] binaryArgument : args) {
+            commandArgs[targetIndex++] = binaryArgument;
+        }
 
-		return (T) execute(command, commandArgs);
-	}
-
+        return (T) execute(command, commandArgs);
+    }
 }

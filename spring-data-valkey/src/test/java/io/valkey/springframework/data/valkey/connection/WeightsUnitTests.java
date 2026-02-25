@@ -17,9 +17,8 @@ package io.valkey.springframework.data.valkey.connection;
 
 import static org.assertj.core.api.Assertions.*;
 
-import org.junit.jupiter.api.Test;
-
 import io.valkey.springframework.data.valkey.connection.zset.Weights;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link Weights}.
@@ -28,49 +27,52 @@ import io.valkey.springframework.data.valkey.connection.zset.Weights;
  */
 class WeightsUnitTests {
 
-	@Test // DATAREDIS-746
-	void shouldCreateWeights() {
+    @Test // DATAREDIS-746
+    void shouldCreateWeights() {
 
-		assertThat(Weights.of(1, 2, 3).toArray()).contains(1, 2, 3);
-		assertThat(Weights.of(1, 2d, 3).toArray()).contains(1d, 2d, 3d);
-	}
+        assertThat(Weights.of(1, 2, 3).toArray()).contains(1, 2, 3);
+        assertThat(Weights.of(1, 2d, 3).toArray()).contains(1d, 2d, 3d);
+    }
 
-	@Test // DATAREDIS-746
-	void shouldRejectCreationWithNull() {
+    @Test // DATAREDIS-746
+    void shouldRejectCreationWithNull() {
 
-		assertThatThrownBy(() -> Weights.of((int[]) null)).isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> Weights.of((double[]) null)).isInstanceOf(IllegalArgumentException.class);
-	}
+        assertThatThrownBy(() -> Weights.of((int[]) null)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Weights.of((double[]) null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 
-	@Test // DATAREDIS-746
-	void shouldCreateEqualWeights() {
+    @Test // DATAREDIS-746
+    void shouldCreateEqualWeights() {
 
-		Weights weights = Weights.fromSetCount(3);
-		assertThat(weights.getWeight(0)).isOne();
-		assertThat(weights.getWeight(1)).isOne();
-		assertThat(weights.getWeight(2)).isOne();
-	}
+        Weights weights = Weights.fromSetCount(3);
+        assertThat(weights.getWeight(0)).isOne();
+        assertThat(weights.getWeight(1)).isOne();
+        assertThat(weights.getWeight(2)).isOne();
+    }
 
-	@Test // DATAREDIS-746
-	void getShouldThrowIndexOutOfBoundsException() {
+    @Test // DATAREDIS-746
+    void getShouldThrowIndexOutOfBoundsException() {
 
-		assertThatThrownBy(() -> Weights.fromSetCount(1).getWeight(1)).isInstanceOf(IndexOutOfBoundsException.class);
-		assertThatThrownBy(() -> Weights.fromSetCount(1).getWeight(-1)).isInstanceOf(IndexOutOfBoundsException.class);
-	}
+        assertThatThrownBy(() -> Weights.fromSetCount(1).getWeight(1))
+                .isInstanceOf(IndexOutOfBoundsException.class);
+        assertThatThrownBy(() -> Weights.fromSetCount(1).getWeight(-1))
+                .isInstanceOf(IndexOutOfBoundsException.class);
+    }
 
-	@Test // DATAREDIS-746
-	void shouldMultiplyDouble() {
+    @Test // DATAREDIS-746
+    void shouldMultiplyDouble() {
 
-		Weights weights = Weights.of(1, 2, 3).multiply(2.5);
-		assertThat(weights.getWeight(0)).isEqualTo(2.5);
-		assertThat(weights.getWeight(2)).isEqualTo(7.5);
-	}
+        Weights weights = Weights.of(1, 2, 3).multiply(2.5);
+        assertThat(weights.getWeight(0)).isEqualTo(2.5);
+        assertThat(weights.getWeight(2)).isEqualTo(7.5);
+    }
 
-	@Test // DATAREDIS-746
-	void shouldMultiplyInt() {
+    @Test // DATAREDIS-746
+    void shouldMultiplyInt() {
 
-		Weights weights = Weights.of(1, 2, 3).multiply(2);
-		assertThat(weights.getWeight(0)).isEqualTo(2);
-		assertThat(weights.getWeight(2)).isEqualTo(6);
-	}
+        Weights weights = Weights.of(1, 2, 3).multiply(2);
+        assertThat(weights.getWeight(0)).isEqualTo(2);
+        assertThat(weights.getWeight(2)).isEqualTo(6);
+    }
 }

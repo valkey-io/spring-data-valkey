@@ -23,9 +23,8 @@ import java.io.Closeable;
  */
 public interface ValkeySentinelConnection extends ValkeySentinelCommands, Closeable {
 
-	/**
-	 * @return true if connected to server
-	 */
-	boolean isOpen();
-
+    /**
+     * @return true if connected to server
+     */
+    boolean isOpen();
 }
