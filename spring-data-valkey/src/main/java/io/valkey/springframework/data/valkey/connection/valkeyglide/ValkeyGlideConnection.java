@@ -237,21 +237,21 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         // adapter and connection object do not matter - they are being destroyed
         // some state cannot be cleared (like stats) but this is acceptable if pooling to be used
 
-        GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
+        // GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
 
-        @SuppressWarnings("unchecked")
-        Callable<Void>[] actions = new Callable[] {
-                () -> nativeClient.customCommand(new String[]{"UNWATCH"}).get(),
-            };
+        // @SuppressWarnings("unchecked")
+        // Callable<Void>[] actions = new Callable[] {
+        //         () -> nativeClient.customCommand(new String[]{"UNWATCH"}).get(),
+        //     };
 
-        for (Callable<Void> action : actions) {
-            try {
-                action.call();
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-            }
-        }
+        // for (Callable<Void> action : actions) {
+        //     try {
+        //         action.call();
+        //     } catch (InterruptedException ie) {
+        //         Thread.currentThread().interrupt();
+        //     } catch (Exception e) {
+        //     }
+        // }
     }
 
     @Override
