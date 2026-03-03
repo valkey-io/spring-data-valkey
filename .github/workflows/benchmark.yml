@@ -34,7 +34,7 @@ on:
           - reference-workload-1-client
         default: "reference-workload-10-client"
       primary_version:
-        description: "Primary driver version. Leave empty for spring-data-valkey (uses branch HEAD)."
+        description: "Primary driver version (version string or commit ID). Leave empty to use default."
         required: false
         type: string
         default: ""
@@ -225,11 +225,20 @@ jobs:
           echo "driver_id=$DRIVER_ID" >> $GITHUB_OUTPUT
           echo "secondary_driver_id=$SECONDARY_DRIVER_ID" >> $GITHUB_OUTPUT
 
-          # Check if we need to build spring-data-valkey locally - this is always the case when
-          # running a spring-data-valkey benchmark
-          if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
-            echo "build_sdv=true" >> $GITHUB_OUTPUT
+          # Check if primary version is a commit ID (7-40 hex chars) or version number
+          PRIMARY_VERSION="${{ steps.inputs.outputs.primary_version }}"
+          if [ "$DRIVER_ID" = "spring-data-valkey" ] && [ -n "$PRIMARY_VERSION" ]; then
+            if [[ "$PRIMARY_VERSION" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+              echo "primary_is_commit=true" >> $GITHUB_OUTPUT
+              echo "build_sdv=true" >> $GITHUB_OUTPUT
+              echo "Detected: primary_version '$PRIMARY_VERSION' is a commit ID"
+            else
+              echo "primary_is_commit=false" >> $GITHUB_OUTPUT
+              echo "build_sdv=false" >> $GITHUB_OUTPUT
+              echo "Detected: primary_version '$PRIMARY_VERSION' is a release version"
+            fi
           else
+            echo "primary_is_commit=false" >> $GITHUB_OUTPUT
             echo "build_sdv=false" >> $GITHUB_OUTPUT
           fi
 
@@ -262,44 +271,36 @@ jobs:
           DRIVER_ID="${{ steps.driver-info.outputs.driver_id }}"
           SECONDARY_DRIVER_ID="${{ steps.driver-info.outputs.secondary_driver_id }}"
 
-          # spring-data-valkey must NOT have explicit primary version (uses branch HEAD)
-          if [ "$DRIVER_ID" = "spring-data-valkey" ] && [ -n "$PRIMARY_VERSION" ]; then
-            echo "ERROR: primary_version must be empty for spring-data-valkey (uses branch HEAD automatically)"
-            exit 1
-          fi
-
           # Cannot provide secondary version if driver has no secondary driver
           if [ -z "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ]; then
             echo "ERROR: secondary_version provided but driver has no secondary driver"
             exit 1
           fi
 
-          # Resolve primary version for spring-data-valkey
-          if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
-            PRIMARY_VERSION="${{ github.sha }}"
-          fi
-
+          echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
           echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build spring-data-valkey
+      - name: Build spring-data-valkey from source
         id: build-sdv
         if: steps.driver-info.outputs.build_sdv == 'true'
         run: |
-          echo "Building spring-data-valkey from current branch..."
+          COMMIT_ID="${{ steps.versions.outputs.primary_version }}"
+          echo "Building spring-data-valkey from commit: $COMMIT_ID"
 
-          # Get base version and short commit ID
-          BASE_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          COMMIT_SHORT="${GITHUB_SHA:0:7}"
-          SDV_VERSION="${BASE_VERSION}-${COMMIT_SHORT}"
+          # Clone to a separate directory so the main workspace (with orchestrator,
+          # configs, etc.) is preserved — allows building commits older than the benchmark infra
+          git clone ${{ github.server_url }}/${{ github.repository }}.git /tmp/spring-data-valkey
+          cd /tmp/spring-data-valkey
+          git checkout "$COMMIT_ID"
 
-          echo "Base version: $BASE_VERSION"
-          echo "Commit: $COMMIT_SHORT"
+          # Use commit ID as version for local Maven
+          SDV_VERSION="${COMMIT_ID:0:8}-SNAPSHOT"
           echo "Build version: $SDV_VERSION"
 
           # Set version to include commit ID
           mvn versions:set -DnewVersion="$SDV_VERSION" -DgenerateBackupPoms=false -q
 
-          # Build and install
+          # Build and install to local Maven repository
           mvn install -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -Dgpg.skip=true -q
 
           echo "✓ Built spring-data-valkey version: $SDV_VERSION"
@@ -369,11 +370,20 @@ jobs:
           SECONDARY_VERSION="${{ steps.versions.outputs.secondary_version }}"
           SECONDARY_IS_COMMIT="${{ steps.driver-info.outputs.secondary_is_commit }}"
 
-          # Update spring-data-valkey version if it was built locally
-          if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
-            SDV_VERSION="${{ steps.build-sdv.outputs.version }}"
-            echo "Updating spring-data-valkey to $SDV_VERSION"
-            sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$SDV_VERSION</spring-data-valkey.version>|" java/pom.xml
+          # Update spring-data-valkey version based on primary_version input
+          PRIMARY_VERSION="${{ steps.versions.outputs.primary_version }}"
+          PRIMARY_IS_COMMIT="${{ steps.driver-info.outputs.primary_is_commit }}"
+
+          if [ "$DRIVER_ID" = "spring-data-valkey" ] && [ -n "$PRIMARY_VERSION" ]; then
+            if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
+              # Use the version from the local build
+              SDV_VERSION="${{ steps.build-sdv.outputs.version }}"
+              echo "Updating spring-data-valkey to locally built $SDV_VERSION"
+              sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$SDV_VERSION</spring-data-valkey.version>|" java/pom.xml
+            else
+              echo "Updating spring-data-valkey to release version $PRIMARY_VERSION"
+              sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$PRIMARY_VERSION</spring-data-valkey.version>|" java/pom.xml
+            fi
           fi
 
           # Update secondary driver version if a version/commit-id for it was supplied. Otherwise use defaults.
