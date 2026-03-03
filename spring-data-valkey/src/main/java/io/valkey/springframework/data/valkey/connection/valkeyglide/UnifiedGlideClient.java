@@ -18,6 +18,7 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 import java.util.concurrent.ExecutionException;
 
 import glide.api.models.GlideString;
+import org.springframework.lang.Nullable;
 
 /**
  * Unified interface that abstracts both GlideClient and GlideClusterClient
@@ -40,4 +41,19 @@ interface UnifiedGlideClient extends AutoCloseable {
     void discardBatch();
     Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException;
     Object getNativeClient();
+
+    /**
+     * Resets the adapter's mutable state so it can be safely reused from the pool.
+     * Must be called before returning the adapter to the pool.
+     */
+    void reset();
+    
+    /**
+     * Returns the {@link DelegatingPubSubListener} associated with this client.
+     * The listener is pre-associated at creation time to avoid per-command map lookups.
+     *
+     * @return the delegating pub/sub listener, or {@literal null} if pub/sub is not configured
+     */
+    @Nullable
+    DelegatingPubSubListener getDelegatingListener();
 }

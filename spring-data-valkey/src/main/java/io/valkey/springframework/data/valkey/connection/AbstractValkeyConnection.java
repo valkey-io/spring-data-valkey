@@ -35,7 +35,7 @@ import org.springframework.util.Assert;
  */
 public abstract class AbstractValkeyConnection implements ValkeyConnection {
 
-	private final Log LOGGER = LogFactory.getLog(getClass());
+	private final static Log LOGGER = LogFactory.getLog(AbstractValkeyConnection.class);
 
 	private @Nullable ValkeySentinelConfiguration sentinelConfiguration;
 	private final Map<ValkeyNode, ValkeySentinelConnection> connectionCache = new ConcurrentHashMap<>();

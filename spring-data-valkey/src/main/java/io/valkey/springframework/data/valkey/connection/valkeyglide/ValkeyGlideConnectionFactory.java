@@ -39,33 +39,10 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
-
-// Imports needed for working with valkey-glide
-// Imports for valkey-glide library
-import glide.api.GlideClient;
-import glide.api.GlideClusterClient;
-import glide.api.models.GlideString;
-import glide.api.models.configuration.AdvancedGlideClientConfiguration;
-import glide.api.models.configuration.AdvancedGlideClusterClientConfiguration;
-import glide.api.models.configuration.BackoffStrategy;
-import glide.api.models.configuration.GlideClientConfiguration;
-import glide.api.models.configuration.GlideClusterClientConfiguration;
-import glide.api.models.configuration.NodeAddress;
-import glide.api.models.configuration.ReadFrom;
 import glide.api.OpenTelemetry;
 import glide.api.OpenTelemetry.MetricsConfig;
 import glide.api.OpenTelemetry.OpenTelemetryConfig;
 import glide.api.OpenTelemetry.TracesConfig;
-import glide.api.models.configuration.StandaloneSubscriptionConfiguration;
-import glide.api.models.configuration.ClusterSubscriptionConfiguration;
-
-import java.util.Map;
-import java.util.Set;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -97,8 +74,8 @@ public class ValkeyGlideConnectionFactory
     private final @Nullable ValkeyGlideClientConfiguration valkeyGlideConfiguration;
     private final ValkeyConfiguration configuration;
     
-    // Connection pools for client reuse
-    private final BlockingQueue<Object> clientPool;
+    // Bounded pool of pre-created adapters (with listeners pre-associated).
+    private final LinkedBlockingQueue<UnifiedGlideClient> adapterPool;
     
     private @Nullable AsyncTaskExecutor executor;
     
@@ -111,22 +88,6 @@ public class ValkeyGlideConnectionFactory
     private static @Nullable OpenTelemetryForGlide OTEL_INITIALIZED_CONFIG;
     private static final Object OTEL_LOCK = new Object();
 
-    /**
-     * Maps native Glide clients ({@link GlideClient} or {@link GlideClusterClient}) to their
-     * associated {@link DelegatingPubSubListener}.
-     * 
-     * <p>This mapping is necessary because Glide requires pub/sub callbacks to be configured
-     * at client creation time, before any subscriptions exist. When a client is created and
-     * added to the pool, we also create a {@link DelegatingPubSubListener} and register it
-     * as the client's pub/sub callback. The actual {@link MessageListener} is set on the
-     * {@link DelegatingPubSubListener} later when {@code subscribe()} is called.
-     * 
-     * <p>When a connection is obtained from the pool, we look up the corresponding
-     * {@link DelegatingPubSubListener} for that client and pass it to the
-     * {@link ValkeyGlideConnection}, which can then configure it with the user's
-     * {@link MessageListener} during subscription.
-     */
-    private final Map<Object, DelegatingPubSubListener> clientListenerMap = new ConcurrentHashMap<>();
 
     /**
      * Constructs a new {@link ValkeyGlideConnectionFactory} instance with default settings.
@@ -155,7 +116,7 @@ public class ValkeyGlideConnectionFactory
         
         this.configuration = standaloneConfiguration;
         this.valkeyGlideConfiguration = valkeyGlideConfiguration;
-        this.clientPool = new LinkedBlockingQueue<>(valkeyGlideConfiguration.getMaxPoolSize());
+        this.adapterPool = new LinkedBlockingQueue<>(valkeyGlideConfiguration.getMaxPoolSize());
     }
 
     /**
@@ -184,7 +145,7 @@ public class ValkeyGlideConnectionFactory
         
         this.configuration = clusterConfiguration;
         this.valkeyGlideConfiguration = valkeyGlideConfiguration;
-        this.clientPool = new LinkedBlockingQueue<>(valkeyGlideConfiguration.getMaxPoolSize());
+        this.adapterPool = new LinkedBlockingQueue<>(valkeyGlideConfiguration.getMaxPoolSize());
     }
 
     /**
@@ -225,7 +186,7 @@ public class ValkeyGlideConnectionFactory
         
         this.configuration = new ValkeyStandaloneConfiguration();
         this.valkeyGlideConfiguration = valkeyGlideConfiguration;
-        this.clientPool = new LinkedBlockingQueue<>(valkeyGlideConfiguration.getMaxPoolSize());
+        this.adapterPool = new LinkedBlockingQueue<>(valkeyGlideConfiguration.getMaxPoolSize());
     }
 
     /**
@@ -243,14 +204,22 @@ public class ValkeyGlideConnectionFactory
             return;
         }
         
-        // Pre-create pool of clients based on configuration mode
+        // Initialize OpenTelemetry before creating any clients
+        if (valkeyGlideConfiguration != null) {
+            OpenTelemetryForGlide openTelemetryForGlide = valkeyGlideConfiguration.getOpenTelemetryForGlide();
+            if (openTelemetryForGlide != null) {
+                useOpenTelemetry(openTelemetryForGlide);
+            }
+        }
+
+        // Pre-create pool of adapters based on configuration mode
         if (isClusterAware()) {
             for (int i = 0; i < valkeyGlideConfiguration.getMaxPoolSize(); i++) {
-                clientPool.offer(createGlideClusterClient());
+                adapterPool.offer(new ClusterGlideClientAdapter((ValkeyClusterConfiguration) configuration, valkeyGlideConfiguration));
             }
         } else {
             for (int i = 0; i < valkeyGlideConfiguration.getMaxPoolSize(); i++) {
-                clientPool.offer(createGlideClient());
+                adapterPool.offer(new StandaloneGlideClientAdapter((ValkeyStandaloneConfiguration) configuration, valkeyGlideConfiguration));
             }
         }
         
@@ -266,17 +235,15 @@ public class ValkeyGlideConnectionFactory
             return getClusterConnection();
         }
         
-        // Get client from pool (or create new if pool is empty)
-        GlideClient client = (GlideClient) clientPool.poll();
-        if (client == null) {
-            client = createGlideClient();
+        // Get adapter from lock-free pool (or create new if pool is empty)
+        UnifiedGlideClient adapter = adapterPool.poll();
+        if (adapter == null) {
+            if (ValkeyConfiguration.isClusterConfiguration(configuration)) {
+                throw new IllegalStateException("Cannot create StandaloneGlideClientAdapter in cluster mode");
+            }
+            adapter = new StandaloneGlideClientAdapter((ValkeyStandaloneConfiguration) configuration, valkeyGlideConfiguration);
         }
-
-        // Get the listener associated with this client
-        DelegatingPubSubListener listener = clientListenerMap.get(client);
-
-        // Return a new connection wrapper around the pooled client
-        return new ValkeyGlideConnection(new StandaloneGlideClientAdapter(client), this, listener);
+        return new ValkeyGlideConnection(adapter, this);
     }
 
     @Override
@@ -287,17 +254,15 @@ public class ValkeyGlideConnectionFactory
             throw new InvalidDataAccessResourceUsageException("Cluster mode is not configured!");
         }
 
-        // Get cluster client from pool (or create new if pool is empty)
-        GlideClusterClient client = (GlideClusterClient) clientPool.poll();
-        if (client == null) {
-            client = createGlideClusterClient();
+        // Get adapter from lock-free pool (or create new if pool is empty)
+        UnifiedGlideClient adapter = adapterPool.poll();
+        if (adapter == null) {
+            if (!ValkeyConfiguration.isClusterConfiguration(configuration)) {
+                throw new IllegalStateException("Cannot create ClusterGlideClientAdapter in non-cluster mode");
+            }
+            adapter = new ClusterGlideClientAdapter((ValkeyClusterConfiguration) configuration, valkeyGlideConfiguration);
         }
-        
-        // Get the listener associated with this client
-        DelegatingPubSubListener listener = clientListenerMap.get(client);
-        
-        // Return a new connection wrapper around the pooled cluster client
-        return new ValkeyGlideClusterConnection(new ClusterGlideClientAdapter(client), this, listener);
+        return new ValkeyGlideClusterConnection((ClusterGlideClientAdapter) adapter, this);
     }
 
     @Override
@@ -311,12 +276,13 @@ public class ValkeyGlideConnectionFactory
     }
 
     /**
-     * Release a standalone client back to the pool.
+     * Release an adapter back to the bounded pool.
+     * If the pool is full, the adapter is discarded (will be GC'd).
      * 
-     * @param client the client to release
+     * @param adapter the adapter to release
      */
-    void releaseClient(Object client) {
-        clientPool.offer(client);
+    void releaseAdapter(UnifiedGlideClient adapter) {
+        adapterPool.offer(adapter);
     }
 
     /**
@@ -404,248 +370,6 @@ public class ValkeyGlideConnectionFactory
 
             OTEL_INITIALIZED_CONFIG = openTelemetryForGlide;
             OpenTelemetry.init(otelBuilder.build());
-        }
-    }
-
-    /**
-     * Creates a GlideClient instance for each connection.
-     */
-    private GlideClient createGlideClient() {
-        try {
-            if (ValkeyConfiguration.isClusterConfiguration(configuration)) {
-                throw new IllegalStateException("Cannot create GlideClient in cluster mode");
-            }
-            // Cast to standalone configuration
-            ValkeyStandaloneConfiguration standaloneConfig = 
-                (ValkeyStandaloneConfiguration) configuration;
-            
-            // Build GlideClientConfiguration using Glide's API
-            var configBuilder = GlideClientConfiguration.builder();
-            
-            // CONNECTION PROPERTIES from driver-agnostic configuration
-            configBuilder.address(NodeAddress.builder()
-                .host(standaloneConfig.getHostName())
-                .port(standaloneConfig.getPort())
-                .build());
-            
-            // Set credentials from driver-agnostic configuration
-            ValkeyPassword password = standaloneConfig.getPassword();
-            if (!password.equals(ValkeyPassword.none())) {
-                String username = standaloneConfig.getUsername();
-                
-                if (StringUtils.hasText(username)) {
-                    // Username + password authentication
-                    configBuilder.credentials(
-                        glide.api.models.configuration.ServerCredentials.builder()
-                            .username(username)
-                            .password(String.valueOf(password.get()))
-                            .build());
-                } else {
-                    // Password-only authentication
-                    configBuilder.credentials(
-                        glide.api.models.configuration.ServerCredentials.builder()
-                            .password(String.valueOf(password.get()))
-                            .build());
-                }
-            }
-            
-            // Set database from driver-agnostic configuration
-            int database = standaloneConfig.getDatabase();
-            if (database != 0) {
-                configBuilder.databaseId(database);
-            }
-            
-            // DRIVER-SPECIFIC PROPERTIES from ValkeyGlideClientConfiguration
-            
-            // Request timeout
-            Duration commandTimeout = valkeyGlideConfiguration.getCommandTimeout();
-            if (commandTimeout != null) {
-                configBuilder.requestTimeout((int) commandTimeout.toMillis());
-            }
-
-            // Connection timeout
-            Duration connectionTimeout = valkeyGlideConfiguration.getConnectionTimeout();
-            if (connectionTimeout != null) {
-                var advancedConfigBuilder = AdvancedGlideClientConfiguration.builder();
-                advancedConfigBuilder.connectionTimeout((int) connectionTimeout.toMillis());
-                configBuilder.advancedConfiguration(advancedConfigBuilder.build());
-            }
-            
-            // SSL/TLS
-            if (valkeyGlideConfiguration.isUseSsl()) {
-                configBuilder.useTLS(true);
-            }
-            
-            // Read from strategy
-            ReadFrom readFrom = valkeyGlideConfiguration.getReadFrom();
-            if (readFrom != null) {
-                configBuilder.readFrom(readFrom);
-            }
-            
-            // Inflight requests limit
-            Integer inflightRequestsLimit = valkeyGlideConfiguration.getInflightRequestsLimit();
-            if (inflightRequestsLimit != null) {
-                configBuilder.inflightRequestsLimit(inflightRequestsLimit);
-            }
-            
-            // Client AZ
-            String clientAZ = valkeyGlideConfiguration.getClientAZ();
-            if (clientAZ != null) {
-                configBuilder.clientAZ(clientAZ);
-            }
-            
-            // Reconnect strategy
-            BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
-            if (reconnectStrategy != null) {
-                configBuilder.reconnectStrategy(reconnectStrategy);
-            }
-
-            // OpenTelemetry
-            OpenTelemetryForGlide openTelemetryForGlide = valkeyGlideConfiguration.getOpenTelemetryForGlide();
-            if (openTelemetryForGlide != null){
-                this.useOpenTelemetry(openTelemetryForGlide);
-            }
-
-            // Pubsub listener 
-            DelegatingPubSubListener clientListener = new DelegatingPubSubListener();
-
-            
-            // Configure pub/sub with callback for event-driven message delivery
-            var subConfigBuilder = StandaloneSubscriptionConfiguration.builder();            
-            
-            // Set callback that delegates to our listener holder
-            subConfigBuilder.callback((msg, context) -> clientListener.onMessage(msg, context));
-            configBuilder.subscriptionConfiguration(subConfigBuilder.build());
-
-            // Build and create client
-            GlideClientConfiguration config = configBuilder.build();
-            GlideClient client = GlideClient.createClient(config).get();
-
-            // Save the mapping of this client to its DelegatingListener
-            clientListenerMap.put(client, clientListener);
-
-            return client;
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to create GlideClient: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Creates a GlideClusterClient instance for each connection.
-     */
-    private GlideClusterClient createGlideClusterClient() {
-        try {
-            if (!ValkeyConfiguration.isClusterConfiguration(configuration)) {
-                throw new IllegalStateException("Cannot create GlideClusterClient in non-cluster mode");
-            }
-            
-            // Cast to cluster configuration
-            ValkeyClusterConfiguration clusterConfig = 
-                (ValkeyClusterConfiguration) configuration;
-            
-            // Build GlideClusterClientConfiguration using Glide's API
-            var configBuilder = 
-                GlideClusterClientConfiguration.builder();
-            
-            // CONNECTION PROPERTIES from driver-agnostic configuration
-            // Add all cluster nodes
-            clusterConfig.getClusterNodes().forEach(node -> {
-                configBuilder.address(NodeAddress.builder()
-                    .host(node.getHost())
-                    .port(node.getPort())
-                    .build());
-            });
-            
-            // Set credentials from driver-agnostic configuration
-            ValkeyPassword password = clusterConfig.getPassword();
-            if (!password.equals(ValkeyPassword.none())) {
-                String username = clusterConfig.getUsername();
-                
-                if (StringUtils.hasText(username)) {
-                    configBuilder.credentials(
-                        glide.api.models.configuration.ServerCredentials.builder()
-                            .username(username)
-                            .password(String.valueOf(password.get()))
-                            .build());
-                } else {
-                    configBuilder.credentials(
-                        glide.api.models.configuration.ServerCredentials.builder()
-                            .password(String.valueOf(password.get()))
-                            .build());
-                }
-            }
-            
-            // DRIVER-SPECIFIC PROPERTIES from ValkeyGlideClientConfiguration
-            
-            // Request timeout
-            Duration commandTimeout = valkeyGlideConfiguration.getCommandTimeout();
-            if (commandTimeout != null) {
-                configBuilder.requestTimeout((int) commandTimeout.toMillis());
-            }
-
-            // Connection timeout
-            Duration connectionTimeout = valkeyGlideConfiguration.getConnectionTimeout();
-            if (connectionTimeout != null) {
-                var advancedConfigBuilder = AdvancedGlideClusterClientConfiguration.builder();
-                advancedConfigBuilder.connectionTimeout((int) connectionTimeout.toMillis());
-                configBuilder.advancedConfiguration(advancedConfigBuilder.build());
-            }
-
-            // SSL/TLS
-            if (valkeyGlideConfiguration.isUseSsl()) {
-                configBuilder.useTLS(true);
-            }
-            
-            // Read from strategy
-            ReadFrom readFrom = valkeyGlideConfiguration.getReadFrom();
-            if (readFrom != null) {
-                configBuilder.readFrom(readFrom);
-            }
-            
-            // Inflight requests limit
-            Integer inflightRequestsLimit = valkeyGlideConfiguration.getInflightRequestsLimit();
-            if (inflightRequestsLimit != null) {
-                configBuilder.inflightRequestsLimit(inflightRequestsLimit);
-            }
-            
-            // Client AZ
-            String clientAZ = valkeyGlideConfiguration.getClientAZ();
-            if (clientAZ != null) {
-                configBuilder.clientAZ(clientAZ);
-            }
-            
-            // Reconnect strategy
-            BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
-            if (reconnectStrategy != null) {
-                configBuilder.reconnectStrategy(reconnectStrategy);
-            }
-
-           // OpenTelemetry
-            OpenTelemetryForGlide openTelemetryForGlide = valkeyGlideConfiguration.getOpenTelemetryForGlide();
-            if (openTelemetryForGlide != null){
-                this.useOpenTelemetry(openTelemetryForGlide);
-            }
-            
-
-            DelegatingPubSubListener clientListener = new DelegatingPubSubListener();
-
-            // Configure pub/sub with callback for event-driven message delivery
-            var subConfigBuilder = ClusterSubscriptionConfiguration.builder();
-            
-            // Set callback that delegates to our listener holder
-            subConfigBuilder.callback((msg, context) -> clientListener.onMessage(msg, context));
-            configBuilder.subscriptionConfiguration(subConfigBuilder.build());
-
-            
-            // Build and create cluster client
-            GlideClusterClientConfiguration config = configBuilder.build();
-            GlideClusterClient client = GlideClusterClient.createClient(config).get();
-
-            clientListenerMap.put(client, clientListener);
-            
-            return client;
-        } catch (InterruptedException | ExecutionException e) {
-            throw new IllegalStateException("Failed to create GlideClusterClient: " + e.getMessage(), e);
         }
     }
 

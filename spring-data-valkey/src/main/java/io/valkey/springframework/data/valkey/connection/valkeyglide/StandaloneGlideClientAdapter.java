@@ -15,10 +15,21 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import glide.api.models.GlideString;
+import glide.api.models.configuration.AdvancedGlideClientConfiguration;
+import glide.api.models.configuration.BackoffStrategy;
+import glide.api.models.configuration.GlideClientConfiguration;
+import glide.api.models.configuration.NodeAddress;
+import glide.api.models.configuration.ReadFrom;
+import glide.api.models.configuration.StandaloneSubscriptionConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
+import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
 import glide.api.GlideClient;
 import glide.api.models.Batch;
+import org.springframework.lang.Nullable;
+import org.springframework.util.StringUtils;
 
 /**
  * 
@@ -28,11 +39,118 @@ import glide.api.models.Batch;
 class StandaloneGlideClientAdapter implements UnifiedGlideClient {
 
     private final GlideClient glideClient;
+    private final @Nullable DelegatingPubSubListener listener;
     private Batch currentBatch;
     private BatchStatus batchStatus = BatchStatus.None;
 
-    StandaloneGlideClientAdapter(GlideClient glideClient) {
-        this.glideClient = glideClient;
+    StandaloneGlideClientAdapter(ValkeyStandaloneConfiguration standaloneConfig, ValkeyGlideClientConfiguration valkeyGlideConfiguration) {
+        // Build GlideClientConfiguration using Glide's API
+        var configBuilder = GlideClientConfiguration.builder();
+        
+        // CONNECTION PROPERTIES from driver-agnostic configuration
+        configBuilder.address(NodeAddress.builder()
+            .host(standaloneConfig.getHostName())
+            .port(standaloneConfig.getPort())
+            .build());
+        
+        // Set credentials from driver-agnostic configuration
+        ValkeyPassword password = standaloneConfig.getPassword();
+        if (!password.equals(ValkeyPassword.none())) {
+            String username = standaloneConfig.getUsername();
+            
+            if (StringUtils.hasText(username)) {
+                // Username + password authentication
+                configBuilder.credentials(
+                    glide.api.models.configuration.ServerCredentials.builder()
+                        .username(username)
+                        .password(String.valueOf(password.get()))
+                        .build());
+            } else {
+                // Password-only authentication
+                configBuilder.credentials(
+                    glide.api.models.configuration.ServerCredentials.builder()
+                        .password(String.valueOf(password.get()))
+                        .build());
+            }
+        }
+        
+        // Set database from driver-agnostic configuration
+        int database = standaloneConfig.getDatabase();
+        if (database != 0) {
+            configBuilder.databaseId(database);
+        }
+        
+        // DRIVER-SPECIFIC PROPERTIES from ValkeyGlideClientConfiguration
+        
+        // Request timeout
+        Duration commandTimeout = valkeyGlideConfiguration.getCommandTimeout();
+        if (commandTimeout != null) {
+            configBuilder.requestTimeout((int) commandTimeout.toMillis());
+        }
+
+        // Connection timeout
+        Duration connectionTimeout = valkeyGlideConfiguration.getConnectionTimeout();
+        if (connectionTimeout != null) {
+            var advancedConfigBuilder = AdvancedGlideClientConfiguration.builder();
+            advancedConfigBuilder.connectionTimeout((int) connectionTimeout.toMillis());
+            configBuilder.advancedConfiguration(advancedConfigBuilder.build());
+        }
+        
+        // SSL/TLS
+        if (valkeyGlideConfiguration.isUseSsl()) {
+            configBuilder.useTLS(true);
+        }
+        
+        // Read from strategy
+        ReadFrom readFrom = valkeyGlideConfiguration.getReadFrom();
+        if (readFrom != null) {
+            configBuilder.readFrom(readFrom);
+        }
+        
+        // Inflight requests limit
+        Integer inflightRequestsLimit = valkeyGlideConfiguration.getInflightRequestsLimit();
+        if (inflightRequestsLimit != null) {
+            configBuilder.inflightRequestsLimit(inflightRequestsLimit);
+        }
+        
+        // Client AZ
+        String clientAZ = valkeyGlideConfiguration.getClientAZ();
+        if (clientAZ != null) {
+            configBuilder.clientAZ(clientAZ);
+        }
+        
+        // Reconnect strategy
+        BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
+        if (reconnectStrategy != null) {
+            configBuilder.reconnectStrategy(reconnectStrategy);
+        }
+
+        // Pubsub listener 
+        this.listener = new DelegatingPubSubListener();
+
+        // Configure pub/sub with callback for event-driven message delivery
+        var subConfigBuilder = StandaloneSubscriptionConfiguration.builder();
+        
+        // Set callback that delegates to our listener holder
+        subConfigBuilder.callback((msg, context) -> this.listener.onMessage(msg, context));
+        configBuilder.subscriptionConfiguration(subConfigBuilder.build());
+
+        // Build and create client
+        GlideClientConfiguration config = configBuilder.build();
+        try {
+            this.glideClient = GlideClient.createClient(config).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted creating GlideClient", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Failed creating GlideClient", e);
+        }
+    }
+
+    @Override
+    @Nullable
+    public DelegatingPubSubListener getDelegatingListener() {
+        return listener;
     }
 
     @Override
@@ -85,6 +203,15 @@ class StandaloneGlideClientAdapter implements UnifiedGlideClient {
     public void discardBatch() {
         currentBatch = null;
         batchStatus = BatchStatus.None;
+    }
+
+    @Override
+    public void reset() {
+        currentBatch = null;
+        batchStatus = BatchStatus.None;
+        if (getDelegatingListener() != null) {
+            getDelegatingListener().clearListener();
+        }
     }
 
 }

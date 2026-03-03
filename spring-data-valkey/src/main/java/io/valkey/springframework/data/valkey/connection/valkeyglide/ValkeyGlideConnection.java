@@ -46,7 +46,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 // Imports from valkey-glide library
@@ -63,30 +63,26 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     protected final UnifiedGlideClient unifiedClient;
     protected final @Nullable ValkeyGlideConnectionFactory factory;
-    /**
-     * Bridges Glide's callback mechanism (configured at client creation) with Spring's
-     * {@link MessageListener} (provided at subscribe time). The user's listener is set
-     * on this delegate when {@code subscribe()} is called, and cleared on connection close.
-     */
-    protected final @Nullable DelegatingPubSubListener delegatingListener;
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
     private final Set<byte[]> watchedKeys = new HashSet<>();
+    /** Tracks whether a WATCH command was issued via execute() directly, bypassing the watch() API */
+    private boolean watchCommandIssued = false;
     private volatile @Nullable ValkeyGlideSubscription subscription;
 
     // Command interfaces
-    private final ValkeyGlideKeyCommands keyCommands;
-    private final ValkeyGlideStringCommands stringCommands;
-    private final ValkeyGlideListCommands listCommands;
-    private final ValkeyGlideSetCommands setCommands;
-    private final ValkeyGlideZSetCommands zSetCommands;
-    private final ValkeyGlideHashCommands hashCommands;
-    private final ValkeyGlideGeoCommands geoCommands;
-    private final ValkeyGlideHyperLogLogCommands hyperLogLogCommands;
-    private final ValkeyGlideScriptingCommands scriptingCommands;
-    private final ValkeyGlideServerCommands serverCommands;
-    private final ValkeyGlideStreamCommands streamCommands;
+    private ValkeyGlideKeyCommands keyCommands = null;
+    private ValkeyGlideStringCommands stringCommands = null;
+    private ValkeyGlideListCommands listCommands = null;
+    private ValkeyGlideSetCommands setCommands = null;
+    private ValkeyGlideZSetCommands zSetCommands = null;
+    private ValkeyGlideHashCommands hashCommands = null;
+    private ValkeyGlideGeoCommands geoCommands = null;
+    private ValkeyGlideHyperLogLogCommands hyperLogLogCommands = null;
+    private ValkeyGlideScriptingCommands scriptingCommands = null;
+    private ValkeyGlideServerCommands serverCommands = null;
+    private ValkeyGlideStreamCommands streamCommands = null;
 
     /**
      * Creates a new {@link ValkeyGlideConnection} with a unified client adapter.
@@ -96,37 +92,10 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
      * @param factory the connection factory (optional, for pooling support)
      */
     public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, @Nullable ValkeyGlideConnectionFactory factory) {
-        this(unifiedClient, factory, null);
-    }
-
-    /**
-     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter and delegating pub/sub listener.
-     *
-     * @param unifiedClient unified client adapter (standalone or cluster)
-     * @param factory the connection factory (optional, for pooling support)
-     * @param delegatingListener the delegating pub/sub listener for callback-based message delivery
-     */
-    public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, 
-            @Nullable ValkeyGlideConnectionFactory factory,
-            @Nullable DelegatingPubSubListener delegatingListener) {
         Assert.notNull(unifiedClient, "UnifiedClient must not be null");
         
         this.unifiedClient = unifiedClient;
         this.factory = factory;
-        this.delegatingListener = delegatingListener;
-        
-        // Initialize command interfaces
-        this.keyCommands = new ValkeyGlideKeyCommands(this);
-        this.stringCommands = new ValkeyGlideStringCommands(this);
-        this.listCommands = new ValkeyGlideListCommands(this);
-        this.setCommands = new ValkeyGlideSetCommands(this);
-        this.zSetCommands = new ValkeyGlideZSetCommands(this);
-        this.hashCommands = new ValkeyGlideHashCommands(this);
-        this.geoCommands = new ValkeyGlideGeoCommands(this);
-        this.hyperLogLogCommands = new ValkeyGlideHyperLogLogCommands(this);
-        this.scriptingCommands = new ValkeyGlideScriptingCommands(this);
-        this.serverCommands = new ValkeyGlideServerCommands(this);
-        this.streamCommands = new ValkeyGlideStreamCommands(this);
     }
 
     /**
@@ -142,57 +111,112 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
     @Override
     public ValkeyGeoCommands geoCommands() {
-        return this.geoCommands;
+        ValkeyGlideGeoCommands cmds = this.geoCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideGeoCommands(this);
+            this.geoCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyHashCommands hashCommands() {
-        return this.hashCommands;
+        ValkeyGlideHashCommands cmds = this.hashCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideHashCommands(this);
+            this.hashCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyHyperLogLogCommands hyperLogLogCommands() {
-        return this.hyperLogLogCommands;
+        ValkeyGlideHyperLogLogCommands cmds = this.hyperLogLogCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideHyperLogLogCommands(this);
+            this.hyperLogLogCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyKeyCommands keyCommands() {
-        return this.keyCommands;
+        ValkeyGlideKeyCommands cmds = this.keyCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideKeyCommands(this);
+            this.keyCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyListCommands listCommands() {
-        return this.listCommands;
+        ValkeyGlideListCommands cmds = this.listCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideListCommands(this);
+            this.listCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeySetCommands setCommands() {
-        return this.setCommands;
+        ValkeyGlideSetCommands cmds = this.setCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideSetCommands(this);
+            this.setCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyScriptingCommands scriptingCommands() {
-        return this.scriptingCommands;
+        ValkeyGlideScriptingCommands cmds = this.scriptingCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideScriptingCommands(this);
+            this.scriptingCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyServerCommands serverCommands() {
-        return this.serverCommands;
+        ValkeyGlideServerCommands cmds = this.serverCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideServerCommands(this);
+            this.serverCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyStreamCommands streamCommands() {
-        return this.streamCommands;
+        ValkeyGlideStreamCommands cmds = this.streamCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideStreamCommands(this);
+            this.streamCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyStringCommands stringCommands() {
-        return this.stringCommands;
+        ValkeyGlideStringCommands cmds = this.stringCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideStringCommands(this);
+            this.stringCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyZSetCommands zSetCommands() {
-        return this.zSetCommands;
+        ValkeyGlideZSetCommands cmds = this.zSetCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideZSetCommands(this);
+            this.zSetCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
@@ -210,48 +234,34 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
                     sub.close();
                     this.subscription = null;
                 }
-                
-                cleanupConnectionState();
 
-                if (delegatingListener != null) {
-                    delegatingListener.clearListener();
+                if (!watchedKeys.isEmpty() || watchCommandIssued) {
+                    sendUnwatch();
+                    watchedKeys.clear();
+                    watchCommandIssued = false;
                 }
-                
-                // Return client to pool
+
+                // Reset adapter state and return to pool
                 if (factory != null) {
-                    factory.releaseClient(unifiedClient.getNativeClient());
+                    unifiedClient.reset();
+                    factory.releaseAdapter(unifiedClient);
                 }
             }
         } catch (Exception ex) {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
     }
-    
-    /**
-     * Cleans up server-side connection state before returning client to pool.
-     * This ensures the next connection gets a clean client without stale state.
-     */
-    protected void cleanupConnectionState() {
-        // Dont use RESET - we will destroy the configured state
-        // Use valkey-glide native pipe to selectively clear the state on the backends,
-        // adapter and connection object do not matter - they are being destroyed
-        // some state cannot be cleared (like stats) but this is acceptable if pooling to be used
 
-        // GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
-
-        // @SuppressWarnings("unchecked")
-        // Callable<Void>[] actions = new Callable[] {
-        //         () -> nativeClient.customCommand(new String[]{"UNWATCH"}).get(),
-        //     };
-
-        // for (Callable<Void> action : actions) {
-        //     try {
-        //         action.call();
-        //     } catch (InterruptedException ie) {
-        //         Thread.currentThread().interrupt();
-        //     } catch (Exception e) {
-        //     }
-        // }
+    protected void sendUnwatch() {
+        GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
+        try {
+            nativeClient.customCommand(new String[]{"UNWATCH"}).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted UNWATCH command during connection cleanup", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Failed to send UNWATCH command during connection cleanup", e);
+        }
     }
 
     @Override
@@ -379,8 +389,9 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
             // Clean up transaction state
             unifiedClient.discardBatch();
             batchCommandsConverters.clear();
-            // Watches are automatically cleared after EXEC
+            // Watches are automatically cleared by the server after EXEC
             watchedKeys.clear();
+            watchCommandIssued = false;
         }
     }
 
@@ -398,7 +409,7 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
     @Override
     public void unwatch() {
         try {
-            if (watchedKeys.isEmpty()) {
+            if (watchedKeys.isEmpty() || !watchCommandIssued) {
                 return; // No keys to unwatch
             }
             execute("UNWATCH");
@@ -457,22 +468,22 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
 		}
 
-        if (delegatingListener == null) {
+        if (unifiedClient.getDelegatingListener() == null) {
             throw new InvalidDataAccessApiUsageException(
                     "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
         }
 
         try {
-            delegatingListener.setListener(listener);
+            unifiedClient.getDelegatingListener().setListener(listener);
             
             ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
-                    listener, unifiedClient, delegatingListener);
+                    listener, unifiedClient, unifiedClient.getDelegatingListener());
             this.subscription = glideSubscription;
             glideSubscription.subscribe(channels);
             
         } catch (Exception ex) {
-            if (delegatingListener != null) {
-                delegatingListener.clearListener();
+            if (unifiedClient.getDelegatingListener() != null) {
+                unifiedClient.getDelegatingListener().clearListener();
             }
             this.subscription = null;
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -494,22 +505,22 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
 		}
         
-        if (delegatingListener == null) {
+        if (unifiedClient.getDelegatingListener() == null) {
             throw new InvalidDataAccessApiUsageException(
                     "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
         }
 
         try {
-            delegatingListener.setListener(listener);
+            unifiedClient.getDelegatingListener().setListener(listener);
             
             ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
-                    listener, unifiedClient, delegatingListener);
+                    listener, unifiedClient, unifiedClient.getDelegatingListener());
             this.subscription = glideSubscription;
             glideSubscription.pSubscribe(patterns);
             
         } catch (Exception ex) {
-            if (delegatingListener != null) {
-                delegatingListener.clearListener();
+            if (unifiedClient.getDelegatingListener() != null) {
+                unifiedClient.getDelegatingListener().clearListener();
             }
             this.subscription = null;
             throw new ValkeyGlideExceptionConverter().convert(ex);
@@ -571,6 +582,12 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
         Assert.notNull(mapper, "ResultMapper must not be null");
 
         verifyConnectionOpen();
+
+        // Track WATCH commands issued directly via execute() to ensure UNWATCH on close
+        if ("WATCH".equalsIgnoreCase(command)) {
+            watchCommandIssued = true;
+        }
+
         try {
             // Convert arguments to appropriate format for Glide
             GlideString[] glideArgs = new GlideString[args.length + 1];

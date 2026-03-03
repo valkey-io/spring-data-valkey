@@ -15,6 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import java.time.Duration;
 import java.util.AbstractMap;
 import java.util.AbstractSet;
 import java.util.Iterator;
@@ -22,13 +23,23 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
+import glide.api.models.configuration.AdvancedGlideClusterClientConfiguration;
+import glide.api.models.configuration.BackoffStrategy;
+import glide.api.models.configuration.ClusterSubscriptionConfiguration;
+import glide.api.models.configuration.GlideClusterClientConfiguration;
+import glide.api.models.configuration.NodeAddress;
+import glide.api.models.configuration.ReadFrom;
 import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
 import glide.api.models.ClusterValue;
 import glide.api.models.GlideString;
-import io.micrometer.common.lang.Nullable;
+import org.springframework.lang.Nullable;
+import org.springframework.util.StringUtils;
+
+import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
 import glide.api.GlideClusterClient;
 
 /**
@@ -41,10 +52,112 @@ import glide.api.GlideClusterClient;
 class ClusterGlideClientAdapter implements UnifiedGlideClient {
 
     private final GlideClusterClient glideClusterClient;
+    private final @Nullable DelegatingPubSubListener listener;
     @Nullable private Route nextCommandRoute = null;
 
-    ClusterGlideClientAdapter(GlideClusterClient glideClusterClient) {
-        this.glideClusterClient = glideClusterClient;
+    ClusterGlideClientAdapter(ValkeyClusterConfiguration clusterConfig, ValkeyGlideClientConfiguration valkeyGlideConfiguration) {
+        // Build GlideClusterClientConfiguration using Glide's API
+        var configBuilder = 
+            GlideClusterClientConfiguration.builder();
+        
+        // CONNECTION PROPERTIES from driver-agnostic configuration
+        // Add all cluster nodes
+        clusterConfig.getClusterNodes().forEach(node -> {
+            configBuilder.address(NodeAddress.builder()
+                .host(node.getHost())
+                .port(node.getPort())
+                .build());
+        });
+        
+        // Set credentials from driver-agnostic configuration
+        ValkeyPassword password = clusterConfig.getPassword();
+        if (!password.equals(ValkeyPassword.none())) {
+            String username = clusterConfig.getUsername();
+            
+            if (StringUtils.hasText(username)) {
+                configBuilder.credentials(
+                    glide.api.models.configuration.ServerCredentials.builder()
+                        .username(username)
+                        .password(String.valueOf(password.get()))
+                        .build());
+            } else {
+                configBuilder.credentials(
+                    glide.api.models.configuration.ServerCredentials.builder()
+                        .password(String.valueOf(password.get()))
+                        .build());
+            }
+        }
+        
+        // DRIVER-SPECIFIC PROPERTIES from ValkeyGlideClientConfiguration
+        
+        // Request timeout
+        Duration commandTimeout = valkeyGlideConfiguration.getCommandTimeout();
+        if (commandTimeout != null) {
+            configBuilder.requestTimeout((int) commandTimeout.toMillis());
+        }
+
+        // Connection timeout
+        Duration connectionTimeout = valkeyGlideConfiguration.getConnectionTimeout();
+        if (connectionTimeout != null) {
+            var advancedConfigBuilder = AdvancedGlideClusterClientConfiguration.builder();
+            advancedConfigBuilder.connectionTimeout((int) connectionTimeout.toMillis());
+            configBuilder.advancedConfiguration(advancedConfigBuilder.build());
+        }
+
+        // SSL/TLS
+        if (valkeyGlideConfiguration.isUseSsl()) {
+            configBuilder.useTLS(true);
+        }
+        
+        // Read from strategy
+        ReadFrom readFrom = valkeyGlideConfiguration.getReadFrom();
+        if (readFrom != null) {
+            configBuilder.readFrom(readFrom);
+        }
+        
+        // Inflight requests limit
+        Integer inflightRequestsLimit = valkeyGlideConfiguration.getInflightRequestsLimit();
+        if (inflightRequestsLimit != null) {
+            configBuilder.inflightRequestsLimit(inflightRequestsLimit);
+        }
+        
+        // Client AZ
+        String clientAZ = valkeyGlideConfiguration.getClientAZ();
+        if (clientAZ != null) {
+            configBuilder.clientAZ(clientAZ);
+        }
+        
+        // Reconnect strategy
+        BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
+        if (reconnectStrategy != null) {
+            configBuilder.reconnectStrategy(reconnectStrategy);
+        }
+
+        this.listener = new DelegatingPubSubListener();
+
+        // Configure pub/sub with callback for event-driven message delivery
+        var subConfigBuilder = ClusterSubscriptionConfiguration.builder();
+        
+        // Set callback that delegates to our listener holder
+        subConfigBuilder.callback((msg, context) -> this.listener.onMessage(msg, context));
+        configBuilder.subscriptionConfiguration(subConfigBuilder.build());
+
+        // Build and create cluster client
+        GlideClusterClientConfiguration config = configBuilder.build();
+        try {
+            this.glideClusterClient = GlideClusterClient.createClient(config).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted creating GlideClusterClient", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Failed creating GlideClusterClient", e);
+        }
+    }
+
+    @Override
+    @Nullable
+    public DelegatingPubSubListener getDelegatingListener() {
+        return listener;
     }
 
     /**
@@ -320,6 +433,14 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
     @Override
     public void discardBatch() {
         throw new IllegalStateException("Transactions and pipelines are not supported in cluster mode");
+    }
+
+    @Override
+    public void reset() {
+        nextCommandRoute = null;
+        if (getDelegatingListener() != null) {
+            getDelegatingListener().clearListener();
+        }
     }
 
     public void setOneShotRouteForNextCommand(Route glideRoute) {

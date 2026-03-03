@@ -25,8 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.lang.Nullable;
@@ -40,7 +40,6 @@ import glide.api.models.GlideString;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
-import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.connection.ClusterInfo;
 import io.valkey.springframework.data.valkey.connection.ClusterTopology;
 import io.valkey.springframework.data.valkey.connection.ClusterTopologyProvider;
@@ -76,47 +75,29 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
     
     // Cache of cluster nodes for backward compatibility
     private final Map<String, ValkeyClusterNode> knownNodes = new ConcurrentHashMap<>();
-    private final ValkeyGlideClusterServerCommands clusterServerCommands;
-    private final ValkeyGlideClusterListCommands clusterListCommands;
-    private final ValkeyGlideClusterKeyCommands clusterKeyCommands;
-    private final ValkeyGlideClusterStringCommands clusterStringCommands;
-    private final ValkeyGlideClusterSetCommands clusterSetCommands;
+    private ValkeyGlideClusterServerCommands clusterServerCommands = null;
+    private ValkeyGlideClusterListCommands clusterListCommands = null;
+    private ValkeyGlideClusterKeyCommands clusterKeyCommands = null;
+    private ValkeyGlideClusterStringCommands clusterStringCommands = null;
+    private ValkeyGlideClusterSetCommands clusterSetCommands = null;
 
     public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter) {
-        this(clusterAdapter, null, Duration.ofMillis(100), null);
+        this(clusterAdapter, null, Duration.ofMillis(100));
     }
 
     public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, 
             @Nullable ValkeyGlideConnectionFactory factory) {
-        this(clusterAdapter, factory, Duration.ofMillis(100), null);
+        this(clusterAdapter, factory, Duration.ofMillis(100));
     }
 
     public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, 
             @Nullable ValkeyGlideConnectionFactory factory,
-            @Nullable DelegatingPubSubListener pubSubListener) {
-        this(clusterAdapter, factory, Duration.ofMillis(100), pubSubListener);
-    }
-
-    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, 
-            @Nullable ValkeyGlideConnectionFactory factory, 
             Duration cacheTimeout) {
-        this(clusterAdapter, factory, cacheTimeout, null);
-    }
-
-    public ValkeyGlideClusterConnection(ClusterGlideClientAdapter clusterAdapter, 
-            @Nullable ValkeyGlideConnectionFactory factory,
-            Duration cacheTimeout,
-            @Nullable DelegatingPubSubListener pubSubListener) {
-        super(clusterAdapter, factory, pubSubListener);
+        super(clusterAdapter, factory);
         Assert.notNull(cacheTimeout, "CacheTimeout must not be null!");
         
         this.clusterAdapter = clusterAdapter;
         this.cacheTimeoutMs = cacheTimeout.toMillis();
-        this.clusterServerCommands = new ValkeyGlideClusterServerCommands(this);
-        this.clusterListCommands = new ValkeyGlideClusterListCommands(this);
-        this.clusterKeyCommands = new ValkeyGlideClusterKeyCommands(this);
-        this.clusterStringCommands = new ValkeyGlideClusterStringCommands(this);
-        this.clusterSetCommands = new ValkeyGlideClusterSetCommands(this);
     }
 
     public ClusterGlideClientAdapter getClusterAdapter() {
@@ -124,36 +105,31 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
     }
 
     /**
-     * Cleans up server-side connection state before returning client to pool.
-     * This ensures the next connection gets a clean client without stale state.
+     * Sends an UNWATCH command to ALL_NODES in cluster mode.
+     * Overrides the standalone implementation which sends to a single node.
      */
     @Override
-    protected void cleanupConnectionState() {
-        // Dont use RESET - we will destroy the configured state
-        // Use valkey-glide native pipe to selectively clear the state on the backends,
-        // adapter and connection object do not matter - they are being destroyed
-        // some state cannot be cleared (like stats) but this is acceptable if pooling to be used
-
+    protected void sendUnwatch() {
         GlideClusterClient nativeClient = (GlideClusterClient) unifiedClient.getNativeClient();
 
-        @SuppressWarnings("unchecked")
-        Callable<Void>[] actions = new Callable[] {
-                () -> nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES).get(),
-            };
-
-        for (Callable<Void> action : actions) {
-            try {
-                action.call();
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            } catch (Exception e) {
-            }
+        try {
+            nativeClient.customCommand(new String[]{"UNWATCH"}, SimpleMultiNodeRoute.ALL_NODES).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Interrupted UNWATCH command during connection cleanup", e);
+        } catch (ExecutionException e) {
+            throw new IllegalStateException("Failed to send UNWATCH command during connection cleanup", e);
         }
     }
 
     @Override
     public ValkeyClusterServerCommands serverCommands() {
-        return this.clusterServerCommands;
+        ValkeyGlideClusterServerCommands cmds = this.clusterServerCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideClusterServerCommands(this);
+            this.clusterServerCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
@@ -163,22 +139,42 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
 
     @Override
     public ValkeyGlideClusterListCommands listCommands() {
-        return this.clusterListCommands;
+        ValkeyGlideClusterListCommands cmds = this.clusterListCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideClusterListCommands(this);
+            this.clusterListCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyGlideClusterKeyCommands keyCommands() {
-        return this.clusterKeyCommands;
+        ValkeyGlideClusterKeyCommands cmds = this.clusterKeyCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideClusterKeyCommands(this);
+            this.clusterKeyCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyGlideClusterStringCommands stringCommands() {
-        return this.clusterStringCommands;
+        ValkeyGlideClusterStringCommands cmds = this.clusterStringCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideClusterStringCommands(this);
+            this.clusterStringCommands = cmds;
+        }
+        return cmds;
     }
 
     @Override
     public ValkeyGlideClusterSetCommands setCommands() {
-        return this.clusterSetCommands;
+        ValkeyGlideClusterSetCommands cmds = this.clusterSetCommands;
+        if (cmds == null) {
+            cmds = new ValkeyGlideClusterSetCommands(this);
+            this.clusterSetCommands = cmds;
+        }
+        return cmds;
     }
 
 	@Override
