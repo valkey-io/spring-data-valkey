@@ -202,11 +202,13 @@ class VarianceControl:
         self.nmi_watchdog_original = None
         self.smt_original = None
 
-    def setup(self, network_delay_ms: int = 1):
+    def setup(self, network_delay: str = "", network_jitter: str = "",
+              network_delay_distribution: str = ""):
         print("Setting up variance control...")
         self._disable_smt()
         self._disable_turbo_boost()
-        self._setup_network_delay(network_delay_ms)
+        self._setup_network_delay(network_delay, network_jitter,
+                                  network_delay_distribution)
         self._disable_nmi_watchdog()
         self._set_perf_permissions()
         print("Variance control setup complete")
@@ -279,17 +281,28 @@ class VarianceControl:
             except Exception as e:
                 print(f"  ⚠ Could not restore SMT: {e}")
 
-    def _setup_network_delay(self, delay_ms: int):
+    def _setup_network_delay(self, delay: str, jitter: str = "",
+                             distribution: str = ""):
+        if not delay:
+            return
         try:
             subprocess.run(["sudo", "tc", "qdisc", "del", "dev", "lo", "root"],
                            capture_output=True)
-            result = subprocess.run(
-                ["sudo", "tc", "qdisc", "add", "dev", "lo", "root", "netem",
-                 "delay", f"{delay_ms}ms"],
-                capture_output=True, text=True)
+            cmd = ["sudo", "tc", "qdisc", "add", "dev", "lo", "root", "netem",
+                   "delay", delay]
+            if jitter:
+                cmd.append(jitter)
+                if distribution:
+                    cmd.extend(["distribution", distribution])
+            desc = delay
+            if jitter:
+                desc += f" jitter {jitter}"
+                if distribution:
+                    desc += f" distribution {distribution}"
+            result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
                 self.tc_configured = True
-                print(f"  ✓ Network delay configured: {delay_ms}ms on loopback")
+                print(f"  ✓ Network delay configured: {desc} on loopback")
             else:
                 print(f"  ⚠ Could not configure network delay: {result.stderr}")
         except Exception as e:
@@ -891,7 +904,8 @@ class BenchmarkOrchestrator:
                  workload_config_path: Path, driver_config_path: Path,
                  s3_bucket: str,
                  job_id_prefix: str = "",
-                 skip_infra: bool = False, network_delay_ms: int = 1,
+                 skip_infra: bool = False, network_delay: str = "",
+                 network_jitter: str = "", network_delay_distribution: str = "",
                  publish_to_db: bool = True, pg_host: str = None,
                  pg_port: int = 5432, pg_database: str = "postgres",
                  pg_secret_name: str = None):
@@ -903,7 +917,9 @@ class BenchmarkOrchestrator:
         self.workload_config = load_json_config(workload_config_path)
         self.driver_config = load_json_config(driver_config_path)
         self.skip_infra = skip_infra
-        self.network_delay_ms = network_delay_ms
+        self.network_delay = network_delay
+        self.network_jitter = network_jitter
+        self.network_delay_distribution = network_delay_distribution
         self.publish_to_db = publish_to_db
         self.job_id = generate_job_id(prefix=job_id_prefix)
         self.timestamp = get_timestamp()
@@ -916,7 +932,10 @@ class BenchmarkOrchestrator:
 
         # Apply variance control
         self.variance_control = VarianceControl()
-        self.variance_control.setup(network_delay_ms=network_delay_ms)
+        self.variance_control.setup(
+            network_delay=network_delay,
+            network_jitter=network_jitter,
+            network_delay_distribution=network_delay_distribution)
 
         # Detect NUMA topology and allocate cores accordingly
         self._setup_numa_aware_cores()
@@ -1295,7 +1314,9 @@ class BenchmarkOrchestrator:
 
                 results = {
                     "elapsed_ms": elapsed_ms,
-                    "network_delay_ms": self.network_delay_ms,
+                    "network_delay": self.network_delay,
+                    "network_jitter": self.network_jitter,
+                    "network_delay_distribution": self.network_delay_distribution,
                     "phases": all_phases,
                     "perf": {
                         "counters": perf_counters,
@@ -1342,7 +1363,12 @@ def main():
     parser.add_argument("--resp-bench-commit", type=str, required=True,
                         help="Git commit ID of the resp-bench repository")
     parser.add_argument("--skip-infra", action="store_true")
-    parser.add_argument("--network-delay-ms", type=int, default=0)
+    parser.add_argument("--network-delay", type=str, default="",
+                        help="Network delay with unit, e.g. '1ms' or '500us'")
+    parser.add_argument("--network-jitter", type=str, default="",
+                        help="Network jitter with unit, e.g. '1ms' or '100us'")
+    parser.add_argument("--network-delay-distribution", type=str, default="",
+                        choices=["", "normal", "pareto", "paretonormal"])
     parser.add_argument("--job-id-prefix", type=str, default="",
                         help="Optional prefix for the job ID "
                              "(e.g., 'regression', 'nightly', 'pr-123')")
@@ -1376,7 +1402,9 @@ def main():
         s3_bucket=args.s3_bucket,
         job_id_prefix=args.job_id_prefix,
         skip_infra=args.skip_infra,
-        network_delay_ms=args.network_delay_ms,
+        network_delay=args.network_delay,
+        network_jitter=args.network_jitter,
+        network_delay_distribution=args.network_delay_distribution,
         publish_to_db=not args.no_publish,
         pg_host=args.pg_host,
         pg_port=args.pg_port,

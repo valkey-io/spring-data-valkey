@@ -58,6 +58,26 @@ on:
         required: false
         type: string
         default: ""
+      network_delay:
+        description: "Network delay with unit, e.g. '1ms' or '500us' (tc netem). Leave empty to disable."
+        required: false
+        type: string
+        default: ""
+      network_jitter:
+        description: "Network jitter with unit, e.g. '1ms' or '100us' (tc netem). Requires network_delay."
+        required: false
+        type: string
+        default: ""
+      network_delay_distribution:
+        description: "Jitter distribution (tc netem). Requires jitter. Options: normal, pareto, paretonormal."
+        required: false
+        type: choice
+        options:
+          - ""
+          - normal
+          - pareto
+          - paretonormal
+        default: ""
 
 env:
   RESP_BENCH_REPO: "https://github.com/ikolomi/resp-bench.git"
@@ -95,6 +115,26 @@ jobs:
           PRIMARY_VERSION="${{ github.event.inputs.primary_version }}"
           SECONDARY_VERSION="${{ github.event.inputs.secondary_version }}"
           JOB_ID_PREFIX="${{ github.event.inputs.job_id_prefix }}"
+          NETWORK_DELAY="${{ github.event.inputs.network_delay }}"
+          NETWORK_JITTER="${{ github.event.inputs.network_jitter }}"
+          NETWORK_DELAY_DISTRIBUTION="${{ github.event.inputs.network_delay_distribution }}"
+
+          # Validate tc netem input combinations
+          if [ -n "$NETWORK_DELAY_DISTRIBUTION" ] && [ -z "$NETWORK_JITTER" ]; then
+            echo "ERROR: network_delay_distribution requires network_jitter"
+            exit 1
+          fi
+          if [ -n "$NETWORK_JITTER" ] && [ -z "$NETWORK_DELAY" ]; then
+            echo "ERROR: network_jitter requires network_delay"
+            exit 1
+          fi
+          # Validate unit format (number followed by ms or us)
+          for val in "$NETWORK_DELAY" "$NETWORK_JITTER"; do
+            if [ -n "$val" ] && ! [[ "$val" =~ ^[0-9]+(ms|us)$ ]]; then
+              echo "ERROR: invalid tc netem value '$val' — expected format: <number>ms or <number>us"
+              exit 1
+            fi
+          done
 
           echo "primary_driver=$PRIMARY_DRIVER" >> $GITHUB_OUTPUT
           echo "secondary_driver=$SECONDARY_DRIVER" >> $GITHUB_OUTPUT
@@ -102,6 +142,9 @@ jobs:
           echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
           echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
           echo "job_id_prefix=$JOB_ID_PREFIX" >> $GITHUB_OUTPUT
+          echo "network_delay=$NETWORK_DELAY" >> $GITHUB_OUTPUT
+          echo "network_jitter=$NETWORK_JITTER" >> $GITHUB_OUTPUT
+          echo "network_delay_distribution=$NETWORK_DELAY_DISTRIBUTION" >> $GITHUB_OUTPUT
 
           echo "========================================"
           echo "Primary driver:    $PRIMARY_DRIVER"
@@ -110,6 +153,7 @@ jobs:
           echo "Primary version:   '${PRIMARY_VERSION}'"
           echo "Secondary version: '${SECONDARY_VERSION}'"
           echo "Job ID prefix:     '${JOB_ID_PREFIX}'"
+          echo "Network delay:     '${NETWORK_DELAY}' jitter='${NETWORK_JITTER}' distribution='${NETWORK_DELAY_DISTRIBUTION}'"
           echo "========================================"
 
       - name: Validate configs exist
@@ -452,6 +496,15 @@ jobs:
           PREFIX_ARG=""
           [ -n "$JOB_ID_PREFIX" ] && PREFIX_ARG="--job-id-prefix $JOB_ID_PREFIX"
 
+          NETWORK_DELAY="${{ steps.inputs.outputs.network_delay }}"
+          NETWORK_JITTER="${{ steps.inputs.outputs.network_jitter }}"
+          NETWORK_DELAY_DISTRIBUTION="${{ steps.inputs.outputs.network_delay_distribution }}"
+
+          TC_ARGS=""
+          [ -n "$NETWORK_DELAY" ] && TC_ARGS="$TC_ARGS --network-delay $NETWORK_DELAY"
+          [ -n "$NETWORK_JITTER" ] && TC_ARGS="$TC_ARGS --network-jitter $NETWORK_JITTER"
+          [ -n "$NETWORK_DELAY_DISTRIBUTION" ] && TC_ARGS="$TC_ARGS --network-delay-distribution $NETWORK_DELAY_DISTRIBUTION"
+
           python3 -u .github/workflows/benchmark_orchestrator.py \
             --output "benchmark_results_${DRIVER}_${WORKLOAD}.json" \
             --workload-config "$WORKLOAD_CONFIG" \
@@ -461,7 +514,7 @@ jobs:
             --s3-bucket "${{ secrets.BENCHMARK_S3_BUCKET }}" \
             --pg-host "${{ secrets.BENCHMARK_PG_HOST }}" \
             --pg-secret-name "${{ secrets.BENCHMARK_PG_SECRET_NAME }}" \
-            $PREFIX_ARG
+            $PREFIX_ARG $TC_ARGS
 
       - name: Display results summary
         if: always()
@@ -540,7 +593,9 @@ jobs:
           driver = data["config"]["driver"]["driver_id"]
           workload_profile = data["config"]["workload"]["benchmark_profile"]["name"]
           elapsed = data["results"]["elapsed_ms"]
-          network_delay = data["results"].get("network_delay_ms", 1)
+          network_delay = data["results"].get("network_delay", "")
+          network_jitter = data["results"].get("network_jitter", "")
+          network_distribution = data["results"].get("network_delay_distribution", "")
           pv = versions.get("primary_driver_version") or "N/A"
           sv = versions.get("secondary_driver_version")
           sid = versions.get("secondary_driver_id")
@@ -555,7 +610,12 @@ jobs:
               print(f"**resp-bench:** \`{commit_id}\`")
           print(f"**Workload config:** \`${WORKLOAD}\` ({workload_profile})")
           print(f"**Driver config:** \`${DRIVER}\`")
-          print(f"**Simulated network delay:** {network_delay}ms")
+          delay_str = network_delay or "disabled"
+          if network_jitter:
+              delay_str += f" jitter {network_jitter}"
+              if network_distribution:
+                  delay_str += f" distribution {network_distribution}"
+          print(f"**Simulated network delay:** {delay_str}")
           print(f"**Elapsed:** {elapsed}ms")
           print()
 
