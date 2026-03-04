@@ -1170,6 +1170,21 @@ class BenchmarkOrchestrator:
         if self.resp_bench_commit:
             cmd.extend(["--commit-id", self.resp_bench_commit])
 
+        # Log CPU model for hardware variance detection
+        try:
+            cpu_result = subprocess.run(
+                ["bash", "-c", "grep 'model name' /proc/cpuinfo | head -1"],
+                capture_output=True, text=True, timeout=5)
+            cpu_model = cpu_result.stdout.strip()
+            print(f"CPU: {cpu_model}")
+            lscpu_result = subprocess.run(
+                ["bash", "-c", "lscpu | grep -E 'Model name|Stepping|CPU MHz|CPU max MHz'"],
+                capture_output=True, text=True, timeout=5)
+            for line in lscpu_result.stdout.strip().split('\n'):
+                print(f"  {line.strip()}")
+        except Exception as e:
+            print(f"  Warning: could not read CPU info: {e}")
+
         print(f"Starting Java benchmark on NUMA node {self.benchmark_numa_node}, cores {self.benchmark_cores}")
         print(f"  Server: {server}")
         print(f"  Driver: {self.driver_config_path}")
