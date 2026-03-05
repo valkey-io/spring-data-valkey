@@ -1,0 +1,6 @@
+/* Make text code blocks word-wrap */
+pre[data-language="text"] .ec-line .code {
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
