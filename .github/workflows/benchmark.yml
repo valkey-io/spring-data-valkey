@@ -88,6 +88,48 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      - name: Validate EC2 type and CPU model
+        run: |
+          # c5.metal: Intel Xeon Platinum 8275CL (Cascade Lake), 96 vCPUs, 2 NUMA nodes
+          EXPECTED_INSTANCE_TYPE="c5.metal"
+          EXPECTED_CPU="8275CL"
+          EXPECTED_STEPPING="7"
+          EXPECTED_VCPUS="96"
+
+          TOKEN=$(curl -s -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds:60")
+          INSTANCE_TYPE=$(curl -s -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-type)
+          CPU_MODEL=$(grep 'model name' /proc/cpuinfo | head -1 | sed 's/.*: //')
+          CPU_STEPPING=$(lscpu | grep '^Stepping:' | awk '{print $2}')
+          CPU_COUNT=$(nproc)
+
+          echo "Instance type: $INSTANCE_TYPE"
+          echo "CPU: $CPU_MODEL"
+          echo "Stepping: $CPU_STEPPING"
+          echo "vCPUs: $CPU_COUNT"
+          lscpu | grep -E 'Model name|Stepping|CPU max MHz|CPU\(s\):|NUMA'
+
+          ERRORS=""
+          if [ "$INSTANCE_TYPE" != "$EXPECTED_INSTANCE_TYPE" ]; then
+            ERRORS="${ERRORS}Instance type: expected '$EXPECTED_INSTANCE_TYPE', got '$INSTANCE_TYPE'\n"
+          fi
+          if ! echo "$CPU_MODEL" | grep -q "$EXPECTED_CPU"; then
+            ERRORS="${ERRORS}CPU model: expected '$EXPECTED_CPU', got '$CPU_MODEL'\n"
+          fi
+          if [ "$CPU_STEPPING" != "$EXPECTED_STEPPING" ]; then
+            ERRORS="${ERRORS}Stepping: expected '$EXPECTED_STEPPING', got '$CPU_STEPPING'\n"
+          fi
+          if [ "$CPU_COUNT" != "$EXPECTED_VCPUS" ]; then
+            ERRORS="${ERRORS}vCPU count: expected '$EXPECTED_VCPUS', got '$CPU_COUNT'\n"
+          fi
+
+          if [ -n "$ERRORS" ]; then
+            echo "ERROR: Hardware validation failed:"
+            echo -e "$ERRORS"
+            echo "This machine does not match expected c5.metal specs. Failing early to avoid inconsistent benchmark results."
+            exit 1
+          fi
+          echo "✓ Hardware validated: $CPU_MODEL, stepping $CPU_STEPPING, $CPU_COUNT vCPUs"
+
       - uses: actions/checkout@v4
 
       - name: Set up Java 21 and Maven
