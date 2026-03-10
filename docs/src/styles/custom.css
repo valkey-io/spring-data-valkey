@@ -22,7 +22,7 @@
 	--vk-color-main-hsl: 236, 83%, 63%;
 	--overlay-color: hsla(var(--vk-color-main-hsl), 0.2);
 	--sl-font: 'Open Sans', system-ui, sans-serif;
-  	--sl-font-system: 'Open Sans', system-ui, sans-serif;
+	--sl-font-system: 'Open Sans', system-ui, sans-serif;
 }
 
 /* Light mode colors. */
@@ -44,20 +44,27 @@
 
 [data-has-hero] .page {
 	background:
-    linear-gradient(var(--sl-color-black) 25%, var(--overlay-color) 75%)
+	linear-gradient(var(--sl-color-black) 25%, var(--overlay-color) 75%)
+}
+
+[data-has-hero] .hero img {
+	max-width: 300px !important;
+	width: 300px !important;
 }
 
 [data-has-hero] .hero > img {
 	filter: drop-shadow(0 0 3rem var(--overlay-color));
 }
-  /* Apply rounded corner */
-  .starlight-aside,
-  .card {
-    border-radius: 0.75rem;
-  }
+
+/* Apply rounded corner */
+.starlight-aside,
+.card {
+	border-radius: 0.75rem;
 }
 
 .hero {
 	padding-bottom: 1.25rem;
 	padding-top: 1.25rem;
+}
+
 }
