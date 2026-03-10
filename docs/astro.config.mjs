@@ -15,7 +15,8 @@ export default defineConfig({
 		starlight({
 			title: 'Spring Data Valkey',
 			logo: {
-				src: './src/assets/spring-data-valkey-springs-logo.png',
+				light: './src/assets/spring-data-valkey-logo-with-name-light.svg',
+				dark: './src/assets/spring-data-valkey-logo-with-name-dark.svg',
 				replacesTitle: true,
 			},
 			customCss: ['./src/styles/custom.css', './src/styles/code-wrap.css'],
