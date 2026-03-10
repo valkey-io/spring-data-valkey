@@ -10,7 +10,7 @@ Each mode of operation requires specific configuration that is explained in the 
 
 The easiest way to get started is by using Valkey Standalone with a single Valkey server,
 
-Configure `io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideConnectionFactory`, `io.valkey.springframework.data.connection.lettuce.LettuceConnectionFactory` or `io.valkey.springframework.data.connection.jedis.JedisConnectionFactory`, as shown in the following example:
+Configure `io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory`, `io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory` or `io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory`, as shown in the following example:
 
 ```java
 @Configuration
@@ -67,12 +67,12 @@ class WriteToMasterReadFromReplicaConfiguration {
 ```
 
 :::tip
-For environments reporting non-public addresses through the `INFO` command (for example, when using AWS), use `io.valkey.springframework.data.connection.ValkeyStaticMasterReplicaConfiguration` instead of `io.valkey.springframework.data.connection.ValkeyStandaloneConfiguration`. Please note that `ValkeyStaticMasterReplicaConfiguration` does not support Pub/Sub because of missing Pub/Sub message propagation across individual servers.
+For environments reporting non-public addresses through the `INFO` command (for example, when using AWS), use `io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration` instead of `io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration`. Please note that `ValkeyStaticMasterReplicaConfiguration` does not support Pub/Sub because of missing Pub/Sub message propagation across individual servers.
 :::
 
 ## Valkey Sentinel
 
-For dealing with high-availability Valkey, Spring Data Valkey has support for [Valkey Sentinel](https://valkey.io/topics/sentinel), using `io.valkey.springframework.data.connection.ValkeySentinelConfiguration`, as shown in the following example:
+For dealing with high-availability Valkey, Spring Data Valkey has support for [Valkey Sentinel](https://valkey.io/topics/sentinel), using `io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration`, as shown in the following example:
 
 :::note[Driver Support]
 Valkey Sentinel is currently supported by Lettuce and Jedis drivers. Valkey GLIDE support for Sentinel is planned for a future release.
@@ -122,8 +122,8 @@ Sometimes, direct interaction with one of the Sentinels is required. Using `Valk
 
 ## Valkey Cluster
 
-[Cluster support](/valkey/cluster) is based on the same building blocks as non-clustered communication. `io.valkey.springframework.data.connection.ValkeyClusterConnection`, an extension to `ValkeyConnection`, handles the communication with the Valkey Cluster and translates errors into the Spring DAO exception hierarchy.
-`ValkeyClusterConnection` instances are created with the `ValkeyConnectionFactory`, which has to be set up with the associated `io.valkey.springframework.data.connection.ValkeyClusterConfiguration`, as shown in the following example:
+[Cluster support](/valkey/cluster) is based on the same building blocks as non-clustered communication. `io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection`, an extension to `ValkeyConnection`, handles the communication with the Valkey Cluster and translates errors into the Spring DAO exception hierarchy.
+`ValkeyClusterConnection` instances are created with the `ValkeyConnectionFactory`, which has to be set up with the associated `io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration`, as shown in the following example:
 
 *Example 1. Sample ValkeyConnectionFactory Configuration for Valkey Cluster*
 

@@ -9,7 +9,6 @@ Spring Data Valkey is organized as a multi-module Maven project:
 * **[`spring-data-valkey`](spring-data-valkey/)** - Core Spring Data Valkey library
 * **[`spring-boot-starter-data-valkey`](spring-boot-starter-data-valkey/)** - Spring Boot starter for auto-configuration
 * **[`examples`](examples/)** - Example applications demonstrating various Spring Data features
-* **[`performance`](performance/)** - Performance testing and benchmarking tools
 
 ## Prerequisites
 
@@ -98,19 +97,6 @@ $ ./mvnw -q exec:java -pl examples/spring-boot
 ```
 
 For detailed information about all available examples and their specific features, see the [examples](examples/) directory.
-
-## Performance Testing
-
-```bash
-# Default performance test with infrastructure management
-$ make performance
-
-# Test with different clients against existing Valkey instance
-$ ./mvnw -q exec:java -pl performance -Dclient=valkeyglide
-$ ./mvnw -q exec:java -pl performance -Dclient=lettuce
-```
-
-For detailed information about all available performance tests and benchmarking options, see the [performance](performance/) directory.
 
 ## Logging Configuration
 

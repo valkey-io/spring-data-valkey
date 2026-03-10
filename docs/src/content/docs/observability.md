@@ -111,7 +111,7 @@ Below you can find a list of all metrics declared by this project.
 
 **Metric name** `spring.data.valkey`. **Type** `timer` and **base unit** `seconds`.
 
-Fully qualified name of the enclosing class `io.valkey.springframework.data.connection.lettuce.observability.ValkeyObservation`.
+Fully qualified name of the enclosing class `io.valkey.springframework.data.valkey.connection.lettuce.observability.ValkeyObservation`.
 
 *Table 1. Low cardinality Keys*
 
@@ -144,7 +144,7 @@ Below you can find a list of all spans declared by this project.
 
 **Span name** `spring.data.valkey`.
 
-Fully qualified name of the enclosing class `io.valkey.springframework.data.connection.lettuce.observability.ValkeyObservation`.
+Fully qualified name of the enclosing class `io.valkey.springframework.data.valkey.connection.lettuce.observability.ValkeyObservation`.
 
 *Table 3. Tag Keys*
 

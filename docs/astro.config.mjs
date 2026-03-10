@@ -30,6 +30,7 @@ export default defineConfig({
 					items: [
 						{ label: 'Spring Data Valkey', slug: 'overview' },
 						{ label: 'Spring Boot', slug: 'commons/spring-boot' },
+						{ label: 'Features', slug: 'commons/features' },
 						{ label: 'Migrating Spring Data', slug: 'commons/migration' },
 					]
 				},

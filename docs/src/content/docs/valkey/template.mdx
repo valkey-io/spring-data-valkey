@@ -5,12 +5,12 @@ description: Template documentation
 
 import { Tabs, TabItem } from '@astrojs/starlight/components';
 
-Most users are likely to use `io.valkey.springframework.data.core.ValkeyTemplate` and its corresponding package, `io.valkey.springframework.data.core` or its reactive variant `io.valkey.springframework.data.core.ReactiveValkeyTemplate`.
+Most users are likely to use `io.valkey.springframework.data.valkey.core.ValkeyTemplate` and its corresponding package, `io.valkey.springframework.data.valkey.core` or its reactive variant `io.valkey.springframework.data.valkey.core.ReactiveValkeyTemplate`.
 The template is, in fact, the central class of the Valkey module, due to its rich feature set.
 The template offers a high-level abstraction for Valkey interactions.
 While `[Reactive]ValkeyConnection` offers low-level methods that accept and return binary values (`byte` arrays), the template takes care of serialization and connection management, freeing the user from dealing with such details.
 
-The `io.valkey.springframework.data.core.ValkeyTemplate` class implements the `io.valkey.springframework.data.core.ValkeyOperations`  interface and its reactive variant `io.valkey.springframework.data.core.ReactiveValkeyTemplate` implements `io.valkey.springframework.data.core.ReactiveValkeyOperations`.
+The `io.valkey.springframework.data.valkey.core.ValkeyTemplate` class implements the `io.valkey.springframework.data.valkey.core.ValkeyOperations`  interface and its reactive variant `io.valkey.springframework.data.valkey.core.ReactiveValkeyTemplate` implements `io.valkey.springframework.data.valkey.core.ReactiveValkeyOperations`.
 
 :::note
 The preferred way to reference operations on a `[Reactive]ValkeyTemplate` instance is through the
@@ -32,21 +32,21 @@ Moreover, the template provides operations views (following the grouping from th
 | Interface | Description |
 |-----------|-------------|
 | *Key Type Operations* | |
-| `io.valkey.springframework.data.core.GeoOperations` | Valkey geospatial operations, such as `GEOADD`, `GEORADIUS`,... |
-| `io.valkey.springframework.data.core.HashOperations` | Valkey hash operations |
-| `io.valkey.springframework.data.core.HyperLogLogOperations` | Valkey HyperLogLog operations, such as `PFADD`, `PFCOUNT`,... |
-| `io.valkey.springframework.data.core.ListOperations` | Valkey list operations |
-| `io.valkey.springframework.data.core.SetOperations` | Valkey set operations |
-| `io.valkey.springframework.data.core.ValueOperations` | Valkey string (or value) operations |
-| `io.valkey.springframework.data.core.ZSetOperations` | Valkey zset (or sorted set) operations |
+| `io.valkey.springframework.data.valkey.core.GeoOperations` | Valkey geospatial operations, such as `GEOADD`, `GEORADIUS`,... |
+| `io.valkey.springframework.data.valkey.core.HashOperations` | Valkey hash operations |
+| `io.valkey.springframework.data.valkey.core.HyperLogLogOperations` | Valkey HyperLogLog operations, such as `PFADD`, `PFCOUNT`,... |
+| `io.valkey.springframework.data.valkey.core.ListOperations` | Valkey list operations |
+| `io.valkey.springframework.data.valkey.core.SetOperations` | Valkey set operations |
+| `io.valkey.springframework.data.valkey.core.ValueOperations` | Valkey string (or value) operations |
+| `io.valkey.springframework.data.valkey.core.ZSetOperations` | Valkey zset (or sorted set) operations |
 | *Key Bound Operations* | |
-| `io.valkey.springframework.data.core.BoundGeoOperations` | Valkey key bound geospatial operations |
-| `io.valkey.springframework.data.core.BoundHashOperations` | Valkey hash key bound operations |
-| `io.valkey.springframework.data.core.BoundKeyOperations` | Valkey key bound operations |
-| `io.valkey.springframework.data.core.BoundListOperations` | Valkey list key bound operations |
-| `io.valkey.springframework.data.core.BoundSetOperations` | Valkey set key bound operations |
-| `io.valkey.springframework.data.core.BoundValueOperations` | Valkey string (or value) key bound operations |
-| `io.valkey.springframework.data.core.BoundZSetOperations` | Valkey zset (or sorted set) key bound operations |
+| `io.valkey.springframework.data.valkey.core.BoundGeoOperations` | Valkey key bound geospatial operations |
+| `io.valkey.springframework.data.valkey.core.BoundHashOperations` | Valkey hash key bound operations |
+| `io.valkey.springframework.data.valkey.core.BoundKeyOperations` | Valkey key bound operations |
+| `io.valkey.springframework.data.valkey.core.BoundListOperations` | Valkey list key bound operations |
+| `io.valkey.springframework.data.valkey.core.BoundSetOperations` | Valkey set key bound operations |
+| `io.valkey.springframework.data.valkey.core.BoundValueOperations` | Valkey string (or value) key bound operations |
+| `io.valkey.springframework.data.valkey.core.BoundZSetOperations` | Valkey zset (or sorted set) key bound operations |
 
 </TabItem>
 <TabItem label="Reactive">
@@ -54,13 +54,13 @@ Moreover, the template provides operations views (following the grouping from th
 | Interface | Description |
 |-----------|-------------|
 | *Key Type Operations* | |
-| `io.valkey.springframework.data.core.ReactiveGeoOperations` | Valkey geospatial operations such as `GEOADD`, `GEORADIUS`, and others |
-| `io.valkey.springframework.data.core.ReactiveHashOperations` | Valkey hash operations |
-| `io.valkey.springframework.data.core.ReactiveHyperLogLogOperations` | Valkey HyperLogLog operations such as (`PFADD`, `PFCOUNT`, and others) |
-| `io.valkey.springframework.data.core.ReactiveListOperations` | Valkey list operations |
-| `io.valkey.springframework.data.core.ReactiveSetOperations` | Valkey set operations |
-| `io.valkey.springframework.data.core.ReactiveValueOperations` | Valkey string (or value) operations |
-| `io.valkey.springframework.data.core.ReactiveZSetOperations` | Valkey zset (or sorted set) operations |
+| `io.valkey.springframework.data.valkey.core.ReactiveGeoOperations` | Valkey geospatial operations such as `GEOADD`, `GEORADIUS`, and others |
+| `io.valkey.springframework.data.valkey.core.ReactiveHashOperations` | Valkey hash operations |
+| `io.valkey.springframework.data.valkey.core.ReactiveHyperLogLogOperations` | Valkey HyperLogLog operations such as (`PFADD`, `PFCOUNT`, and others) |
+| `io.valkey.springframework.data.valkey.core.ReactiveListOperations` | Valkey list operations |
+| `io.valkey.springframework.data.valkey.core.ReactiveSetOperations` | Valkey set operations |
+| `io.valkey.springframework.data.valkey.core.ReactiveValueOperations` | Valkey string (or value) operations |
+| `io.valkey.springframework.data.valkey.core.ReactiveZSetOperations` | Valkey zset (or sorted set) operations |
 
 </TabItem>
 </Tabs>
@@ -72,7 +72,7 @@ Once configured, the template is thread-safe and can be reused across multiple i
 `ValkeyTemplate` uses a Java-based serializer for most of its operations.
 This means that any object written or read by the template is serialized and deserialized through Java.
 
-You can change the serialization mechanism on the template, and the Valkey module offers several implementations, which are available in the `io.valkey.springframework.data.serializer` package.
+You can change the serialization mechanism on the template, and the Valkey module offers several implementations, which are available in the `io.valkey.springframework.data.valkey.serializer` package.
 See [Serializers](#serializers) for more information.
 You can also set any of the serializers to null and use ValkeyTemplate with raw byte arrays by setting the `enableDefaultSerializer` property to `false`.
 Note that the template requires all keys to be non-null.
@@ -135,9 +135,9 @@ class MyConfig {
   xmlns:p="http://www.springframework.org/schema/p"
   xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
 
-  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideConnectionFactory"/>
+  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory"/>
   <!-- valkey template definition -->
-  <bean id="valkeyTemplate" class="io.valkey.springframework.data.core.ValkeyTemplate" p:connection-factory-ref="valkeyConnectionFactory"/>
+  <bean id="valkeyTemplate" class="io.valkey.springframework.data.valkey.core.ValkeyTemplate" p:connection-factory-ref="valkeyConnectionFactory"/>
   ...
 
 </beans>
@@ -244,9 +244,9 @@ class ValkeyConfiguration {
   xmlns:p="http://www.springframework.org/schema/p"
   xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
 
-  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideConnectionFactory"/>
+  <bean id="valkeyConnectionFactory" class="io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory"/>
 
-  <bean id="stringValkeyTemplate" class="io.valkey.springframework.data.core.StringValkeyTemplate" p:connection-factory-ref="valkeyConnectionFactory"/>
+  <bean id="stringValkeyTemplate" class="io.valkey.springframework.data.valkey.core.StringValkeyTemplate" p:connection-factory-ref="valkeyConnectionFactory"/>
 
 </beans>
 ```
@@ -311,27 +311,27 @@ From the framework perspective, the data stored in Valkey is only bytes.
 While Valkey itself supports various types, for the most part, these refer to the way the data is stored rather than what it represents.
 It is up to the user to decide whether the information gets translated into strings or any other objects.
 
-In Spring Data, the conversion between the user (custom) types and raw data (and vice-versa) is handled by Spring Data Valkey in the `io.valkey.springframework.data.serializer` package.
+In Spring Data, the conversion between the user (custom) types and raw data (and vice-versa) is handled by Spring Data Valkey in the `io.valkey.springframework.data.valkey.serializer` package.
 
 This package contains two types of serializers that, as the name implies, take care of the serialization process:
 
-* Two-way serializers based on `io.valkey.springframework.data.serializer.ValkeySerializer`.
+* Two-way serializers based on `io.valkey.springframework.data.valkey.serializer.ValkeySerializer`.
 * Element readers and writers that use `ValkeyElementReader` and ``ValkeyElementWriter``.
 
 The main difference between these variants is that `ValkeySerializer` primarily serializes to `byte[]` while readers and writers use `ByteBuffer`.
 
 Multiple implementations are available (including two that have been already mentioned in this documentation):
 
-* `io.valkey.springframework.data.serializer.JdkSerializationValkeySerializer`, which is used by default for `io.valkey.springframework.data.cache.ValkeyCache` and `io.valkey.springframework.data.core.ValkeyTemplate`.
+* `io.valkey.springframework.data.valkey.serializer.JdkSerializationValkeySerializer`, which is used by default for `io.valkey.springframework.data.valkey.cache.ValkeyCache` and `io.valkey.springframework.data.valkey.core.ValkeyTemplate`.
 * the `StringValkeySerializer`.
 
-However, one can use `OxmSerializer` for Object/XML mapping through Spring [OXM](https://docs.spring.io/spring-framework/reference/data-access.html#oxm) support or `io.valkey.springframework.data.serializer.Jackson2JsonValkeySerializer` or `io.valkey.springframework.data.serializer.GenericJackson2JsonValkeySerializer` for storing data in [JSON](https://en.wikipedia.org/wiki/JSON) format.
+However, one can use `OxmSerializer` for Object/XML mapping through Spring [OXM](https://docs.spring.io/spring-framework/reference/data-access.html#oxm) support or `io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer` or `io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializer` for storing data in [JSON](https://en.wikipedia.org/wiki/JSON) format.
 
 Do note that the storage format is not limited only to values.
 It can be used for keys, values, or hashes without any restrictions.
 
 :::danger
-By default, `io.valkey.springframework.data.cache.ValkeyCache` and `io.valkey.springframework.data.core.ValkeyTemplate` are configured to use Java native serialization.
+By default, `io.valkey.springframework.data.valkey.cache.ValkeyCache` and `io.valkey.springframework.data.valkey.core.ValkeyTemplate` are configured to use Java native serialization.
 Java native serialization is known for allowing the running of remote code caused by payloads that exploit vulnerable libraries and classes injecting unverified bytecode.
 Manipulated input could lead to unwanted code being run in the application during the deserialization step.
 As a consequence, do not use serialization in untrusted environments.

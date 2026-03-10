@@ -6,7 +6,7 @@ description: Drivers documentation
 One of the first tasks when using Valkey and Spring is to connect to the store through the IoC container.
 To do that, a Java connector (or binding) is required.
 No matter the library you choose, you need to use only one set of Spring Data Valkey APIs (which behaves consistently across all connectors).
-The `io.valkey.springframework.data.connection` package and its `ValkeyConnection` and `ValkeyConnectionFactory` interfaces for working with and retrieving active connections to Valkey.
+The `io.valkey.springframework.data.valkey.connection` package and its `ValkeyConnection` and `ValkeyConnectionFactory` interfaces for working with and retrieving active connections to Valkey.
 
 ## ValkeyConnection and ValkeyConnectionFactory
 
@@ -47,11 +47,12 @@ The following overview explains features that are supported by the individual Va
 | Standalone Connections | X | X | X |
 | [Master/Replica Connections](/valkey/connection-modes#write-to-master-read-from-replica) | X | X | X |
 | [Valkey Sentinel](/valkey/connection-modes#valkey-sentinel) | | Master Lookup, Sentinel Authentication, Replica Reads | Master Lookup |
-| [Valkey Cluster](/valkey/cluster) | Cluster Connections, Cluster Node Connections, Replica Reads | Cluster Connections, Cluster Node Connections, Replica Reads | Cluster Connections, Cluster Node Connections |
+| [Valkey Cluster](/valkey/cluster) | Cluster Connections, Cluster Node Connections, Replica Reads, AZ-aware Reads | Cluster Connections, Cluster Node Connections, Replica Reads | Cluster Connections, Cluster Node Connections |
 | Transport Channels | TCP | TCP, OS-native TCP (epoll, kqueue), Unix Domain Sockets | TCP |
-| Connection Pooling | X (using `LinkedBlockingQueue`) | X (using `commons-pool2`) | X (using `commons-pool2`) |
+| Connection Pooling | X (using internal connection pool) | X (using `commons-pool2`) | X (using `commons-pool2`) |
 | Other Connection Features | High-performance async operations | Singleton-connection sharing for non-blocking commands | Pipelining and Transactions mutually exclusive. Cannot use server/connection commands in pipeline/transactions. |
 | SSL Support | X | X | X |
+| IAM Authentication (AWS) | X (ElastiCache, MemoryDB) | | |
 | [Pub/Sub](/valkey/pubsub) | X | X | X |
 | [Pipelining](/valkey/pipelining) | X | X | X (Pipelining and Transactions mutually exclusive) |
 | [Transactions](/valkey/transactions) | X | X | X (Pipelining and Transactions mutually exclusive) |
@@ -60,7 +61,7 @@ The following overview explains features that are supported by the individual Va
 
 ## Configuring the Valkey GLIDE Connector
 
-[Valkey GLIDE](https://github.com/valkey-io/valkey-glide) is a high-performance, cross-language client library for Valkey, supported by Spring Data Valkey through the `io.valkey.springframework.data.connection.valkeyglide` package.
+[Valkey GLIDE](https://github.com/valkey-io/valkey-glide) is a high-performance, cross-language client library for Valkey, supported by Spring Data Valkey through the `io.valkey.springframework.data.valkey.connection.valkeyglide` package.
 
 *Add the following to the pom.xml files `dependencies` element:*
 
@@ -121,11 +122,11 @@ public ValkeyGlideConnectionFactory valkeyGlideConnectionFactory() {
 }
 ```
 
-For more detailed client configuration options, see `io.valkey.springframework.data.connection.valkeyglide.ValkeyGlideClientConfiguration`.
+For more detailed client configuration options, see `io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration`.
 
 ## Configuring the Lettuce Connector
 
-[Lettuce](https://github.com/lettuce-io/lettuce-core) is a [Netty](https://netty.io/)-based open-source connector supported by Spring Data Valkey through the `io.valkey.springframework.data.connection.lettuce` package.
+[Lettuce](https://github.com/lettuce-io/lettuce-core) is a [Netty](https://netty.io/)-based open-source connector supported by Spring Data Valkey through the `io.valkey.springframework.data.valkey.connection.lettuce` package.
 
 *Add the following to the pom.xml files `dependencies` element:*
 
@@ -177,7 +178,7 @@ public LettuceConnectionFactory lettuceConnectionFactory() {
 }
 ```
 
-For more detailed client configuration tweaks, see `io.valkey.springframework.data.connection.lettuce.LettuceClientConfiguration`.
+For more detailed client configuration tweaks, see `io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientConfiguration`.
 
 Lettuce integrates with Netty's [native transports](https://netty.io/wiki/native-transports.html), letting you use Unix domain sockets to communicate with Valkey.
 Make sure to include the appropriate native transport dependencies that match your runtime environment.
@@ -201,7 +202,7 @@ Netty currently supports the epoll (Linux) and kqueue (BSD/macOS) interfaces for
 
 ## Configuring the Jedis Connector
 
-[Jedis](https://github.com/redis/jedis) is a community-driven connector supported by the Spring Data Valkey module through the `io.valkey.springframework.data.connection.jedis` package.
+[Jedis](https://github.com/redis/jedis) is a community-driven connector supported by the Spring Data Valkey module through the `io.valkey.springframework.data.valkey.connection.jedis` package.
 
 *Add the following to the pom.xml files `dependencies` element:*
 

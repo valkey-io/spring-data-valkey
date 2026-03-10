@@ -8,7 +8,7 @@ Spring offers sophisticated support for creating bean instances.
 Spring Data Valkey ships with a custom CDI extension that lets you use the repository abstraction in CDI environments.
 The extension is part of the JAR, so, to activate it, drop the Spring Data Valkey JAR into your classpath.
 
-You can then set up the infrastructure by implementing a CDI Producer for the `io.valkey.springframework.data.connection.ValkeyConnectionFactory` and `io.valkey.springframework.data.core.ValkeyOperations`, as shown in the following example:
+You can then set up the infrastructure by implementing a CDI Producer for the `io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory` and `io.valkey.springframework.data.valkey.core.ValkeyOperations`, as shown in the following example:
 
 ```java
 class ValkeyOperationsProducer {
@@ -60,6 +60,6 @@ class RepositoryClient {
 }
 ```
 
-A Valkey Repository requires `io.valkey.springframework.data.core.ValkeyKeyValueAdapter` and `io.valkey.springframework.data.core.ValkeyKeyValueTemplate` instances.
+A Valkey Repository requires `io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter` and `io.valkey.springframework.data.valkey.core.ValkeyKeyValueTemplate` instances.
 These beans are created and managed by the Spring Data CDI extension if no provided beans are found.
-You can, however, supply your own beans to configure the specific properties of `io.valkey.springframework.data.core.ValkeyKeyValueAdapter` and `io.valkey.springframework.data.core.ValkeyKeyValueTemplate`.
+You can, however, supply your own beans to configure the specific properties of `io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter` and `io.valkey.springframework.data.valkey.core.ValkeyKeyValueTemplate`.

@@ -3,8 +3,8 @@ title: Valkey Cache
 description: Valkey Cache documentation
 ---
 
-Spring Data Valkey provides an implementation of Spring Framework's [Cache Abstraction](https://docs.spring.io/spring-framework/reference/integration.html#cache) in the `io.valkey.springframework.data.cache` package.
-To use Valkey as a backing implementation, add `io.valkey.springframework.data.cache.ValkeyCacheManager` to your configuration, as follows:
+Spring Data Valkey provides an implementation of Spring Framework's [Cache Abstraction](https://docs.spring.io/spring-framework/reference/integration.html#cache) in the `io.valkey.springframework.data.valkey.cache` package.
+To use Valkey as a backing implementation, add `io.valkey.springframework.data.valkey.cache.ValkeyCacheManager` to your configuration, as follows:
 
 ```java
 @Bean
@@ -13,7 +13,7 @@ public ValkeyCacheManager cacheManager(ValkeyConnectionFactory connectionFactory
 }
 ```
 
-`ValkeyCacheManager` behavior can be configured with `io.valkey.springframework.data.cache.ValkeyCacheManager$ValkeyCacheManagerBuilder`, letting you set the default `io.valkey.springframework.data.cache.ValkeyCacheManager`, transaction behavior, and predefined caches.
+`ValkeyCacheManager` behavior can be configured with `io.valkey.springframework.data.valkey.cache.ValkeyCacheManager$ValkeyCacheManagerBuilder`, letting you set the default `io.valkey.springframework.data.valkey.cache.ValkeyCacheManager`, transaction behavior, and predefined caches.
 
 ```java
 ValkeyCacheManager cacheManager = ValkeyCacheManager.builder(connectionFactory)
@@ -26,7 +26,7 @@ ValkeyCacheManager cacheManager = ValkeyCacheManager.builder(connectionFactory)
 
 As shown in the preceding example, `ValkeyCacheManager` allows custom configuration on a per-cache basis.
 
-The behavior of `io.valkey.springframework.data.cache.ValkeyCache` created by `io.valkey.springframework.data.cache.ValkeyCacheManager` is defined with `ValkeyCacheConfiguration`.
+The behavior of `io.valkey.springframework.data.valkey.cache.ValkeyCache` created by `io.valkey.springframework.data.valkey.cache.ValkeyCacheManager` is defined with `ValkeyCacheConfiguration`.
 The configuration lets you set key expiration times, prefixes, and `ValkeySerializer` implementations for converting to and from the binary storage format, as shown in the following example:
 
 ```java
@@ -35,7 +35,7 @@ ValkeyCacheConfiguration cacheConfiguration = ValkeyCacheConfiguration.defaultCa
     .disableCachingNullValues();
 ```
 
-`io.valkey.springframework.data.cache.ValkeyCacheManager` defaults to a lock-free `io.valkey.springframework.data.cache.ValkeyCacheWriter` for reading and writing binary values.
+`io.valkey.springframework.data.valkey.cache.ValkeyCacheManager` defaults to a lock-free `io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter` for reading and writing binary values.
 Lock-free caching improves throughput.
 The lack of entry locking can lead to overlapping, non-atomic commands for the `Cache` `putIfAbsent` and `clean` operations, as those require multiple commands to be sent to Valkey.
 The locking counterpart prevents command overlap by setting an explicit lock key and checking against presence of this key, which leads to additional requests and potential command wait times.

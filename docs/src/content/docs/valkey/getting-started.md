@@ -20,9 +20,9 @@ Create the main application to run, as the following example shows:
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import io.valkey.springframework.data.connection.ValkeyConnectionFactory;
-import io.valkey.springframework.data.connection.glide.ValkeyGlideConnectionFactory;
-import io.valkey.springframework.data.core.ValkeyTemplate;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.glide.ValkeyGlideConnectionFactory;
+import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 
 public class ValkeyApplication {
 
@@ -46,6 +46,6 @@ public class ValkeyApplication {
 ```
 Even in this simple example, there are a few notable things to point out:
 
-* You can create an instance of `io.valkey.springframework.data.core.ValkeyTemplate` with a `io.valkey.springframework.data.connection.ValkeyConnectionFactory`. Connection factories are an abstraction on top of the supported drivers.
+* You can create an instance of `io.valkey.springframework.data.valkey.core.ValkeyTemplate` with a `io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory`. Connection factories are an abstraction on top of the supported drivers.
 * For reactive programming with `ReactiveValkeyTemplate`, only Lettuce is supported.
 * There's no single way to use Valkey as it comes with support for a wide range of data structures such as plain keys ("strings"), lists, sets, sorted sets, streams, hashes and so on.

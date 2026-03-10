@@ -4,10 +4,10 @@ description: Transactions documentation
 ---
 
 Valkey provides support for [transactions](https://valkey.io/topics/transactions) through the `multi`, `exec`, and `discard` commands.
-These operations are available on `io.valkey.springframework.data.core.ValkeyTemplate`.
+These operations are available on `io.valkey.springframework.data.valkey.core.ValkeyTemplate`.
 However, `ValkeyTemplate` is not guaranteed to run all the operations in the transaction with the same connection.
 
-Spring Data Valkey provides the `io.valkey.springframework.data.core.SessionCallback` interface for use when multiple operations need to be performed with the same `connection`, such as when using Valkey transactions.The following example uses the `multi` method:
+Spring Data Valkey provides the `io.valkey.springframework.data.valkey.core.SessionCallback` interface for use when multiple operations need to be performed with the same `connection`, such as when using Valkey transactions.The following example uses the `multi` method:
 
 ```java
 //execute a transaction

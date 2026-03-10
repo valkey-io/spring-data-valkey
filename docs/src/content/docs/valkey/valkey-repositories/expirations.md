@@ -5,7 +5,7 @@ description: Expirations documentation
 
 Objects stored in Valkey may be valid only for a certain amount of time.
 This is especially useful for persisting short-lived objects in Valkey without having to remove them manually when they reach their end of life.
-The expiration time in seconds can be set with `@ValkeyHash(timeToLive=...)` as well as by using `io.valkey.springframework.data.core.convert.KeyspaceConfiguration$KeyspaceSettings` (see [Keyspaces](/valkey/valkey-repositories/keyspaces)).
+The expiration time in seconds can be set with `@ValkeyHash(timeToLive=...)` as well as by using `io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration$KeyspaceSettings` (see [Keyspaces](/valkey/valkey-repositories/keyspaces)).
 
 More flexible expiration times can be set by using the `@TimeToLive` annotation on either a numeric property or a method.
 However, do not apply `@TimeToLive` on both a method and a property within the same class.
@@ -39,16 +39,16 @@ public class TimeToLiveOnMethod {
 Annotating a property explicitly with `@TimeToLive` reads back the actual `TTL` or `PTTL` value from Valkey. -1 indicates that the object has no associated expiration.
 :::
 
-The repository implementation ensures subscription to [Valkey keyspace notifications](https://valkey.io/topics/notifications) via `io.valkey.springframework.data.listener.ValkeyMessageListenerContainer`.
+The repository implementation ensures subscription to [Valkey keyspace notifications](https://valkey.io/topics/notifications) via `io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer`.
 
 When the expiration is set to a positive value, the corresponding `EXPIRE` command is run.
 In addition to persisting the original, a phantom copy is persisted in Valkey and set to expire five minutes after the original one.
-This is done to enable the Repository support to publish `io.valkey.springframework.data.core.ValkeyKeyExpiredEvent`, holding the expired value in Spring's `ApplicationEventPublisher` whenever a key expires, even though the original values have already been removed.
+This is done to enable the Repository support to publish `io.valkey.springframework.data.valkey.core.ValkeyKeyExpiredEvent`, holding the expired value in Spring's `ApplicationEventPublisher` whenever a key expires, even though the original values have already been removed.
 Expiry events are received on all connected applications that use Spring Data Valkey repositories.
 
 By default, the key expiry listener is disabled when initializing the application.
 The startup mode can be adjusted in `@EnableValkeyRepositories` or `ValkeyKeyValueAdapter` to start the listener with the application or upon the first insert of an entity with a TTL.
-See `io.valkey.springframework.data.core.ValkeyKeyValueAdapter$EnableKeyspaceEvents` for possible values.
+See `io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter$EnableKeyspaceEvents` for possible values.
 
 The `ValkeyKeyExpiredEvent` holds a copy of the expired domain object as well as the key.
 
