@@ -13,6 +13,7 @@ This project provides both the [core Spring Data Valkey library](spring-data-val
 * `ValkeyTemplate` that provides a high level abstraction for performing various Valkey operations, exception translation and serialization support.
 * Pubsub support (such as a MessageListenerContainer for message-driven POJOs).
 * OpenTelemetry instrumentation support when using the Valkey GLIDE client for emitting traces and metrics for Valkey operations.
+* AWS IAM authentication support for Valkey GLIDE when connecting to Amazon ElastiCache or MemoryDB, with automatic token generation and refresh.
 * Valkey Sentinel support is currently available in Jedis and Lettuce, while support in Valkey GLIDE is planned for a future release.
 * Reactive API using Lettuce.
 * JDK, String, JSON and Spring Object/XML mapping serializers.
@@ -34,6 +35,7 @@ This project provides both the [core Spring Data Valkey library](spring-data-val
 * SSL/TLS connection support with Spring Boot SSL bundles.
 * Spring Boot Actuator health indicators and metrics for Valkey connections.
 * Property-based OpenTelemetry configuration for Valkey GLIDE, enabling automatic trace and metric export without application code changes.
+* Property-based IAM authentication configuration for Valkey GLIDE when connecting to AWS ElastiCache or MemoryDB, with automatic token generation and refresh.
 * `@DataValkeyTest` slice test annotation for focused Valkey testing.
 * Testcontainers integration with `@ServiceConnection` annotation.
 * Docker Compose support for automatic service detection and startup.

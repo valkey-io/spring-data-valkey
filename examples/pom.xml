@@ -18,6 +18,7 @@
 	<description>Example projects demonstrating Spring Data Valkey features</description>
 
 	<modules>
+		<module>boot-iam-auth</module>
 		<module>boot-telemetry</module>
 		<module>cache</module>
 		<module>cluster</module>

@@ -133,6 +133,30 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 			builder.useOpenTelemetry(otelConfig);
 		}
 
+		// Apply IAM authentication configuration if configured
+		ValkeyProperties.ValkeyGlide.IamAuthentication iamProperties = valkeyGlideProperties.getIamAuthentication();
+		if (iamProperties != null) {
+			if (!StringUtils.hasText(iamProperties.getClusterName())
+					|| !StringUtils.hasText(iamProperties.getService())
+					|| !StringUtils.hasText(iamProperties.getRegion())) {
+				throw new IllegalArgumentException(
+					"IAM authentication requires all of: cluster-name, service, and region. "
+					+ "Please set spring.data.valkey.valkey-glide.iam-authentication.cluster-name, "
+					+ "spring.data.valkey.valkey-glide.iam-authentication.service, and "
+					+ "spring.data.valkey.valkey-glide.iam-authentication.region");
+			}
+			ValkeyGlideClientConfiguration.AwsServiceType serviceType =
+				ValkeyGlideClientConfiguration.AwsServiceType.valueOf(iamProperties.getService().toUpperCase());
+			ValkeyGlideClientConfiguration.IamAuthenticationForGlide iamConfig =
+				new ValkeyGlideClientConfiguration.IamAuthenticationForGlide(
+					iamProperties.getClusterName(),
+					serviceType,
+					iamProperties.getRegion(),
+					iamProperties.getRefreshIntervalSeconds()
+				);
+			builder.useIamAuthentication(iamConfig);
+		}
+
 		builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 		return builder.build();
 	}

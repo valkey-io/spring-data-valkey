@@ -40,6 +40,7 @@ class ValkeyPropertiesTests {
 		assertThat(valkeyGlide.getMaxPoolSize()).isEqualTo(8);
 		assertThat(valkeyGlide.getOpenTelemetry()).isNotNull();
 		assertThat(valkeyGlide.getOpenTelemetry().isEnabled()).isEqualTo(false);
+		assertThat(valkeyGlide.getIamAuthentication()).isNull();
 	}
 
 }

@@ -79,6 +79,24 @@
           "name": "any"
         }
       ]
+    },
+    {
+      "name": "spring.data.valkey.valkeyglide.iam-authentication.service",
+      "values": [
+        {
+          "value": "ELASTICACHE",
+          "description": "Amazon ElastiCache service."
+        },
+        {
+          "value": "MEMORYDB",
+          "description": "Amazon MemoryDB service."
+        }
+      ],
+      "providers": [
+        {
+          "name": "any"
+        }
+      ]
     }
   ]
 }

@@ -27,11 +27,13 @@ import glide.api.models.configuration.AdvancedGlideClusterClientConfiguration;
 import glide.api.models.configuration.BackoffStrategy;
 import glide.api.models.configuration.ClusterSubscriptionConfiguration;
 import glide.api.models.configuration.GlideClusterClientConfiguration;
+import glide.api.models.configuration.IamAuthConfig;
 import glide.api.models.configuration.NodeAddress;
 import glide.api.models.configuration.ReadFrom;
 import glide.api.models.configuration.RequestRoutingConfiguration.ByAddressRoute;
 import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import glide.api.models.configuration.RequestRoutingConfiguration.SimpleMultiNodeRoute;
+import glide.api.models.configuration.ServiceType;
 import glide.api.models.ClusterValue;
 import glide.api.models.GlideString;
 import org.springframework.lang.Nullable;
@@ -40,6 +42,8 @@ import org.springframework.util.StringUtils;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration.AwsServiceType;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration.IamAuthenticationForGlide;
 import glide.api.GlideClusterClient;
 
 /**
@@ -70,8 +74,33 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
         });
         
         // Set credentials from driver-agnostic configuration
+        IamAuthenticationForGlide iamAuth = valkeyGlideConfiguration.getIamAuthentication();
         ValkeyPassword password = clusterConfig.getPassword();
-        if (!password.equals(ValkeyPassword.none())) {
+
+        if (iamAuth != null) {
+            // IAM authentication — mutually exclusive with password
+            String username = clusterConfig.getUsername();
+            if (!StringUtils.hasText(username)) {
+                throw new IllegalArgumentException(
+                    "Username is required for IAM authentication. "
+                    + "Set spring.data.valkey.username or configure username in ValkeyClusterConfiguration.");
+            }
+
+            IamAuthConfig.IamAuthConfigBuilder iamConfigBuilder = IamAuthConfig.builder()
+                .clusterName(iamAuth.clusterName())
+                .service(mapServiceType(iamAuth.serviceType()))
+                .region(iamAuth.region());
+
+            if (iamAuth.refreshIntervalSeconds() != null) {
+                iamConfigBuilder.refreshIntervalSeconds(iamAuth.refreshIntervalSeconds());
+            }
+
+            configBuilder.credentials(
+                glide.api.models.configuration.ServerCredentials.builder()
+                    .username(username)
+                    .iamConfig(iamConfigBuilder.build())
+                    .build());
+        } else if (!password.equals(ValkeyPassword.none())) {
             String username = clusterConfig.getUsername();
             
             if (StringUtils.hasText(username)) {
@@ -449,5 +478,15 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
     
     public Object customCommand(GlideString[] args, ValkeyClusterNode node) throws InterruptedException, ExecutionException {
         return glideClusterClient.customCommand(args, new ByAddressRoute(node.getHost(), node.getPort())).get().getSingleValue();
+    }
+
+    /**
+     * Maps the Spring Data Valkey {@link AwsServiceType} enum to the Glide-native {@link ServiceType} enum.
+     */
+    private static ServiceType mapServiceType(AwsServiceType serviceType) {
+        return switch (serviceType) {
+            case ELASTICACHE -> ServiceType.ELASTICACHE;
+            case MEMORYDB -> ServiceType.MEMORYDB;
+        };
     }
 }

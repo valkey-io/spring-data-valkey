@@ -21,11 +21,15 @@ import glide.api.models.GlideString;
 import glide.api.models.configuration.AdvancedGlideClientConfiguration;
 import glide.api.models.configuration.BackoffStrategy;
 import glide.api.models.configuration.GlideClientConfiguration;
+import glide.api.models.configuration.IamAuthConfig;
 import glide.api.models.configuration.NodeAddress;
 import glide.api.models.configuration.ReadFrom;
+import glide.api.models.configuration.ServiceType;
 import glide.api.models.configuration.StandaloneSubscriptionConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration.AwsServiceType;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration.IamAuthenticationForGlide;
 import glide.api.GlideClient;
 import glide.api.models.Batch;
 import org.springframework.lang.Nullable;
@@ -54,8 +58,33 @@ class StandaloneGlideClientAdapter implements UnifiedGlideClient {
             .build());
         
         // Set credentials from driver-agnostic configuration
+        IamAuthenticationForGlide iamAuth = valkeyGlideConfiguration.getIamAuthentication();
         ValkeyPassword password = standaloneConfig.getPassword();
-        if (!password.equals(ValkeyPassword.none())) {
+
+        if (iamAuth != null) {
+            // IAM authentication — mutually exclusive with password
+            String username = standaloneConfig.getUsername();
+            if (!StringUtils.hasText(username)) {
+                throw new IllegalArgumentException(
+                    "Username is required for IAM authentication. "
+                    + "Set spring.data.valkey.username or configure username in ValkeyStandaloneConfiguration.");
+            }
+
+            IamAuthConfig.IamAuthConfigBuilder iamConfigBuilder = IamAuthConfig.builder()
+                .clusterName(iamAuth.clusterName())
+                .service(mapServiceType(iamAuth.serviceType()))
+                .region(iamAuth.region());
+
+            if (iamAuth.refreshIntervalSeconds() != null) {
+                iamConfigBuilder.refreshIntervalSeconds(iamAuth.refreshIntervalSeconds());
+            }
+
+            configBuilder.credentials(
+                glide.api.models.configuration.ServerCredentials.builder()
+                    .username(username)
+                    .iamConfig(iamConfigBuilder.build())
+                    .build());
+        } else if (!password.equals(ValkeyPassword.none())) {
             String username = standaloneConfig.getUsername();
             
             if (StringUtils.hasText(username)) {
@@ -212,6 +241,16 @@ class StandaloneGlideClientAdapter implements UnifiedGlideClient {
         if (getDelegatingListener() != null) {
             getDelegatingListener().clearListener();
         }
+    }
+
+    /**
+     * Maps the Spring Data Valkey {@link AwsServiceType} enum to the Glide-native {@link ServiceType} enum.
+     */
+    private static ServiceType mapServiceType(AwsServiceType serviceType) {
+        return switch (serviceType) {
+            case ELASTICACHE -> ServiceType.ELASTICACHE;
+            case MEMORYDB -> ServiceType.MEMORYDB;
+        };
     }
 
 }

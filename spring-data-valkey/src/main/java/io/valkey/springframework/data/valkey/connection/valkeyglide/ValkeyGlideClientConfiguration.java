@@ -21,6 +21,7 @@ import java.util.Optional;
 import glide.api.models.configuration.BackoffStrategy;
 import glide.api.models.configuration.ReadFrom;
 import org.springframework.lang.Nullable;
+import org.springframework.util.Assert;
 
 /**
  * Configuration interface for Valkey-Glide client settings.
@@ -119,12 +120,64 @@ public interface ValkeyGlideClientConfiguration {
     OpenTelemetryForGlide getOpenTelemetryForGlide();
 
     /**
+     * Get IAM authentication configuration for Valkey-Glide client connecting to
+     * AWS ElastiCache or MemoryDB.
+     *
+     * @return The {@link IamAuthenticationForGlide} configuration. May be {@literal null} if not set.
+     */
+    @Nullable
+    IamAuthenticationForGlide getIamAuthentication();
+
+    /**
      * Get client options for mode-specific configurations.
      * Placeholder for future mode-specific extensions.
      * 
      * @return Optional containing client options if configured.
      */
     Optional<GlideClientOptions> getClientOptions();
+
+    /**
+     * Supported AWS service types for IAM authentication with ElastiCache and MemoryDB.
+     */
+    enum AwsServiceType {
+        /** Amazon ElastiCache service. */
+        ELASTICACHE,
+        /** Amazon MemoryDB service. */
+        MEMORYDB
+    }
+
+    /**
+     * IAM authentication configuration for GLIDE client connecting to AWS ElastiCache or MemoryDB.
+     *
+     * <p>When IAM authentication is configured, the GLIDE client will automatically generate and
+     * refresh IAM authentication tokens. This is mutually exclusive with password-based authentication.
+     *
+     * @param clusterName            the name of the ElastiCache/MemoryDB cluster (required)
+     * @param serviceType            the AWS service type — {@link AwsServiceType#ELASTICACHE} or
+     *                               {@link AwsServiceType#MEMORYDB} (required)
+     * @param region                 the AWS region where the cluster is located (required)
+     * @param refreshIntervalSeconds optional refresh interval in seconds for renewing IAM tokens;
+     *                               if {@code null}, defaults to 300 seconds (5 minutes)
+     */
+    record IamAuthenticationForGlide(
+            String clusterName,
+            AwsServiceType serviceType,
+            String region,
+            @Nullable Integer refreshIntervalSeconds
+    ) {
+        /**
+         * Creates a new IAM authentication configuration.
+         *
+         * @throws IllegalArgumentException if {@code clusterName}, {@code serviceType}, or
+         *                                  {@code region} is {@code null}
+         */
+        public IamAuthenticationForGlide {
+            Assert.notNull(clusterName, "clusterName must not be null");
+            Assert.notNull(serviceType, "serviceType must not be null");
+            Assert.notNull(region, "region must not be null");
+        }
+    }
+
     /**
      * Record representing OpenTelemetry configuration for Valkey-Glide client.
      *
@@ -167,6 +220,7 @@ public interface ValkeyGlideClientConfiguration {
         private @Nullable BackoffStrategy reconnectStrategy;
         private int maxPoolSize = 8; // Default pool size
         private @Nullable OpenTelemetryForGlide openTelemetryForGlide;
+        private @Nullable IamAuthenticationForGlide iamAuthentication;
         
         
         ValkeyGlideClientConfigurationBuilder() {}
@@ -270,6 +324,22 @@ public interface ValkeyGlideClientConfiguration {
             this.maxPoolSize = maxPoolSize;
             return this;
         }
+
+        /**
+         * Configure IAM authentication for connecting to AWS ElastiCache or MemoryDB.
+         *
+         * <p>When IAM authentication is enabled, the GLIDE client will automatically generate and
+         * refresh IAM authentication tokens. This is mutually exclusive with password-based
+         * authentication.
+         *
+         * @param iamAuthentication the IAM authentication configuration.
+         * @return {@literal this} builder.
+         */
+        public ValkeyGlideClientConfigurationBuilder useIamAuthentication(
+                IamAuthenticationForGlide iamAuthentication) {
+            this.iamAuthentication = iamAuthentication;
+            return this;
+        }
         
         /**
          * Build the {@link ValkeyGlideClientConfiguration}.
@@ -286,7 +356,8 @@ public interface ValkeyGlideClientConfiguration {
                 clientAZ,
                 reconnectStrategy,
                 maxPoolSize,
-                openTelemetryForGlide
+                openTelemetryForGlide,
+                iamAuthentication
             );
         }
     }

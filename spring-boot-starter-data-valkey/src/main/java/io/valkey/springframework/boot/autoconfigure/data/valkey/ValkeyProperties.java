@@ -610,6 +610,8 @@ public class ValkeyProperties {
 
 		private final OpenTelemetry openTelemetry = new OpenTelemetry();
 
+		private IamAuthentication iamAuthentication;
+
 		public Duration getConnectionTimeout() {
 			return this.connectionTimeout;
 		}
@@ -656,6 +658,14 @@ public class ValkeyProperties {
 
 		public OpenTelemetry getOpenTelemetry() {
 			return this.openTelemetry;
+		}
+
+		public IamAuthentication getIamAuthentication() {
+			return this.iamAuthentication;
+		}
+
+		public void setIamAuthentication(IamAuthentication iamAuthentication) {
+			this.iamAuthentication = iamAuthentication;
 		}
 
 		public static class Cluster {
@@ -766,6 +776,67 @@ public class ValkeyProperties {
 
 			public void setFlushIntervalMs(Long flushIntervalMs) {
 				this.flushIntervalMs = flushIntervalMs;
+			}
+
+		}
+
+		/**
+		 * IAM authentication configuration for GLIDE client connecting to
+		 * AWS ElastiCache or MemoryDB.
+		 */
+		public static class IamAuthentication {
+
+			/**
+			 * The name of the ElastiCache/MemoryDB cluster.
+			 */
+			private String clusterName;
+
+			/**
+			 * The AWS service type: ELASTICACHE or MEMORYDB.
+			 */
+			private String service;
+
+			/**
+			 * The AWS region where the cluster is located (e.g., us-east-1).
+			 */
+			private String region;
+
+			/**
+			 * Optional refresh interval in seconds for renewing IAM authentication tokens.
+			 * Defaults to 300 seconds (5 minutes) if not set.
+			 */
+			private Integer refreshIntervalSeconds;
+
+			public String getClusterName() {
+				return this.clusterName;
+			}
+
+			public void setClusterName(String clusterName) {
+				this.clusterName = clusterName;
+			}
+
+			public String getService() {
+				return this.service;
+			}
+
+			public void setService(String service) {
+				this.service = service;
+			}
+
+			public String getRegion() {
+				return this.region;
+			}
+
+			public void setRegion(String region) {
+				this.region = region;
+			}
+
+			public Integer getRefreshIntervalSeconds() {
+				return this.refreshIntervalSeconds;
+			}
+
+			public void setRefreshIntervalSeconds(Integer refreshIntervalSeconds) {
+				this.refreshIntervalSeconds = refreshIntervalSeconds;
 			}
 
 		}
