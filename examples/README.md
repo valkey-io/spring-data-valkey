@@ -41,6 +41,7 @@ Replace `quickstart` with any example name below. To run from project root, use 
 | **scripting** | Lua script execution (EVAL, EVALSHA) for atomic operations |
 | **telemetry** | OpenTelemetry instrumentation with manual SDK setup for tracing and metrics |
 | **boot-telemetry** | Spring Boot with OpenTelemetry enabled via configuration properties and Docker Compose |
+| **boot-iam-auth** | Spring Boot using AWS IAM authentication via Valkey-GLIDE to connect to Amazon ElastiCache or Amazon MemoryDB clusters |
 
 ## Notes
 
