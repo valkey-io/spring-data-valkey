@@ -13,6 +13,9 @@ export default defineConfig({
 	},
 	integrations: [
 		starlight({
+			components: {
+				Hero: './src/components/Hero.astro',
+			},
 			title: 'Spring Data Valkey',
 			logo: {
 				light: './src/assets/spring-data-valkey-logo-with-name-light.svg',
