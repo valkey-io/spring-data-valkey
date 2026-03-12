@@ -405,10 +405,10 @@ jobs:
           echo "✓ Built spring-data-valkey version: $SDV_VERSION"
           echo "version=$SDV_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Install valkey-glide build dependencies (primary)
-        if: steps.driver-info.outputs.build_glide_primary == 'true'
+      - name: Install valkey-glide build dependencies
+        if: steps.driver-info.outputs.build_glide_primary == 'true' || (steps.driver-info.outputs.secondary_driver_id == 'valkey-glide' && steps.driver-info.outputs.secondary_is_commit == 'true')
         run: |
-          echo "Installing dependencies for building valkey-glide from source (primary driver)"
+          echo "Installing dependencies for building valkey-glide from source"
 
           # Install system dependencies
           sudo apt-get update
@@ -460,34 +460,6 @@ jobs:
           echo "✓ Built valkey-glide $GLIDE_VERSION from commit $COMMIT_ID (primary driver)"
           echo "version=$GLIDE_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Install valkey-glide build dependencies (secondary)
-        if: steps.driver-info.outputs.secondary_driver_id == 'valkey-glide' && steps.driver-info.outputs.secondary_is_commit == 'true'
-        run: |
-          echo "Installing dependencies for building valkey-glide from source (secondary driver)"
-
-          # Install system dependencies
-          sudo apt-get update
-          sudo apt-get install -y git gcc pkg-config openssl libssl-dev unzip cmake python3-pip
-
-          # Install Rust
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source "$HOME/.cargo/env"
-          rustc --version
-
-          # Install protobuf compiler v29.1
-          PROTOC_VERSION="29.1"
-          curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          unzip -o "protoc-${PROTOC_VERSION}-linux-x86_64.zip" -d "$HOME/.local"
-          rm "protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          export PATH="$PATH:$HOME/.local/bin"
-          protoc --version
-
-          # Install ziglang and cargo-zigbuild (required for Linux builds)
-          sudo python3 -m pip install ziglang
-          cargo install --locked cargo-zigbuild
-
-          echo "✓ valkey-glide build dependencies installed"
-
       - name: Build valkey-glide from source (secondary)
         id: build-glide-secondary
         if: steps.driver-info.outputs.secondary_driver_id == 'valkey-glide' && steps.driver-info.outputs.secondary_is_commit == 'true'
@@ -524,32 +496,24 @@ jobs:
           SECONDARY_VERSION="${{ steps.versions.outputs.secondary_version }}"
           SECONDARY_IS_COMMIT="${{ steps.driver-info.outputs.secondary_is_commit }}"
 
-          # Update spring-data-valkey version based on primary_version input
+          # Update primary driver version if supplied
           PRIMARY_VERSION="${{ steps.versions.outputs.primary_version }}"
           PRIMARY_IS_COMMIT="${{ steps.driver-info.outputs.primary_is_commit }}"
 
-          if [ "$DRIVER_ID" = "spring-data-valkey" ] && [ -n "$PRIMARY_VERSION" ]; then
-            if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
-              # Use the version from the local build
-              SDV_VERSION="${{ steps.build-sdv.outputs.version }}"
-              echo "Updating spring-data-valkey to locally built $SDV_VERSION"
-              sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$SDV_VERSION</spring-data-valkey.version>|" java/pom.xml
-            else
-              echo "Updating spring-data-valkey to release version $PRIMARY_VERSION"
-              sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$PRIMARY_VERSION</spring-data-valkey.version>|" java/pom.xml
-            fi
-          fi
-
-          # Update primary driver version if a version/commit-id for it was supplied for standalone drivers. Otherwise use defaults.
-          # If primary version is glide and it was built locally, update the pom.xml file to use this built version.
-          # Otherwise, update the version supplied in the pom.xml.
-          PRIMARY_VERSION="${{ steps.inputs.outputs.primary_version }}"
-          PRIMARY_IS_COMMIT="${{ steps.driver-info.outputs.primary_is_commit }}"
-          if [ "$DRIVER_ID" != "spring-data-valkey" ] && [ -n "$PRIMARY_VERSION" ]; then
+          if [ -n "$PRIMARY_VERSION" ]; then
             case "$DRIVER_ID" in
+              spring-data-valkey)
+                if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
+                  SDV_VERSION="${{ steps.build-sdv.outputs.version }}"
+                  echo "Updating spring-data-valkey to locally built $SDV_VERSION"
+                  sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$SDV_VERSION</spring-data-valkey.version>|" java/pom.xml
+                else
+                  echo "Updating spring-data-valkey to release version $PRIMARY_VERSION"
+                  sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$PRIMARY_VERSION</spring-data-valkey.version>|" java/pom.xml
+                fi
+                ;;
               valkey-glide)
                 if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
-                  # Use the version from the local build
                   GLIDE_VERSION="${{ steps.build-glide-primary.outputs.version }}"
                   echo "Updating valkey-glide (primary) to locally built $GLIDE_VERSION"
                   sed -i "s|<valkey-glide.version>.*</valkey-glide.version>|<valkey-glide.version>$GLIDE_VERSION</valkey-glide.version>|" java/pom.xml
