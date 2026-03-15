@@ -143,7 +143,10 @@ jobs:
         id: resp-bench
         run: |
           echo "Cloning resp-bench repository..."
-          git clone --depth 1 ${{ env.RESP_BENCH_REPO }} resp-bench
+          git clone ${{ env.RESP_BENCH_REPO }} resp-bench
+          cd resp-bench
+          git checkout 658c1f3a5f85bbb973e62470d967fdbbc32282f3
+          cd ..
           RESP_BENCH_COMMIT=$(git -C resp-bench rev-parse HEAD)
           echo "commit=$RESP_BENCH_COMMIT" >> $GITHUB_OUTPUT
           echo "✓ resp-bench cloned (commit: ${RESP_BENCH_COMMIT:0:7})"
