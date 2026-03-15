@@ -314,36 +314,32 @@ jobs:
 
           # Check if primary version is a commit ID (7-40 hex chars) or version number
           PRIMARY_VERSION="${{ steps.inputs.outputs.primary_version }}"
+          BUILD_GLIDE=false
           if [ -n "$PRIMARY_VERSION" ] && [[ "$PRIMARY_VERSION" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
             echo "primary_is_commit=true" >> $GITHUB_OUTPUT
             echo "Detected: primary_version '$PRIMARY_VERSION' is a commit ID"
-            # Set build flags based on driver type
             if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
               echo "build_sdv=true" >> $GITHUB_OUTPUT
             elif [ "$DRIVER_ID" = "valkey-glide" ]; then
-              echo "build_glide_primary=true" >> $GITHUB_OUTPUT
+              BUILD_GLIDE=true
             else
               echo "ERROR: Commit IDs are only supported for spring-data-valkey and valkey-glide primary drivers"
               exit 1
             fi
           else
             echo "primary_is_commit=false" >> $GITHUB_OUTPUT
-            if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
-              echo "build_sdv=false" >> $GITHUB_OUTPUT
-            elif [ "$DRIVER_ID" = "valkey-glide" ]; then
-              echo "build_glide_primary=false" >> $GITHUB_OUTPUT
-            fi
+            echo "build_sdv=false" >> $GITHUB_OUTPUT
             if [ -n "$PRIMARY_VERSION" ]; then
               echo "Detected: primary_version '$PRIMARY_VERSION' is a release version"
             fi
           fi
-
 
           # Check if secondary version is a commit ID (7-40 hex chars) or version number
           if [ -n "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ] && [[ "$SECONDARY_VERSION" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
             if [ "$SECONDARY_DRIVER_ID" = "valkey-glide" ]; then
               echo "secondary_is_commit=true" >> $GITHUB_OUTPUT
               echo "Detected: secondary_version '$SECONDARY_VERSION' is a commit ID"
+              BUILD_GLIDE=true
             else
               echo "ERROR: Commit IDs are only supported for valkey-glide secondary driver"
               exit 1
@@ -354,6 +350,8 @@ jobs:
               echo "Detected: secondary_version '$SECONDARY_VERSION' is a release version"
             fi
           fi
+
+          echo "build_glide=$BUILD_GLIDE" >> $GITHUB_OUTPUT
 
           echo ""
           echo "=== Driver Analysis ==="
@@ -406,7 +404,7 @@ jobs:
           echo "version=$SDV_VERSION" >> $GITHUB_OUTPUT
 
       - name: Install valkey-glide build dependencies
-        if: steps.driver-info.outputs.build_glide_primary == 'true' || (steps.driver-info.outputs.secondary_driver_id == 'valkey-glide' && steps.driver-info.outputs.secondary_is_commit == 'true')
+        if: steps.driver-info.outputs.build_glide == 'true'
         run: |
           echo "Installing dependencies for building valkey-glide from source"
 
@@ -433,19 +431,26 @@ jobs:
 
           echo "✓ valkey-glide build dependencies installed"
 
-      - name: Build valkey-glide from source (primary)
-        id: build-glide-primary
-        if: steps.driver-info.outputs.build_glide_primary == 'true'
+      - name: Build valkey-glide from source
+        id: build-glide
+        if: steps.driver-info.outputs.build_glide == 'true'
         run: |
           source "$HOME/.cargo/env"
           export PATH="$PATH:$HOME/.local/bin"
 
-          COMMIT_ID="${{ steps.inputs.outputs.primary_version }}"
-          echo "Building valkey-glide from commit: $COMMIT_ID (primary driver)"
+          # Resolve commit ID — glide can be built as primary or secondary driver
+          if [ "${{ steps.driver-info.outputs.primary_is_commit }}" = "true" ] && [ "${{ steps.driver-info.outputs.driver_id }}" = "valkey-glide" ]; then
+            COMMIT_ID="${{ steps.inputs.outputs.primary_version }}"
+            ROLE="primary"
+          else
+            COMMIT_ID="${{ steps.versions.outputs.secondary_version }}"
+            ROLE="secondary"
+          fi
+          echo "Building valkey-glide from commit: $COMMIT_ID ($ROLE driver)"
 
           # Clone valkey-glide at specific commit
-          git clone https://github.com/valkey-io/valkey-glide.git /tmp/valkey-glide-primary
-          cd /tmp/valkey-glide-primary
+          git clone https://github.com/valkey-io/valkey-glide.git /tmp/valkey-glide
+          cd /tmp/valkey-glide
           git checkout "$COMMIT_ID"
 
           # Use commit ID as version for local Maven
@@ -457,34 +462,7 @@ jobs:
           CARGO_PROFILE_RELEASE_DEBUG=true ./gradlew :client:buildAll -x test
           GLIDE_RELEASE_VERSION="$GLIDE_VERSION" ./gradlew publishToMavenLocal -x test
 
-          echo "✓ Built valkey-glide $GLIDE_VERSION from commit $COMMIT_ID (primary driver)"
-          echo "version=$GLIDE_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Build valkey-glide from source (secondary)
-        id: build-glide-secondary
-        if: steps.driver-info.outputs.secondary_driver_id == 'valkey-glide' && steps.driver-info.outputs.secondary_is_commit == 'true'
-        run: |
-          source "$HOME/.cargo/env"
-          export PATH="$PATH:$HOME/.local/bin"
-
-          COMMIT_ID="${{ steps.versions.outputs.secondary_version }}"
-          echo "Building valkey-glide from commit: $COMMIT_ID (secondary driver)"
-
-          # Clone valkey-glide at specific commit
-          git clone https://github.com/valkey-io/valkey-glide.git /tmp/valkey-glide-secondary
-          cd /tmp/valkey-glide-secondary
-          git checkout "$COMMIT_ID"
-
-          # Use commit ID as version for local Maven
-          GLIDE_VERSION="${COMMIT_ID:0:8}-SNAPSHOT"
-          echo "Building valkey-glide version: $GLIDE_VERSION"
-
-          # build with debug symbols for flamegraph visibility
-          cd java
-          CARGO_PROFILE_RELEASE_DEBUG=true ./gradlew :client:buildAll -x test
-          GLIDE_RELEASE_VERSION="$GLIDE_VERSION" ./gradlew publishToMavenLocal -x test
-
-          echo "✓ Built valkey-glide $GLIDE_VERSION from commit $COMMIT_ID (secondary driver)"
+          echo "✓ Built valkey-glide $GLIDE_VERSION from commit $COMMIT_ID ($ROLE driver)"
           echo "version=$GLIDE_VERSION" >> $GITHUB_OUTPUT
 
       - name: Update resp-bench driver versions
@@ -514,7 +492,7 @@ jobs:
                 ;;
               valkey-glide)
                 if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
-                  GLIDE_VERSION="${{ steps.build-glide-primary.outputs.version }}"
+                  GLIDE_VERSION="${{ steps.build-glide.outputs.version }}"
                   echo "Updating valkey-glide (primary) to locally built $GLIDE_VERSION"
                   sed -i "s|<valkey-glide.version>.*</valkey-glide.version>|<valkey-glide.version>$GLIDE_VERSION</valkey-glide.version>|" java/pom.xml
                 else
@@ -545,7 +523,7 @@ jobs:
               valkey-glide)
                 if [ "$SECONDARY_IS_COMMIT" = "true" ]; then
                   # Use the version from the local build
-                  GLIDE_VERSION="${{ steps.build-glide-secondary.outputs.version }}"
+                  GLIDE_VERSION="${{ steps.build-glide.outputs.version }}"
                   echo "Updating valkey-glide (secondary) to locally built $GLIDE_VERSION"
                   sed -i "s|<valkey-glide.version>.*</valkey-glide.version>|<valkey-glide.version>$GLIDE_VERSION</valkey-glide.version>|" java/pom.xml
                 else
