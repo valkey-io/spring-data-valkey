@@ -130,6 +130,59 @@ jobs:
           fi
           echo "✓ Hardware validated: $CPU_MODEL, stepping $CPU_STEPPING, $CPU_COUNT vCPUs"
 
+          echo ""
+          echo "=== Hardware Fingerprint ==="
+
+          # CPU microcode version
+          MICROCODE=$(grep -m1 'microcode' /proc/cpuinfo | awk '{print $3}')
+          echo "Microcode: $MICROCODE"
+
+          # CPU actual frequency at boot
+          BASE_MHZ=$(cat /proc/cpuinfo | grep -m1 "cpu MHz" | awk '{print $4}')
+          echo "CPU MHz (core 0): $BASE_MHZ"
+
+          # Memory configuration
+          echo ""
+          echo "--- Memory ---"
+          sudo dmidecode -t memory 2>/dev/null | grep -E "^\s+(Size|Speed|Configured|Rank|Locator):" | head -16 || echo "dmidecode not available"
+
+          # NIC / ENA info
+          echo ""
+          echo "--- NIC ---"
+          DEFAULT_IF=$(ip route | grep default | awk '{print $5}' | head -1)
+          ethtool -i "$DEFAULT_IF" 2>/dev/null | grep -E "driver|version|firmware" || echo "ethtool not available"
+
+          # BIOS / firmware
+          echo ""
+          echo "--- Firmware ---"
+          sudo dmidecode -t bios 2>/dev/null | grep -E "Version|Date|Revision" || echo "dmidecode not available"
+
+          # Kernel
+          echo ""
+          echo "--- Kernel ---"
+          uname -r
+          cat /proc/cmdline
+
+          # IRQ affinity on benchmark cores (24-47)
+          echo ""
+          echo "--- IRQs on benchmark cores (24-47) ---"
+          for irq_dir in /proc/irq/[0-9]*; do
+            irq_num=$(basename "$irq_dir")
+            aff=$(cat "$irq_dir/smp_affinity_list" 2>/dev/null) || continue
+            if echo "$aff" | grep -qP '(^|,)(2[4-9]|3[0-9]|4[0-7])(,|$|-)'; then
+              actions=$(ls "$irq_dir" 2>/dev/null | grep -v smp_affinity | grep -v node | grep -v effective | head -1)
+              echo "  IRQ $irq_num [$actions]: $aff"
+            fi
+          done 2>/dev/null | head -20
+
+          # Processes on benchmark cores
+          echo ""
+          echo "--- Processes on cores 24-47 ---"
+          ps -eo pid,psr,comm --no-headers | awk '$2 >= 24 && $2 <= 47 {print}' | head -10
+
+          echo ""
+          echo "=== End Hardware Fingerprint ==="
+
       - uses: actions/checkout@v4
 
       - name: Set up Java 21 and Maven
