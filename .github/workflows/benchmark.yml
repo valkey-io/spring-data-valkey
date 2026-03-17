@@ -407,12 +407,8 @@ jobs:
           retention-days: 1
 
   benchmark:
-    needs: [prepare, build-sdv, build-glide]
-    if: |
-      always() &&
-      needs.prepare.result == 'success' &&
-      (needs.build-sdv.result == 'success' || needs.build-sdv.result == 'skipped') &&
-      (needs.build-glide.result == 'success' || needs.build-glide.result == 'skipped')
+    needs: [prepare]
+    if: needs.prepare.result == 'success'
     runs-on: [self-hosted, Linux, x86, ephemeral, metal]
     timeout-minutes: 30
 
@@ -510,6 +506,45 @@ jobs:
           echo "Driver config: $DRIVER_CONFIG"
           echo "Workload: $WORKLOAD"
           echo "Workload config: $WORKLOAD_CONFIG"
+
+      - name: Wait for build jobs to complete
+        if: needs.prepare.outputs.build_sdv == 'true' || needs.prepare.outputs.build_glide == 'true'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          API_URL="https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs"
+          echo "Waiting for build jobs to complete..."
+          while true; do
+            JOBS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "$API_URL?per_page=100")
+
+            ALL_DONE=true
+            for JOB_NAME in "build-sdv" "build-glide"; do
+              STATUS=$(echo "$JOBS" | jq -r --arg name "$JOB_NAME" '.jobs[] | select(.name==$name) | .status' | head -1)
+              CONCLUSION=$(echo "$JOBS" | jq -r --arg name "$JOB_NAME" '.jobs[] | select(.name==$name) | .conclusion' | head -1)
+
+              if [ -z "$STATUS" ]; then
+                continue
+              fi
+
+              echo "  $JOB_NAME: status=$STATUS conclusion=$CONCLUSION"
+
+              if [ "$STATUS" = "completed" ]; then
+                if [ "$CONCLUSION" = "failure" ] || [ "$CONCLUSION" = "cancelled" ]; then
+                  echo "ERROR: $JOB_NAME failed with conclusion: $CONCLUSION"
+                  exit 1
+                fi
+              else
+                ALL_DONE=false
+              fi
+            done
+
+            if [ "$ALL_DONE" = "true" ]; then
+              echo "✓ All build jobs completed successfully"
+              break
+            fi
+
+            sleep 10
+          done
 
       - name: Download SDV build artifacts
         if: needs.prepare.outputs.build_sdv == 'true'
