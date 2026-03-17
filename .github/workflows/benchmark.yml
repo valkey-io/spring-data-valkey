@@ -293,22 +293,13 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Cache SDV build artifacts
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: m2-sdv
-          key: sdv-build-${{ needs.prepare.outputs.sdv_commit }}
-
       - name: Set up Java 21
-        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
       - name: Build spring-data-valkey
-        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           COMMIT_ID="${{ needs.prepare.outputs.sdv_commit }}"
@@ -322,11 +313,14 @@ jobs:
           mvn versions:set -DnewVersion="$SDV_VERSION" -DgenerateBackupPoms=false -q
           mvn install -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -Dgpg.skip=true -q
 
-          # Copy SDV artifacts to fixed path for cross-runner cache
-          mkdir -p m2-sdv
-          cp -r ~/.m2/repository/io/valkey/springframework m2-sdv/
-
           echo "✓ Built spring-data-valkey version: $SDV_VERSION"
+
+      - name: Upload SDV build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdv-build-${{ needs.prepare.outputs.sdv_commit }}
+          path: ~/.m2/repository/io/valkey/springframework/
+          retention-days: 1
 
   build-glide:
     needs: prepare
@@ -335,22 +329,13 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Cache glide build artifacts
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: m2-glide
-          key: glide-build-${{ needs.prepare.outputs.glide_commit }}
-
       - name: Set up Java 21
-        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
       - name: Install build dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           sudo apt-get update
@@ -376,7 +361,6 @@ jobs:
           echo "✓ valkey-glide build dependencies installed"
 
       - name: Build valkey-glide
-        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           source "$HOME/.cargo/env"
@@ -394,11 +378,14 @@ jobs:
           CARGO_PROFILE_RELEASE_DEBUG=true ./gradlew :client:buildAll -x test
           GLIDE_RELEASE_VERSION="$GLIDE_VERSION" ./gradlew publishToMavenLocal -x test
 
-          # Copy glide artifacts to fixed path for cross-runner cache
-          mkdir -p m2-glide
-          cp -r ~/.m2/repository/io/valkey/valkey-glide m2-glide/
-
           echo "✓ Built valkey-glide $GLIDE_VERSION from commit $COMMIT_ID"
+
+      - name: Upload glide build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: glide-build-${{ needs.prepare.outputs.glide_commit }}
+          path: ~/.m2/repository/io/valkey/valkey-glide/
+          retention-days: 1
 
   benchmark:
     needs: [prepare, build-sdv, build-glide]
@@ -505,37 +492,19 @@ jobs:
           echo "Workload: $WORKLOAD"
           echo "Workload config: $WORKLOAD_CONFIG"
 
-      - name: Restore SDV build from cache
+      - name: Download SDV build artifacts
         if: needs.prepare.outputs.build_sdv == 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/download-artifact@v4
         with:
-          path: m2-sdv
-          key: sdv-build-${{ needs.prepare.outputs.sdv_commit }}
-          fail-on-cache-miss: true
+          name: sdv-build-${{ needs.prepare.outputs.sdv_commit }}
+          path: ~/.m2/repository/io/valkey/springframework/
 
-      - name: Copy SDV artifacts to local Maven repo
-        if: needs.prepare.outputs.build_sdv == 'true'
-        run: |
-          mkdir -p ~/.m2/repository/io/valkey/
-          cp -r m2-sdv/springframework ~/.m2/repository/io/valkey/
-          echo "✓ SDV artifacts installed to local Maven repo"
-          find ~/.m2/repository/io/valkey/springframework -name "*.jar" | head -5
-
-      - name: Restore glide build from cache
+      - name: Download glide build artifacts
         if: needs.prepare.outputs.build_glide == 'true'
-        uses: actions/cache/restore@v4
+        uses: actions/download-artifact@v4
         with:
-          path: m2-glide
-          key: glide-build-${{ needs.prepare.outputs.glide_commit }}
-          fail-on-cache-miss: true
-
-      - name: Copy glide artifacts to local Maven repo
-        if: needs.prepare.outputs.build_glide == 'true'
-        run: |
-          mkdir -p ~/.m2/repository/io/valkey/
-          cp -r m2-glide/valkey-glide ~/.m2/repository/io/valkey/
-          echo "✓ Glide artifacts installed to local Maven repo"
-          find ~/.m2/repository/io/valkey/valkey-glide -name "*.jar" | head -5
+          name: glide-build-${{ needs.prepare.outputs.glide_commit }}
+          path: ~/.m2/repository/io/valkey/valkey-glide/
 
       - name: Update resp-bench driver versions
         run: |
