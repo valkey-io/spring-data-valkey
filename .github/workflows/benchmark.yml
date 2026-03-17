@@ -293,13 +293,22 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Restore SDV build from cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/io/valkey/springframework
+          key: sdv-build-${{ needs.prepare.outputs.sdv_commit }}
+
       - name: Set up Java 21
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
       - name: Build spring-data-valkey
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           COMMIT_ID="${{ needs.prepare.outputs.sdv_commit }}"
@@ -329,13 +338,22 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      - name: Restore glide build from cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/io/valkey/valkey-glide
+          key: glide-build-${{ needs.prepare.outputs.glide_commit }}
+
       - name: Set up Java 21
+        if: steps.cache.outputs.cache-hit != 'true'
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
 
       - name: Install build dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           sudo apt-get update
@@ -361,6 +379,7 @@ jobs:
           echo "✓ valkey-glide build dependencies installed"
 
       - name: Build valkey-glide
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
           source "$HOME/.cargo/env"
