@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
-  "description": "Jedis client - standalone mode",
-  "driver_id": "jedis",
+  "description": "Lettuce client",
+  "driver_id": "lettuce",
   "mode": "standalone",
   "specific_driver_config": {}
 }
