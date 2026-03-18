@@ -254,10 +254,10 @@ jobs:
               if [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
                 SECONDARY_IN_FILENAME="glide"
               fi
-              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-${MODE}"
+              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}"
             else
               # Standalone drivers (valkey-glide, jedis, lettuce, redisson)
-              DRIVER="${PRIMARY_DRIVER}-${MODE}"
+              DRIVER="${PRIMARY_DRIVER}"
               if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
                 echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
               fi
@@ -271,6 +271,14 @@ jobs:
               exit 1
             fi
             echo "✓ Driver config: $DRIVER_CONFIG"
+          fi
+
+          # Handle selected driver mode (server topology)
+          if [ -z "$CUSTOM_DRIVER_CONFIG_INPUT" ]; then
+            DRIVER_CONFIG_WITH_MODE="$CUSTOM_CONFIG_DIR/driver-config.json"
+            jq --arg mode "$MODE" '.mode = $mode' "$DRIVER_CONFIG" > "$DRIVER_CONFIG_WITH_MODE"
+            DRIVER_CONFIG="$DRIVER_CONFIG_WITH_MODE"
+            echo "✓ Mode set to: $MODE"
           fi
 
           # Handle custom workload config

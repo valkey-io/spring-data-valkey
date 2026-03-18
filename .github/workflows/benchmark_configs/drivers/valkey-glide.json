@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
-  "description": "Valkey-Glide client - cluster mode",
+  "description": "Valkey-Glide client",
   "driver_id": "valkey-glide",
-  "mode": "cluster",
+  "mode": "standalone",
   "specific_driver_config": {}
 }
