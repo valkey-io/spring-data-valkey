@@ -25,6 +25,14 @@ on:
           - lettuce
           - none
         default: "valkey-glide"
+      mode:
+        description: "Server topology mode"
+        required: false
+        type: choice
+        options:
+          - standalone
+          - cluster
+        default: "standalone"
       workload:
         description: "Workload config"
         required: true
@@ -32,6 +40,7 @@ on:
         options:
           - reference-workload-10-client
           - reference-workload-1-client
+          - reference-workload-100-client
         default: "reference-workload-10-client"
       primary_version:
         description: "Primary driver version (version string or commit ID). Leave empty to use default."
@@ -153,6 +162,7 @@ jobs:
         run: |
           PRIMARY_DRIVER="${{ github.event.inputs.primary_driver }}"
           SECONDARY_DRIVER="${{ github.event.inputs.secondary_driver }}"
+          MODE="${{ github.event.inputs.mode || 'standalone' }}"
           WORKLOAD="${{ github.event.inputs.workload }}"
           PRIMARY_VERSION="${{ github.event.inputs.primary_version }}"
           SECONDARY_VERSION="${{ github.event.inputs.secondary_version }}"
@@ -180,6 +190,7 @@ jobs:
 
           echo "primary_driver=$PRIMARY_DRIVER" >> $GITHUB_OUTPUT
           echo "secondary_driver=$SECONDARY_DRIVER" >> $GITHUB_OUTPUT
+          echo "mode=$MODE" >> $GITHUB_OUTPUT
           echo "workload=$WORKLOAD" >> $GITHUB_OUTPUT
           echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
           echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
@@ -191,6 +202,7 @@ jobs:
           echo "========================================"
           echo "Primary driver:    $PRIMARY_DRIVER"
           echo "Secondary driver:  $SECONDARY_DRIVER"
+          echo "Mode:              $MODE"
           echo "Workload:          $WORKLOAD"
           echo "Primary version:   '${PRIMARY_VERSION}'"
           echo "Secondary version: '${SECONDARY_VERSION}'"
@@ -203,6 +215,7 @@ jobs:
         run: |
           PRIMARY_DRIVER="${{ steps.inputs.outputs.primary_driver }}"
           SECONDARY_DRIVER="${{ steps.inputs.outputs.secondary_driver }}"
+          MODE="${{ steps.inputs.outputs.mode }}"
           WORKLOAD="${{ steps.inputs.outputs.workload }}"
           CONFIG_DIR=".github/workflows/benchmark_configs"
           CUSTOM_CONFIG_DIR="/tmp/custom_configs"
@@ -241,10 +254,10 @@ jobs:
               if [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
                 SECONDARY_IN_FILENAME="glide"
               fi
-              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-standalone"
+              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-${MODE}"
             else
               # Standalone drivers (valkey-glide, jedis, lettuce, redisson)
-              DRIVER="${PRIMARY_DRIVER}-standalone"
+              DRIVER="${PRIMARY_DRIVER}-${MODE}"
               if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
                 echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
               fi
@@ -413,6 +426,9 @@ jobs:
           # Install system dependencies
           sudo apt-get update
           sudo apt-get install -y git gcc pkg-config openssl libssl-dev unzip cmake python3-pip
+
+          # Install JDK 11 (required by valkey-glide Gradle toolchain)
+          sudo apt-get install -y openjdk-11-jdk-headless
 
           # Install Rust
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
