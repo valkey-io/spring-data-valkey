@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "description": "Jedis client - standalone mode",
+  "description": "Jedis client",
   "driver_id": "jedis",
   "mode": "standalone",
   "specific_driver_config": {}
