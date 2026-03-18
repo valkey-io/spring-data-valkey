@@ -40,7 +40,6 @@ on:
         options:
           - reference-workload-10-client
           - reference-workload-1-client
-          - reference-workload-100-client
         default: "reference-workload-10-client"
       primary_version:
         description: "Primary driver version (version string or commit ID). Leave empty to use default."
