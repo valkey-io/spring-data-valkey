@@ -1110,10 +1110,6 @@ class BenchmarkOrchestrator:
         subprocess.run(["pkill", "-f", "valkey-server"], capture_output=True)
         time.sleep(1)
 
-        work_dir = self.resp_bench_dir / "work"
-        if work_dir.exists():
-            shutil.rmtree(work_dir)
-
         result = subprocess.run(
             ["numactl", f"--cpunodebind={self.infra_numa_node}",
              f"--membind={self.infra_numa_node}", "make", make_target],

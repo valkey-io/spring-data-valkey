@@ -464,7 +464,7 @@ jobs:
           java -version
           mvn -version
 
-      - name: Clone resp-bench
+      - name: Clone resp-bench and pre-compile Valkey server
         id: resp-bench
         run: |
           echo "Cloning resp-bench repository..."
@@ -472,6 +472,13 @@ jobs:
           RESP_BENCH_COMMIT=$(git -C resp-bench rev-parse HEAD)
           echo "commit=$RESP_BENCH_COMMIT" >> $GITHUB_OUTPUT
           echo "✓ resp-bench cloned (commit: ${RESP_BENCH_COMMIT:0:7})"
+
+          # Pre-compile Valkey server binary in the background.
+          # When the orchestrator later calls `make server-standalone-start`,
+          # Make will find the binary already exists and just start the servers.
+          echo "Starting Valkey server compilation in background..."
+          (cd resp-bench && make work/valkey/bin/valkey-server 2>&1 | tail -3) &
+          echo "VALKEY_BUILD_PID=$!" >> $GITHUB_ENV
 
       - name: Set up config files
         id: config
@@ -664,6 +671,19 @@ jobs:
           sudo apt-get install -y linux-tools-$(uname -r) 2>/dev/null || \
             sudo apt-get install -y linux-tools-generic 2>/dev/null || true
           command -v perf && perf --version || echo "perf not available"
+
+      - name: Wait for Valkey server compilation
+        run: |
+          if [ -n "$VALKEY_BUILD_PID" ]; then
+            echo "Waiting for Valkey server compilation (PID $VALKEY_BUILD_PID)..."
+            if wait "$VALKEY_BUILD_PID"; then
+              echo "✓ Valkey server compiled"
+            else
+              echo "ERROR: Valkey server compilation failed"
+              exit 1
+            fi
+            resp-bench/work/valkey/bin/valkey-server --version
+          fi
 
       - name: Run benchmark and publish results to DB
         run: |
