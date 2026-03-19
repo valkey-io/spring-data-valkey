@@ -464,7 +464,7 @@ jobs:
           java -version
           mvn -version
 
-      - name: Clone resp-bench
+      - name: Clone resp-bench and pre-compile Valkey server
         id: resp-bench
         run: |
           echo "Cloning resp-bench repository..."
@@ -472,6 +472,12 @@ jobs:
           RESP_BENCH_COMMIT=$(git -C resp-bench rev-parse HEAD)
           echo "commit=$RESP_BENCH_COMMIT" >> $GITHUB_OUTPUT
           echo "✓ resp-bench cloned (commit: ${RESP_BENCH_COMMIT:0:7})"
+
+          # Pre-compile Valkey server binary in the background.
+          # When the orchestrator later calls `make server-standalone-start`,
+          # Make will find the binary already exists and just start the servers.
+          echo "Starting Valkey server compilation in background..."
+          (cd resp-bench && make "$(pwd)/work/valkey/bin/valkey-server" > /tmp/valkey-build.log 2>&1; echo $? > /tmp/valkey-build.exit) &
 
       - name: Set up config files
         id: config
@@ -664,6 +670,33 @@ jobs:
           sudo apt-get install -y linux-tools-$(uname -r) 2>/dev/null || \
             sudo apt-get install -y linux-tools-generic 2>/dev/null || true
           command -v perf && perf --version || echo "perf not available"
+
+      - name: Wait for Valkey server compilation
+        run: |
+          echo "Waiting for Valkey server compilation..."
+          TIMEOUT=300
+          ELAPSED=0
+          while [ ! -f "/tmp/valkey-build.exit" ]; do
+            if [ "$ELAPSED" -ge "$TIMEOUT" ]; then
+              echo "ERROR: Valkey server compilation timed out after ${TIMEOUT}s"
+              echo "--- build log ---"
+              cat /tmp/valkey-build.log 2>/dev/null || echo "(no log)"
+              exit 1
+            fi
+            sleep 2
+            ELAPSED=$((ELAPSED + 2))
+          done
+
+          EXIT_CODE=$(cat /tmp/valkey-build.exit)
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "ERROR: Valkey server compilation failed (exit $EXIT_CODE)"
+            echo "--- build log ---"
+            cat /tmp/valkey-build.log 2>/dev/null || echo "(no log)"
+            exit 1
+          fi
+
+          echo "✓ Valkey server compiled (${ELAPSED}s)"
+          resp-bench/work/valkey/bin/valkey-server --version
 
       - name: Run benchmark and publish results to DB
         run: |
