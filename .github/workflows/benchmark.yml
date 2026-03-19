@@ -83,332 +83,7 @@ env:
   RESP_BENCH_REPO: "https://github.com/ikolomi/resp-bench.git"
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    outputs:
-      build_sdv: ${{ steps.analyze.outputs.build_sdv }}
-      build_glide: ${{ steps.analyze.outputs.build_glide }}
-      sdv_version: ${{ steps.analyze.outputs.sdv_version }}
-      sdv_commit: ${{ steps.analyze.outputs.sdv_commit }}
-      glide_version: ${{ steps.analyze.outputs.glide_version }}
-      glide_commit: ${{ steps.analyze.outputs.glide_commit }}
-      driver: ${{ steps.analyze.outputs.driver }}
-      workload: ${{ steps.analyze.outputs.workload }}
-      driver_id: ${{ steps.analyze.outputs.driver_id }}
-      secondary_driver_id: ${{ steps.analyze.outputs.secondary_driver_id }}
-      primary_version: ${{ steps.analyze.outputs.primary_version }}
-      secondary_version: ${{ steps.analyze.outputs.secondary_version }}
-      primary_is_commit: ${{ steps.analyze.outputs.primary_is_commit }}
-      secondary_is_commit: ${{ steps.analyze.outputs.secondary_is_commit }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate inputs and analyze build requirements
-        id: analyze
-        run: |
-          PRIMARY_DRIVER="${{ github.event.inputs.primary_driver }}"
-          SECONDARY_DRIVER="${{ github.event.inputs.secondary_driver }}"
-          WORKLOAD="${{ github.event.inputs.workload }}"
-          PRIMARY_VERSION="${{ github.event.inputs.primary_version }}"
-          SECONDARY_VERSION="${{ github.event.inputs.secondary_version }}"
-          NETWORK_DELAY="${{ github.event.inputs.network_delay }}"
-          NETWORK_JITTER="${{ github.event.inputs.network_jitter }}"
-          NETWORK_DELAY_DISTRIBUTION="${{ github.event.inputs.network_delay_distribution }}"
-          CONFIG_DIR=".github/workflows/benchmark_configs"
-
-          # --- Validate tc netem input combinations ---
-          if [ -n "$NETWORK_DELAY_DISTRIBUTION" ] && [ -z "$NETWORK_JITTER" ]; then
-            echo "ERROR: network_delay_distribution requires network_jitter"
-            exit 1
-          fi
-          if [ -n "$NETWORK_JITTER" ] && [ -z "$NETWORK_DELAY" ]; then
-            echo "ERROR: network_jitter requires network_delay"
-            exit 1
-          fi
-          for val in "$NETWORK_DELAY" "$NETWORK_JITTER"; do
-            if [ -n "$val" ] && ! [[ "$val" =~ ^[0-9]+(ms|us)$ ]]; then
-              echo "ERROR: invalid tc netem value '$val' — expected format: <number>ms or <number>us"
-              exit 1
-            fi
-          done
-
-          # --- Resolve and validate driver config ---
-          CUSTOM_DRIVER_CONFIG_INPUT='${{ github.event.inputs.custom_driver_config }}'
-          if [ -n "$CUSTOM_DRIVER_CONFIG_INPUT" ]; then
-            echo "Using custom driver config..."
-            DRIVER_CONFIG="/tmp/custom-driver.json"
-            printf '%s\n' "$CUSTOM_DRIVER_CONFIG_INPUT" > "$DRIVER_CONFIG"
-            if ! jq . "$DRIVER_CONFIG" > /dev/null 2>&1; then
-              echo "ERROR: Custom driver config is not valid JSON"
-              echo "Content written:"
-              cat "$DRIVER_CONFIG"
-              exit 1
-            fi
-            DRIVER="custom-driver"
-            echo "✓ Custom driver config validated"
-          else
-            if [[ "$PRIMARY_DRIVER" == spring-data-* ]]; then
-              # spring-data-* drivers require a secondary driver
-              if [ "$SECONDARY_DRIVER" = "none" ] || [ -z "$SECONDARY_DRIVER" ]; then
-                echo "ERROR: $PRIMARY_DRIVER requires a secondary driver (valkey-glide, jedis, or lettuce)"
-                exit 1
-              fi
-              # spring-data-redis cannot use valkey-glide
-              if [ "$PRIMARY_DRIVER" = "spring-data-redis" ] && [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
-                echo "ERROR: spring-data-redis does not support valkey-glide. Use jedis or lettuce instead."
-                exit 1
-              fi
-              SECONDARY_IN_FILENAME="$SECONDARY_DRIVER"
-              [ "$SECONDARY_IN_FILENAME" = "valkey-glide" ] && SECONDARY_IN_FILENAME="glide"
-              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-standalone"
-            else
-              DRIVER="${PRIMARY_DRIVER}-standalone"
-              if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
-                echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
-              fi
-            fi
-            DRIVER_CONFIG="${CONFIG_DIR}/drivers/${DRIVER}.json"
-            if [ ! -f "$DRIVER_CONFIG" ]; then
-              echo "ERROR: Driver config not found: $DRIVER_CONFIG"
-              echo "Available driver configs:"
-              ls -la "${CONFIG_DIR}/drivers/"
-              exit 1
-            fi
-            echo "✓ Driver config: $DRIVER_CONFIG"
-          fi
-
-          # --- Resolve and validate workload config ---
-          CUSTOM_WORKLOAD_CONFIG_INPUT='${{ github.event.inputs.custom_workload_config }}'
-          if [ -n "$CUSTOM_WORKLOAD_CONFIG_INPUT" ]; then
-            echo "Using custom workload config..."
-            WORKLOAD_CONFIG="/tmp/custom-workload.json"
-            printf '%s\n' "$CUSTOM_WORKLOAD_CONFIG_INPUT" > "$WORKLOAD_CONFIG"
-            if ! jq . "$WORKLOAD_CONFIG" > /dev/null 2>&1; then
-              echo "ERROR: Custom workload config is not valid JSON"
-              echo "Content written:"
-              cat "$WORKLOAD_CONFIG"
-              exit 1
-            fi
-            WORKLOAD="custom-workload"
-            echo "✓ Custom workload config validated"
-          else
-            WORKLOAD_CONFIG="${CONFIG_DIR}/workloads/${WORKLOAD}.json"
-            if [ ! -f "$WORKLOAD_CONFIG" ]; then
-              echo "ERROR: Workload config not found: $WORKLOAD_CONFIG"
-              echo "Available workload configs:"
-              ls -la "${CONFIG_DIR}/workloads/"
-              exit 1
-            fi
-            echo "✓ Workload config: $WORKLOAD_CONFIG"
-          fi
-
-          echo "Driver config contents:"
-          cat "$DRIVER_CONFIG" | jq .
-          echo "Workload phases:"
-          jq '.phases[] | {id, completion}' "$WORKLOAD_CONFIG"
-
-          # --- Analyze driver requirements ---
-          DRIVER_ID=$(jq -r '.driver_id' "$DRIVER_CONFIG")
-          SECONDARY_DRIVER_ID=$(jq -r '.specific_driver_config.secondary_driver_id // empty' "$DRIVER_CONFIG")
-
-          BUILD_SDV=false
-          BUILD_GLIDE=false
-          SDV_COMMIT=""
-          SDV_VERSION=""
-          GLIDE_COMMIT=""
-          GLIDE_VERSION=""
-          PRIMARY_IS_COMMIT=false
-          SECONDARY_IS_COMMIT=false
-
-          # Check if primary version is a commit ID (7-40 hex chars)
-          if [ -n "$PRIMARY_VERSION" ] && [[ "$PRIMARY_VERSION" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-            PRIMARY_IS_COMMIT=true
-            if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
-              BUILD_SDV=true
-              SDV_COMMIT="$PRIMARY_VERSION"
-              SDV_VERSION="${PRIMARY_VERSION:0:8}-SNAPSHOT"
-            elif [ "$DRIVER_ID" = "valkey-glide" ]; then
-              BUILD_GLIDE=true
-              GLIDE_COMMIT="$PRIMARY_VERSION"
-              GLIDE_VERSION="${PRIMARY_VERSION:0:8}-SNAPSHOT"
-            else
-              echo "ERROR: Commit IDs are only supported for spring-data-valkey and valkey-glide primary drivers"
-              exit 1
-            fi
-          fi
-
-          # Check if secondary version is a commit ID
-          if [ -n "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ] && [[ "$SECONDARY_VERSION" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-            if [ "$SECONDARY_DRIVER_ID" = "valkey-glide" ]; then
-              SECONDARY_IS_COMMIT=true
-              BUILD_GLIDE=true
-              GLIDE_COMMIT="$SECONDARY_VERSION"
-              GLIDE_VERSION="${SECONDARY_VERSION:0:8}-SNAPSHOT"
-            else
-              echo "ERROR: Commit IDs are only supported for valkey-glide secondary driver"
-              exit 1
-            fi
-          fi
-
-          # Cannot provide secondary version if driver has no secondary driver
-          if [ -z "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ]; then
-            echo "ERROR: secondary_version provided but driver has no secondary driver"
-            exit 1
-          fi
-
-          # --- Write outputs ---
-          echo "build_sdv=$BUILD_SDV" >> $GITHUB_OUTPUT
-          echo "build_glide=$BUILD_GLIDE" >> $GITHUB_OUTPUT
-          echo "sdv_version=$SDV_VERSION" >> $GITHUB_OUTPUT
-          echo "sdv_commit=$SDV_COMMIT" >> $GITHUB_OUTPUT
-          echo "glide_version=$GLIDE_VERSION" >> $GITHUB_OUTPUT
-          echo "glide_commit=$GLIDE_COMMIT" >> $GITHUB_OUTPUT
-          echo "driver=$DRIVER" >> $GITHUB_OUTPUT
-          echo "workload=$WORKLOAD" >> $GITHUB_OUTPUT
-          echo "driver_id=$DRIVER_ID" >> $GITHUB_OUTPUT
-          echo "secondary_driver_id=$SECONDARY_DRIVER_ID" >> $GITHUB_OUTPUT
-          echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
-          echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
-          echo "primary_is_commit=$PRIMARY_IS_COMMIT" >> $GITHUB_OUTPUT
-          echo "secondary_is_commit=$SECONDARY_IS_COMMIT" >> $GITHUB_OUTPUT
-
-          echo ""
-          echo "========================================"
-          echo "Primary driver:    $PRIMARY_DRIVER"
-          echo "Secondary driver:  $SECONDARY_DRIVER"
-          echo "Workload:          $WORKLOAD"
-          echo "Primary version:   '${PRIMARY_VERSION}'"
-          echo "Secondary version: '${SECONDARY_VERSION}'"
-          echo "Driver:            $DRIVER ($DRIVER_ID)"
-          echo "Build SDV:         $BUILD_SDV (commit: ${SDV_COMMIT:-N/A}, version: ${SDV_VERSION:-N/A})"
-          echo "Build Glide:       $BUILD_GLIDE (commit: ${GLIDE_COMMIT:-N/A}, version: ${GLIDE_VERSION:-N/A})"
-          echo "========================================"
-
-  build-sdv:
-    needs: prepare
-    if: needs.prepare.outputs.build_sdv == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Restore SDV build from cache
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository/io/valkey/springframework
-          key: sdv-build-${{ needs.prepare.outputs.sdv_commit }}
-
-      - name: Set up Java 21
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Build spring-data-valkey
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          COMMIT_ID="${{ needs.prepare.outputs.sdv_commit }}"
-          SDV_VERSION="${{ needs.prepare.outputs.sdv_version }}"
-          echo "Building spring-data-valkey from commit: $COMMIT_ID (version: $SDV_VERSION)"
-
-          git clone https://github.com/${{ github.repository }}.git /tmp/spring-data-valkey
-          cd /tmp/spring-data-valkey
-          git checkout "$COMMIT_ID"
-
-          mvn versions:set -DnewVersion="$SDV_VERSION" -DgenerateBackupPoms=false -q
-          mvn install -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -Dgpg.skip=true -q
-
-          echo "✓ Built spring-data-valkey version: $SDV_VERSION"
-
-      - name: Upload SDV build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: sdv-build-${{ needs.prepare.outputs.sdv_commit }}
-          path: ~/.m2/repository/io/valkey/springframework/
-          retention-days: 1
-
-  build-glide:
-    needs: prepare
-    if: needs.prepare.outputs.build_glide == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - name: Restore glide build from cache
-        id: cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.m2/repository/io/valkey/valkey-glide
-          key: glide-build-${{ needs.prepare.outputs.glide_commit }}
-
-      - name: Set up Java 21
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Install build dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y gcc pkg-config openssl libssl-dev unzip cmake python3-pip
-
-          # Install Rust
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source "$HOME/.cargo/env"
-          rustc --version
-
-          # Install protobuf compiler v29.1
-          PROTOC_VERSION="29.1"
-          curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          unzip -o "protoc-${PROTOC_VERSION}-linux-x86_64.zip" -d "$HOME/.local"
-          rm "protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          export PATH="$PATH:$HOME/.local/bin"
-          protoc --version
-
-          # Install ziglang and cargo-zigbuild
-          sudo python3 -m pip install ziglang
-          cargo install --locked cargo-zigbuild
-
-          echo "✓ valkey-glide build dependencies installed"
-
-      - name: Build valkey-glide
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          source "$HOME/.cargo/env"
-          export PATH="$PATH:$HOME/.local/bin"
-
-          COMMIT_ID="${{ needs.prepare.outputs.glide_commit }}"
-          GLIDE_VERSION="${{ needs.prepare.outputs.glide_version }}"
-          echo "Building valkey-glide from commit: $COMMIT_ID (version: $GLIDE_VERSION)"
-
-          git clone https://github.com/valkey-io/valkey-glide.git /tmp/valkey-glide
-          cd /tmp/valkey-glide
-          git checkout "$COMMIT_ID"
-
-          cd java
-          CARGO_PROFILE_RELEASE_DEBUG=true ./gradlew :client:buildAll -x test
-          GLIDE_RELEASE_VERSION="$GLIDE_VERSION" ./gradlew publishToMavenLocal -x test
-
-          echo "✓ Built valkey-glide $GLIDE_VERSION from commit $COMMIT_ID"
-
-      - name: Upload glide build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: glide-build-${{ needs.prepare.outputs.glide_commit }}
-          path: ~/.m2/repository/io/valkey/valkey-glide/
-          retention-days: 1
-
   benchmark:
-    needs: [prepare]
-    if: needs.prepare.result == 'success'
     runs-on: [self-hosted, Linux, x86, ephemeral, metal]
     timeout-minutes: 30
 
@@ -460,11 +135,15 @@ jobs:
       - name: Set up Java 21 and Maven
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-21-jdk-headless maven
+          sudo apt-get install -y openjdk-21-jdk-headless maven python3-pip \
+            sysstat numactl \
+            gcc pkg-config openssl libssl-dev unzip cmake
+          sudo apt-get install -y linux-tools-$(uname -r) 2>/dev/null || \
+            sudo apt-get install -y linux-tools-generic 2>/dev/null || true
           java -version
           mvn -version
 
-      - name: Clone resp-bench and pre-compile Valkey server
+      - name: Clone resp-bench
         id: resp-bench
         run: |
           echo "Cloning resp-bench repository..."
@@ -473,118 +152,338 @@ jobs:
           echo "commit=$RESP_BENCH_COMMIT" >> $GITHUB_OUTPUT
           echo "✓ resp-bench cloned (commit: ${RESP_BENCH_COMMIT:0:7})"
 
-          # Pre-compile Valkey server binary in the background.
-          # When the orchestrator later calls `make server-standalone-start`,
-          # Make will find the binary already exists and just start the servers.
-          echo "Starting Valkey server compilation in background..."
-          (cd resp-bench && make work/valkey/bin/valkey-server 2>&1 | tail -3) &
-          echo "VALKEY_BUILD_PID=$!" >> $GITHUB_ENV
-
-      - name: Set up config files
+      - name: Validate inputs and resolve configs
         id: config
         run: |
-          DRIVER="${{ needs.prepare.outputs.driver }}"
-          WORKLOAD="${{ needs.prepare.outputs.workload }}"
+          PRIMARY_DRIVER="${{ github.event.inputs.primary_driver }}"
+          SECONDARY_DRIVER="${{ github.event.inputs.secondary_driver }}"
+          WORKLOAD="${{ github.event.inputs.workload }}"
+          PRIMARY_VERSION="${{ github.event.inputs.primary_version }}"
+          SECONDARY_VERSION="${{ github.event.inputs.secondary_version }}"
+          NETWORK_DELAY="${{ github.event.inputs.network_delay }}"
+          NETWORK_JITTER="${{ github.event.inputs.network_jitter }}"
+          NETWORK_DELAY_DISTRIBUTION="${{ github.event.inputs.network_delay_distribution }}"
           CONFIG_DIR=".github/workflows/benchmark_configs"
           CUSTOM_CONFIG_DIR="/tmp/custom_configs"
           mkdir -p "$CUSTOM_CONFIG_DIR"
 
-          # Re-create custom config files on this runner (validated in prepare job)
-          CUSTOM_DRIVER_CONFIG_INPUT='${{ github.event.inputs.custom_driver_config }}'
-          if [ -n "$CUSTOM_DRIVER_CONFIG_INPUT" ]; then
-            DRIVER_CONFIG="$CUSTOM_CONFIG_DIR/custom-driver.json"
-            printf '%s\n' "$CUSTOM_DRIVER_CONFIG_INPUT" > "$DRIVER_CONFIG"
-          else
-            DRIVER_CONFIG="${CONFIG_DIR}/drivers/${DRIVER}.json"
+          # --- Validate tc netem input combinations ---
+          if [ -n "$NETWORK_DELAY_DISTRIBUTION" ] && [ -z "$NETWORK_JITTER" ]; then
+            echo "ERROR: network_delay_distribution requires network_jitter"
+            exit 1
           fi
-
-          CUSTOM_WORKLOAD_CONFIG_INPUT='${{ github.event.inputs.custom_workload_config }}'
-          if [ -n "$CUSTOM_WORKLOAD_CONFIG_INPUT" ]; then
-            WORKLOAD_CONFIG="$CUSTOM_CONFIG_DIR/custom-workload.json"
-            printf '%s\n' "$CUSTOM_WORKLOAD_CONFIG_INPUT" > "$WORKLOAD_CONFIG"
-          else
-            WORKLOAD_CONFIG="${CONFIG_DIR}/workloads/${WORKLOAD}.json"
+          if [ -n "$NETWORK_JITTER" ] && [ -z "$NETWORK_DELAY" ]; then
+            echo "ERROR: network_jitter requires network_delay"
+            exit 1
           fi
-
-          echo "driver_config=$DRIVER_CONFIG" >> $GITHUB_OUTPUT
-          echo "workload_config=$WORKLOAD_CONFIG" >> $GITHUB_OUTPUT
-
-          echo "Driver: $DRIVER"
-          echo "Driver config: $DRIVER_CONFIG"
-          echo "Workload: $WORKLOAD"
-          echo "Workload config: $WORKLOAD_CONFIG"
-
-      - name: Wait for build jobs to complete
-        if: needs.prepare.outputs.build_sdv == 'true' || needs.prepare.outputs.build_glide == 'true'
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          API_URL="https://api.github.com/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs"
-          echo "Waiting for build jobs to complete..."
-          while true; do
-            JOBS=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" "$API_URL?per_page=100")
-
-            ALL_DONE=true
-            for JOB_NAME in "build-sdv" "build-glide"; do
-              STATUS=$(echo "$JOBS" | jq -r --arg name "$JOB_NAME" '.jobs[] | select(.name==$name) | .status' | head -1)
-              CONCLUSION=$(echo "$JOBS" | jq -r --arg name "$JOB_NAME" '.jobs[] | select(.name==$name) | .conclusion' | head -1)
-
-              if [ -z "$STATUS" ]; then
-                continue
-              fi
-
-              echo "  $JOB_NAME: status=$STATUS conclusion=$CONCLUSION"
-
-              if [ "$STATUS" = "completed" ]; then
-                if [ "$CONCLUSION" = "failure" ] || [ "$CONCLUSION" = "cancelled" ]; then
-                  echo "ERROR: $JOB_NAME failed with conclusion: $CONCLUSION"
-                  exit 1
-                fi
-              else
-                ALL_DONE=false
-              fi
-            done
-
-            if [ "$ALL_DONE" = "true" ]; then
-              echo "✓ All build jobs completed successfully"
-              break
+          for val in "$NETWORK_DELAY" "$NETWORK_JITTER"; do
+            if [ -n "$val" ] && ! [[ "$val" =~ ^[0-9]+(ms|us)$ ]]; then
+              echo "ERROR: invalid tc netem value '$val' — expected format: <number>ms or <number>us"
+              exit 1
             fi
-
-            sleep 10
           done
 
-      - name: Download SDV build artifacts
-        if: needs.prepare.outputs.build_sdv == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: sdv-build-${{ needs.prepare.outputs.sdv_commit }}
-          path: ~/.m2/repository/io/valkey/springframework/
+          # --- Resolve and validate driver config ---
+          CUSTOM_DRIVER_CONFIG_INPUT='${{ github.event.inputs.custom_driver_config }}'
+          if [ -n "$CUSTOM_DRIVER_CONFIG_INPUT" ]; then
+            echo "Using custom driver config..."
+            DRIVER_CONFIG="$CUSTOM_CONFIG_DIR/custom-driver.json"
+            printf '%s\n' "$CUSTOM_DRIVER_CONFIG_INPUT" > "$DRIVER_CONFIG"
+            if ! jq . "$DRIVER_CONFIG" > /dev/null 2>&1; then
+              echo "ERROR: Custom driver config is not valid JSON"
+              echo "Content written:"
+              cat "$DRIVER_CONFIG"
+              exit 1
+            fi
+            DRIVER="custom-driver"
+            echo "✓ Custom driver config validated"
+          else
+            if [[ "$PRIMARY_DRIVER" == spring-data-* ]]; then
+              if [ "$SECONDARY_DRIVER" = "none" ] || [ -z "$SECONDARY_DRIVER" ]; then
+                echo "ERROR: $PRIMARY_DRIVER requires a secondary driver (valkey-glide, jedis, or lettuce)"
+                exit 1
+              fi
+              if [ "$PRIMARY_DRIVER" = "spring-data-redis" ] && [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
+                echo "ERROR: spring-data-redis does not support valkey-glide. Use jedis or lettuce instead."
+                exit 1
+              fi
+              SECONDARY_IN_FILENAME="$SECONDARY_DRIVER"
+              if [ "$SECONDARY_DRIVER" = "valkey-glide" ]; then
+                SECONDARY_IN_FILENAME="glide"
+              fi
+              DRIVER="${PRIMARY_DRIVER}-${SECONDARY_IN_FILENAME}-standalone"
+            else
+              DRIVER="${PRIMARY_DRIVER}-standalone"
+              if [ "$SECONDARY_DRIVER" != "none" ] && [ -n "$SECONDARY_DRIVER" ]; then
+                echo "Note: secondary_driver '$SECONDARY_DRIVER' ignored for standalone driver '$PRIMARY_DRIVER'"
+              fi
+            fi
+            DRIVER_CONFIG="${CONFIG_DIR}/drivers/${DRIVER}.json"
+            if [ ! -f "$DRIVER_CONFIG" ]; then
+              echo "ERROR: Driver config not found: $DRIVER_CONFIG"
+              echo "Available driver configs:"
+              ls -la "${CONFIG_DIR}/drivers/"
+              exit 1
+            fi
+            echo "✓ Driver config: $DRIVER_CONFIG"
+          fi
 
-      - name: Download glide build artifacts
-        if: needs.prepare.outputs.build_glide == 'true'
-        uses: actions/download-artifact@v4
+          # --- Resolve and validate workload config ---
+          CUSTOM_WORKLOAD_CONFIG_INPUT='${{ github.event.inputs.custom_workload_config }}'
+          if [ -n "$CUSTOM_WORKLOAD_CONFIG_INPUT" ]; then
+            echo "Using custom workload config..."
+            WORKLOAD_CONFIG="$CUSTOM_CONFIG_DIR/custom-workload.json"
+            printf '%s\n' "$CUSTOM_WORKLOAD_CONFIG_INPUT" > "$WORKLOAD_CONFIG"
+            if ! jq . "$WORKLOAD_CONFIG" > /dev/null 2>&1; then
+              echo "ERROR: Custom workload config is not valid JSON"
+              echo "Content written:"
+              cat "$WORKLOAD_CONFIG"
+              exit 1
+            fi
+            WORKLOAD="custom-workload"
+            echo "✓ Custom workload config validated"
+          else
+            WORKLOAD_CONFIG="${CONFIG_DIR}/workloads/${WORKLOAD}.json"
+            if [ ! -f "$WORKLOAD_CONFIG" ]; then
+              echo "ERROR: Workload config not found: $WORKLOAD_CONFIG"
+              echo "Available workload configs:"
+              ls -la "${CONFIG_DIR}/workloads/"
+              exit 1
+            fi
+            echo "✓ Workload config: $WORKLOAD_CONFIG"
+          fi
+
+          echo "Driver config contents:"
+          cat "$DRIVER_CONFIG" | jq .
+          echo "Workload phases:"
+          jq '.phases[] | {id, completion}' "$WORKLOAD_CONFIG"
+
+          # --- Analyze driver requirements ---
+          DRIVER_ID=$(jq -r '.driver_id' "$DRIVER_CONFIG")
+          SECONDARY_DRIVER_ID=$(jq -r '.specific_driver_config.secondary_driver_id // empty' "$DRIVER_CONFIG")
+
+          BUILD_SDV=false
+          BUILD_GLIDE=false
+          SDV_COMMIT=""
+          SDV_VERSION=""
+          GLIDE_COMMIT=""
+          GLIDE_VERSION=""
+          PRIMARY_IS_COMMIT=false
+          SECONDARY_IS_COMMIT=false
+
+          if [ -n "$PRIMARY_VERSION" ] && [[ "$PRIMARY_VERSION" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            PRIMARY_IS_COMMIT=true
+            if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
+              BUILD_SDV=true
+              SDV_COMMIT="$PRIMARY_VERSION"
+              SDV_VERSION="${PRIMARY_VERSION:0:8}-SNAPSHOT"
+            elif [ "$DRIVER_ID" = "valkey-glide" ]; then
+              BUILD_GLIDE=true
+              GLIDE_COMMIT="$PRIMARY_VERSION"
+              GLIDE_VERSION="${PRIMARY_VERSION:0:8}-SNAPSHOT"
+            else
+              echo "ERROR: Commit IDs are only supported for spring-data-valkey and valkey-glide primary drivers"
+              exit 1
+            fi
+          fi
+
+          if [ -n "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ] && [[ "$SECONDARY_VERSION" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+            if [ "$SECONDARY_DRIVER_ID" = "valkey-glide" ]; then
+              SECONDARY_IS_COMMIT=true
+              BUILD_GLIDE=true
+              GLIDE_COMMIT="$SECONDARY_VERSION"
+              GLIDE_VERSION="${SECONDARY_VERSION:0:8}-SNAPSHOT"
+            else
+              echo "ERROR: Commit IDs are only supported for valkey-glide secondary driver"
+              exit 1
+            fi
+          fi
+
+          if [ -z "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ]; then
+            echo "ERROR: secondary_version provided but driver has no secondary driver"
+            exit 1
+          fi
+
+          # --- Write outputs ---
+          echo "driver=$DRIVER" >> $GITHUB_OUTPUT
+          echo "driver_config=$DRIVER_CONFIG" >> $GITHUB_OUTPUT
+          echo "workload=$WORKLOAD" >> $GITHUB_OUTPUT
+          echo "workload_config=$WORKLOAD_CONFIG" >> $GITHUB_OUTPUT
+          echo "driver_id=$DRIVER_ID" >> $GITHUB_OUTPUT
+          echo "secondary_driver_id=$SECONDARY_DRIVER_ID" >> $GITHUB_OUTPUT
+          echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
+          echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
+          echo "primary_is_commit=$PRIMARY_IS_COMMIT" >> $GITHUB_OUTPUT
+          echo "secondary_is_commit=$SECONDARY_IS_COMMIT" >> $GITHUB_OUTPUT
+          echo "build_sdv=$BUILD_SDV" >> $GITHUB_OUTPUT
+          echo "build_glide=$BUILD_GLIDE" >> $GITHUB_OUTPUT
+          echo "sdv_version=$SDV_VERSION" >> $GITHUB_OUTPUT
+          echo "sdv_commit=$SDV_COMMIT" >> $GITHUB_OUTPUT
+          echo "glide_version=$GLIDE_VERSION" >> $GITHUB_OUTPUT
+          echo "glide_commit=$GLIDE_COMMIT" >> $GITHUB_OUTPUT
+
+          echo ""
+          echo "========================================"
+          echo "Driver:            $DRIVER ($DRIVER_ID)"
+          echo "Workload:          $WORKLOAD"
+          echo "Primary version:   '${PRIMARY_VERSION}' (commit: $PRIMARY_IS_COMMIT)"
+          echo "Secondary:         ${SECONDARY_DRIVER_ID:-none} @ '${SECONDARY_VERSION}' (commit: $SECONDARY_IS_COMMIT)"
+          echo "Build SDV:         $BUILD_SDV (${SDV_VERSION:-N/A})"
+          echo "Build Glide:       $BUILD_GLIDE (${GLIDE_VERSION:-N/A})"
+          echo "========================================"
+
+      # --- Cache restore for source builds (same runner type = no version hash mismatch) ---
+      - name: Restore SDV build from cache
+        if: steps.config.outputs.build_sdv == 'true'
+        id: cache-sdv
+        uses: actions/cache@v4
         with:
-          name: glide-build-${{ needs.prepare.outputs.glide_commit }}
-          path: ~/.m2/repository/io/valkey/valkey-glide/
+          path: ~/.m2/repository/io/valkey/springframework
+          key: sdv-build-${{ steps.config.outputs.sdv_commit }}
+
+      - name: Restore glide build from cache
+        if: steps.config.outputs.build_glide == 'true'
+        id: cache-glide
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/io/valkey/valkey-glide
+          key: glide-build-${{ steps.config.outputs.glide_commit }}
+
+      # --- Parallel background builds + wait (must be in same step for `wait` to work) ---
+      - name: Parallel builds and installs
+        run: |
+          set +e
+          LOG_DIR="/tmp/build-logs"
+          mkdir -p "$LOG_DIR"
+          PIDS=()
+          NAMES=()
+
+          # 1. Pre-compile Valkey server (needed by orchestrator)
+          echo "Starting Valkey server compilation..."
+          (
+            set -euo pipefail
+            cd resp-bench && make "$(pwd)/work/valkey/bin/valkey-server"
+          ) > "$LOG_DIR/valkey.log" 2>&1 &
+          PIDS+=($!); NAMES+=("valkey")
+
+          # 2. Build SDV from source (if needed and cache miss)
+          if [ "${{ steps.config.outputs.build_sdv }}" = "true" ] && [ "${{ steps.cache-sdv.outputs.cache-hit }}" != "true" ]; then
+            echo "Starting SDV build from source..."
+            (
+              set -euo pipefail
+              COMMIT_ID="${{ steps.config.outputs.sdv_commit }}"
+              SDV_VERSION="${{ steps.config.outputs.sdv_version }}"
+              git clone ${{ github.server_url }}/${{ github.repository }}.git /tmp/spring-data-valkey
+              cd /tmp/spring-data-valkey
+              git checkout "$COMMIT_ID"
+              mvn versions:set -DnewVersion="$SDV_VERSION" -DgenerateBackupPoms=false -q
+              mvn install -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -Dgpg.skip=true -q
+              echo "Built spring-data-valkey $SDV_VERSION"
+            ) > "$LOG_DIR/sdv.log" 2>&1 &
+            PIDS+=($!); NAMES+=("sdv")
+          elif [ "${{ steps.config.outputs.build_sdv }}" = "true" ]; then
+            echo "SDV build restored from cache"
+          fi
+
+          # 3. Build glide from source (if needed and cache miss)
+          if [ "${{ steps.config.outputs.build_glide }}" = "true" ] && [ "${{ steps.cache-glide.outputs.cache-hit }}" != "true" ]; then
+            echo "Starting glide build from source..."
+            (
+              set -euo pipefail
+
+              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+              source "$HOME/.cargo/env"
+
+              PROTOC_VERSION="29.1"
+              curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+              unzip -o "protoc-${PROTOC_VERSION}-linux-x86_64.zip" -d "$HOME/.local"
+              rm "protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+              export PATH="$PATH:$HOME/.local/bin"
+
+              sudo python3 -m pip install ziglang
+              cargo install --locked cargo-zigbuild
+
+              COMMIT_ID="${{ steps.config.outputs.glide_commit }}"
+              GLIDE_VERSION="${{ steps.config.outputs.glide_version }}"
+              git clone https://github.com/valkey-io/valkey-glide.git /tmp/valkey-glide
+              cd /tmp/valkey-glide
+              git checkout "$COMMIT_ID"
+              cd java
+              CARGO_PROFILE_RELEASE_DEBUG=true ./gradlew :client:buildAll -x test
+              GLIDE_RELEASE_VERSION="$GLIDE_VERSION" ./gradlew publishToMavenLocal -x test
+              echo "Built valkey-glide $GLIDE_VERSION"
+            ) > "$LOG_DIR/glide.log" 2>&1 &
+            PIDS+=($!); NAMES+=("glide")
+          elif [ "${{ steps.config.outputs.build_glide }}" = "true" ]; then
+            echo "Glide build restored from cache"
+          fi
+
+          # 4. Install Python deps
+          echo "Starting pip install..."
+          (
+            set -euo pipefail
+            sudo python3 -m pip install psycopg2-binary boto3 hdrhistogram
+          ) > "$LOG_DIR/pip.log" 2>&1 &
+          PIDS+=($!); NAMES+=("pip")
+
+          # 5. Install async-profiler
+          if [ ! -f "/opt/async-profiler/bin/asprof" ]; then
+            echo "Downloading async-profiler..."
+            (
+              set -euo pipefail
+              curl -sL "https://github.com/async-profiler/async-profiler/releases/download/v3.0/async-profiler-3.0-linux-x64.tar.gz" | sudo tar xzf - -C /opt
+              sudo mv /opt/async-profiler-3.0-linux-x64 /opt/async-profiler
+            ) > "$LOG_DIR/ap.log" 2>&1 &
+            PIDS+=($!); NAMES+=("ap")
+          else
+            echo "async-profiler already installed"
+          fi
+
+          # Wait for all background processes
+          echo ""
+          echo "=== Waiting for background builds ==="
+          FAILED=0
+          for i in "${!PIDS[@]}"; do
+            echo -n "  ${NAMES[$i]}: "
+            if wait "${PIDS[$i]}"; then
+              echo "OK"
+            else
+              EXIT_CODE=$?
+              echo "FAILED (exit $EXIT_CODE)"
+              echo "::error::${NAMES[$i]} build failed"
+              echo "--- ${NAMES[$i]} log ---"
+              cat "$LOG_DIR/${NAMES[$i]}.log" 2>/dev/null || echo "(no log)"
+              echo "--- end ---"
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo ""
+          echo "=== All builds completed ==="
+          resp-bench/work/valkey/bin/valkey-server --version
+          /opt/async-profiler/bin/asprof --version
+          command -v perf && perf --version || echo "perf not available"
 
       - name: Update resp-bench driver versions
         run: |
           cd resp-bench
 
-          DRIVER_ID="${{ needs.prepare.outputs.driver_id }}"
-          SECONDARY_DRIVER_ID="${{ needs.prepare.outputs.secondary_driver_id }}"
-          SECONDARY_VERSION="${{ needs.prepare.outputs.secondary_version }}"
-          SECONDARY_IS_COMMIT="${{ needs.prepare.outputs.secondary_is_commit }}"
-
-          # Update primary driver version if supplied
-          PRIMARY_VERSION="${{ needs.prepare.outputs.primary_version }}"
-          PRIMARY_IS_COMMIT="${{ needs.prepare.outputs.primary_is_commit }}"
+          DRIVER_ID="${{ steps.config.outputs.driver_id }}"
+          SECONDARY_DRIVER_ID="${{ steps.config.outputs.secondary_driver_id }}"
+          SECONDARY_VERSION="${{ steps.config.outputs.secondary_version }}"
+          SECONDARY_IS_COMMIT="${{ steps.config.outputs.secondary_is_commit }}"
+          PRIMARY_VERSION="${{ steps.config.outputs.primary_version }}"
+          PRIMARY_IS_COMMIT="${{ steps.config.outputs.primary_is_commit }}"
 
           if [ -n "$PRIMARY_VERSION" ]; then
             case "$DRIVER_ID" in
               spring-data-valkey)
                 if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
-                  SDV_VERSION="${{ needs.prepare.outputs.sdv_version }}"
+                  SDV_VERSION="${{ steps.config.outputs.sdv_version }}"
                   echo "Updating spring-data-valkey to locally built $SDV_VERSION"
                   sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$SDV_VERSION</spring-data-valkey.version>|" java/pom.xml
                 else
@@ -594,7 +493,7 @@ jobs:
                 ;;
               valkey-glide)
                 if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
-                  GLIDE_VERSION="${{ needs.prepare.outputs.glide_version }}"
+                  GLIDE_VERSION="${{ steps.config.outputs.glide_version }}"
                   echo "Updating valkey-glide (primary) to locally built $GLIDE_VERSION"
                   sed -i "s|<valkey-glide.version>.*</valkey-glide.version>|<valkey-glide.version>$GLIDE_VERSION</valkey-glide.version>|" java/pom.xml
                 else
@@ -617,15 +516,12 @@ jobs:
             esac
           fi
 
-          # Update secondary driver version if a version/commit-id for it was supplied. Otherwise use defaults.
-          # If secondary version is glide and it was built locally, update the pom.xml file to use this built version.
-          # Otherwise, update the version supplied in the pom.xml.
+          # Update secondary driver version if supplied
           if [ -n "$SECONDARY_DRIVER_ID" ] && [ -n "$SECONDARY_VERSION" ]; then
             case "$SECONDARY_DRIVER_ID" in
               valkey-glide)
                 if [ "$SECONDARY_IS_COMMIT" = "true" ]; then
-                  # Use the version from the local build
-                  GLIDE_VERSION="${{ needs.prepare.outputs.glide_version }}"
+                  GLIDE_VERSION="${{ steps.config.outputs.glide_version }}"
                   echo "Updating valkey-glide (secondary) to locally built $GLIDE_VERSION"
                   sed -i "s|<valkey-glide.version>.*</valkey-glide.version>|<valkey-glide.version>$GLIDE_VERSION</valkey-glide.version>|" java/pom.xml
                 else
@@ -655,40 +551,10 @@ jobs:
           echo "✓ Java benchmark built"
           ls -la java/target/*.jar
 
-      - name: Install dependencies
-        run: |
-          sudo apt-get install -y sysstat python3-pip numactl
-          sudo python3 -m pip install psycopg2-binary boto3 hdrhistogram
-
-          # async-profiler for flame graphs
-          if [ ! -f "/opt/async-profiler/bin/asprof" ]; then
-            curl -sL "https://github.com/async-profiler/async-profiler/releases/download/v3.0/async-profiler-3.0-linux-x64.tar.gz" | sudo tar xzf - -C /opt
-            sudo mv /opt/async-profiler-3.0-linux-x64 /opt/async-profiler
-          fi
-          /opt/async-profiler/bin/asprof --version
-
-          # perf for hardware counters
-          sudo apt-get install -y linux-tools-$(uname -r) 2>/dev/null || \
-            sudo apt-get install -y linux-tools-generic 2>/dev/null || true
-          command -v perf && perf --version || echo "perf not available"
-
-      - name: Wait for Valkey server compilation
-        run: |
-          if [ -n "$VALKEY_BUILD_PID" ]; then
-            echo "Waiting for Valkey server compilation (PID $VALKEY_BUILD_PID)..."
-            if wait "$VALKEY_BUILD_PID"; then
-              echo "✓ Valkey server compiled"
-            else
-              echo "ERROR: Valkey server compilation failed"
-              exit 1
-            fi
-            resp-bench/work/valkey/bin/valkey-server --version
-          fi
-
       - name: Run benchmark and publish results to DB
         run: |
-          DRIVER="${{ needs.prepare.outputs.driver }}"
-          WORKLOAD="${{ needs.prepare.outputs.workload }}"
+          DRIVER="${{ steps.config.outputs.driver }}"
+          WORKLOAD="${{ steps.config.outputs.workload }}"
           DRIVER_CONFIG="${{ steps.config.outputs.driver_config }}"
           WORKLOAD_CONFIG="${{ steps.config.outputs.workload_config }}"
           JOB_ID_PREFIX="${{ github.event.inputs.job_id_prefix }}"
@@ -719,8 +585,8 @@ jobs:
       - name: Display results summary
         if: always()
         run: |
-          DRIVER="${{ needs.prepare.outputs.driver }}"
-          WORKLOAD="${{ needs.prepare.outputs.workload }}"
+          DRIVER="${{ steps.config.outputs.driver }}"
+          WORKLOAD="${{ steps.config.outputs.workload }}"
           RESULT_FILE="benchmark_results_${DRIVER}_${WORKLOAD}.json"
 
           if [ -f "$RESULT_FILE" ]; then
@@ -775,8 +641,8 @@ jobs:
       - name: Generate summary report
         if: always()
         run: |
-          DRIVER="${{ needs.prepare.outputs.driver }}"
-          WORKLOAD="${{ needs.prepare.outputs.workload }}"
+          DRIVER="${{ steps.config.outputs.driver }}"
+          WORKLOAD="${{ steps.config.outputs.workload }}"
           RESULT_FILE="benchmark_results_${DRIVER}_${WORKLOAD}.json"
 
           echo "# Benchmark Results" >> $GITHUB_STEP_SUMMARY
@@ -844,8 +710,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results-${{ needs.prepare.outputs.driver }}-${{ needs.prepare.outputs.workload }}
+          name: benchmark-results-${{ steps.config.outputs.driver }}-${{ steps.config.outputs.workload }}
           path: |
-            benchmark_results_${{ needs.prepare.outputs.driver }}_${{ needs.prepare.outputs.workload }}.json
-            benchmark_results_${{ needs.prepare.outputs.driver }}_${{ needs.prepare.outputs.workload }}.ndjson
-            benchmark_results_${{ needs.prepare.outputs.driver }}_${{ needs.prepare.outputs.workload }}_collapsed.txt
+            benchmark_results_${{ steps.config.outputs.driver }}_${{ steps.config.outputs.workload }}.json
+            benchmark_results_${{ steps.config.outputs.driver }}_${{ steps.config.outputs.workload }}.ndjson
+            benchmark_results_${{ steps.config.outputs.driver }}_${{ steps.config.outputs.workload }}_collapsed.txt
