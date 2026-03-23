@@ -150,7 +150,10 @@ jobs:
           git clone --depth 1 ${{ env.RESP_BENCH_REPO }} resp-bench
           RESP_BENCH_COMMIT=$(git -C resp-bench rev-parse HEAD)
           echo "commit=$RESP_BENCH_COMMIT" >> $GITHUB_OUTPUT
-          echo "✓ resp-bench cloned (commit: ${RESP_BENCH_COMMIT:0:7})"
+
+          VALKEY_SERVER_VERSION=$(grep '^SERVER_VERSION?=' resp-bench/Makefile | cut -d= -f2)
+          echo "valkey_version=$VALKEY_SERVER_VERSION" >> $GITHUB_OUTPUT
+          echo "✓ resp-bench cloned (commit: ${RESP_BENCH_COMMIT:0:7}, valkey: $VALKEY_SERVER_VERSION)"
 
       - name: Resolve inputs
         id: inputs
@@ -392,6 +395,28 @@ jobs:
           echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
           echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
 
+      - name: Cache Valkey server binary
+        id: cache-valkey
+        uses: actions/cache@v4
+        with:
+          path: resp-bench/work/valkey
+          key: valkey-server-${{ steps.resp-bench.outputs.valkey_version }}
+
+      - name: Cache Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: maven-bench-${{ steps.resp-bench.outputs.commit }}
+          restore-keys: |
+            maven-bench-
+
+      - name: Cache async-profiler
+        id: cache-profiler
+        uses: actions/cache@v4
+        with:
+          path: /opt/async-profiler
+          key: async-profiler-3.0
+
       - name: Restore SDV build from cache
         if: steps.driver-info.outputs.build_sdv == 'true'
         id: cache-sdv
@@ -418,13 +443,17 @@ jobs:
           PIDS=()
           NAMES=()
 
-          # 1. Pre-compile Valkey server (needed by orchestrator)
-          echo "Starting Valkey server compilation..."
-          (
-            set -euo pipefail
-            cd resp-bench && make "$(pwd)/work/valkey/bin/valkey-server"
-          ) > "$LOG_DIR/valkey.log" 2>&1 &
-          PIDS+=($!); NAMES+=("valkey")
+          # 1. Pre-compile Valkey server (skip if cached)
+          if [ "${{ steps.cache-valkey.outputs.cache-hit }}" != "true" ]; then
+            echo "Starting Valkey server compilation..."
+            (
+              set -euo pipefail
+              cd resp-bench && make "$(pwd)/work/valkey/bin/valkey-server"
+            ) > "$LOG_DIR/valkey.log" 2>&1 &
+            PIDS+=($!); NAMES+=("valkey")
+          else
+            echo "Valkey server restored from cache"
+          fi
 
           # 2. Build SDV from source (if needed and cache miss)
           if [ "${{ steps.driver-info.outputs.build_sdv }}" = "true" ] && [ "${{ steps.cache-sdv.outputs.cache-hit }}" != "true" ]; then
@@ -497,8 +526,8 @@ jobs:
           ) > "$LOG_DIR/pip.log" 2>&1 &
           PIDS+=($!); NAMES+=("pip")
 
-          # 5. Install async-profiler
-          if [ ! -f "/opt/async-profiler/bin/asprof" ]; then
+          # 5. Install async-profiler (skip if cached)
+          if [ "${{ steps.cache-profiler.outputs.cache-hit }}" != "true" ]; then
             echo "Downloading async-profiler..."
             (
               set -euo pipefail
@@ -507,7 +536,7 @@ jobs:
             ) > "$LOG_DIR/ap.log" 2>&1 &
             PIDS+=($!); NAMES+=("ap")
           else
-            echo "async-profiler already installed"
+            echo "async-profiler restored from cache"
           fi
 
           # Wait for all background processes
