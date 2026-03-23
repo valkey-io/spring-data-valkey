@@ -135,7 +135,11 @@ jobs:
       - name: Set up Java 21 and Maven
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-21-jdk-headless maven
+          sudo apt-get install -y openjdk-21-jdk-headless maven python3-pip \
+            sysstat numactl \
+            gcc pkg-config openssl libssl-dev unzip cmake
+          sudo apt-get install -y linux-tools-$(uname -r) 2>/dev/null || \
+            sudo apt-get install -y linux-tools-generic 2>/dev/null || true
           java -version
           mvn -version
 
@@ -320,6 +324,7 @@ jobs:
             echo "Detected: primary_version '$PRIMARY_VERSION' is a commit ID"
             if [ "$DRIVER_ID" = "spring-data-valkey" ]; then
               echo "build_sdv=true" >> $GITHUB_OUTPUT
+              echo "sdv_version=${PRIMARY_VERSION:0:8}-SNAPSHOT" >> $GITHUB_OUTPUT
             elif [ "$DRIVER_ID" = "valkey-glide" ]; then
               BUILD_GLIDE=true
             else
@@ -352,6 +357,16 @@ jobs:
           fi
 
           echo "build_glide=$BUILD_GLIDE" >> $GITHUB_OUTPUT
+          if [ "$BUILD_GLIDE" = "true" ]; then
+            # Resolve glide commit ID and version — glide can be primary or secondary
+            if [ "$DRIVER_ID" = "valkey-glide" ] && [[ "$PRIMARY_VERSION" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
+              GLIDE_COMMIT="$PRIMARY_VERSION"
+            else
+              GLIDE_COMMIT="$SECONDARY_VERSION"
+            fi
+            echo "glide_commit=$GLIDE_COMMIT" >> $GITHUB_OUTPUT
+            echo "glide_version=${GLIDE_COMMIT:0:8}-SNAPSHOT" >> $GITHUB_OUTPUT
+          fi
 
           echo ""
           echo "=== Driver Analysis ==="
@@ -377,93 +392,152 @@ jobs:
           echo "primary_version=$PRIMARY_VERSION" >> $GITHUB_OUTPUT
           echo "secondary_version=$SECONDARY_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Build spring-data-valkey from source
-        id: build-sdv
+      - name: Restore SDV build from cache
         if: steps.driver-info.outputs.build_sdv == 'true'
-        run: |
-          COMMIT_ID="${{ steps.versions.outputs.primary_version }}"
-          echo "Building spring-data-valkey from commit: $COMMIT_ID"
+        id: cache-sdv
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/io/valkey/springframework
+          key: sdv-build-${{ steps.versions.outputs.primary_version }}
 
-          # Clone to a separate directory so the main workspace (with orchestrator,
-          # configs, etc.) is preserved — allows building commits older than the benchmark infra
-          git clone ${{ github.server_url }}/${{ github.repository }}.git /tmp/spring-data-valkey
-          cd /tmp/spring-data-valkey
-          git checkout "$COMMIT_ID"
-
-          # Use commit ID as version for local Maven
-          SDV_VERSION="${COMMIT_ID:0:8}-SNAPSHOT"
-          echo "Build version: $SDV_VERSION"
-
-          # Set version to include commit ID
-          mvn versions:set -DnewVersion="$SDV_VERSION" -DgenerateBackupPoms=false -q
-
-          # Build and install to local Maven repository
-          mvn install -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -Dgpg.skip=true -q
-
-          echo "✓ Built spring-data-valkey version: $SDV_VERSION"
-          echo "version=$SDV_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Install valkey-glide build dependencies
+      - name: Restore glide build from cache
         if: steps.driver-info.outputs.build_glide == 'true'
+        id: cache-glide
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/io/valkey/valkey-glide
+          key: glide-build-${{ steps.driver-info.outputs.glide_commit }}
+
+      # All background builds run in the same step so `wait` works across PIDs.
+      # Per-process logs are captured and displayed on failure.
+      - name: Parallel builds and installs
         run: |
-          echo "Installing dependencies for building valkey-glide from source"
+          set +e
+          LOG_DIR="/tmp/build-logs"
+          mkdir -p "$LOG_DIR"
+          PIDS=()
+          NAMES=()
 
-          # Install system dependencies
-          sudo apt-get update
-          sudo apt-get install -y git gcc pkg-config openssl libssl-dev unzip cmake python3-pip
+          # 1. Pre-compile Valkey server (needed by orchestrator)
+          echo "Starting Valkey server compilation..."
+          (
+            set -euo pipefail
+            cd resp-bench && make "$(pwd)/work/valkey/bin/valkey-server"
+          ) > "$LOG_DIR/valkey.log" 2>&1 &
+          PIDS+=($!); NAMES+=("valkey")
 
-          # Install Rust
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          source "$HOME/.cargo/env"
-          rustc --version
+          # 2. Build SDV from source (if needed and cache miss)
+          if [ "${{ steps.driver-info.outputs.build_sdv }}" = "true" ] && [ "${{ steps.cache-sdv.outputs.cache-hit }}" != "true" ]; then
+            echo "Starting SDV build from source..."
+            (
+              set -euo pipefail
+              COMMIT_ID="${{ steps.versions.outputs.primary_version }}"
+              SDV_VERSION="${{ steps.driver-info.outputs.sdv_version }}"
 
-          # Install protobuf compiler v29.1
-          PROTOC_VERSION="29.1"
-          curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          unzip -o "protoc-${PROTOC_VERSION}-linux-x86_64.zip" -d "$HOME/.local"
-          rm "protoc-${PROTOC_VERSION}-linux-x86_64.zip"
-          export PATH="$PATH:$HOME/.local/bin"
-          protoc --version
+              # Clone to a separate directory so the main workspace (with orchestrator,
+              # configs, etc.) is preserved — allows building commits older than the benchmark infra
+              git clone ${{ github.server_url }}/${{ github.repository }}.git /tmp/spring-data-valkey
+              cd /tmp/spring-data-valkey
+              git checkout "$COMMIT_ID"
 
-          # Install ziglang and cargo-zigbuild (required for Linux builds)
-          sudo python3 -m pip install ziglang
-          cargo install --locked cargo-zigbuild
-
-          echo "✓ valkey-glide build dependencies installed"
-
-      - name: Build valkey-glide from source
-        id: build-glide
-        if: steps.driver-info.outputs.build_glide == 'true'
-        run: |
-          source "$HOME/.cargo/env"
-          export PATH="$PATH:$HOME/.local/bin"
-
-          # Resolve commit ID — glide can be built as primary or secondary driver
-          if [ "${{ steps.driver-info.outputs.primary_is_commit }}" = "true" ] && [ "${{ steps.driver-info.outputs.driver_id }}" = "valkey-glide" ]; then
-            COMMIT_ID="${{ steps.inputs.outputs.primary_version }}"
-            ROLE="primary"
-          else
-            COMMIT_ID="${{ steps.versions.outputs.secondary_version }}"
-            ROLE="secondary"
+              mvn versions:set -DnewVersion="$SDV_VERSION" -DgenerateBackupPoms=false -q
+              mvn install -DskipTests -Dmaven.compiler.source=17 -Dmaven.compiler.target=17 -Dgpg.skip=true -q
+              echo "✓ Built spring-data-valkey $SDV_VERSION"
+            ) > "$LOG_DIR/sdv.log" 2>&1 &
+            PIDS+=($!); NAMES+=("sdv")
+          elif [ "${{ steps.driver-info.outputs.build_sdv }}" = "true" ]; then
+            echo "SDV build restored from cache"
           fi
-          echo "Building valkey-glide from commit: $COMMIT_ID ($ROLE driver)"
 
-          # Clone valkey-glide at specific commit
-          git clone https://github.com/valkey-io/valkey-glide.git /tmp/valkey-glide
-          cd /tmp/valkey-glide
-          git checkout "$COMMIT_ID"
+          # 3. Build glide from source (if needed and cache miss)
+          if [ "${{ steps.driver-info.outputs.build_glide }}" = "true" ] && [ "${{ steps.cache-glide.outputs.cache-hit }}" != "true" ]; then
+            echo "Starting glide build from source..."
+            (
+              set -euo pipefail
 
-          # Use commit ID as version for local Maven
-          GLIDE_VERSION="${COMMIT_ID:0:8}-SNAPSHOT"
-          echo "Building valkey-glide version: $GLIDE_VERSION"
+              # Install Rust
+              curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+              source "$HOME/.cargo/env"
 
-          # build with debug symbols for flamegraph visibility
-          cd java
-          CARGO_PROFILE_RELEASE_DEBUG=true ./gradlew :client:buildAll -x test
-          GLIDE_RELEASE_VERSION="$GLIDE_VERSION" ./gradlew publishToMavenLocal -x test
+              # Install protobuf compiler v29.1
+              PROTOC_VERSION="29.1"
+              curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+              unzip -o "protoc-${PROTOC_VERSION}-linux-x86_64.zip" -d "$HOME/.local"
+              rm "protoc-${PROTOC_VERSION}-linux-x86_64.zip"
+              export PATH="$PATH:$HOME/.local/bin"
 
-          echo "✓ Built valkey-glide $GLIDE_VERSION from commit $COMMIT_ID ($ROLE driver)"
-          echo "version=$GLIDE_VERSION" >> $GITHUB_OUTPUT
+              # Install ziglang and cargo-zigbuild (required for Linux builds)
+              sudo python3 -m pip install ziglang
+              cargo install --locked cargo-zigbuild
+
+              COMMIT_ID="${{ steps.driver-info.outputs.glide_commit }}"
+              GLIDE_VERSION="${{ steps.driver-info.outputs.glide_version }}"
+
+              # Clone valkey-glide at specific commit
+              git clone https://github.com/valkey-io/valkey-glide.git /tmp/valkey-glide
+              cd /tmp/valkey-glide
+              git checkout "$COMMIT_ID"
+
+              # build with debug symbols for flamegraph visibility
+              cd java
+              CARGO_PROFILE_RELEASE_DEBUG=true ./gradlew :client:buildAll -x test
+              GLIDE_RELEASE_VERSION="$GLIDE_VERSION" ./gradlew publishToMavenLocal -x test
+              echo "✓ Built valkey-glide $GLIDE_VERSION"
+            ) > "$LOG_DIR/glide.log" 2>&1 &
+            PIDS+=($!); NAMES+=("glide")
+          elif [ "${{ steps.driver-info.outputs.build_glide }}" = "true" ]; then
+            echo "Glide build restored from cache"
+          fi
+
+          # 4. Install Python deps
+          echo "Starting pip install..."
+          (
+            set -euo pipefail
+            sudo python3 -m pip install psycopg2-binary boto3 hdrhistogram
+          ) > "$LOG_DIR/pip.log" 2>&1 &
+          PIDS+=($!); NAMES+=("pip")
+
+          # 5. Install async-profiler
+          if [ ! -f "/opt/async-profiler/bin/asprof" ]; then
+            echo "Downloading async-profiler..."
+            (
+              set -euo pipefail
+              curl -sL "https://github.com/async-profiler/async-profiler/releases/download/v3.0/async-profiler-3.0-linux-x64.tar.gz" | sudo tar xzf - -C /opt
+              sudo mv /opt/async-profiler-3.0-linux-x64 /opt/async-profiler
+            ) > "$LOG_DIR/ap.log" 2>&1 &
+            PIDS+=($!); NAMES+=("ap")
+          else
+            echo "async-profiler already installed"
+          fi
+
+          # Wait for all background processes
+          echo ""
+          echo "=== Waiting for background builds ==="
+          FAILED=0
+          for i in "${!PIDS[@]}"; do
+            echo -n "  ${NAMES[$i]}: "
+            if wait "${PIDS[$i]}"; then
+              echo "OK"
+            else
+              EXIT_CODE=$?
+              echo "FAILED (exit $EXIT_CODE)"
+              echo "::error::${NAMES[$i]} build failed"
+              echo "--- ${NAMES[$i]} log ---"
+              cat "$LOG_DIR/${NAMES[$i]}.log" 2>/dev/null || echo "(no log)"
+              echo "--- end ---"
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            exit 1
+          fi
+
+          echo ""
+          echo "=== All builds completed ==="
+          resp-bench/work/valkey/bin/valkey-server --version
+          /opt/async-profiler/bin/asprof --version
+          command -v perf && perf --version || echo "perf not available"
 
       - name: Update resp-bench driver versions
         run: |
@@ -482,7 +556,7 @@ jobs:
             case "$DRIVER_ID" in
               spring-data-valkey)
                 if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
-                  SDV_VERSION="${{ steps.build-sdv.outputs.version }}"
+                  SDV_VERSION="${{ steps.driver-info.outputs.sdv_version }}"
                   echo "Updating spring-data-valkey to locally built $SDV_VERSION"
                   sed -i "s|<spring-data-valkey.version>.*</spring-data-valkey.version>|<spring-data-valkey.version>$SDV_VERSION</spring-data-valkey.version>|" java/pom.xml
                 else
@@ -492,7 +566,7 @@ jobs:
                 ;;
               valkey-glide)
                 if [ "$PRIMARY_IS_COMMIT" = "true" ]; then
-                  GLIDE_VERSION="${{ steps.build-glide.outputs.version }}"
+                  GLIDE_VERSION="${{ steps.driver-info.outputs.glide_version }}"
                   echo "Updating valkey-glide (primary) to locally built $GLIDE_VERSION"
                   sed -i "s|<valkey-glide.version>.*</valkey-glide.version>|<valkey-glide.version>$GLIDE_VERSION</valkey-glide.version>|" java/pom.xml
                 else
@@ -523,7 +597,7 @@ jobs:
               valkey-glide)
                 if [ "$SECONDARY_IS_COMMIT" = "true" ]; then
                   # Use the version from the local build
-                  GLIDE_VERSION="${{ steps.build-glide.outputs.version }}"
+                  GLIDE_VERSION="${{ steps.driver-info.outputs.glide_version }}"
                   echo "Updating valkey-glide (secondary) to locally built $GLIDE_VERSION"
                   sed -i "s|<valkey-glide.version>.*</valkey-glide.version>|<valkey-glide.version>$GLIDE_VERSION</valkey-glide.version>|" java/pom.xml
                 else
@@ -552,23 +626,6 @@ jobs:
           make java-build
           echo "✓ Java benchmark built"
           ls -la java/target/*.jar
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get install -y sysstat python3-pip numactl
-          sudo python3 -m pip install psycopg2-binary boto3 hdrhistogram
-
-          # async-profiler for flame graphs
-          if [ ! -f "/opt/async-profiler/bin/asprof" ]; then
-            curl -sL "https://github.com/async-profiler/async-profiler/releases/download/v3.0/async-profiler-3.0-linux-x64.tar.gz" | sudo tar xzf - -C /opt
-            sudo mv /opt/async-profiler-3.0-linux-x64 /opt/async-profiler
-          fi
-          /opt/async-profiler/bin/asprof --version
-
-          # perf for hardware counters
-          sudo apt-get install -y linux-tools-$(uname -r) 2>/dev/null || \
-            sudo apt-get install -y linux-tools-generic 2>/dev/null || true
-          command -v perf && perf --version || echo "perf not available"
 
       - name: Run benchmark and publish results to DB
         run: |
