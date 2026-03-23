@@ -410,13 +410,6 @@ jobs:
           restore-keys: |
             maven-bench-
 
-      - name: Cache async-profiler
-        id: cache-profiler
-        uses: actions/cache@v4
-        with:
-          path: /opt/async-profiler
-          key: async-profiler-3.0
-
       - name: Restore SDV build from cache
         if: steps.driver-info.outputs.build_sdv == 'true'
         id: cache-sdv
@@ -526,8 +519,8 @@ jobs:
           ) > "$LOG_DIR/pip.log" 2>&1 &
           PIDS+=($!); NAMES+=("pip")
 
-          # 5. Install async-profiler (skip if cached)
-          if [ "${{ steps.cache-profiler.outputs.cache-hit }}" != "true" ]; then
+          # 5. Install async-profiler
+          if [ ! -f "/opt/async-profiler/bin/asprof" ]; then
             echo "Downloading async-profiler..."
             (
               set -euo pipefail
@@ -536,7 +529,7 @@ jobs:
             ) > "$LOG_DIR/ap.log" 2>&1 &
             PIDS+=($!); NAMES+=("ap")
           else
-            echo "async-profiler restored from cache"
+            echo "async-profiler already installed"
           fi
 
           # Wait for all background processes
