@@ -228,6 +228,7 @@ Configure health endpoints in `application.properties`:
 
 ```properties
 management.endpoints.web.exposure.include=health,metrics
+management.endpoint.health.show-components=always
 management.health.valkey.enabled=true
 ```
 
