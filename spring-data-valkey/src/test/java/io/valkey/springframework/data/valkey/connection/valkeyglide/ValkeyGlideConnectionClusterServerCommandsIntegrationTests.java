@@ -31,6 +31,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterServerComma
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.FlushOption;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 
 /**
  * Comprehensive low-level integration tests for {@link ValkeyGlideClusterConnection} 
@@ -464,6 +465,7 @@ public class ValkeyGlideConnectionClusterServerCommandsIntegrationTests extends 
     }
 
     @Test
+    @EnabledOnValkeyVersion("7.2")
     void testClientLibNameReported() {
         List<ValkeyClientInfo> clientList = clusterConnection.serverCommands().getClientList();
         assertThat(clientList).anyMatch(client -> "GlideSpringDataValkey".equals(client.get("lib-name")));

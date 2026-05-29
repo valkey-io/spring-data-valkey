@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyNode;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.FlushOption;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.MigrateOption;
@@ -454,6 +455,7 @@ public class ValkeyGlideConnectionServerCommandsIntegrationTests extends Abstrac
     }
 
     @Test
+    @EnabledOnValkeyVersion("7.2")
     void testClientLibNameReported() {
         List<ValkeyClientInfo> clientList = connection.serverCommands().getClientList();
         assertThat(clientList).anyMatch(client -> "GlideSpringDataValkey".equals(client.get("lib-name")));
