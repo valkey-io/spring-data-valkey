@@ -463,6 +463,12 @@ public class ValkeyGlideConnectionClusterServerCommandsIntegrationTests extends 
         }
     }
 
+    @Test
+    void testClientLibNameReported() {
+        List<ValkeyClientInfo> clientList = clusterConnection.serverCommands().getClientList();
+        assertThat(clientList).anyMatch(client -> "GlideSpringDataValkey".equals(client.get("lib-name")));
+    }
+
     // ==================== Cluster-Wide Routing and Aggregation Verification ====================
 
     @Test

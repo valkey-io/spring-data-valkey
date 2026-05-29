@@ -454,6 +454,12 @@ public class ValkeyGlideConnectionServerCommandsIntegrationTests extends Abstrac
     }
 
     @Test
+    void testClientLibNameReported() {
+        List<ValkeyClientInfo> clientList = connection.serverCommands().getClientList();
+        assertThat(clientList).anyMatch(client -> "GlideSpringDataValkey".equals(client.get("lib-name")));
+    }
+
+    @Test
     void testKillClient() {
         // Test killing a client
         // This is tricky to test safely, so we test with a non-existent client
