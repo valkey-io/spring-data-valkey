@@ -73,9 +73,7 @@ The following overview explains features that are supported by the individual Va
   <dependency>
     <groupId>io.valkey</groupId>
     <artifactId>valkey-glide</artifactId>
-    <version>2.3.0</version>
-    <classifier>linux-x86_64</classifier>
-  </dependency>
+    <version>2.4.0</version>
 
 </dependencies>
 ```
