@@ -37,40 +37,23 @@ Add the starter and Valkey GLIDE dependencies:
     <dependency>
         <groupId>io.valkey</groupId>
         <artifactId>valkey-glide</artifactId>
-        <classifier>${os.detected.classifier}</classifier>
         <version>${version}</version>
     </dependency>
 </dependencies>
 ```
 
-Add the os-maven-plugin for platform-specific GLIDE libraries:
-
-```xml
-<build>
-    <extensions>
-        <extension>
-            <groupId>kr.motd.maven</groupId>
-            <artifactId>os-maven-plugin</artifactId>
-            <version>1.7.1</version>
-        </extension>
-    </extensions>
-</build>
-```
-
 Or to your `build.gradle`:
 
 ```gradle
-plugins {
-    id 'com.google.osdetector' version '1.7.3'
-}
-
 dependencies {
     implementation 'io.valkey.springframework.boot:spring-boot-starter-data-valkey:${version}'
-    implementation 'io.valkey:valkey-glide:${version}:${osdetector.classifier}'
+    implementation 'io.valkey:valkey-glide:${version}'
 }
 ```
 
-Note: The Valkey GLIDE dependency must also be explicitly added due to the OS classifier (platform-specific JAR).  To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
+To use platform specific Valkey GLIDE dependency and reduce the Jar size, see Valkey GLIDE installation [guide](https://glide.valkey.io/how-to/installation?lang=java).
+
+To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
 
 ## Getting Started
 

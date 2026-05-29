@@ -31,23 +31,8 @@ Add the Spring Data Valkey and Valkey GLIDE dependencies:
 <dependency>
     <groupId>io.valkey</groupId>
     <artifactId>valkey-glide</artifactId>
-    <classifier>${os.detected.classifier}</classifier>
     <version>${version}</version>
 </dependency>
-```
-
-Add the os-maven-plugin for platform-specific GLIDE libraries:
-
-```xml
-<build>
-    <extensions>
-        <extension>
-            <groupId>kr.motd.maven</groupId>
-            <artifactId>os-maven-plugin</artifactId>
-            <version>1.7.1</version>
-        </extension>
-    </extensions>
-</build>
 ```
 
 ## Getting Started

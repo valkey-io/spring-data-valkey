@@ -29,7 +29,6 @@ Spring Data Valkey is a Spring Data module providing first-class Valkey/Redis in
 
 **Driver Notes:**
 
-- Valkey GLIDE requires `${os.detected.classifier}` (platform-specific JAR) and the `os-maven-plugin` build extension
 - Sentinel support is available in Lettuce and Jedis only — GLIDE does not support Sentinel at this time
 
 ## Architecture Quick Facts

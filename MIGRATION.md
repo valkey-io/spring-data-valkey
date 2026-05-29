@@ -32,23 +32,8 @@ Update your `pom.xml`:
 <dependency>
     <groupId>io.valkey</groupId>
     <artifactId>valkey-glide</artifactId>
-    <classifier>${os.detected.classifier}</classifier>
     <version>${version}</version>
 </dependency>
-```
-
-Valkey GLIDE requires platform-specific native libraries. Add the os-maven-plugin to resolve `${os.detected.classifier}`:
-
-```xml
-<build>
-    <extensions>
-        <extension>
-            <groupId>kr.motd.maven</groupId>
-            <artifactId>os-maven-plugin</artifactId>
-            <version>1.7.1</version>
-        </extension>
-    </extensions>
-</build>
 ```
 
 Note: You can continue using Lettuce or Jedis if preferred by setting `spring.data.valkey.client-type=lettuce` or `spring.data.valkey.client-type=jedis`.
@@ -63,15 +48,7 @@ implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 // After
 implementation 'io.valkey.springframework.boot:spring-boot-starter-data-valkey:${version}'
-implementation "io.valkey:valkey-glide:${version}:${osdetector.classifier}"
-```
-
-Add the osdetector plugin to resolve `${osdetector.classifier}`:
-
-```groovy
-plugins {
-    id 'com.google.osdetector' version '1.7.3'
-}
+implementation 'io.valkey:valkey-glide:${version}'
 ```
 
 ### Vanilla Spring
@@ -97,7 +74,6 @@ Update your `pom.xml`:
 <dependency>
     <groupId>io.valkey</groupId>
     <artifactId>valkey-glide</artifactId>
-    <classifier>${os.detected.classifier}</classifier>
     <version>${version}</version>
 </dependency>
 ```
@@ -112,7 +88,7 @@ implementation 'org.springframework.data:spring-data-redis:${version}'
 
 // After
 implementation 'io.valkey.springframework.data:spring-data-valkey:${version}'
-implementation "io.valkey:valkey-glide:${version}:${osdetector.classifier}"
+implementation 'io.valkey:valkey-glide:${version}'
 ```
 
 ## Package Name Changes
