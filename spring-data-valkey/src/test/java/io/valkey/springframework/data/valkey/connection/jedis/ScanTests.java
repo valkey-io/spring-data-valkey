@@ -38,7 +38,7 @@ import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
@@ -62,14 +62,14 @@ public class ScanTests {
 	public static List<ValkeyConnectionFactory> params() {
 
 		JedisConnectionFactory jedisConnectionFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		LettuceConnectionFactory lettuceConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		// Pretty strange that Lettuce is used in Jedis-tree test - adding Valkey-Glide as well
 		ValkeyGlideConnectionFactory valkeyGlideConnectionFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		return Arrays.asList(jedisConnectionFactory, lettuceConnectionFactory, valkeyGlideConnectionFactory);
 	}

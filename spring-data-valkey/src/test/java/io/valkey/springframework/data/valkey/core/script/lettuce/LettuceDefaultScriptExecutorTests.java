@@ -19,7 +19,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.core.script.AbstractDefaultScriptExecutorTests;
 import io.valkey.springframework.data.valkey.core.script.DefaultScriptExecutor;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * Integration test of {@link DefaultScriptExecutor} with Lettuce.
@@ -31,6 +31,6 @@ public class LettuceDefaultScriptExecutorTests extends AbstractDefaultScriptExec
 
 	@Override
 	protected ValkeyConnectionFactory getConnectionFactory() {
-		return LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+		return LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 	}
 }

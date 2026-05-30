@@ -40,17 +40,17 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingCl
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
 import org.springframework.data.util.Lazy;
 
 /**
  * JUnit {@link ParameterResolver} providing pre-cached {@link LettuceConnectionFactory} instances. Connection factories
- * can be qualified with {@code @ValkeyStanalone} (default), {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a
+ * can be qualified with {@code @ValkeyStandalone} (default), {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a
  * specific factory instance. Instances are managed by this extension and will be shut down on JVM shutdown.
  *
  * @author Mark Paluch
- * @see ValkeyStanalone
+ * @see ValkeyStandalone
  * @see ValkeySentinel
  * @see ValkeyCluster
  */
@@ -155,12 +155,12 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 	static {
 
 		pooledFactories = new HashMap<>();
-		pooledFactories.put(ValkeyStanalone.class, STANDALONE);
+		pooledFactories.put(ValkeyStandalone.class, STANDALONE);
 		pooledFactories.put(ValkeySentinel.class, SENTINEL);
 		pooledFactories.put(ValkeyCluster.class, CLUSTER);
 
 		unpooledFactories = new HashMap<>();
-		unpooledFactories.put(ValkeyStanalone.class, STANDALONE_UNPOOLED);
+		unpooledFactories.put(ValkeyStandalone.class, STANDALONE_UNPOOLED);
 		unpooledFactories.put(ValkeySentinel.class, SENTINEL_UNPOOLED);
 		unpooledFactories.put(ValkeyCluster.class, CLUSTER_UNPOOLED);
 	}
@@ -169,7 +169,7 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 	 * Obtain a {@link LettuceConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
 	 * and will be shut down on JVM shutdown.
 	 *
-	 * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
+	 * @param qualifier an be any of {@link ValkeyStandalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
 	 * @return the managed {@link LettuceConnectionFactory}.
 	 */
 	public static LettuceConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier) {
@@ -180,7 +180,7 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 	 * Obtain a {@link LettuceConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
 	 * and will be shut down on JVM shutdown.
 	 *
-	 * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
+	 * @param qualifier an be any of {@link ValkeyStandalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
 	 * @return the managed {@link LettuceConnectionFactory}.
 	 */
 	public static LettuceConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier, boolean pooled) {
@@ -215,7 +215,7 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 			return ValkeyCluster.class;
 		}
 
-		return ValkeyStanalone.class;
+		return ValkeyStandalone.class;
 	}
 
 	static class ManagedLettuceConnectionFactory extends LettuceConnectionFactory

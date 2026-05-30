@@ -37,7 +37,7 @@ import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerial
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * Integration test for ValkeyMap.
@@ -80,7 +80,7 @@ public class ValkeyMapIntegrationTests extends AbstractValkeyMapIntegrationTests
 		ObjectFactory<byte[]> rawFactory = new RawObjectFactory();
 
 		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate genericTemplate = new ValkeyTemplate();
 		genericTemplate.setConnectionFactory(jedisConnFactory);
@@ -106,7 +106,7 @@ public class ValkeyMapIntegrationTests extends AbstractValkeyMapIntegrationTests
 
 		// Lettuce
 		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class, false);
+				.getConnectionFactory(ValkeyStandalone.class, false);
 
 		ValkeyTemplate genericTemplateLettuce = new ValkeyTemplate();
 		genericTemplateLettuce.setConnectionFactory(lettuceConnFactory);
@@ -136,7 +136,7 @@ public class ValkeyMapIntegrationTests extends AbstractValkeyMapIntegrationTests
 
 		// ValkeyGlide
 		ValkeyGlideConnectionFactory valkeyGlideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 		ValkeyTemplate genericTemplateVkg = new ValkeyTemplate();
 		genericTemplateVkg.setConnectionFactory(valkeyGlideConnFactory);
 		genericTemplateVkg.afterPropertiesSet();

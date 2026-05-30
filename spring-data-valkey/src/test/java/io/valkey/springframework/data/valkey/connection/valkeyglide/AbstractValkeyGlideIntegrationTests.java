@@ -34,7 +34,7 @@ import org.slf4j.LoggerFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * Abstract base class for Valkey Glide integration tests that provides common setup, 
@@ -65,7 +65,7 @@ public abstract class AbstractValkeyGlideIntegrationTests {
     protected ValkeyConnection connection;
 
     @BeforeAll
-     void setUpAll(@ValkeyStanalone ValkeyConnectionFactory connectionFactory) {
+     void setUpAll(@ValkeyStandalone ValkeyConnectionFactory connectionFactory) {
         // Create connection factory
         this.connectionFactory = connectionFactory;
         validateServerExistance(connectionFactory);

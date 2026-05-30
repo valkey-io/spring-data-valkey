@@ -27,7 +27,7 @@ import io.valkey.springframework.data.valkey.core.ValkeyKeyValueTemplate;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * @author Mark Paluch
@@ -39,7 +39,7 @@ public class ValkeyCdiDependenciesProducer {
 	 */
 	@Produces
 	public ValkeyConnectionFactory valkeyConnectionFactory() {
-		return ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+		return ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 	}
 
 	/**

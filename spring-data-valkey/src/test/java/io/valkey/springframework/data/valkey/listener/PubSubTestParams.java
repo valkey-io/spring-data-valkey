@@ -32,7 +32,7 @@ import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * @author Costin Leau
@@ -47,7 +47,7 @@ public class PubSubTestParams {
 		ObjectFactory<Person> personFactory = new PersonObjectFactory();
 
 		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getNewConnectionFactory(ValkeyStanalone.class);
+				.getNewConnectionFactory(ValkeyStandalone.class);
 
 		jedisConnFactory.afterPropertiesSet();
 
@@ -62,7 +62,7 @@ public class PubSubTestParams {
 
 		// add Lettuce
 		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate<String, String> stringTemplateLtc = new StringValkeyTemplate(lettuceConnFactory);
 		ValkeyTemplate<String, Person> personTemplateLtc = new ValkeyTemplate<>();
@@ -75,7 +75,7 @@ public class PubSubTestParams {
 
 		// add Valkey Glide
 		ValkeyGlideConnectionFactory glideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate<String, String> stringTemplateGlide = new StringValkeyTemplate(glideConnFactory);
 		ValkeyTemplate<String, Person> personTemplateGlide = new ValkeyTemplate<>();

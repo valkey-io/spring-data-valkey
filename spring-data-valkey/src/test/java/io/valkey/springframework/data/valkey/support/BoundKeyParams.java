@@ -31,7 +31,7 @@ import io.valkey.springframework.data.valkey.support.atomic.ValkeyAtomicLong;
 import io.valkey.springframework.data.valkey.support.collections.DefaultValkeyMap;
 import io.valkey.springframework.data.valkey.support.collections.DefaultValkeySet;
 import io.valkey.springframework.data.valkey.support.collections.ValkeyList;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * @author Costin Leau
@@ -43,7 +43,7 @@ public class BoundKeyParams {
 	public static Collection<Object[]> testParams() {
 		// Jedis
 		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		StringValkeyTemplate templateJS = new StringValkeyTemplate(jedisConnFactory);
 		DefaultValkeyMap mapJS = new DefaultValkeyMap("bound:key:map", templateJS);
@@ -52,7 +52,7 @@ public class BoundKeyParams {
 
 		// Lettuce
 		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		StringValkeyTemplate templateLT = new StringValkeyTemplate(lettuceConnFactory);
 		DefaultValkeyMap mapLT = new DefaultValkeyMap("bound:key:mapLT", templateLT);
@@ -61,7 +61,7 @@ public class BoundKeyParams {
 
 		// ValkeyGlide
 		ValkeyGlideConnectionFactory vgConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		StringValkeyTemplate templateVG = new StringValkeyTemplate(vgConnFactory);
 		DefaultValkeyMap mapVG = new DefaultValkeyMap("bound:key:mapVG", templateLT);

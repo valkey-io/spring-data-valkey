@@ -36,17 +36,17 @@ import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfigu
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
 import org.springframework.data.util.Lazy;
 
 /**
  * JUnit {@link ParameterResolver} providing pre-cached {@link JedisConnectionFactory} instances. Connection factories
- * can be qualified with {@code @ValkeyStanalone} (default), {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a
+ * can be qualified with {@code @ValkeyStandalone} (default), {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a
  * specific factory instance. Instances are managed by this extension and will be shut down on JVM shutdown.
  *
  * @author Mark Paluch
- * @see ValkeyStanalone
+ * @see ValkeyStandalone
  * @see ValkeySentinel
  * @see ValkeyCluster
  */
@@ -99,7 +99,7 @@ public class JedisConnectionFactoryExtension implements ParameterResolver {
 	static {
 
 		factories = new HashMap<>();
-		factories.put(ValkeyStanalone.class, STANDALONE);
+		factories.put(ValkeyStandalone.class, STANDALONE);
 		factories.put(ValkeySentinel.class, SENTINEL);
 		factories.put(ValkeyCluster.class, CLUSTER);
 	}
@@ -108,7 +108,7 @@ public class JedisConnectionFactoryExtension implements ParameterResolver {
 	 * Obtain a cached {@link JedisConnectionFactory} described by {@code qualifier}. Instances are managed by this
 	 * extension and will be shut down on JVM shutdown.
 	 *
-	 * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
+	 * @param qualifier an be any of {@link ValkeyStandalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
 	 * @return the managed {@link JedisConnectionFactory}.
 	 */
 	public static JedisConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier) {
@@ -119,7 +119,7 @@ public class JedisConnectionFactoryExtension implements ParameterResolver {
 	 * Obtain a new {@link JedisConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
 	 * and will be shut down on JVM shutdown.
 	 *
-	 * @param qualifier an be any of {@link ValkeyStanalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
+	 * @param qualifier an be any of {@link ValkeyStandalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
 	 * @return the managed {@link JedisConnectionFactory}.
 	 */
 	public static JedisConnectionFactory getNewConnectionFactory(Class<? extends Annotation> qualifier) {
@@ -153,7 +153,7 @@ public class JedisConnectionFactoryExtension implements ParameterResolver {
 			return ValkeyCluster.class;
 		}
 
-		return ValkeyStanalone.class;
+		return ValkeyStandalone.class;
 	}
 
 	static class NewableLazy<T> {

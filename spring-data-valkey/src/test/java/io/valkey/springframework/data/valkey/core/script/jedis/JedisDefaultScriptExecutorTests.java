@@ -23,7 +23,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.core.script.AbstractDefaultScriptExecutorTests;
 import io.valkey.springframework.data.valkey.core.script.DefaultScriptExecutor;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * Integration test of {@link DefaultScriptExecutor} with {@link Jedis}.
@@ -34,7 +34,7 @@ public class JedisDefaultScriptExecutorTests extends AbstractDefaultScriptExecut
 
 	@Override
 	protected ValkeyConnectionFactory getConnectionFactory() {
-		return JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+		return JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 	}
 
 	@Disabled("transactional execution is currently not supported with Jedis")

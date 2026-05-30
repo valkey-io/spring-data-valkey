@@ -52,7 +52,7 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyDrive
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
@@ -91,7 +91,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 
 		List<Object[]> params = new ArrayList<>();
 		params.addAll(AbstractOperationsTestParams
-				.testParams(JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class)));
+				.testParams(JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class)));
 
 		if (ValkeyDetector.isClusterAvailable()) {
 			params.addAll(AbstractOperationsTestParams
@@ -99,7 +99,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		}
 
 		params.addAll(AbstractOperationsTestParams
-				.testParams(LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class)));
+				.testParams(LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class)));
 
 		if (ValkeyDetector.isClusterAvailable()) {
 			params.addAll(AbstractOperationsTestParams
@@ -107,7 +107,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		}
 
 		params.addAll(AbstractOperationsTestParams
-				.testParams(ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class)));
+				.testParams(ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class)));
 
 		if (ValkeyDetector.isClusterAvailable()) {
 			params.addAll(AbstractOperationsTestParams

@@ -39,7 +39,7 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.core.index.Indexed;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.lang.Nullable;
@@ -66,9 +66,9 @@ public class ValkeyKeyValueTemplateTests {
 
 	public static List<ValkeyConnectionFactory> params() {
 
-		JedisConnectionFactory jedis = JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
-		LettuceConnectionFactory lettuce = LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
-		ValkeyGlideConnectionFactory valkeyGlide = ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+		JedisConnectionFactory jedis = JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
+		LettuceConnectionFactory lettuce = LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
+		ValkeyGlideConnectionFactory valkeyGlide = ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 
 		return Arrays.asList(jedis, lettuce, valkeyGlide);
 	}

@@ -25,7 +25,7 @@ import java.lang.annotation.Target;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 
 /**
- * {@code @ValkeyStanalone} is used to qualify a connection resource to point to Valkey Standalone.
+ * {@code @ValkeyStandalone} is used to qualify a connection resource to point to Valkey Standalone.
  *
  * @author Mark Paluch
  * @see SettingsUtils#getPort()
@@ -34,5 +34,5 @@ import io.valkey.springframework.data.valkey.SettingsUtils;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 @Documented
-public @interface ValkeyStanalone {
+public @interface ValkeyStandalone {
 }

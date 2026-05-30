@@ -44,7 +44,7 @@ import io.valkey.springframework.data.valkey.serializer.ValkeyElementWriter;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.ValkeySerializationContextBuilder;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import org.springframework.scripting.support.StaticScriptSource;
 
 /**
@@ -60,7 +60,7 @@ public class DefaultReactiveScriptExecutorTests {
 	@BeforeAll
 	static void setUp() {
 
-		connectionFactory = LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+		connectionFactory = LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 
 		stringTemplate = new StringValkeyTemplate(connectionFactory);
 		stringScriptExecutor = new DefaultReactiveScriptExecutor<>(connectionFactory, ValkeySerializationContext.string());

@@ -37,7 +37,7 @@ import io.valkey.springframework.data.valkey.connection.lettuce.extension.Lettuc
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAdapter;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
@@ -74,15 +74,15 @@ public class SubscriptionConnectionTests {
 
 		// Jedis
 		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		// Lettuce
 		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		// Valkey-GLIDE
 		ValkeyGlideConnectionFactory glideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		return Arrays.asList(new Object[][] { { jedisConnFactory }, { lettuceConnFactory }, { glideConnFactory } });
 	}

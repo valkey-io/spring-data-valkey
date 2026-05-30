@@ -26,7 +26,7 @@ import io.valkey.springframework.data.valkey.aot.ValkeyRuntimeHints;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * @author Christoph Strobl
@@ -38,7 +38,7 @@ class BoundOperationsProxyFactoryRuntimeHintTests {
 	void boundOpsRuntimeHints() {
 
 		LettuceConnectionFactory connectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 		ValkeyTemplate template = new ValkeyTemplate<>();
 		template.setConnectionFactory(connectionFactory);
 		template.afterPropertiesSet();

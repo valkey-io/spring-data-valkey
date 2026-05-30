@@ -45,7 +45,7 @@ import io.valkey.springframework.data.valkey.core.index.Indexed;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 import io.valkey.springframework.data.valkey.repository.core.MappingValkeyEntityInformation;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import org.springframework.data.repository.query.FluentQuery;
 
 /**
@@ -65,7 +65,7 @@ class QueryByExampleValkeyExecutorIntegrationTests {
 
 	@BeforeAll
 	static void beforeAll() {
-		connectionFactory = ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+		connectionFactory = ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 	}
 
 	@BeforeEach

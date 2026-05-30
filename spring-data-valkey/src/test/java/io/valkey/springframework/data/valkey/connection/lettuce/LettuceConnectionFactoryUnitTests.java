@@ -1157,7 +1157,7 @@ class LettuceConnectionFactoryUnitTests {
 	}
 
 	@Test // GH-2116
-	void createFullValkeyStanaloneConfiguration() {
+	void createFullValkeyStandaloneConfiguration() {
 
 		RedisURI redisURI = RedisURI.create("redis://fooUser:fooPass@myserver1:111/7");
 

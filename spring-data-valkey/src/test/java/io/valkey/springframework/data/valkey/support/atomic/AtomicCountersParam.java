@@ -24,7 +24,7 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectio
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * @author Costin Leau
@@ -38,15 +38,15 @@ abstract class AtomicCountersParam {
 
 		// Jedis
 		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		// Lettuce
 		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class, false);
+				.getConnectionFactory(ValkeyStandalone.class, false);
 
 		// Valkey-Glide
 		ValkeyGlideConnectionFactory valkeyGlideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		return Arrays.asList(new Object[][] { { jedisConnFactory }, { lettuceConnFactory }, { valkeyGlideConnFactory } });
 	}

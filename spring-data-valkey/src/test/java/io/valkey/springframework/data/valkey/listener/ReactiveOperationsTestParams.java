@@ -27,7 +27,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * Parameters for testing implementations of {@link ReactiveValkeyMessageListenerContainer}
@@ -39,9 +39,9 @@ class ReactiveOperationsTestParams {
 	public static Collection<Object[]> testParams() {
 
 		LettuceConnectionFactory lettuceConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class, false);
+				.getConnectionFactory(ValkeyStandalone.class, false);
 		LettuceConnectionFactory poolingConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class, true);
+				.getConnectionFactory(ValkeyStandalone.class, true);
 
 		List<Object[]> list = Arrays.asList(new Object[][] { //
 				{ lettuceConnectionFactory, "Standalone" }, //
@@ -54,7 +54,7 @@ class ReactiveOperationsTestParams {
 			clusterConfiguration.addClusterNode(new ValkeyClusterNode(CLUSTER_HOST, MASTER_NODE_1_PORT));
 
 			LettuceConnectionFactory lettuceClusterConnectionFactory = LettuceConnectionFactoryExtension
-					.getConnectionFactory(ValkeyStanalone.class);
+					.getConnectionFactory(ValkeyStandalone.class);
 
 			list = new ArrayList<>(list);
 			list.add(new Object[] { lettuceClusterConnectionFactory, "Cluster" });

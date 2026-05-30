@@ -43,7 +43,7 @@ import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
@@ -201,7 +201,7 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 		ObjectFactory<String> doubleFactory = new DoubleAsStringObjectFactory();
 
 		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate<String, String> genericTemplate = new StringValkeyTemplate(jedisConnFactory);
 
@@ -219,7 +219,7 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 
 		// Lettuce
 		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class, false);
+				.getConnectionFactory(ValkeyStandalone.class, false);
 
 		ValkeyTemplate<String, String> genericTemplateLtc = new StringValkeyTemplate(lettuceConnFactory);
 		ValkeyTemplate<String, Person> xGenericTemplateLtc = new ValkeyTemplate<>();
@@ -236,7 +236,7 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 
 		// ValkeyGlide
 		ValkeyGlideConnectionFactory valkeyGlideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 				
 		ValkeyTemplate<String, String> genericTemplateVkg = new StringValkeyTemplate(valkeyGlideConnFactory);
 		ValkeyTemplate<String, Person> xGenericTemplateVkg = new ValkeyTemplate<>();

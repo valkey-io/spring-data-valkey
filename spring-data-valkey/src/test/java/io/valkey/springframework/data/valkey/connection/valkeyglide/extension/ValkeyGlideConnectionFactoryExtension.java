@@ -35,20 +35,20 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.ShutdownQueue;
 import org.springframework.data.util.Lazy;
 
 /**
  * JUnit {@link ParameterResolver} providing pre-cached {@link ValkeyGlideConnectionFactory} instances. Connection factories
- * can be qualified with {@code @ValkeyStanalone} (default) or {@code @ValkeyCluster} to obtain a specific factory instance.
+ * can be qualified with {@code @ValkeyStandalone} (default) or {@code @ValkeyCluster} to obtain a specific factory instance.
  * Instances are managed by this extension and will be shut down on JVM shutdown.
  * 
  * <p><strong>Note:</strong> Sentinel configurations are not supported by Valkey-Glide and will throw an 
  * {@link UnsupportedOperationException}.
  *
  * @author Ilia Kolominsky
- * @see ValkeyStanalone
+ * @see ValkeyStandalone
  * @see ValkeyCluster
  */
 public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver {
@@ -88,7 +88,7 @@ public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver 
 	static {
 
 		factories = new HashMap<>();
-		factories.put(ValkeyStanalone.class, STANDALONE);
+		factories.put(ValkeyStandalone.class, STANDALONE);
 		factories.put(ValkeyCluster.class, CLUSTER);
 		// Sentinel is not supported by Valkey-Glide - omitted intentionally
 	}
@@ -97,7 +97,7 @@ public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver 
 	 * Obtain a cached {@link ValkeyGlideConnectionFactory} described by {@code qualifier}. Instances are managed by this
 	 * extension and will be shut down on JVM shutdown.
 	 *
-	 * @param qualifier can be any of {@link ValkeyStanalone}, {@link ValkeyCluster}. {@link ValkeySentinel} is not supported.
+	 * @param qualifier can be any of {@link ValkeyStandalone}, {@link ValkeyCluster}. {@link ValkeySentinel} is not supported.
 	 * @return the managed {@link ValkeyGlideConnectionFactory}.
 	 * @throws UnsupportedOperationException if {@link ValkeySentinel} is requested.
 	 */
@@ -119,7 +119,7 @@ public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver 
 	 * Obtain a new {@link ValkeyGlideConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
 	 * and will be shut down on JVM shutdown.
 	 *
-	 * @param qualifier can be any of {@link ValkeyStanalone}, {@link ValkeyCluster}. {@link ValkeySentinel} is not supported.
+	 * @param qualifier can be any of {@link ValkeyStandalone}, {@link ValkeyCluster}. {@link ValkeySentinel} is not supported.
 	 * @return the managed {@link ValkeyGlideConnectionFactory}.
 	 * @throws UnsupportedOperationException if {@link ValkeySentinel} is requested.
 	 */
@@ -165,7 +165,7 @@ public class ValkeyGlideConnectionFactoryExtension implements ParameterResolver 
 			return ValkeyCluster.class;
 		}
 
-		return ValkeyStanalone.class;
+		return ValkeyStandalone.class;
 	}
 
 	static class NewableLazy<T> {

@@ -29,7 +29,7 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.Va
 import io.valkey.springframework.data.valkey.core.ValkeyCallback;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import io.valkey.springframework.data.valkey.support.collections.ValkeyCollectionFactoryBean.CollectionType;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * Integration tests for {@link ValkeyCollectionFactoryBean}.
@@ -47,7 +47,7 @@ public class ValkeyCollectionFactoryBeanTests {
 	ValkeyCollectionFactoryBeanTests() {
 
 		ValkeyGlideConnectionFactory valkeyGlideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		this.template = new StringValkeyTemplate(valkeyGlideConnFactory);
 	}

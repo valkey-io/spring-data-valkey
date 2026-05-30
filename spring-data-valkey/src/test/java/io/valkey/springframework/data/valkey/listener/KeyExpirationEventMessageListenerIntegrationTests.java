@@ -34,7 +34,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * @author Christoph Strobl
@@ -53,7 +53,7 @@ class KeyExpirationEventMessageListenerIntegrationTests {
 
 		publisherMock = mock(ApplicationEventPublisher.class);
 
-		this.connectionFactory = JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class);
+		this.connectionFactory = JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 
 		container = new ValkeyMessageListenerContainer();
 		container.setConnectionFactory(connectionFactory);

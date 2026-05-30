@@ -38,7 +38,7 @@ import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerial
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * Parameters for testing implementations of {@link AbstractOperations}
@@ -54,9 +54,9 @@ abstract public class AbstractOperationsTestParams {
 	public static Collection<Object[]> testParams() {
 
 		List<Object[]> params = new ArrayList<>();
-		params.addAll(testParams(LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class)));
-		params.addAll(testParams(JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class)));
-		params.addAll(testParams(ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class)));
+		params.addAll(testParams(LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class)));
+		params.addAll(testParams(JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class)));
+		params.addAll(testParams(ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class)));
 		return params;
 	}
 

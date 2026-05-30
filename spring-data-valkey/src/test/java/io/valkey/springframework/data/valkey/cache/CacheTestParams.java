@@ -38,7 +38,7 @@ import io.valkey.springframework.data.valkey.serializer.SerializationException;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -60,17 +60,17 @@ class CacheTestParams {
 
 		// Jedis Standalone
 		JedisConnectionFactory jedisConnectionFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 		factoryList.add(jedisConnectionFactory);
 
 		// Lettuce Standalone
 		LettuceConnectionFactory lettuceConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 		factoryList.add(lettuceConnectionFactory);
 
 		// ValkeyGlide Standalone
 		ValkeyGlideConnectionFactory valkeyGlideConnectionFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 		factoryList.add(valkeyGlideConnectionFactory);
 
 		if (clusterAvailable()) {

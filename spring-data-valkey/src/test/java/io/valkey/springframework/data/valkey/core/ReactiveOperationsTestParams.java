@@ -42,7 +42,7 @@ import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import org.springframework.lang.Nullable;
 
 /**
@@ -63,7 +63,7 @@ abstract public class ReactiveOperationsTestParams {
 		ObjectFactory<Person> personFactory = new PersonObjectFactory();
 
 		LettuceConnectionFactory lettuceConnectionFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ReactiveValkeyTemplate<Object, Object> objectTemplate = new ReactiveValkeyTemplate<>(lettuceConnectionFactory,
 				ValkeySerializationContext.java(ReactiveOperationsTestParams.class.getClassLoader()));

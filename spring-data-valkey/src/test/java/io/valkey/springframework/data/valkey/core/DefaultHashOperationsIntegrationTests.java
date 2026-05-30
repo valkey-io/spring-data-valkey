@@ -41,7 +41,7 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.Va
 import io.valkey.springframework.data.valkey.core.ExpireChanges.ExpiryChangeState;
 import io.valkey.springframework.data.valkey.core.types.Expirations.TimeToLive;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
@@ -79,7 +79,7 @@ public class DefaultHashOperationsIntegrationTests<K, HK, HV> {
 		ObjectFactory<byte[]> rawFactory = new RawObjectFactory();
 
 		JedisConnectionFactory jedisConnectionFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate<String, String> stringTemplate = new StringValkeyTemplate();
 		stringTemplate.setConnectionFactory(jedisConnectionFactory);
@@ -91,7 +91,7 @@ public class DefaultHashOperationsIntegrationTests<K, HK, HV> {
 		rawTemplate.afterPropertiesSet();
 
 		ValkeyGlideConnectionFactory valkeyGlideConnectionFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate<String, String> vgStringTemplate = new StringValkeyTemplate();
 		vgStringTemplate.setConnectionFactory(valkeyGlideConnectionFactory);

@@ -36,7 +36,7 @@ import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerial
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * @author Costin Leau
@@ -59,7 +59,7 @@ public abstract class CollectionTestParams {
 		ObjectFactory<byte[]> rawFactory = new RawObjectFactory();
 
 		JedisConnectionFactory jedisConnFactory = JedisConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate<String, String> stringTemplate = new StringValkeyTemplate(jedisConnFactory);
 		ValkeyTemplate<String, Person> personTemplate = new ValkeyTemplate<>();
@@ -90,7 +90,7 @@ public abstract class CollectionTestParams {
 
 		// Lettuce
 		LettuceConnectionFactory lettuceConnFactory = LettuceConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate<String, String> stringTemplateLtc = new StringValkeyTemplate(lettuceConnFactory);
 		ValkeyTemplate<String, Person> personTemplateLtc = new ValkeyTemplate<>();
@@ -120,7 +120,7 @@ public abstract class CollectionTestParams {
 
 		// ValkeyGlide
 		ValkeyGlideConnectionFactory valkeyGlideConnFactory = ValkeyGlideConnectionFactoryExtension
-				.getConnectionFactory(ValkeyStanalone.class);
+				.getConnectionFactory(ValkeyStandalone.class);
 
 		ValkeyTemplate<String, String> stringTemplateVkg = new StringValkeyTemplate(valkeyGlideConnFactory);
 		ValkeyTemplate<String, Person> personTemplateVkg = new ValkeyTemplate<>();
