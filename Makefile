@@ -210,12 +210,19 @@ all-tests:
 	$(MAKE) stop
 	$(MAKE) clean
 
-# Run all Spring Data Valkey examples
+# Examples that require a production environment (e.g., AWS cluster) and cannot run locally
+SKIP_EXAMPLES := boot-iam-auth
+
+# Run all Spring Data Valkey examples (skipping those requiring prod environment)
 examples:
 	$(MAKE) start
 	sleep 1
 	@for example_dir in examples/*/; do \
 		example=$$(basename "$$example_dir"); \
+		if echo "$(SKIP_EXAMPLES)" | grep -qw "$$example"; then \
+			echo "=== Skipping $$example (requires prod environment) ==="; \
+			continue; \
+		fi; \
 		echo "=== Running $$example example ==="; \
 		./mvnw -q exec:java -pl examples/$$example || (echo "$$example example failed"; exit 1); \
 		echo ""; \
