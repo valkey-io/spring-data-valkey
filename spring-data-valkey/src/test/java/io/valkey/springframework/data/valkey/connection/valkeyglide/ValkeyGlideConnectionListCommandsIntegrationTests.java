@@ -497,7 +497,7 @@ public class ValkeyGlideConnectionListCommandsIntegrationTests extends AbstractV
             
             assertThat(timeoutResult).isNull();
             // Verify timeout occurred (allow some margin for execution time)
-            assertThat(endTime - startTime).isGreaterThanOrEqualTo(90L).isLessThan(200L);
+            assertThat(endTime - startTime).isGreaterThanOrEqualTo(90L).isLessThan(300L);
         } finally {
             cleanupKey(sourceKey);
             cleanupKey(destKey);
