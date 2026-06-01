@@ -54,19 +54,11 @@
 		<dependency>
 			<groupId>io.valkey</groupId>
 			<artifactId>valkey-glide</artifactId>
-			<classifier>${os.detected.classifier}</classifier>
 			<version>${valkey-glide.version}</version>
 		</dependency>
 	</dependencies>
 
 	<build>
-		<extensions>
-			<extension>
-				<groupId>kr.motd.maven</groupId>
-				<artifactId>os-maven-plugin</artifactId>
-				<version>1.7.1</version>
-			</extension>
-		</extensions>
 		<pluginManagement>
 			<plugins>
 				<plugin>
