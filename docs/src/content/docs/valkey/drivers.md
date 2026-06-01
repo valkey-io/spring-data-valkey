@@ -74,7 +74,7 @@ The following overview explains features that are supported by the individual Va
     <groupId>io.valkey</groupId>
     <artifactId>valkey-glide</artifactId>
     <version>2.4.0</version>
-
+  </dependency>
 </dependencies>
 ```
 
