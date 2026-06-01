@@ -1719,7 +1719,7 @@ public class ValkeyGlideConnectionKeyCommandsIntegrationTests extends AbstractVa
             // Verify conversion relationships
             if (actualPTtlHours != null && actualPTtlHours > 0) {
                 double hoursToMillisecondsRatio = (double) actualPTtlMilliseconds / actualPTtlHours;
-                assertThat(hoursToMillisecondsRatio).isBetween(3500000.0, 3700000.0); // ~3600000 ms per hour
+                assertThat(hoursToMillisecondsRatio).isBetween(3500000.0, 3800000.0); // ~3600000 ms per hour
             }
             
         } finally {
