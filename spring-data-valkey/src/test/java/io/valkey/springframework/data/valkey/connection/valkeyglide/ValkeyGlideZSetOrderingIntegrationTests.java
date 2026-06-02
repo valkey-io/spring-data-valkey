@@ -26,7 +26,7 @@ import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.ZSetOperations;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
-import io.valkey.springframework.data.valkey.test.extension.ValkeyStanalone;
+import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
  * Integration tests verifying that ZSet rangeWithScores operations maintain
@@ -40,7 +40,7 @@ class ValkeyGlideZSetOrderingIntegrationTests {
 	@Test
 	void rangeWithScoresStandaloneOrder() {
 		StringValkeyTemplate template = new StringValkeyTemplate(
-				ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStanalone.class));
+				ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class));
 		try {
 			ZSetOperations<String, String> opsForZSet = template.opsForZSet();
 
