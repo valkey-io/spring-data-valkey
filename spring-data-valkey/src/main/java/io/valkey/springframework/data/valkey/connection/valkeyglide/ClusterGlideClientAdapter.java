@@ -171,6 +171,9 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
         subConfigBuilder.callback((msg, context) -> this.listener.onMessage(msg, context));
         configBuilder.subscriptionConfiguration(subConfigBuilder.build());
 
+        // Set library name for server-side client identification
+        configBuilder.libName("GlideSpringDataValkey");
+
         // Build and create cluster client
         GlideClusterClientConfiguration config = configBuilder.build();
         try {
