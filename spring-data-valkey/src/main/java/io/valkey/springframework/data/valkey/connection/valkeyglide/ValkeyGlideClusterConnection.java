@@ -50,7 +50,6 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.LinkSt
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.SlotRange;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterServerCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyNode.NodeType;
-import io.valkey.springframework.data.valkey.connection.ValkeyPipelineException;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
@@ -202,20 +201,6 @@ public class ValkeyGlideClusterConnection extends ValkeyGlideConnection implemen
 		throw new InvalidDataAccessApiUsageException("UNWATCH is currently not supported in cluster mode");
 	}
 
-	@Override
-	public boolean isPipelined() {
-		return false;
-	}
-
-	@Override
-	public void openPipeline() {
-		throw new InvalidDataAccessApiUsageException("Pipeline is not supported in cluster mode");
-	}
-
-	@Override
-	public List<Object> closePipeline() throws ValkeyPipelineException {
-		throw new InvalidDataAccessApiUsageException("Pipeline is not supported in cluster mode");
-	}
 
 	@Override
 	public ValkeySentinelConnection getSentinelConnection() {

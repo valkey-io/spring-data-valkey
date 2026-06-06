@@ -50,7 +50,7 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClust
  *   <li>All test keys use hash tags (e.g., {@code {test}:key}) to ensure multi-key operations
  *       work correctly in cluster mode by routing to the same slot.</li>
  *   <li>Transactions ({@code MULTI/EXEC}) are not supported in cluster mode and are omitted.</li>
- *   <li>Pipeline operations have limited support in cluster mode and are omitted.</li>
+ *   <li>Pipeline operations are supported in cluster mode via {@code ClusterBatch}.</li>
  * </ul>
  * 
  * @author Ilia Kolominsky
@@ -949,6 +949,114 @@ public class ValkeyGlideClusterConnectionFactoryIntegrationTests {
      * This test is intentionally omitted as cluster mode does not support transactions
      * that span multiple keys, and even single-key transactions have limited support.
      */
+
+    // ==================== Pipeline Tests ====================
+
+    @Test
+    void testBasicPipelineFlow() {
+        String key1 = "{pipe}:basic:key1";
+        String key2 = "{pipe}:basic:key2";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                assertThat(connection.isPipelined()).isFalse();
+
+                connection.openPipeline();
+                assertThat(connection.isPipelined()).isTrue();
+
+                connection.stringCommands().set(key1.getBytes(), "value1".getBytes());
+                connection.stringCommands().set(key2.getBytes(), "value2".getBytes());
+                connection.stringCommands().get(key1.getBytes());
+                connection.stringCommands().get(key2.getBytes());
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(connection.isPipelined()).isFalse();
+                assertThat(results).hasSize(4);
+                assertThat(results.get(0)).isEqualTo(true);
+                assertThat(results.get(1)).isEqualTo(true);
+                assertThat(results.get(2)).isEqualTo("value1".getBytes());
+                assertThat(results.get(3)).isEqualTo("value2".getBytes());
+                return null;
+            });
+        } finally {
+            template.delete(key1);
+            template.delete(key2);
+        }
+    }
+
+    @Test
+    void testEmptyPipeline() {
+        template.execute((ValkeyCallback<Object>) connection -> {
+            connection.openPipeline();
+            assertThat(connection.isPipelined()).isTrue();
+
+            List<Object> results = connection.closePipeline();
+
+            assertThat(connection.isPipelined()).isFalse();
+            assertThat(results).isNotNull();
+            assertThat(results).isEmpty();
+            return null;
+        });
+    }
+
+    @Test
+    void testMultipleConsecutivePipelines() {
+        String key1 = "{pipe}:consecutive:key1";
+        String key2 = "{pipe}:consecutive:key2";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+                connection.stringCommands().set(key1.getBytes(), "pipe1_value".getBytes());
+                List<Object> results1 = connection.closePipeline();
+
+                assertThat(results1).hasSize(1);
+                assertThat(results1.get(0)).isEqualTo(true);
+
+                connection.openPipeline();
+                connection.stringCommands().set(key2.getBytes(), "pipe2_value".getBytes());
+                connection.stringCommands().get(key1.getBytes());
+                List<Object> results2 = connection.closePipeline();
+
+                assertThat(results2).hasSize(2);
+                assertThat(results2.get(0)).isEqualTo(true);
+                assertThat(results2.get(1)).isEqualTo("pipe1_value".getBytes());
+                return null;
+            });
+        } finally {
+            template.delete(key1);
+            template.delete(key2);
+        }
+    }
+
+    @Test
+    void testPipelineWithCrossSlotKeys() {
+        String key1 = "pipe:cross:key1";
+        String key2 = "pipe:cross:key2";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+                connection.stringCommands().set(key1.getBytes(), "cross1".getBytes());
+                connection.stringCommands().set(key2.getBytes(), "cross2".getBytes());
+                connection.stringCommands().get(key1.getBytes());
+                connection.stringCommands().get(key2.getBytes());
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(results).hasSize(4);
+                assertThat(results.get(0)).isEqualTo(true);
+                assertThat(results.get(1)).isEqualTo(true);
+                assertThat(results.get(2)).isEqualTo("cross1".getBytes());
+                assertThat(results.get(3)).isEqualTo("cross2".getBytes());
+                return null;
+            });
+        } finally {
+            template.delete(key1);
+            template.delete(key2);
+        }
+    }
 
     /**
      * Checks if the server version is at least the specified major.minor version.

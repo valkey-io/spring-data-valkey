@@ -45,6 +45,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration.AwsServiceType;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration.IamAuthenticationForGlide;
 import glide.api.GlideClusterClient;
+import glide.api.models.ClusterBatch;
 
 /**
  * Unified interface that abstracts both GlideClient and GlideClusterClient
@@ -58,6 +59,8 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
     private final GlideClusterClient glideClusterClient;
     private final @Nullable DelegatingPubSubListener listener;
     @Nullable private Route nextCommandRoute = null;
+    private ClusterBatch currentBatch;
+    private BatchStatus batchStatus = BatchStatus.None;
 
     ClusterGlideClientAdapter(ValkeyClusterConfiguration clusterConfig, ValkeyGlideClientConfiguration valkeyGlideConfiguration) {
         // Build GlideClusterClientConfiguration using Glide's API
@@ -382,6 +385,10 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
 
     @Override
     public Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException {
+        if (currentBatch != null) {
+            currentBatch.customCommand(args);
+            return null;
+        }
         try {
             ClusterValue<?> clusterValue = nextCommandRoute == null
                 ? glideClusterClient.customCommand(args).get()
@@ -434,7 +441,10 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
 
     @Override
     public Object[] execBatch() throws InterruptedException, ExecutionException {
-        throw new IllegalStateException("Transactions and pipelines are not supported in cluster mode");
+        if (currentBatch == null) {
+            throw new IllegalStateException("No batch in progress");
+        }
+        return glideClusterClient.exec(currentBatch, false).get();
     }
 
     @Override
@@ -449,27 +459,34 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
 
     @Override
     public BatchStatus getBatchStatus() {
-        return BatchStatus.None;
+        return batchStatus;
     }
 
     @Override
     public int getBatchCount() {
-        throw new IllegalStateException("No batch in progress");
+        if (currentBatch == null) {
+            throw new IllegalStateException("No batch in progress");
+        }
+        return currentBatch.getProtobufBatch().getCommandsCount();
     }
 
     @Override
     public void startNewBatch(boolean atomic) {
-        throw new IllegalStateException("Transactions and pipelines are not supported in cluster mode");
+        currentBatch = new ClusterBatch(atomic).withBinaryOutput();
+        batchStatus = atomic ? BatchStatus.Transaction : BatchStatus.Pipeline;
     }
 
     @Override
     public void discardBatch() {
-        throw new IllegalStateException("Transactions and pipelines are not supported in cluster mode");
+        currentBatch = null;
+        batchStatus = BatchStatus.None;
     }
 
     @Override
     public void reset() {
         nextCommandRoute = null;
+        currentBatch = null;
+        batchStatus = BatchStatus.None;
         if (getDelegatingListener() != null) {
             getDelegatingListener().clearListener();
         }
