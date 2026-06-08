@@ -16,12 +16,17 @@
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -29,8 +34,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.junit.jupiter.api.TestInstance.Lifecycle;
 
+import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterTestVariables;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
@@ -1056,6 +1063,469 @@ public class ValkeyGlideClusterConnectionFactoryIntegrationTests {
             template.delete(key1);
             template.delete(key2);
         }
+    }
+
+    // ==================== Pipeline: Mixed Command Type Tests ====================
+
+    @Test
+    void testPipelineWithMixedCommandTypes() {
+        String stringKey = "{pipe}:mixed:string";
+        String hashKey = "{pipe}:mixed:hash";
+        String listKey = "{pipe}:mixed:list";
+        String setKey = "{pipe}:mixed:set";
+        String zsetKey = "{pipe}:mixed:zset";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+
+                connection.stringCommands().set(stringKey.getBytes(), "string_value".getBytes());
+                connection.stringCommands().get(stringKey.getBytes());
+
+                connection.hashCommands().hSet(hashKey.getBytes(), "field1".getBytes(), "hash_value".getBytes());
+                connection.hashCommands().hGet(hashKey.getBytes(), "field1".getBytes());
+
+                connection.listCommands().lPush(listKey.getBytes(), "list_item".getBytes());
+                connection.listCommands().lLen(listKey.getBytes());
+
+                connection.setCommands().sAdd(setKey.getBytes(), "set_member".getBytes());
+                connection.setCommands().sCard(setKey.getBytes());
+
+                connection.zSetCommands().zAdd(zsetKey.getBytes(), 1.0, "zset_member".getBytes());
+                connection.zSetCommands().zCard(zsetKey.getBytes());
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(results).hasSize(10);
+
+                assertThat(results.get(0)).isEqualTo(true);
+                assertThat(results.get(2)).isEqualTo(true);
+                assertThat(results.get(4)).isEqualTo(1L);
+                assertThat(results.get(6)).isEqualTo(1L);
+                assertThat(results.get(8)).isEqualTo(true);
+
+                assertThat(results.get(1)).isEqualTo("string_value".getBytes());
+                assertThat(results.get(3)).isEqualTo("hash_value".getBytes());
+                assertThat(results.get(5)).isEqualTo(1L);
+                assertThat(results.get(7)).isEqualTo(1L);
+                assertThat(results.get(9)).isEqualTo(1L);
+                return null;
+            });
+        } finally {
+            template.delete(stringKey);
+            template.delete(hashKey);
+            template.delete(listKey);
+            template.delete(setKey);
+            template.delete(zsetKey);
+        }
+    }
+
+    @Test
+    void testPipelineWithMixedCommandTypesCrossSlot() {
+        String stringKey = "pipe:mixed:cs:string";
+        String hashKey = "pipe:mixed:cs:hash";
+        String listKey = "pipe:mixed:cs:list";
+        String setKey = "pipe:mixed:cs:set";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+
+                connection.stringCommands().set(stringKey.getBytes(), "str_val".getBytes());
+                connection.hashCommands().hSet(hashKey.getBytes(), "f1".getBytes(), "h_val".getBytes());
+                connection.listCommands().lPush(listKey.getBytes(), "l_item".getBytes());
+                connection.setCommands().sAdd(setKey.getBytes(), "s_member".getBytes());
+
+                connection.stringCommands().get(stringKey.getBytes());
+                connection.hashCommands().hGet(hashKey.getBytes(), "f1".getBytes());
+                connection.listCommands().lLen(listKey.getBytes());
+                connection.setCommands().sCard(setKey.getBytes());
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(results).hasSize(8);
+                assertThat(results.get(0)).isEqualTo(true);
+                assertThat(results.get(1)).isEqualTo(true);
+                assertThat(results.get(2)).isEqualTo(1L);
+                assertThat(results.get(3)).isEqualTo(1L);
+                assertThat(results.get(4)).isEqualTo("str_val".getBytes());
+                assertThat(results.get(5)).isEqualTo("h_val".getBytes());
+                assertThat(results.get(6)).isEqualTo(1L);
+                assertThat(results.get(7)).isEqualTo(1L);
+                return null;
+            });
+        } finally {
+            template.delete(stringKey);
+            template.delete(hashKey);
+            template.delete(listKey);
+            template.delete(setKey);
+        }
+    }
+
+    // ==================== Pipeline: State Management Tests ====================
+
+    @Test
+    void testIsPipelinedState() {
+        template.execute((ValkeyCallback<Object>) connection -> {
+            assertThat(connection.isPipelined()).isFalse();
+
+            connection.openPipeline();
+            assertThat(connection.isPipelined()).isTrue();
+
+            connection.closePipeline();
+            assertThat(connection.isPipelined()).isFalse();
+            return null;
+        });
+    }
+
+    @Test
+    void testPipelineTransactionIsolation() {
+        template.execute((ValkeyCallback<Object>) connection -> {
+            connection.openPipeline();
+
+            // In cluster mode, multi() is blocked entirely (not just during pipeline)
+            assertThatThrownBy(() -> connection.multi())
+                .isInstanceOf(InvalidDataAccessApiUsageException.class);
+
+            connection.closePipeline();
+            return null;
+        });
+    }
+
+    // ==================== Pipeline: Edge Cases and Error Handling ====================
+
+    @Test
+    void testClosePipelineWithoutOpen() {
+        template.execute((ValkeyCallback<Object>) connection -> {
+            assertThat(connection.isPipelined()).isFalse();
+
+            List<Object> results = connection.closePipeline();
+
+            assertThat(results).isNotNull();
+            assertThat(results).isEmpty();
+            assertThat(connection.isPipelined()).isFalse();
+            return null;
+        });
+    }
+
+    @Test
+    void testNestedOpenPipelineCalls() {
+        String key = "{pipe}:nested:key";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+                assertThat(connection.isPipelined()).isTrue();
+
+                connection.openPipeline();
+                assertThat(connection.isPipelined()).isTrue();
+
+                connection.stringCommands().set(key.getBytes(), "nested_value".getBytes());
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(connection.isPipelined()).isFalse();
+                assertThat(results).hasSize(1);
+                assertThat(results.get(0)).isEqualTo(true);
+                return null;
+            });
+        } finally {
+            template.delete(key);
+        }
+    }
+
+    @Test
+    void testPipelineWithNonExistentKeys() {
+        String nonExistentKey1 = "{pipe}:nonexist:key1";
+        String nonExistentKey2 = "{pipe}:nonexist:key2";
+
+        template.execute((ValkeyCallback<Object>) connection -> {
+            connection.openPipeline();
+
+            connection.stringCommands().get(nonExistentKey1.getBytes());
+            connection.stringCommands().get(nonExistentKey2.getBytes());
+            connection.listCommands().lLen("{pipe}:nonexist:list".getBytes());
+            connection.setCommands().sCard("{pipe}:nonexist:set".getBytes());
+
+            List<Object> results = connection.closePipeline();
+
+            assertThat(results).hasSize(4);
+            assertThat(results.get(0)).isNull();
+            assertThat(results.get(1)).isNull();
+            assertThat(results.get(2)).isEqualTo(0L);
+            assertThat(results.get(3)).isEqualTo(0L);
+            return null;
+        });
+    }
+
+    @Test
+    void testPipelineWithEmptyValues() {
+        String key = "{pipe}:empty:key";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+
+                connection.stringCommands().set(key.getBytes(), new byte[0]);
+                connection.stringCommands().get(key.getBytes());
+                connection.stringCommands().strLen(key.getBytes());
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(results).hasSize(3);
+                assertThat(results.get(0)).isEqualTo(true);
+                assertThat(results.get(1)).isEqualTo(new byte[0]);
+                assertThat(results.get(2)).isEqualTo(0L);
+                return null;
+            });
+        } finally {
+            template.delete(key);
+        }
+    }
+
+    // ==================== Pipeline: Large Pipeline Tests ====================
+
+    @Test
+    void testLargePipeline() {
+        String keyPrefix = "{pipe}:large:key";
+        int commandCount = 100;
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+
+                for (int i = 0; i < commandCount; i++) {
+                    String key = keyPrefix + ":" + i;
+                    connection.stringCommands().set(key.getBytes(), ("value" + i).getBytes());
+                }
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(results).hasSize(commandCount);
+                for (int i = 0; i < commandCount; i++) {
+                    assertThat(results.get(i)).isEqualTo(true);
+                }
+                return null;
+            });
+
+            // Verify values were set
+            template.execute((ValkeyCallback<Object>) connection -> {
+                assertThat(connection.stringCommands().get((keyPrefix + ":0").getBytes()))
+                    .isEqualTo("value0".getBytes());
+                assertThat(connection.stringCommands().get((keyPrefix + ":50").getBytes()))
+                    .isEqualTo("value50".getBytes());
+                assertThat(connection.stringCommands().get((keyPrefix + ":99").getBytes()))
+                    .isEqualTo("value99".getBytes());
+                return null;
+            });
+        } finally {
+            for (int i = 0; i < commandCount; i++) {
+                template.delete(keyPrefix + ":" + i);
+            }
+        }
+    }
+
+    @Test
+    void testLargePipelineCrossSlot() {
+        String keyPrefix = "pipe:largecs:key";
+        int commandCount = 100;
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+
+                for (int i = 0; i < commandCount; i++) {
+                    String key = keyPrefix + ":" + i;
+                    connection.stringCommands().set(key.getBytes(), ("value" + i).getBytes());
+                }
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(results).hasSize(commandCount);
+                for (int i = 0; i < commandCount; i++) {
+                    assertThat(results.get(i)).isEqualTo(true);
+                }
+                return null;
+            });
+
+            // Verify a few values
+            template.execute((ValkeyCallback<Object>) connection -> {
+                assertThat(connection.stringCommands().get((keyPrefix + ":0").getBytes()))
+                    .isEqualTo("value0".getBytes());
+                assertThat(connection.stringCommands().get((keyPrefix + ":99").getBytes()))
+                    .isEqualTo("value99".getBytes());
+                return null;
+            });
+        } finally {
+            for (int i = 0; i < commandCount; i++) {
+                template.delete(keyPrefix + ":" + i);
+            }
+        }
+    }
+
+    @Test
+    void testPipelinePerformance() {
+        String keyPrefix = "{pipe}:perf:key";
+        int commandCount = 200;
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                long startTime = System.currentTimeMillis();
+
+                connection.openPipeline();
+
+                for (int i = 0; i < commandCount; i++) {
+                    String key = keyPrefix + ":" + i;
+                    connection.stringCommands().set(key.getBytes(), ("value" + i).getBytes());
+                    connection.stringCommands().get(key.getBytes());
+                }
+
+                List<Object> results = connection.closePipeline();
+
+                long duration = System.currentTimeMillis() - startTime;
+
+                assertThat(results).hasSize(commandCount * 2);
+                assertThat(duration).isLessThan(10000);
+
+                for (int i = 0; i < commandCount; i += 10) {
+                    assertThat(results.get(i * 2)).isEqualTo(true);
+                    assertThat(results.get(i * 2 + 1)).isEqualTo(("value" + i).getBytes());
+                }
+                return null;
+            });
+        } finally {
+            for (int i = 0; i < commandCount; i++) {
+                template.delete(keyPrefix + ":" + i);
+            }
+        }
+    }
+
+    // ==================== Pipeline: Concurrent Tests ====================
+
+    @Test
+    void testConcurrentPipelines() throws Exception {
+        String sharedKey = "{pipe}:concurrent:shared";
+        String keyPrefix = "{pipe}:concurrent:key";
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+
+        try {
+            template.opsForValue().set(sharedKey, "shared_value");
+
+            CompletableFuture<?>[] futures = new CompletableFuture[5];
+
+            for (int i = 0; i < 5; i++) {
+                final int threadId = i;
+                futures[i] = CompletableFuture.runAsync(() -> {
+                    try (ValkeyConnection conn = connectionFactory.getClusterConnection()) {
+                        conn.openPipeline();
+                        conn.stringCommands().set((keyPrefix + ":" + threadId).getBytes(),
+                            ("thread" + threadId).getBytes());
+                        conn.stringCommands().get(sharedKey.getBytes());
+                        List<Object> results = conn.closePipeline();
+
+                        assertThat(results).hasSize(2);
+                        assertThat(results.get(0)).isEqualTo(true);
+                        assertThat(results.get(1)).isEqualTo("shared_value".getBytes());
+                    }
+                }, executor);
+            }
+
+            CompletableFuture.allOf(futures).get(10, TimeUnit.SECONDS);
+
+            // Verify all threads succeeded
+            for (int i = 0; i < 5; i++) {
+                assertThat(template.opsForValue().get(keyPrefix + ":" + i))
+                    .isEqualTo("thread" + i);
+            }
+        } finally {
+            executor.shutdown();
+            template.delete(sharedKey);
+            for (int i = 0; i < 5; i++) {
+                template.delete(keyPrefix + ":" + i);
+            }
+        }
+    }
+
+    // ==================== Pipeline: Result Conversion Tests ====================
+
+    @Test
+    void testPipelineResultConversion() {
+        String key = "{pipe}:convert:key";
+        String counterKey = "{pipe}:convert:counter";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+
+                connection.stringCommands().set(key.getBytes(), "42".getBytes());
+                connection.stringCommands().get(key.getBytes());
+                connection.stringCommands().set(counterKey.getBytes(), "10".getBytes());
+                connection.stringCommands().incr(counterKey.getBytes());
+                connection.stringCommands().strLen(counterKey.getBytes());
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(results).hasSize(5);
+                assertThat(results.get(0)).isEqualTo(true);
+                assertThat(results.get(1)).isEqualTo("42".getBytes());
+                assertThat(results.get(2)).isEqualTo(true);
+                assertThat(results.get(3)).isEqualTo(11L);
+                assertThat(results.get(4)).isEqualTo(2L);
+                return null;
+            });
+        } finally {
+            template.delete(key);
+            template.delete(counterKey);
+        }
+    }
+
+    // ==================== Pipeline: Error Recovery Tests ====================
+
+    @Test
+    void testPipelineErrorRecovery() {
+        String validKey = "{pipe}:error:valid";
+        String nonExistentKey = "{pipe}:error:nonexist";
+
+        try {
+            template.execute((ValkeyCallback<Object>) connection -> {
+                connection.openPipeline();
+
+                connection.stringCommands().set(validKey.getBytes(), "valid_value".getBytes());
+                connection.stringCommands().get(nonExistentKey.getBytes());
+                connection.stringCommands().get(validKey.getBytes());
+
+                List<Object> results = connection.closePipeline();
+
+                assertThat(results).hasSize(3);
+                assertThat(results.get(0)).isEqualTo(true);
+                assertThat(results.get(1)).isNull();
+                assertThat(results.get(2)).isEqualTo("valid_value".getBytes());
+                return null;
+            });
+        } finally {
+            template.delete(validKey);
+        }
+    }
+
+    // ==================== Pipeline: State Consistency Tests ====================
+
+    @Test
+    void testPipelineStateConsistency() {
+        template.execute((ValkeyCallback<Object>) connection -> {
+            assertThat(connection.isPipelined()).isFalse();
+
+            for (int i = 0; i < 3; i++) {
+                connection.openPipeline();
+                assertThat(connection.isPipelined()).isTrue();
+
+                List<Object> results = connection.closePipeline();
+                assertThat(connection.isPipelined()).isFalse();
+                assertThat(results).isEmpty();
+            }
+
+            assertThat(connection.isPipelined()).isFalse();
+            return null;
+        });
     }
 
     /**
