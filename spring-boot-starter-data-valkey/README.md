@@ -189,6 +189,7 @@ spring.data.valkey.ssl.bundle=valkey-ssl
 spring.data.valkey.valkeyglide.connection-timeout=2000ms
 spring.data.valkey.valkeyglide.read-from=PRIMARY
 spring.data.valkey.valkeyglide.inflight-requests-limit=250
+# Set client-az with read-from=AZ_AFFINITY to enable AZ-aware routing
 spring.data.valkey.valkeyglide.client-az=us-west-2a
 ```
 

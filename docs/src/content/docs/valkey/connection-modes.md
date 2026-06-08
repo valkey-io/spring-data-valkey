@@ -187,3 +187,18 @@ public class AppConfig {
 :::note
 The initial configuration points driver libraries to an initial set of cluster nodes. Changes resulting from live cluster reconfiguration are kept only in the native driver and are not written back to the configuration.
 :::
+
+### AZ Affinity
+
+Valkey GLIDE can route read operations to replicas in the same availability zone (AZ) as the client, reducing cross-AZ data transfer costs and improving latency. Both `clientAZ` and `readFrom` must be configured together for AZ affinity to take effect.
+
+```java
+ValkeyGlideClientConfiguration clientConfig = ValkeyGlideClientConfiguration.builder()
+    .readFrom(ReadFrom.AZ_AFFINITY)
+    .clientAZ("us-west-2a")
+    .build();
+```
+
+The available AZ-aware read strategies are:
+- `AZ_AFFINITY` — Reads from replicas in the same AZ, falling back to other replicas or the primary if needed.
+- `AZ_AFFINITY_REPLICAS_AND_PRIMARY` — Reads from same-AZ nodes (replicas first, then local primary), falling back to any node.
