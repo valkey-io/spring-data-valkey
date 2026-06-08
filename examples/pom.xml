@@ -22,6 +22,7 @@
 		<module>boot-telemetry</module>
 		<module>cache</module>
 		<module>cluster</module>
+		<module>cluster-pipeline</module>
 		<module>collections</module>
 		<module>operations</module>
 		<module>pipeline</module>
