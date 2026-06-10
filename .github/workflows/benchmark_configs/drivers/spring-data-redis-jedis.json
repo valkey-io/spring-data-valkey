@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
-  "description": "Spring Data Valkey with Jedis driver - standalone mode",
-  "driver_id": "spring-data-valkey",
+  "description": "Spring Data Redis with Jedis driver",
+  "driver_id": "spring-data-redis",
   "mode": "standalone",
   "specific_driver_config": {
     "secondary_driver_id": "jedis"
