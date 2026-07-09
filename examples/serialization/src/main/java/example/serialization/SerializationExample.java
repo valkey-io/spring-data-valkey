@@ -17,7 +17,7 @@ package example.serialization;
 
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.JacksonJsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.JdkSerializationValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 
@@ -41,7 +41,7 @@ public class SerializationExample {
 			ValkeyTemplate<String, User> jsonTemplate = new ValkeyTemplate<>();
 			jsonTemplate.setConnectionFactory(connectionFactory);
 			jsonTemplate.setKeySerializer(new StringValkeySerializer());
-			jsonTemplate.setValueSerializer(new Jackson2JsonValkeySerializer<>(User.class));
+			jsonTemplate.setValueSerializer(new JacksonJsonValkeySerializer<>(User.class));
 			jsonTemplate.afterPropertiesSet();
 
 			jsonTemplate.opsForValue().set("user:json", user);

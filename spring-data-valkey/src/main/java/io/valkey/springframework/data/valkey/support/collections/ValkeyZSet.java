@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.core.BoundZSetOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
+import io.valkey.springframework.data.valkey.core.ZSetOperations;
 import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
 
 /**
@@ -41,6 +42,7 @@ import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author Andrey Shlykov
+ * @author Vinoth Selvaraj
  */
 public interface ValkeyZSet<E> extends ValkeyCollection<E>, Set<E> {
 
@@ -270,42 +272,10 @@ public interface ValkeyZSet<E> extends ValkeyCollection<E>, Set<E> {
 	 * @param range must not be {@literal null}.
 	 * @return
 	 * @see BoundZSetOperations#rangeByLex(Range)
-	 * @since 1.7
-	 * @deprecated since 3.0. Please use {@link #rangeByLex(Range)} instead.
-	 */
-	@Deprecated(since = "3.0", forRemoval = true)
-	default Set<E> rangeByLex(io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.Range range) {
-		return rangeByLex(range.toRange());
-	}
-
-	/**
-	 * Get all elements with lexicographical ordering with a value between {@link Range#getLowerBound()} and
-	 * {@link Range#getUpperBound()}.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @return
-	 * @see BoundZSetOperations#rangeByLex(Range)
 	 * @since 3.0
 	 */
 	default Set<E> rangeByLex(Range<String> range) {
 		return rangeByLex(range, Limit.unlimited());
-	}
-
-	/**
-	 * Get all elements {@literal n} elements, where {@literal n = } {@link Limit#getCount()}, starting at
-	 * {@link Limit#getOffset()} with lexicographical ordering having a value between {@link Range#getLowerBound()} and
-	 * {@link Range#getUpperBound()}.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @param limit can be {@literal null}.
-	 * @return
-	 * @since 1.7
-	 * @see BoundZSetOperations#rangeByLex(Range, Limit)
-	 * @deprecated since 3.0. Please use {@link #rangeByLex(Range, Limit)} instead.
-	 */
-	@Deprecated(since = "3.0", forRemoval = true)
-	default Set<E> rangeByLex(io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.Range range, Limit limit) {
-		return rangeByLex(range.toRange(), limit);
 	}
 
 	/**
@@ -327,44 +297,11 @@ public interface ValkeyZSet<E> extends ValkeyCollection<E>, Set<E> {
 	 *
 	 * @param range must not be {@literal null}.
 	 * @return
-	 * @since 2.4
-	 * @see BoundZSetOperations#reverseRangeByLex(Range)
-	 * @deprecated since 3.0. Please use {@link #reverseRangeByLex(Range, Limit)} instead.
-	 */
-	@Deprecated(since = "3.0", forRemoval = true)
-	default Set<E> reverseRangeByLex(io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.Range range) {
-		return reverseRangeByLex(range.toRange());
-	}
-
-	/**
-	 * Get all elements with reverse lexicographical ordering with a value between {@link Range#getLowerBound()} and
-	 * {@link Range#getUpperBound()}.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @return
 	 * @since 3.0
 	 * @see BoundZSetOperations#reverseRangeByLex(Range)
 	 */
 	default Set<E> reverseRangeByLex(Range<String> range) {
 		return reverseRangeByLex(range, Limit.unlimited());
-	}
-
-	/**
-	 * Get all elements {@literal n} elements, where {@literal n = } {@link Limit#getCount()}, starting at
-	 * {@link Limit#getOffset()} with reverse lexicographical ordering having a value between
-	 * {@link Range#getLowerBound()} and {@link Range#getUpperBound()}.
-	 *
-	 * @param range must not be {@literal null}.
-	 * @param limit can be {@literal null}.
-	 * @return
-	 * @since 2.4
-	 * @see BoundZSetOperations#reverseRangeByLex(Range, Limit)
-	 * @deprecated since 3.0. Please use {@link #reverseRangeByLex(Range, Limit)} instead.
-	 */
-	@Deprecated(since = "3.0", forRemoval = true)
-	default Set<E> reverseRangeByLex(io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.Range range,
-			Limit limit) {
-		return reverseRangeByLex(range.toRange(), limit);
 	}
 
 	/**
@@ -601,7 +538,7 @@ public interface ValkeyZSet<E> extends ValkeyCollection<E>, Set<E> {
 	}
 
 	/**
-	 * Adds an element to the set with the given score if the element does not already exists.
+	 * Adds an element to the set with the given score if the element does not already exist.
 	 *
 	 * @param e element to add
 	 * @param score element score
@@ -628,6 +565,19 @@ public interface ValkeyZSet<E> extends ValkeyCollection<E>, Set<E> {
 	 * @return the score associated with the given object
 	 */
 	Double score(Object o);
+
+	/**
+	 * Increment the score of the given element in the set.
+	 * <p>
+	 * If the element does not exist in the set, it will be added with the specified increment as its initial score.
+	 * @param e the non-null element whose score to increment
+	 * @param increment the value by which the score should be incremented (can be negative)
+	 * @return the new score after increment, or {@literal null} when used in pipeline / transaction
+	 * @see ZSetOperations#incrementScore(Object, Object, double)
+	 * @see <a href="https://valkey.io/commands/zincrby">Valkey Documentation: ZINCRBY</a>
+	 * @since 4.1
+	 */
+	Double incrementScore(E e, double increment);
 
 	/**
 	 * Returns the rank (position) of the given element in the set, in ascending order. Returns null if the element is not

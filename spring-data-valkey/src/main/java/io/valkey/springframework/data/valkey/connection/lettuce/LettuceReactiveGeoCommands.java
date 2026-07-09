@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import reactor.core.publisher.Mono;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.reactivestreams.Publisher;
@@ -130,7 +131,7 @@ class LettuceReactiveGeoCommands implements ReactiveGeoCommands {
 			Assert.notNull(command.getMembers(), "Members must not be null");
 
 			Mono<List<Value<GeoCoordinates>>> result = cmd
-					.geopos(command.getKey(), command.getMembers().stream().toArray(ByteBuffer[]::new)).collectList();
+					.geopos(command.getKey(), command.getMembers().toArray(ByteBuffer[]::new)).collectList();
 
 			return result.map(value -> new MultiValueResponse<>(command, value.stream().map(v -> v.getValueOrElse(null))
 					.map(LettuceConverters::geoCoordinatesToPoint).collect(Collectors.toList())));
@@ -154,7 +155,7 @@ class LettuceReactiveGeoCommands implements ReactiveGeoCommands {
 					.georadius(command.getKey(), command.getPoint().getX(), command.getPoint().getY(),
 							command.getDistance().getValue(), LettuceConverters.toGeoArgsUnit(command.getDistance().getMetric()),
 							geoArgs) //
-					.map(converter(command.getDistance().getMetric())::convert);
+					.map(converter(command.getDistance().getMetric()));
 
 			return Mono.just(new CommandResponse<>(command, result));
 		}));
@@ -176,7 +177,7 @@ class LettuceReactiveGeoCommands implements ReactiveGeoCommands {
 			Flux<GeoResult<GeoLocation<ByteBuffer>>> result = cmd
 					.georadiusbymember(command.getKey(), command.getMember(), command.getDistance().getValue(),
 							LettuceConverters.toGeoArgsUnit(command.getDistance().getMetric()), geoArgs)
-					.map(converter(command.getDistance().getMetric())::convert);
+					.map(converter(command.getDistance().getMetric()));
 
 			return Mono.just(new CommandResponse<>(command, result));
 		}));
@@ -198,7 +199,7 @@ class LettuceReactiveGeoCommands implements ReactiveGeoCommands {
 			GeoSearch.GeoPredicate predicate = LettuceConverters.toGeoPredicate(command.getShape());
 
 			Flux<GeoResult<GeoLocation<ByteBuffer>>> result = cmd.geosearch(command.getKey(), ref, predicate, geoArgs)
-					.map(converter(command.getShape().getMetric())::convert);
+					.map(converter(command.getShape().getMetric()));
 
 			return new CommandResponse<>(command, result);
 		}));
@@ -228,7 +229,8 @@ class LettuceReactiveGeoCommands implements ReactiveGeoCommands {
 		}));
 	}
 
-	private Converter<GeoWithin<ByteBuffer>, GeoResult<GeoLocation<ByteBuffer>>> converter(Metric metric) {
+	@SuppressWarnings("NullAway")
+	private Function<GeoWithin<ByteBuffer>, GeoResult<GeoLocation<ByteBuffer>>> converter(Metric metric) {
 
 		return (source) -> {
 

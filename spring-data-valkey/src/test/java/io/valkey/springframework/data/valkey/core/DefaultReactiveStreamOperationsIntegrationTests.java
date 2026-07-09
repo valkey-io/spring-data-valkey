@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package io.valkey.springframework.data.valkey.core;
 import static org.assertj.core.api.Assertions.*;
 import static org.junit.Assume.*;
 
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
@@ -26,6 +27,9 @@ import java.util.Collections;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.data.domain.Range;
 import org.springframework.data.domain.Range.Bound;
@@ -35,7 +39,11 @@ import io.valkey.springframework.data.valkey.PersonObjectFactory;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamDeletionPolicy;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamEntryDeletionResult;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XDelOptions;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
 import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
 import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
@@ -45,6 +53,7 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamReadOptions
 import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
 import io.valkey.springframework.data.valkey.core.ReactiveOperationsTestParams.Fixture;
 import io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.GenericJacksonJsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.JdkSerializationValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
@@ -53,8 +62,6 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializationConte
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for {@link DefaultReactiveStreamOperations}.
@@ -64,6 +71,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Marcin Zielinski
  * @author jinkshower
  */
+@ParameterizedClass
 @MethodSource("testParams")
 @SuppressWarnings("unchecked")
 @EnabledOnCommand("XADD")
@@ -112,7 +120,8 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 		connection.close();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test
+	// DATAREDIS-864
 	void addShouldAddMessage() {
 
 		K key = keyFactory.instance();
@@ -135,11 +144,12 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void addShouldAddReadSimpleMessage() {
 
 		assumeTrue(!(serializer instanceof Jackson2JsonValkeySerializer)
 				&& !(serializer instanceof GenericJackson2JsonValkeySerializer)
+				&& !(serializer instanceof GenericJacksonJsonValkeySerializer)
 				&& !(serializer instanceof JdkSerializationValkeySerializer) && !(serializer instanceof OxmSerializer));
 
 		K key = keyFactory.instance();
@@ -158,11 +168,12 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void addShouldAddReadSimpleMessageWithRawSerializer() {
 
 		assumeTrue(!(serializer instanceof Jackson2JsonValkeySerializer)
-				&& !(serializer instanceof GenericJackson2JsonValkeySerializer));
+				&& !(serializer instanceof GenericJackson2JsonValkeySerializer)
+				&& !(serializer instanceof GenericJacksonJsonValkeySerializer));
 
 		SerializationPair<K> keySerializer = valkeyTemplate.getSerializationContext().getKeySerializationPair();
 
@@ -188,7 +199,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMaxLenShouldLimitMessagesSize() {
 
 		K key = keyFactory.instance();
@@ -215,11 +226,12 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 		}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMaxLenShouldLimitSimpleMessagesSize() {
 
 		assumeTrue(!(serializer instanceof Jackson2JsonValkeySerializer)
 				&& !(serializer instanceof GenericJackson2JsonValkeySerializer)
+				&& !(serializer instanceof GenericJacksonJsonValkeySerializer)
 				&& !(serializer instanceof JdkSerializationValkeySerializer) && !(serializer instanceof OxmSerializer));
 
 		K key = keyFactory.instance();
@@ -242,11 +254,12 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				}).expectNextCount(0).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMaxLenShouldLimitSimpleMessageWithRawSerializerSize() {
 
 		assumeTrue(!(serializer instanceof Jackson2JsonValkeySerializer)
-				&& !(serializer instanceof GenericJackson2JsonValkeySerializer));
+				&& !(serializer instanceof GenericJackson2JsonValkeySerializer)
+				&& !(serializer instanceof GenericJacksonJsonValkeySerializer));
 
 		SerializationPair<K> keySerializer = valkeyTemplate.getSerializationContext().getKeySerializationPair();
 
@@ -278,7 +291,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				}).expectNextCount(0).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMinIdShouldEvictLowerIdMessages() {
 
 		K key = keyFactory.instance();
@@ -301,7 +314,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 		}).expectNextCount(0).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMakeNoStreamShouldNotCreateStreamWhenNoStreamExists() {
 
 		K key = keyFactory.instance();
@@ -317,7 +330,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 		streamOperations.range(key, Range.unbounded()).as(StepVerifier::create).expectNextCount(0L).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMakeNoStreamShouldCreateStreamWhenStreamExists() {
 
 		K key = keyFactory.instance();
@@ -335,7 +348,64 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 		streamOperations.range(key, Range.unbounded()).as(StepVerifier::create).expectNextCount(2L).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // GH-3232
+	void addWithLimitShouldHonorApproximateTrimming() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(100).approximate().limit(50));
+
+		// Add multiple messages with limit
+		for (int i = 0; i < 5; i++) {
+			streamOperations.add(key, Collections.singletonMap(hashKey, value), options).block();
+		}
+
+		streamOperations.size(key).as(StepVerifier::create).assertNext(size -> {
+			assertThat(size).isGreaterThan(0L);
+		}).verifyComplete();
+	}
+
+	@Test // GH-3232
+	void addWithExactTrimmingShouldTrimExactly() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(2).exact());
+
+		// Add 3 messages with exact trimming to maxlen=2
+		streamOperations.add(key, Collections.singletonMap(hashKey, value), options).block();
+		streamOperations.add(key, Collections.singletonMap(hashKey, value), options).block();
+		streamOperations.add(key, Collections.singletonMap(hashKey, value), options).block();
+
+		// Should have exactly 2 entries
+		streamOperations.size(key).as(StepVerifier::create).expectNext(2L).verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnValkeyVersion("8.2")
+	void addWithDeletionPolicyShouldApplyPolicy() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(5).approximate().deletionPolicy(StreamDeletionPolicy.delete()));
+
+		// Add multiple messages with deletion policy
+		for (int i = 0; i < 3; i++) {
+			streamOperations.add(key, Collections.singletonMap(hashKey, value), options).block();
+		}
+
+		streamOperations.size(key).as(StepVerifier::create).assertNext(size -> {
+			assertThat(size).isGreaterThan(0L);
+		}).verifyComplete();
+	}
+
+	@Test // DATAREDIS-864
 	void rangeShouldReportMessages() {
 
 		K key = keyFactory.instance();
@@ -356,7 +426,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void reverseRangeShouldReportMessages() {
 
 		K key = keyFactory.instance();
@@ -372,11 +442,12 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void reverseRangeShouldConvertSimpleMessages() {
 
 		assumeTrue(!(serializer instanceof Jackson2JsonValkeySerializer)
-				&& !(serializer instanceof GenericJackson2JsonValkeySerializer));
+				&& !(serializer instanceof GenericJackson2JsonValkeySerializer)
+				&& !(serializer instanceof GenericJacksonJsonValkeySerializer));
 
 		K key = keyFactory.instance();
 		HK hashKey = hashKeyFactory.instance();
@@ -390,7 +461,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				.consumeNextWith(it -> assertThat(it.getId()).isEqualTo(messageId1)).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void readShouldReadMessage() {
 
 		// assumeFalse(valueFactory instanceof PersonObjectFactory);
@@ -416,7 +487,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void readShouldReadMessages() {
 
 		assumeFalse(valueFactory instanceof PersonObjectFactory);
@@ -434,7 +505,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void sizeShouldReportStreamSize() {
 
 		K key = keyFactory.instance();
@@ -456,7 +527,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void pendingShouldReadMessageSummary() {
 
 		K key = keyFactory.instance();
@@ -479,7 +550,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 		}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void pendingShouldReadMessageDetails() {
 
 		K key = keyFactory.instance();
@@ -504,7 +575,7 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 		}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2465
+	@Test // GH-2465
 	void claimShouldReadMessageDetails() {
 
 		K key = keyFactory.instance();
@@ -526,5 +597,151 @@ public class DefaultReactiveStreamOperationsIntegrationTests<K, HK, HV> {
 					assertThat(claimed.getValue()).isEqualTo(content);
 					assertThat(claimed.getId()).isEqualTo(messageId);
 				}).verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XDELEX")
+	void deleteWithOptionsShouldDeleteEntries() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		RecordId messageId1 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+		RecordId messageId2 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+		RecordId messageId3 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+
+		streamOperations.size(key).as(StepVerifier::create).expectNext(3L).verifyComplete();
+
+		XDelOptions options = XDelOptions.defaults();
+
+		streamOperations.deleteWithOptions(key, options, messageId1, messageId2).as(StepVerifier::create)
+				.expectNext(StreamEntryDeletionResult.DELETED)
+				.expectNext(StreamEntryDeletionResult.DELETED)
+				.verifyComplete();
+
+		streamOperations.size(key).as(StepVerifier::create).expectNext(1L).verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XDELEX")
+	void deleteWithOptionsUsingStringIdsShouldDeleteEntries() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		RecordId messageId1 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+		RecordId messageId2 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+
+		streamOperations.size(key).as(StepVerifier::create).expectNext(2L).verifyComplete();
+
+		XDelOptions options = XDelOptions.defaults();
+
+		streamOperations.deleteWithOptions(key, options, messageId1.getValue(), messageId2.getValue())
+				.as(StepVerifier::create)
+				.expectNextCount(2)
+				.verifyComplete();
+
+		streamOperations.size(key).as(StepVerifier::create).expectNext(0L).verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XDELEX")
+	void deleteWithOptionsUsingRecordShouldDeleteEntry() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		Map<HK, HV> content = Collections.singletonMap(hashKey, value);
+		RecordId messageId = streamOperations.add(key, content).block();
+
+		streamOperations.size(key).as(StepVerifier::create).expectNext(1L).verifyComplete();
+
+		MapRecord<K, HK, HV> record = StreamRecords.newRecord().in(key).withId(messageId).ofMap(content);
+		XDelOptions options = XDelOptions.defaults();
+
+		streamOperations.deleteWithOptions(record, options).as(StepVerifier::create)
+				.expectNext(StreamEntryDeletionResult.DELETED)
+				.verifyComplete();
+
+		streamOperations.size(key).as(StepVerifier::create).expectNext(0L).verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XACKDEL")
+	void acknowledgeAndDeleteShouldAcknowledgeAndDeleteEntries() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		RecordId messageId1 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+		RecordId messageId2 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+
+		streamOperations.createGroup(key, ReadOffset.from("0-0"), "my-group").then().as(StepVerifier::create)
+				.verifyComplete();
+
+		streamOperations.read(Consumer.from("my-group", "my-consumer"), StreamOffset.create(key, ReadOffset.lastConsumed()))
+				.then().as(StepVerifier::create).verifyComplete();
+
+		XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.removeAcknowledged());
+
+		streamOperations.acknowledgeAndDelete(key, "my-group", options, messageId1, messageId2)
+				.as(StepVerifier::create)
+				.expectNext(StreamEntryDeletionResult.DELETED)
+				.expectNext(StreamEntryDeletionResult.DELETED)
+				.verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XACKDEL")
+	void acknowledgeAndDeleteUsingStringIdsShouldWork() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		RecordId messageId1 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+		RecordId messageId2 = streamOperations.add(key, Collections.singletonMap(hashKey, value)).block();
+
+		streamOperations.createGroup(key, ReadOffset.from("0-0"), "my-group").then().as(StepVerifier::create)
+				.verifyComplete();
+
+		streamOperations.read(Consumer.from("my-group", "my-consumer"), StreamOffset.create(key, ReadOffset.lastConsumed()))
+				.then().as(StepVerifier::create).verifyComplete();
+
+		XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.removeAcknowledged());
+
+		streamOperations.acknowledgeAndDelete(key, "my-group", options, messageId1.getValue(), messageId2.getValue())
+				.as(StepVerifier::create)
+				.expectNextCount(2)
+				.verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XACKDEL")
+	void acknowledgeAndDeleteUsingRecordShouldWork() {
+
+		K key = keyFactory.instance();
+		HK hashKey = hashKeyFactory.instance();
+		HV value = valueFactory.instance();
+
+		Map<HK, HV> content = Collections.singletonMap(hashKey, value);
+		RecordId messageId = streamOperations.add(key, content).block();
+
+		streamOperations.createGroup(key, ReadOffset.from("0-0"), "my-group").then().as(StepVerifier::create)
+				.verifyComplete();
+
+		streamOperations.read(Consumer.from("my-group", "my-consumer"), StreamOffset.create(key, ReadOffset.lastConsumed()))
+				.then().as(StepVerifier::create).verifyComplete();
+
+		MapRecord<K, HK, HV> record = StreamRecords.newRecord().in(key).withId(messageId).ofMap(content);
+		XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.removeAcknowledged());
+
+		streamOperations.acknowledgeAndDelete("my-group", record, options).as(StepVerifier::create)
+				.expectNext(StreamEntryDeletionResult.DELETED)
+				.verifyComplete();
 	}
 }

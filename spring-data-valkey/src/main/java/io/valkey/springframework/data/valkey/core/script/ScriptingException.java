@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core.script;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.NestedRuntimeException;
 
 /**
@@ -23,7 +25,6 @@ import org.springframework.core.NestedRuntimeException;
  * @author Jennifer Hickey
  * @author Mark Paluch
  */
-@SuppressWarnings("serial")
 public class ScriptingException extends NestedRuntimeException {
 
 	/**
@@ -31,7 +32,7 @@ public class ScriptingException extends NestedRuntimeException {
 	 *
 	 * @param msg the detail message.
 	 */
-	public ScriptingException(String msg) {
+	public ScriptingException(@Nullable String msg) {
 		super(msg);
 	}
 
@@ -41,7 +42,8 @@ public class ScriptingException extends NestedRuntimeException {
 	 * @param msg the detail message.
 	 * @param cause the nested exception.
 	 */
-	public ScriptingException(String msg, Throwable cause) {
+	public ScriptingException(@Nullable String msg, @Nullable Throwable cause) {
 		super(msg, cause);
 	}
+
 }

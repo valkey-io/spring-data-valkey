@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 
 /**
@@ -37,7 +38,7 @@ import org.springframework.util.CollectionUtils;
  * @param <T>
  * @since 1.4
  */
-public abstract class ScanCursor<T> implements Cursor<T> {
+public abstract class ScanCursor<T> implements Cursor<@NonNull T> {
 
 	private CursorState state;
 	private CursorId id;
@@ -65,9 +66,9 @@ public abstract class ScanCursor<T> implements Cursor<T> {
 	 * Crates new {@link ScanCursor} with {@link ScanOptions#NONE}
 	 *
 	 * @param cursorId the cursor Id.
-	 * @deprecated since 3.3.0 - Use {@link ScanCursor#ScanCursor(CursorId)} instead.
+	 * @deprecated since 3.3 - Use {@link ScanCursor#ScanCursor(CursorId)} instead.
 	 */
-	@Deprecated(since = "3.3.0")
+	@Deprecated(since = "3.3")
 	public ScanCursor(long cursorId) {
 		this(cursorId, ScanOptions.NONE);
 	}
@@ -87,9 +88,9 @@ public abstract class ScanCursor<T> implements Cursor<T> {
 	 *
 	 * @param cursorId the cursor Id.
 	 * @param options Defaulted to {@link ScanOptions#NONE} if {@literal null}.
-	 * @deprecated since 3.3.0 - Use {@link ScanCursor#ScanCursor(CursorId, ScanOptions)} instead.
+	 * @deprecated since 3.3 - Use {@link ScanCursor#ScanCursor(CursorId, ScanOptions)} instead.
 	 */
-	@Deprecated(since = "3.3.0")
+	@Deprecated(since = "3.3")
 	public ScanCursor(long cursorId, @Nullable ScanOptions options) {
 		this(CursorId.of(cursorId), options);
 	}
@@ -130,9 +131,9 @@ public abstract class ScanCursor<T> implements Cursor<T> {
 	 * @param cursorId
 	 * @param options
 	 * @return
-	 * @deprecated since 3.3.0, cursorId, can exceed {@link Long#MAX_VALUE}.
+	 * @deprecated since 3.3 cursorId, can exceed {@link Long#MAX_VALUE}.
 	 */
-	@Deprecated(since = "3.3.0")
+	@Deprecated(since = "3.3")
 	protected ScanIteration<T> doScan(long cursorId, ScanOptions options) {
 		return doScan(CursorId.of(cursorId), scanOptions);
 	}
@@ -169,17 +170,6 @@ public abstract class ScanCursor<T> implements Cursor<T> {
 	 * Customization hook when calling {@link #open()}.
 	 *
 	 * @param cursorId
-	 * @deprecated since 3.3.0, use {@link #doOpen(CursorId)} instead.
-	 */
-	@Deprecated(since = "3.3.0", forRemoval = true)
-	protected void doOpen(long cursorId) {
-		doOpen(CursorId.of(cursorId));
-	}
-
-	/**
-	 * Customization hook when calling {@link #open()}.
-	 *
-	 * @param cursorId
 	 */
 	protected void doOpen(CursorId cursorId) {
 		scan(cursorId);
@@ -198,18 +188,6 @@ public abstract class ScanCursor<T> implements Cursor<T> {
 		} else {
 			resetDelegate();
 		}
-	}
-
-	/**
-	 * Check whether {@code cursorId} is finished.
-	 *
-	 * @param cursorId the cursor Id
-	 * @return {@literal true} if the cursor is considered finished, {@literal false} otherwise.s
-	 * @since 2.1
-	 */
-	@Deprecated(since = "3.3.0", forRemoval = true)
-	protected boolean isFinished(long cursorId) {
-		return cursorId == 0;
 	}
 
 	/**
@@ -329,4 +307,5 @@ public abstract class ScanCursor<T> implements Cursor<T> {
 	enum CursorState {
 		READY, OPEN, FINISHED, CLOSED;
 	}
+
 }

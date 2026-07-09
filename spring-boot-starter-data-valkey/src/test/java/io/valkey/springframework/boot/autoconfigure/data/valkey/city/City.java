@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2019 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +27,19 @@ public class City implements Serializable {
 	private static final long serialVersionUID = 1L;
 
 	@Id
+	@SuppressWarnings("NullAway.Init")
 	private Long id;
 
+	@SuppressWarnings("NullAway.Init")
 	private String name;
 
+	@SuppressWarnings("NullAway.Init")
 	private String state;
 
+	@SuppressWarnings("NullAway.Init")
 	private String country;
 
+	@SuppressWarnings("NullAway.Init")
 	private String map;
 
 	protected City() {

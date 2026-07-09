@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,12 +41,12 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
  */
 @AutoConfiguration(after = ValkeyAutoConfiguration.class)
 @ConditionalOnClass({ ReactiveValkeyConnectionFactory.class, ReactiveValkeyTemplate.class, Flux.class })
-public class ValkeyReactiveAutoConfiguration {
+public final class ValkeyReactiveAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(name = "reactiveValkeyTemplate")
 	@ConditionalOnBean(ReactiveValkeyConnectionFactory.class)
-	public ReactiveValkeyTemplate<Object, Object> reactiveValkeyTemplate(
+	ReactiveValkeyTemplate<Object, Object> reactiveValkeyTemplate(
 			ReactiveValkeyConnectionFactory reactiveValkeyConnectionFactory, ResourceLoader resourceLoader) {
 		ValkeySerializer<Object> javaSerializer = ValkeySerializer.java(resourceLoader.getClassLoader());
 		ValkeySerializationContext<Object, Object> serializationContext = ValkeySerializationContext
@@ -62,7 +62,7 @@ public class ValkeyReactiveAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean(name = "reactiveStringValkeyTemplate")
 	@ConditionalOnBean(ReactiveValkeyConnectionFactory.class)
-	public ReactiveStringValkeyTemplate reactiveStringValkeyTemplate(
+	ReactiveStringValkeyTemplate reactiveStringValkeyTemplate(
 			ReactiveValkeyConnectionFactory reactiveValkeyConnectionFactory) {
 		return new ReactiveStringValkeyTemplate(reactiveValkeyConnectionFactory);
 	}

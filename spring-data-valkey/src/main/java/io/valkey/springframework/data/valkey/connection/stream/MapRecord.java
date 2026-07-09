@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.stream.StreamRecords.MapBackedRecord;
 import io.valkey.springframework.data.valkey.hash.HashMapper;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -113,6 +113,7 @@ public interface MapRecord<S, K, V> extends Record<S, Map<K, V>>, Iterable<Map.E
 	 * @param valueSerializer can be {@literal null} if the values are binary.
 	 * @return new {@link ByteRecord} holding the serialized values.
 	 */
+	@SuppressWarnings("NullAway")
 	default ByteRecord serialize(@Nullable ValkeySerializer<? super S> streamSerializer,
 			@Nullable ValkeySerializer<? super K> fieldSerializer, @Nullable ValkeySerializer<? super V> valueSerializer) {
 
@@ -134,7 +135,7 @@ public interface MapRecord<S, K, V> extends Record<S, Map<K, V>>, Iterable<Map.E
 	 * @param <OV> type of the value backing the {@link ObjectRecord}.
 	 * @return new instance of {@link ObjectRecord}.
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked", "rawtypes", "NullAway" })
 	default <OV> ObjectRecord<S, OV> toObjectRecord(HashMapper<? super OV, ? super K, ? super V> mapper) {
 		return Record.<S, OV> of((OV) mapper.fromHash((Map) getValue())).withId(getId()).withStreamKey(getRequiredStream());
 	}

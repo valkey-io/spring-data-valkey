@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
+import java.util.Collections;
 import java.util.List;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslBundles;
@@ -37,35 +40,27 @@ class PropertiesValkeyConnectionDetails implements ValkeyConnectionDetails {
 
 	private final ValkeyProperties properties;
 
-	private final SslBundles sslBundles;
+	private final @Nullable SslBundles sslBundles;
 
-	PropertiesValkeyConnectionDetails(ValkeyProperties properties, SslBundles sslBundles) {
+	PropertiesValkeyConnectionDetails(ValkeyProperties properties, @Nullable SslBundles sslBundles) {
 		this.properties = properties;
 		this.sslBundles = sslBundles;
 	}
 
 	@Override
-	public String getUsername() {
+	public @Nullable String getUsername() {
 		ValkeyUrl valkeyUrl = getValkeyUrl();
 		return (valkeyUrl != null) ? valkeyUrl.credentials().username() : this.properties.getUsername();
 	}
 
 	@Override
-	public String getPassword() {
+	public @Nullable String getPassword() {
 		ValkeyUrl valkeyUrl = getValkeyUrl();
 		return (valkeyUrl != null) ? valkeyUrl.credentials().password() : this.properties.getPassword();
 	}
 
 	@Override
-	public Standalone getStandalone() {
-		ValkeyUrl valkeyUrl = getValkeyUrl();
-		return (valkeyUrl != null)
-				? Standalone.of(valkeyUrl.uri().getHost(), valkeyUrl.uri().getPort(), valkeyUrl.database(), getSslBundle())
-				: Standalone.of(this.properties.getHost(), this.properties.getPort(), this.properties.getDatabase(),
-						getSslBundle());
-	}
-
-	private SslBundle getSslBundle() {
+	public @Nullable SslBundle getSslBundle() {
 		if (!this.properties.getSsl().isEnabled()) {
 			return null;
 		}
@@ -78,26 +73,43 @@ class PropertiesValkeyConnectionDetails implements ValkeyConnectionDetails {
 	}
 
 	@Override
-	public Sentinel getSentinel() {
+	public Standalone getStandalone() {
+		ValkeyUrl valkeyUrl = getValkeyUrl();
+		return (valkeyUrl != null)
+				? Standalone.of(valkeyUrl.uri().getHost(), valkeyUrl.uri().getPort(), valkeyUrl.database())
+				: Standalone.of(this.properties.getHost(), this.properties.getPort(), this.properties.getDatabase());
+	}
+
+	@Override
+	public @Nullable Sentinel getSentinel() {
 		ValkeyProperties.Sentinel sentinel = this.properties.getSentinel();
 		return (sentinel != null) ? new PropertiesSentinel(getStandalone().getDatabase(), sentinel) : null;
 	}
 
 	@Override
-	public Cluster getCluster() {
+	public @Nullable Cluster getCluster() {
 		ValkeyProperties.Cluster cluster = this.properties.getCluster();
 		return (cluster != null) ? new PropertiesCluster(cluster) : null;
 	}
 
-	private ValkeyUrl getValkeyUrl() {
+	@Override
+	public @Nullable MasterReplica getMasterReplica() {
+		ValkeyProperties.Masterreplica masterreplica = this.properties.getMasterreplica();
+		return (masterreplica != null) ? new PropertiesMasterReplica(masterreplica) : null;
+	}
+
+	private @Nullable ValkeyUrl getValkeyUrl() {
 		return ValkeyUrl.of(this.properties.getUrl());
 	}
 
-	private List<Node> asNodes(List<String> nodes) {
-		return nodes.stream().map(this::asNode).toList();
+	private static List<Node> asNodes(@Nullable List<String> nodes) {
+		if (nodes == null) {
+			return Collections.emptyList();
+		}
+		return nodes.stream().map(PropertiesValkeyConnectionDetails::asNode).toList();
 	}
 
-	private Node asNode(String node) {
+	private static Node asNode(String node) {
 		int portSeparatorIndex = node.lastIndexOf(':');
 		String host = node.substring(0, portSeparatorIndex);
 		int port = Integer.parseInt(node.substring(portSeparatorIndex + 1));
@@ -107,7 +119,7 @@ class PropertiesValkeyConnectionDetails implements ValkeyConnectionDetails {
 	/**
 	 * {@link Cluster} implementation backed by properties.
 	 */
-	private class PropertiesCluster implements Cluster {
+	private static class PropertiesCluster implements Cluster {
 
 		private final List<Node> nodes;
 
@@ -120,9 +132,22 @@ class PropertiesValkeyConnectionDetails implements ValkeyConnectionDetails {
 			return this.nodes;
 		}
 
+	}
+
+	/**
+	 * {@link MasterReplica} implementation backed by properties.
+	 */
+	private static class PropertiesMasterReplica implements MasterReplica {
+
+		private final List<Node> nodes;
+
+		PropertiesMasterReplica(ValkeyProperties.Masterreplica properties) {
+			this.nodes = asNodes(properties.getNodes());
+		}
+
 		@Override
-		public SslBundle getSslBundle() {
-			return PropertiesValkeyConnectionDetails.this.getSslBundle();
+		public List<Node> getNodes() {
+			return this.nodes;
 		}
 
 	}
@@ -130,7 +155,7 @@ class PropertiesValkeyConnectionDetails implements ValkeyConnectionDetails {
 	/**
 	 * {@link Sentinel} implementation backed by properties.
 	 */
-	private class PropertiesSentinel implements Sentinel {
+	private static class PropertiesSentinel implements Sentinel {
 
 		private final int database;
 
@@ -148,7 +173,9 @@ class PropertiesValkeyConnectionDetails implements ValkeyConnectionDetails {
 
 		@Override
 		public String getMaster() {
-			return this.properties.getMaster();
+			String master = this.properties.getMaster();
+			Assert.state(master != null, "'master' must not be null");
+			return master;
 		}
 
 		@Override
@@ -157,18 +184,13 @@ class PropertiesValkeyConnectionDetails implements ValkeyConnectionDetails {
 		}
 
 		@Override
-		public String getUsername() {
+		public @Nullable String getUsername() {
 			return this.properties.getUsername();
 		}
 
 		@Override
-		public String getPassword() {
+		public @Nullable String getPassword() {
 			return this.properties.getPassword();
-		}
-
-		@Override
-		public SslBundle getSslBundle() {
-			return PropertiesValkeyConnectionDetails.this.getSslBundle();
 		}
 
 	}

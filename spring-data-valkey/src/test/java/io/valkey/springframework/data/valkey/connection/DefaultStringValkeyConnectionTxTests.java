@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,7 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
  * @author Jennifer Hickey
  * @author Christoph Strobl
  * @author Ninad Divadkar
+ * @author Viktoriya Kutsarova
  */
 public class DefaultStringValkeyConnectionTxTests extends DefaultStringValkeyConnectionTests {
 
@@ -394,6 +395,42 @@ public class DefaultStringValkeyConnectionTxTests extends DefaultStringValkeyCon
 	public void testHVals() {
 		doReturn(Collections.singletonList(bytesList)).when(nativeConnection).exec();
 		super.testHVals();
+	}
+
+	@Test
+	void hGetDelBytes() {
+		doReturn(Collections.singletonList(Collections.singletonList(barBytes))).when(nativeConnection).exec();
+		super.hGetDelBytes();
+	}
+
+	@Test
+	void hGetDel() {
+		doReturn(Collections.singletonList(Collections.singletonList(barBytes))).when(nativeConnection).exec();
+		super.hGetDel();
+	}
+
+	@Test
+	void hGetExBytes() {
+		doReturn(Collections.singletonList(Collections.singletonList(barBytes))).when(nativeConnection).exec();
+		super.hGetExBytes();
+	}
+
+	@Test
+	void hGetEx() {
+		doReturn(Collections.singletonList(Collections.singletonList(barBytes))).when(nativeConnection).exec();
+		super.hGetEx();
+	}
+
+	@Test
+	void hSetExBytes() {
+		doReturn(Collections.singletonList(true)).when(nativeConnection).exec();
+		super.hSetExBytes();
+	}
+
+	@Test
+	void hSetEx() {
+		doReturn(Collections.singletonList(true)).when(nativeConnection).exec();
+		super.hSetEx();
 	}
 
 	@Test
@@ -957,6 +994,90 @@ public class DefaultStringValkeyConnectionTxTests extends DefaultStringValkeyCon
 	public void testBitOp() {
 		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
 		super.testBitOp();
+	}
+
+	@Test // GH-3250
+	public void testBitOpOrBytes() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpOrBytes();
+	}
+
+	@Test // GH-3250
+	public void testBitOpOr() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpOr();
+	}
+
+	@Test // GH-3250
+	public void testBitOpXorBytes() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpXorBytes();
+	}
+
+	@Test // GH-3250
+	public void testBitOpXor() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpXor();
+	}
+
+	@Test // GH-3250
+	public void testBitOpNotBytes() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpNotBytes();
+	}
+
+	@Test // GH-3250
+	public void testBitOpNot() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpNot();
+	}
+
+	@Test // GH-3250
+	public void testBitOpDiffBytes() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpDiffBytes();
+	}
+
+	@Test // GH-3250
+	public void testBitOpDiff() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpDiff();
+	}
+
+	@Test // GH-3250
+	public void testBitOpDiff1Bytes() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpDiff1Bytes();
+	}
+
+	@Test // GH-3250
+	public void testBitOpDiff1() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpDiff1();
+	}
+
+	@Test // GH-3250
+	public void testBitOpAndorBytes() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpAndorBytes();
+	}
+
+	@Test // GH-3250
+	public void testBitOpAndor() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpAndor();
+	}
+
+	@Test // GH-3250
+	public void testBitOpOneBytes() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpOneBytes();
+	}
+
+	@Test // GH-3250
+	public void testBitOpOne() {
+		doReturn(Collections.singletonList(5L)).when(nativeConnection).exec();
+		super.testBitOpOne();
 	}
 
 	@Test
@@ -1732,7 +1853,7 @@ public class DefaultStringValkeyConnectionTxTests extends DefaultStringValkeyCon
 
 		doReturn(Collections.singletonList(
 				Collections.singletonList(StreamRecords.newRecord().in(bar2Bytes).withId("stream-1").ofBytes(bytesMap))))
-						.when(nativeConnection).exec();
+				.when(nativeConnection).exec();
 		super.xRangeShouldDelegateAndConvertCorrectly();
 	}
 
@@ -1741,7 +1862,7 @@ public class DefaultStringValkeyConnectionTxTests extends DefaultStringValkeyCon
 
 		doReturn(Collections.singletonList(
 				Collections.singletonList(StreamRecords.newRecord().in(bar2Bytes).withId("stream-1").ofBytes(bytesMap))))
-						.when(nativeConnection).exec();
+				.when(nativeConnection).exec();
 		super.xReadShouldDelegateAndConvertCorrectly();
 	}
 
@@ -1750,7 +1871,7 @@ public class DefaultStringValkeyConnectionTxTests extends DefaultStringValkeyCon
 
 		doReturn(Collections.singletonList(
 				Collections.singletonList(StreamRecords.newRecord().in(bar2Bytes).withId("stream-1").ofBytes(bytesMap))))
-						.when(nativeConnection).exec();
+				.when(nativeConnection).exec();
 		super.xReadGroupShouldDelegateAndConvertCorrectly();
 	}
 
@@ -1759,7 +1880,7 @@ public class DefaultStringValkeyConnectionTxTests extends DefaultStringValkeyCon
 
 		doReturn(Collections.singletonList(
 				Collections.singletonList(StreamRecords.newRecord().in(bar2Bytes).withId("stream-1").ofBytes(bytesMap))))
-						.when(nativeConnection).exec();
+				.when(nativeConnection).exec();
 		super.xRevRangeShouldDelegateAndConvertCorrectly();
 	}
 

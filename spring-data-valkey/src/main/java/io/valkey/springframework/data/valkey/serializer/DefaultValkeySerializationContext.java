@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.serializer;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -36,8 +36,7 @@ class DefaultValkeySerializationContext<K, V> implements ValkeySerializationCont
 	private final SerializationPair<String> stringTuple;
 
 	private DefaultValkeySerializationContext(SerializationPair<K> keyTuple, SerializationPair<V> valueTuple,
-			SerializationPair<?> hashKeyTuple, SerializationPair<?> hashValueTuple,
-			SerializationPair<String> stringTuple) {
+			SerializationPair<?> hashKeyTuple, SerializationPair<?> hashValueTuple, SerializationPair<String> stringTuple) {
 
 		this.keyTuple = keyTuple;
 		this.valueTuple = valueTuple;
@@ -148,8 +147,10 @@ class DefaultValkeySerializationContext<K, V> implements ValkeySerializationCont
 			Assert.notNull(this.hashKeyTuple, "HashKey SerializationPair must not be null");
 			Assert.notNull(this.hashValueTuple, "HashValue SerializationPair must not be null");
 
-			return new DefaultValkeySerializationContext<>(this.keyTuple, this.valueTuple,
-					this.hashKeyTuple, this.hashValueTuple, this.stringTuple);
+			return new DefaultValkeySerializationContext<>(this.keyTuple, this.valueTuple, this.hashKeyTuple,
+					this.hashValueTuple, this.stringTuple);
 		}
+
 	}
+
 }

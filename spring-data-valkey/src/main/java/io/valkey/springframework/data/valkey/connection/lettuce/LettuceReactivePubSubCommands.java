@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -233,7 +233,7 @@ class LettuceReactivePubSubCommands implements ReactivePubSubCommands {
 
 		@Override
 		public String toString() {
-			return "%s: Subscribers: %s".formatted(new String(raw), SUBSCRIBERS.get(this));
+			return "%s: Subscribers: %s".formatted(LettuceConverters.toString(raw), SUBSCRIBERS.get(this));
 		}
 	}
 }

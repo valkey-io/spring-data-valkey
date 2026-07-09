@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,7 +87,7 @@ class LettuceAclIntegrationTests {
 	@EnabledOnValkeySentinelAvailable(26382)
 	void shouldConnectSentinelWithAuthentication() throws IOException {
 
-		// Note: As per https://github.com/valkey/valkey/issues/7708, Sentinel does not support ACL authentication yet.
+		// Note: As per https://github.com/redis/redis/issues/7708, Sentinel does not support ACL authentication yet.
 
 		LettuceClientConfiguration configuration = LettuceTestClientConfiguration.builder()
 				.clientOptions(ClientOptions.builder().protocolVersion(ProtocolVersion.RESP2).build()).build();

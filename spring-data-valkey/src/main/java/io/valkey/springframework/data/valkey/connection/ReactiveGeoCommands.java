@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
 import org.springframework.data.domain.Sort.Direction;
@@ -43,7 +44,6 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoRadiusCommandArgs.Flag;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -183,8 +183,8 @@ public interface ReactiveGeoCommands {
 	 */
 	class GeoDistCommand extends KeyCommand {
 
-		private final ByteBuffer from;
-		private final ByteBuffer to;
+		private final @Nullable ByteBuffer from;
+		private final @Nullable ByteBuffer to;
 		private final Metric metric;
 
 		private GeoDistCommand(@Nullable ByteBuffer key, @Nullable ByteBuffer from, @Nullable ByteBuffer to,
@@ -280,16 +280,14 @@ public interface ReactiveGeoCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public ByteBuffer getFrom() {
+		public @Nullable ByteBuffer getFrom() {
 			return from;
 		}
 
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public ByteBuffer getTo() {
+		public @Nullable ByteBuffer getTo() {
 			return to;
 		}
 
@@ -826,10 +824,9 @@ public interface ReactiveGeoCommands {
 		}
 
 		/**
-		 * @return  can be {@literal null}.
+		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Point getPoint() {
+		public @Nullable Point getPoint() {
 			return point;
 		}
 
@@ -1159,10 +1156,9 @@ public interface ReactiveGeoCommands {
 		}
 
 		/**
-		 * @return  can be {@literal null}.
+		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public ByteBuffer getMember() {
+		public @Nullable ByteBuffer getMember() {
 			return member;
 		}
 
@@ -1229,7 +1225,7 @@ public interface ReactiveGeoCommands {
 
 		return geoRadiusByMember(
 				Mono.just(GeoRadiusByMemberCommand.within(distance).from(member).forKey(key).withArgs(geoRadiusArgs)))
-						.flatMap(CommandResponse::getOutput);
+				.flatMap(CommandResponse::getOutput);
 	}
 
 	/**
@@ -1319,13 +1315,11 @@ public interface ReactiveGeoCommands {
 			return Optional.ofNullable(args);
 		}
 
-		@Nullable
-		public GeoReference<ByteBuffer> getReference() {
+		public @Nullable GeoReference<ByteBuffer> getReference() {
 			return reference;
 		}
 
-		@Nullable
-		public GeoShape getShape() {
+		public @Nullable GeoShape getShape() {
 			return shape;
 		}
 	}
@@ -1419,8 +1413,7 @@ public interface ReactiveGeoCommands {
 			return new GeoSearchStoreCommand(getKey(), getDestKey(), getReference(), getShape(), args);
 		}
 
-		@Nullable
-		public ByteBuffer getDestKey() {
+		public @Nullable ByteBuffer getDestKey() {
 			return destKey;
 		}
 
@@ -1428,13 +1421,11 @@ public interface ReactiveGeoCommands {
 			return Optional.ofNullable(args);
 		}
 
-		@Nullable
-		public GeoReference<ByteBuffer> getReference() {
+		public @Nullable GeoReference<ByteBuffer> getReference() {
 			return reference;
 		}
 
-		@Nullable
-		public GeoShape getShape() {
+		public @Nullable GeoShape getShape() {
 			return shape;
 		}
 	}
@@ -1484,7 +1475,7 @@ public interface ReactiveGeoCommands {
 			GeoShape shape, GeoSearchStoreCommandArgs args) {
 		return geoSearchStore(
 				Mono.just(GeoSearchStoreCommand.within(shape).in(key).storeAt(destKey).at(reference).with(args))).next()
-						.map(CommandResponse::getOutput);
+				.map(CommandResponse::getOutput);
 	}
 
 	/**

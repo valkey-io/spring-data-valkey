@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,12 @@ package io.valkey.springframework.boot.actuate.autoconfigure.data.valkey;
 
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.actuate.autoconfigure.health.HealthContributorAutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
 import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
 import io.valkey.springframework.boot.actuate.data.valkey.ValkeyReactiveHealthIndicator;
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyReactiveAutoConfiguration;
+import org.springframework.boot.health.autoconfigure.contributor.HealthContributorAutoConfiguration;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -38,9 +36,8 @@ class ValkeyReactiveHealthContributorAutoConfigurationTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class,
-				ValkeyReactiveAutoConfiguration.class, ValkeyReactiveHealthContributorAutoConfiguration.class, 
-				HealthContributorAutoConfiguration.class))
-		.withPropertyValues("spring.data.valkey.client-type=lettuce"); // Force Lettuce for reactive support
+				ValkeyReactiveHealthContributorAutoConfiguration.class, HealthContributorAutoConfiguration.class))
+		.withPropertyValues("spring.data.valkey.client-type=lettuce");
 
 	@Test
 	void runShouldCreateIndicator() {

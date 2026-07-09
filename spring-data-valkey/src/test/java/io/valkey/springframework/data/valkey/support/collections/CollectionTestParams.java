@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.Va
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.JacksonJsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
@@ -50,6 +51,7 @@ public abstract class CollectionTestParams {
 
 		OxmSerializer serializer = XstreamOxmSerializerSingleton.getInstance();
 		Jackson2JsonValkeySerializer<Person> jackson2JsonSerializer = new Jackson2JsonValkeySerializer<>(Person.class);
+		JacksonJsonValkeySerializer<Person> jackson3JsonSerializer = new JacksonJsonValkeySerializer<>(Person.class);
 		StringValkeySerializer stringSerializer = StringValkeySerializer.UTF_8;
 
 		// create Jedis Factory
@@ -82,6 +84,12 @@ public abstract class CollectionTestParams {
 		jackson2JsonPersonTemplate.setValueSerializer(jackson2JsonSerializer);
 		jackson2JsonPersonTemplate.afterPropertiesSet();
 
+		// jackson3
+		ValkeyTemplate<String, Person> jackson3JsonPersonTemplate = new ValkeyTemplate<>();
+		jackson3JsonPersonTemplate.setConnectionFactory(jedisConnFactory);
+		jackson3JsonPersonTemplate.setValueSerializer(jackson3JsonSerializer);
+		jackson3JsonPersonTemplate.afterPropertiesSet();
+
 		ValkeyTemplate<byte[], byte[]> rawTemplate = new ValkeyTemplate<>();
 		rawTemplate.setConnectionFactory(jedisConnFactory);
 		rawTemplate.setEnableDefaultSerializer(false);
@@ -111,6 +119,11 @@ public abstract class CollectionTestParams {
 		jackson2JsonPersonTemplateLtc.setValueSerializer(jackson2JsonSerializer);
 		jackson2JsonPersonTemplateLtc.setConnectionFactory(lettuceConnFactory);
 		jackson2JsonPersonTemplateLtc.afterPropertiesSet();
+
+		ValkeyTemplate<String, Person> jackson3JsonPersonTemplateLtc = new ValkeyTemplate<>();
+		jackson3JsonPersonTemplateLtc.setValueSerializer(jackson3JsonSerializer);
+		jackson3JsonPersonTemplateLtc.setConnectionFactory(lettuceConnFactory);
+		jackson3JsonPersonTemplateLtc.afterPropertiesSet();
 
 		ValkeyTemplate<byte[], byte[]> rawTemplateLtc = new ValkeyTemplate<>();
 		rawTemplateLtc.setConnectionFactory(lettuceConnFactory);
@@ -142,18 +155,24 @@ public abstract class CollectionTestParams {
 		jackson2JsonPersonTemplateVkg.setValueSerializer(jackson2JsonSerializer);
 		jackson2JsonPersonTemplateVkg.afterPropertiesSet();
 
+		ValkeyTemplate<String, Person> jackson3JsonPersonTemplateVkg = new ValkeyTemplate<>();
+		jackson3JsonPersonTemplateVkg.setConnectionFactory(valkeyGlideConnFactory);
+		jackson3JsonPersonTemplateVkg.setValueSerializer(jackson3JsonSerializer);
+		jackson3JsonPersonTemplateVkg.afterPropertiesSet();
+
 		ValkeyTemplate<byte[], byte[]> rawTemplateVkg = new ValkeyTemplate<>();
 		rawTemplateVkg.setConnectionFactory(valkeyGlideConnFactory);
 		rawTemplateVkg.setEnableDefaultSerializer(false);
 		rawTemplateVkg.setKeySerializer(stringSerializer);
 		rawTemplateVkg.afterPropertiesSet();
-		
+
 		return Arrays.asList(new Object[][] { { stringFactory, stringTemplate }, //
 				{ doubleAsStringObjectFactory, stringTemplate }, //
 				{ personFactory, personTemplate }, //
 				{ stringFactory, xstreamStringTemplate }, //
 				{ personFactory, xstreamPersonTemplate }, //
 				{ personFactory, jackson2JsonPersonTemplate }, //
+				{ personFactory, jackson3JsonPersonTemplate }, //
 				{ rawFactory, rawTemplate },
 
 				// lettuce
@@ -164,6 +183,7 @@ public abstract class CollectionTestParams {
 				{ stringFactory, xstreamStringTemplateLtc }, //
 				{ personFactory, xstreamPersonTemplateLtc }, //
 				{ personFactory, jackson2JsonPersonTemplateLtc }, //
+				{ personFactory, jackson3JsonPersonTemplateLtc }, //
 				{ rawFactory, rawTemplateLtc },
 
 				// ValkeyGlide
@@ -174,6 +194,7 @@ public abstract class CollectionTestParams {
 				{ stringFactory, xstreamStringTemplateVkg }, //
 				{ personFactory, xstreamPersonTemplateVkg }, //
 				{ personFactory, jackson2JsonPersonTemplateVkg }, //
+				{ personFactory, jackson3JsonPersonTemplateVkg }, //
 				{ rawFactory, rawTemplateVkg } });
 	}
 }

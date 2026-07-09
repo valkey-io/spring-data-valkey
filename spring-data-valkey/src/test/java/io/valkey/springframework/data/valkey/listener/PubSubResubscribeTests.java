@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,9 @@ import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.SyncTaskExecutor;
@@ -48,8 +51,6 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledIfLongRunning
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * @author Costin Leau
@@ -58,6 +59,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author Vedran Pavic
  */
+@ParameterizedClass
 @MethodSource("testParams")
 @EnabledIfLongRunningTest
 public class PubSubResubscribeTests {
@@ -102,16 +104,15 @@ public class PubSubResubscribeTests {
 			factories.add(lettuceClusterConnFactory);
 		}
 
-
 		// Valkey-GLIDE
 		ValkeyGlideConnectionFactory glideConnFactory = ValkeyGlideConnectionFactoryExtension
 				.getConnectionFactory(ValkeyStandalone.class);
 
 		factories.add(glideConnFactory);
-	
+
 		if (clusterAvailable()) {
-		    ValkeyGlideConnectionFactory glideClusterConnFactory = ValkeyGlideConnectionFactoryExtension
-		            .getConnectionFactory(ValkeyCluster.class);
+			ValkeyGlideConnectionFactory glideClusterConnFactory = ValkeyGlideConnectionFactoryExtension
+					.getConnectionFactory(ValkeyCluster.class);
 
 			factories.add(glideClusterConnFactory);
 		}
@@ -142,7 +143,7 @@ public class PubSubResubscribeTests {
 		bag.clear();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@EnabledIfLongRunningTest
 	void testContainerPatternResubscribe() {
 
@@ -180,7 +181,7 @@ public class PubSubResubscribeTests {
 		await().atMost(Duration.ofSeconds(2)).until(() -> bag2.contains(payload1) && bag2.contains(payload2));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testContainerChannelResubscribe() {
 
 		String payload1 = "do";
@@ -192,8 +193,9 @@ public class PubSubResubscribeTests {
 		String ANOTHER_CHANNEL = "pubsub::test::extra";
 
 		// bind listener on another channel
+		container.addMessageListener(adapter, new ChannelTopic(CHANNEL));
 		container.addMessageListener(adapter, new ChannelTopic(ANOTHER_CHANNEL));
-		container.removeMessageListener(null, new ChannelTopic(CHANNEL));
+		container.removeMessageListener(adapter, new ChannelTopic(CHANNEL));
 
 		// Listener removed from channel
 		template.convertAndSend(CHANNEL, payload1);
@@ -210,7 +212,7 @@ public class PubSubResubscribeTests {
 	 * Validates the behavior of {@link ValkeyMessageListenerContainer} when it needs to spin up a thread executing its
 	 * PatternSubscriptionTask
 	 */
-	@ParameterizedValkeyTest
+	@Test
 	void testInitializeContainerWithMultipleTopicsIncludingPattern() {
 
 		assumeFalse(isClusterAware(template.getConnectionFactory()));
@@ -250,15 +252,15 @@ public class PubSubResubscribeTests {
 		return ValkeyDetector.isClusterAvailable();
 	}
 
-    private static boolean isClusterAware(ValkeyConnectionFactory connectionFactory) {
+	private static boolean isClusterAware(ValkeyConnectionFactory connectionFactory) {
 
-        if (connectionFactory instanceof LettuceConnectionFactory lettuceConnectionFactory) {
-            return lettuceConnectionFactory.isClusterAware();
-        } else if (connectionFactory instanceof JedisConnectionFactory jedisConnectionFactory) {
-            return jedisConnectionFactory.isValkeyClusterAware();
-        } else if (connectionFactory instanceof ValkeyGlideConnectionFactory glideConnectionFactory) {
-            return glideConnectionFactory.isClusterAware();
-        }
-        return false;
-    }
+		if (connectionFactory instanceof LettuceConnectionFactory lettuceConnectionFactory) {
+			return lettuceConnectionFactory.isClusterAware();
+		} else if (connectionFactory instanceof JedisConnectionFactory jedisConnectionFactory) {
+			return jedisConnectionFactory.isValkeyClusterAware();
+		} else if (connectionFactory instanceof ValkeyGlideConnectionFactory glideConnectionFactory) {
+			return glideConnectionFactory.isClusterAware();
+		}
+		return false;
+	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,11 +27,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ReactiveSetCommands;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -41,6 +41,7 @@ import org.springframework.util.Assert;
  * @author Christoph Strobl
  * @author Roman Bezpalko
  * @author John Blum
+ * @author Mingi Lee
  * @since 2.0
  */
 class DefaultReactiveSetOperations<K, V> implements ReactiveSetOperations<K, V> {
@@ -211,6 +212,35 @@ class DefaultReactiveSetOperations<K, V> implements ReactiveSetOperations<K, V> 
 				.map(this::rawKey) //
 				.collectList() //
 				.flatMap(rawKeys -> setCommands.sInterStore(rawKey(destKey), rawKeys)));
+	}
+
+	@Override
+	public Mono<Long> intersectSize(K key, K otherKey) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(otherKey, "Other key must not be null");
+
+		return intersectSize(key, Collections.singleton(otherKey));
+	}
+
+	@Override
+	public Mono<Long> intersectSize(K key, Collection<K> otherKeys) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(otherKeys, "Other keys must not be null");
+
+		return intersectSize(getKeys(key, otherKeys));
+	}
+
+	@Override
+	public Mono<Long> intersectSize(Collection<K> keys) {
+
+		Assert.notNull(keys, "Keys must not be null");
+
+		return createMono(setCommands -> Flux.fromIterable(keys) //
+				.map(this::rawKey) //
+				.collectList() //
+				.flatMap(setCommands::sInterCard));
 	}
 
 	@Override
@@ -418,8 +448,7 @@ class DefaultReactiveSetOperations<K, V> implements ReactiveSetOperations<K, V> 
 		return serializationContext.getValueSerializationPair().write(value);
 	}
 
-	@Nullable
-	private V readValue(ByteBuffer buffer) {
+	private @Nullable V readValue(ByteBuffer buffer) {
 		return serializationContext.getValueSerializationPair().read(buffer);
 	}
 

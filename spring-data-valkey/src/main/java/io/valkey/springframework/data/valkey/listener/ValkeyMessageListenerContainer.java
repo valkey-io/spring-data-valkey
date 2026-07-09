@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ import io.valkey.springframework.data.valkey.connection.util.ByteArrayWrapper;
 import io.valkey.springframework.data.valkey.listener.adapter.ValkeyListenerExecutionFailedException;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
@@ -131,6 +131,8 @@ public class ValkeyMessageListenerContainer implements InitializingBean, Disposa
 
 	// whether the TaskExecutor was created by the container
 	private boolean manageExecutor = false;
+
+	private boolean autoStartup = true;
 
 	private long maxSubscriptionRegistrationWaitingTime = DEFAULT_SUBSCRIPTION_REGISTRATION_WAIT_TIME;
 
@@ -232,6 +234,22 @@ public class ValkeyMessageListenerContainer implements InitializingBean, Disposa
 
 	public long getMaxSubscriptionRegistrationWaitingTime() {
 		return this.maxSubscriptionRegistrationWaitingTime;
+	}
+
+	/**
+	 * Set whether this container will start once the configuration is loaded, or wait for an explicit
+	 * {@link #start()} call.
+	 *
+	 * @param autoStartup whether to automatically start the container
+	 * @see SmartLifecycle
+	 */
+	public void setAutoStartup(boolean autoStartup) {
+		this.autoStartup = autoStartup;
+	}
+
+	@Override
+	public boolean isAutoStartup() {
+		return this.autoStartup;
 	}
 
 	/**

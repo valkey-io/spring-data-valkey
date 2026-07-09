@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,17 @@ import static io.valkey.springframework.data.valkey.connection.lettuce.LettuceRe
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 
 /**
  * @author Christoph Strobl
+ * @author Viktoriya Kutsarova
  * @since 2.0
  */
 class LettuceReactiveClusterStringCommandsIntegrationTests extends LettuceReactiveClusterTestSupport {
@@ -83,11 +86,80 @@ class LettuceReactiveClusterStringCommandsIntegrationTests extends LettuceReacti
 		assertThat(nativeCommands.get(SAME_SLOT_KEY_3)).isEqualTo(VALUE_3);
 	}
 
+	@Test // GH-3250
+	void bitOpXorShouldWorkAsExpectedWhenKeysMapToSameSlot() {
+
+		nativeCommands.set(SAME_SLOT_KEY_1, VALUE_1);
+		nativeCommands.set(SAME_SLOT_KEY_2, VALUE_2);
+
+		assertThat(connection.stringCommands().bitOp(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
+				ValkeyStringCommands.BitOperation.XOR, SAME_SLOT_KEY_3_BBUFFER).block()).isEqualTo(7L);
+		assertThat(nativeCommands.get(SAME_SLOT_KEY_3)).isNotNull();
+	}
+
+	@Test // GH-3250
+	void bitOpNotShouldWorkAsExpectedWhenKeysMapToSameSlot() {
+
+		nativeCommands.set(SAME_SLOT_KEY_1, VALUE_1);
+
+		assertThat(connection.stringCommands().bitOp(List.of(SAME_SLOT_KEY_1_BBUFFER),
+				ValkeyStringCommands.BitOperation.NOT, SAME_SLOT_KEY_3_BBUFFER).block()).isEqualTo(7L);
+		assertThat(nativeCommands.get(SAME_SLOT_KEY_3)).isNotNull();
+	}
+
 	@Test // DATAREDIS-525
 	void bitNotShouldThrowExceptionWhenMoreThanOnSourceKeyAndKeysMapToSameSlot() {
 		assertThatIllegalArgumentException().isThrownBy(
 				() -> connection.stringCommands().bitOp(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
 						ValkeyStringCommands.BitOperation.NOT, SAME_SLOT_KEY_3_BBUFFER).block());
+	}
+
+	@Test // GH-3250
+	@EnabledOnValkeyVersion("8.2")
+	void bitOpDiffShouldWorkAsExpectedWhenKeysMapToSameSlot() {
+
+		nativeCommands.set(SAME_SLOT_KEY_1, "foobar");
+		nativeCommands.set(SAME_SLOT_KEY_2, "abcdef");
+
+		assertThat(connection.stringCommands().bitOp(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
+				ValkeyStringCommands.BitOperation.DIFF, SAME_SLOT_KEY_3_BBUFFER).block()).isEqualTo(6L);
+		assertThat(nativeCommands.get(SAME_SLOT_KEY_3)).isNotNull();
+	}
+
+	@Test // GH-3250
+	@EnabledOnValkeyVersion("8.2")
+	void bitOpDiff1ShouldWorkAsExpectedWhenKeysMapToSameSlot() {
+
+		nativeCommands.set(SAME_SLOT_KEY_1, "foobar");
+		nativeCommands.set(SAME_SLOT_KEY_2, "abcdef");
+
+		assertThat(connection.stringCommands().bitOp(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
+				ValkeyStringCommands.BitOperation.DIFF1, SAME_SLOT_KEY_3_BBUFFER).block()).isEqualTo(6L);
+		assertThat(nativeCommands.get(SAME_SLOT_KEY_3)).isNotNull();
+	}
+
+	@Test // GH-3250
+	@EnabledOnValkeyVersion("8.2")
+	void bitOpAndorShouldWorkAsExpectedWhenKeysMapToSameSlot() {
+
+		nativeCommands.set(SAME_SLOT_KEY_1, VALUE_1);
+		nativeCommands.set(SAME_SLOT_KEY_2, VALUE_2);
+
+		assertThat(connection.stringCommands().bitOp(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
+				ValkeyStringCommands.BitOperation.ANDOR, SAME_SLOT_KEY_3_BBUFFER).block()).isEqualTo(7L);
+		assertThat(nativeCommands.get(SAME_SLOT_KEY_3)).isNotNull();
+	}
+
+	@Test // GH-3250
+	@EnabledOnValkeyVersion("8.2")
+	void bitOpOneShouldWorkAsExpectedWhenKeysMapToSameSlot() {
+
+		nativeCommands.set(SAME_SLOT_KEY_1, VALUE_1);
+		nativeCommands.set(SAME_SLOT_KEY_2, VALUE_2);
+
+		assertThat(connection.stringCommands().bitOp(Arrays.asList(SAME_SLOT_KEY_1_BBUFFER, SAME_SLOT_KEY_2_BBUFFER),
+				ValkeyStringCommands.BitOperation.ONE, SAME_SLOT_KEY_3_BBUFFER).block()).isEqualTo(7L);
+		assertThat(nativeCommands.get(SAME_SLOT_KEY_3)).isNotNull();
 	}
 
 }

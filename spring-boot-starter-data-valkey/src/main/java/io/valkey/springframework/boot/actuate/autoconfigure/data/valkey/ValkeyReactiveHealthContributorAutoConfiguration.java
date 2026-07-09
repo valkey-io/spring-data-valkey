@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,19 +19,18 @@ package io.valkey.springframework.boot.actuate.autoconfigure.data.valkey;
 import reactor.core.publisher.Flux;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.actuate.autoconfigure.health.CompositeReactiveHealthContributorConfiguration;
-import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
-import org.springframework.boot.actuate.health.HealthContributor;
-import org.springframework.boot.actuate.health.ReactiveHealthContributor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.annotation.Bean;
-
-import io.valkey.springframework.boot.actuate.data.valkey.ValkeyReactiveHealthIndicator;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyReactiveAutoConfiguration;
+import io.valkey.springframework.boot.actuate.data.valkey.ValkeyReactiveHealthIndicator;
+import org.springframework.boot.health.autoconfigure.contributor.CompositeReactiveHealthContributorConfiguration;
+import org.springframework.boot.health.autoconfigure.contributor.ConditionalOnEnabledHealthIndicator;
+import org.springframework.boot.health.contributor.ReactiveHealthContributor;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
+import org.springframework.context.annotation.Bean;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
 
 /**
@@ -45,10 +44,11 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
  * @since 2.1.0
  */
 @AutoConfiguration(after = ValkeyReactiveAutoConfiguration.class)
-@ConditionalOnClass({ ReactiveValkeyConnectionFactory.class, Flux.class, HealthContributor.class })
+@ConditionalOnClass({ ReactiveValkeyConnectionFactory.class, Flux.class, ReactiveHealthIndicator.class,
+		ConditionalOnEnabledHealthIndicator.class })
 @ConditionalOnBean(ReactiveValkeyConnectionFactory.class)
 @ConditionalOnEnabledHealthIndicator("valkey")
-public class ValkeyReactiveHealthContributorAutoConfiguration extends
+public final class ValkeyReactiveHealthContributorAutoConfiguration extends
 		CompositeReactiveHealthContributorConfiguration<ValkeyReactiveHealthIndicator, ReactiveValkeyConnectionFactory> {
 
 	ValkeyReactiveHealthContributorAutoConfiguration() {
@@ -57,7 +57,7 @@ public class ValkeyReactiveHealthContributorAutoConfiguration extends
 
 	@Bean
 	@ConditionalOnMissingBean(name = { "valkeyHealthIndicator", "valkeyHealthContributor" })
-	public ReactiveHealthContributor valkeyHealthContributor(ConfigurableListableBeanFactory beanFactory) {
+	ReactiveHealthContributor valkeyHealthContributor(ConfigurableListableBeanFactory beanFactory) {
 		return createContributor(beanFactory, ReactiveValkeyConnectionFactory.class);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -132,8 +132,7 @@ public class ValkeyClusterNode extends ValkeyNode {
 	/**
 	 * @return can be {@literal null}
 	 */
-	@Nullable
-	public LinkState getLinkState() {
+	public @Nullable LinkState getLinkState() {
 		return this.linkState;
 	}
 
@@ -216,8 +215,8 @@ public class ValkeyClusterNode extends ValkeyNode {
 		}
 
 		/**
-		 * Determines whether this {@link SlotRange} contains the given {@link Integer slot}, which implies
-		 * this cluster nodes manages the slot holding data stored in Valkey.
+		 * Determines whether this {@link SlotRange} contains the given {@link Integer slot}, which implies this cluster
+		 * nodes manages the slot holding data stored in Valkey.
 		 *
 		 * @param slot {@link Integer slot} to evaluate.
 		 * @return true when slot is part of the range.
@@ -286,14 +285,8 @@ public class ValkeyClusterNode extends ValkeyNode {
 	 */
 	public enum Flag {
 
-		MYSELF("myself"),
-		MASTER("master"),
-		REPLICA("slave"),
-		FAIL("fail"),
-		PFAIL("fail?"),
-		HANDSHAKE("handshake"),
-		NOADDR("noaddr"),
-		NOFLAGS("noflags");
+		MYSELF("myself"), MASTER("master"), REPLICA("slave"), FAIL("fail"), PFAIL("fail?"), HANDSHAKE("handshake"), NOADDR(
+				"noaddr"), NOFLAGS("noflags");
 
 		private String raw;
 
@@ -388,13 +381,14 @@ public class ValkeyClusterNode extends ValkeyNode {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public ValkeyClusterNode build() {
 
 			ValkeyNode base = super.build();
 
 			ValkeyClusterNode node;
-			if (base.host != null) {
-				node = new ValkeyClusterNode(base.getHost(), base.getPort(), slotRange);
+			if (base.getHost() != null) {
+				node = new ValkeyClusterNode(base.getRequiredHost(), base.getRequiredPort(), slotRange);
 			} else {
 				node = new ValkeyClusterNode(slotRange);
 			}
@@ -402,7 +396,7 @@ public class ValkeyClusterNode extends ValkeyNode {
 			node.type = base.type;
 			node.masterId = base.masterId;
 			node.name = base.name;
-			node.flags = flags;
+			node.flags = flags != null ? flags : Collections.emptySet();
 			node.linkState = linkState;
 			return node;
 		}

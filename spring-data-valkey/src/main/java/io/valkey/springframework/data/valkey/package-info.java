@@ -3,6 +3,5 @@
  * <p>
  * Provides Valkey specific exception hierarchy on top of the {@code org.springframework.dao} package.
  */
-@org.springframework.lang.NonNullApi
-@org.springframework.lang.NonNullFields
+@org.jspecify.annotations.NullMarked
 package io.valkey.springframework.data.valkey;

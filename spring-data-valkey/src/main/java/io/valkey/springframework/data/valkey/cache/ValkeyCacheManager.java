@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,18 +23,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.transaction.AbstractTransactionSupportingCacheManager;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
  * {@link CacheManager} implementation for Valkey backed by {@link ValkeyCache}.
  * <p>
- * This {@link CacheManager} creates {@link Cache caches} on first write, by default. Empty {@link Cache caches}
- * are not visible in Valkey due to how Valkey represents empty data structures.
+ * This {@link CacheManager} creates {@link Cache caches} on first write, by default. Empty {@link Cache caches} are not
+ * visible in Valkey due to how Valkey represents empty data structures.
  * <p>
  * {@link Cache Caches} requiring a different {@link ValkeyCacheConfiguration cache configuration} than the
  * {@link ValkeyCacheConfiguration#defaultCacheConfig() default cache configuration} can be specified via
@@ -64,18 +65,20 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 
 	private final Map<String, ValkeyCacheConfiguration> initialCacheConfiguration;
 
+	private final ResetStrategy resetStrategy;
+
 	/**
 	 * Creates a new {@link ValkeyCacheManager} initialized with the given {@link ValkeyCacheWriter} and default
 	 * {@link ValkeyCacheConfiguration}.
 	 * <p>
 	 * Allows {@link ValkeyCache cache} creation at runtime.
 	 *
-	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations
-	 * by executing appropriate Valkey commands; must not be {@literal null}.
-	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches}
-	 * by default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
+	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing appropriate
+	 *          Valkey commands; must not be {@literal null}.
+	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches} by
+	 *          default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
 	 * @throws IllegalArgumentException if either the given {@link ValkeyCacheWriter} or {@link ValkeyCacheConfiguration}
-	 * are {@literal null}.
+	 *           are {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheConfiguration
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
 	 */
@@ -84,17 +87,17 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	}
 
 	/**
-	 * Creates a new {@link ValkeyCacheManager} initialized with the given {@link ValkeyCacheWriter}
-	 * and default {@link ValkeyCacheConfiguration} along with whether to allow cache creation at runtime.
+	 * Creates a new {@link ValkeyCacheManager} initialized with the given {@link ValkeyCacheWriter} and default
+	 * {@link ValkeyCacheConfiguration} along with whether to allow cache creation at runtime.
 	 *
-	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations
-	 * by executing appropriate Valkey commands; must not be {@literal null}.
-	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches}
-	 * by default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
+	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing appropriate
+	 *          Valkey commands; must not be {@literal null}.
+	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches} by
+	 *          default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
 	 * @param allowRuntimeCacheCreation boolean specifying whether to allow creation of undeclared caches at runtime;
-	 * {@literal true} by default. Maybe just use {@link ValkeyCacheConfiguration#defaultCacheConfig()}.
+	 *          {@literal true} by default. Maybe just use {@link ValkeyCacheConfiguration#defaultCacheConfig()}.
 	 * @throws IllegalArgumentException if either the given {@link ValkeyCacheWriter} or {@link ValkeyCacheConfiguration}
-	 * are {@literal null}.
+	 *           are {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheConfiguration
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
 	 * @since 2.0.4
@@ -109,23 +112,38 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 		this.cacheWriter = cacheWriter;
 		this.initialCacheConfiguration = new LinkedHashMap<>();
 		this.allowRuntimeCacheCreation = allowRuntimeCacheCreation;
+		this.resetStrategy = ResetStrategy.clear();
+	}
+
+	private ValkeyCacheManager(ValkeyCacheWriter cacheWriter, ValkeyCacheConfiguration valkeyCacheConfiguration,
+			boolean allowRuntimeCacheCreation, Map<String, ValkeyCacheConfiguration> initialCaches,
+			ResetStrategy resetStrategy) {
+
+		Assert.notNull(valkeyCacheConfiguration, "DefaultCacheConfiguration must not be null");
+		Assert.notNull(cacheWriter, "CacheWriter must not be null");
+
+		this.defaultCacheConfiguration = valkeyCacheConfiguration;
+		this.cacheWriter = cacheWriter;
+		this.initialCacheConfiguration = new LinkedHashMap<>(initialCaches);
+		this.allowRuntimeCacheCreation = allowRuntimeCacheCreation;
+		this.resetStrategy = resetStrategy;
 	}
 
 	/**
 	 * Creates a new {@link ValkeyCacheManager} initialized with the given {@link ValkeyCacheWriter} and a default
-	 * {@link ValkeyCacheConfiguration} along with an optional, initial set of {@link String cache names}
-	 * used to create {@link ValkeyCache Valkey caches} on startup.
+	 * {@link ValkeyCacheConfiguration} along with an optional, initial set of {@link String cache names} used to create
+	 * {@link ValkeyCache Valkey caches} on startup.
 	 * <p>
 	 * Allows {@link ValkeyCache cache} creation at runtime.
 	 *
-	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations
-	 * by executing appropriate Valkey commands; must not be {@literal null}.
-	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches}
-	 * by default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
+	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing appropriate
+	 *          Valkey commands; must not be {@literal null}.
+	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches} by
+	 *          default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
 	 * @param initialCacheNames optional set of {@link String cache names} used to create {@link ValkeyCache Valkey caches}
-	 * on startup. The default {@link ValkeyCacheConfiguration} will be applied to each cache.
+	 *          on startup. The default {@link ValkeyCacheConfiguration} will be applied to each cache.
 	 * @throws IllegalArgumentException if either the given {@link ValkeyCacheWriter} or {@link ValkeyCacheConfiguration}
-	 * are {@literal null}.
+	 *           are {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheConfiguration
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
 	 */
@@ -139,19 +157,19 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	 * Creates a new {@link ValkeyCacheManager} initialized with the given {@link ValkeyCacheWriter} and default
 	 * {@link ValkeyCacheConfiguration} along with whether to allow cache creation at runtime.
 	 * <p>
-	 * Additionally, the optional, initial set of {@link String cache names} will be used to
-	 * create {@link ValkeyCache Valkey caches} on startup.
+	 * Additionally, the optional, initial set of {@link String cache names} will be used to create {@link ValkeyCache
+	 * Valkey caches} on startup.
 	 *
-	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations
-	 * by executing appropriate Valkey commands; must not be {@literal null}.
-	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches}
-	 * by default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
+	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing appropriate
+	 *          Valkey commands; must not be {@literal null}.
+	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches} by
+	 *          default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
 	 * @param allowRuntimeCacheCreation boolean specifying whether to allow creation of undeclared caches at runtime;
-	 * {@literal true} by default. Maybe just use {@link ValkeyCacheConfiguration#defaultCacheConfig()}.
+	 *          {@literal true} by default. Maybe just use {@link ValkeyCacheConfiguration#defaultCacheConfig()}.
 	 * @param initialCacheNames optional set of {@link String cache names} used to create {@link ValkeyCache Valkey caches}
-	 * on startup. The default {@link ValkeyCacheConfiguration} will be applied to each cache.
+	 *          on startup. The default {@link ValkeyCacheConfiguration} will be applied to each cache.
 	 * @throws IllegalArgumentException if either the given {@link ValkeyCacheWriter} or {@link ValkeyCacheConfiguration}
-	 * are {@literal null}.
+	 *           are {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheConfiguration
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
 	 * @since 2.0.4
@@ -175,15 +193,15 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	 * <p>
 	 * Allows {@link ValkeyCache cache} creation at runtime.
 	 *
-	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations
-	 * by executing appropriate Valkey commands; must not be {@literal null}.
-	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches}
-	 * by default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
+	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing appropriate
+	 *          Valkey commands; must not be {@literal null}.
+	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches} by
+	 *          default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
 	 * @param initialCacheConfigurations {@link Map} of declared, known {@link String cache names} along with associated
-	 * {@link ValkeyCacheConfiguration} used to create and configure {@link ValkeyCache Reds caches} on startup;
-	 * must not be {@literal null}.
+	 *          {@link ValkeyCacheConfiguration} used to create and configure {@link ValkeyCache Reds caches} on startup;
+	 *          must not be {@literal null}.
 	 * @throws IllegalArgumentException if either the given {@link ValkeyCacheWriter} or {@link ValkeyCacheConfiguration}
-	 * are {@literal null}.
+	 *           are {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheConfiguration
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
 	 */
@@ -200,17 +218,17 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	 * Additionally, an initial {@link ValkeyCache} will be created and configured using the associated
 	 * {@link ValkeyCacheConfiguration} for each {@link String named} {@link ValkeyCache} in the given {@link Map}.
 	 *
-	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations
-	 * by executing appropriate Valkey commands; must not be {@literal null}.
-	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches}
-	 * by default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
+	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing appropriate
+	 *          Valkey commands; must not be {@literal null}.
+	 * @param defaultCacheConfiguration {@link ValkeyCacheConfiguration} applied to new {@link ValkeyCache Valkey caches} by
+	 *          default when no cache-specific {@link ValkeyCacheConfiguration} is provided; must not be {@literal null}.
 	 * @param allowRuntimeCacheCreation boolean specifying whether to allow creation of undeclared caches at runtime;
-	 * {@literal true} by default. Maybe just use {@link ValkeyCacheConfiguration#defaultCacheConfig()}.
+	 *          {@literal true} by default. Maybe just use {@link ValkeyCacheConfiguration#defaultCacheConfig()}.
 	 * @param initialCacheConfigurations {@link Map} of declared, known {@link String cache names} along with the
-	 * associated {@link ValkeyCacheConfiguration} used to create and configure {@link ValkeyCache Valkey caches}
-	 * on startup; must not be {@literal null}.
+	 *          associated {@link ValkeyCacheConfiguration} used to create and configure {@link ValkeyCache Valkey caches} on
+	 *          startup; must not be {@literal null}.
 	 * @throws IllegalArgumentException if either the given {@link ValkeyCacheWriter} or {@link ValkeyCacheConfiguration}
-	 * are {@literal null}.
+	 *           are {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheConfiguration
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
 	 * @since 2.0.4
@@ -225,15 +243,7 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 		this.initialCacheConfiguration.putAll(initialCacheConfigurations);
 	}
 
-	/**
-	 * @deprecated since 3.2. Use {@link ValkeyCacheManager#ValkeyCacheManager(ValkeyCacheWriter, ValkeyCacheConfiguration, boolean, Map)} instead.
-	 */
-	@Deprecated(since = "3.2")
-	public ValkeyCacheManager(ValkeyCacheWriter cacheWriter, ValkeyCacheConfiguration defaultCacheConfiguration,
-			Map<String, ValkeyCacheConfiguration> initialCacheConfigurations, boolean allowRuntimeCacheCreation) {
 
-		this(cacheWriter, defaultCacheConfiguration, allowRuntimeCacheCreation, initialCacheConfigurations);
-	}
 
 	/**
 	 * Factory method returning a {@literal Builder} used to construct and configure a {@link ValkeyCacheManager}.
@@ -249,8 +259,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	 * Factory method returning a {@literal Builder} used to construct and configure a {@link ValkeyCacheManager}
 	 * initialized with the given {@link ValkeyCacheWriter}.
 	 *
-	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations
-	 * by executing appropriate Valkey commands; must not be {@literal null}.
+	 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing appropriate
+	 *          Valkey commands; must not be {@literal null}.
 	 * @return new {@link ValkeyCacheManagerBuilder}.
 	 * @throws IllegalArgumentException if the given {@link ValkeyCacheWriter} is {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
@@ -266,8 +276,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	 * Factory method returning a {@literal Builder} used to construct and configure a {@link ValkeyCacheManager}
 	 * initialized with the given {@link ValkeyConnectionFactory}.
 	 *
-	 * @param connectionFactory {@link ValkeyConnectionFactory} used by the {@link ValkeyCacheManager}
-	 * to acquire connections to Valkey when performing {@link ValkeyCache} operations; must not be {@literal null}.
+	 * @param connectionFactory {@link ValkeyConnectionFactory} used by the {@link ValkeyCacheManager} to acquire
+	 *          connections to Valkey when performing {@link ValkeyCache} operations; must not be {@literal null}.
 	 * @return new {@link ValkeyCacheManagerBuilder}.
 	 * @throws IllegalArgumentException if the given {@link ValkeyConnectionFactory} is {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory
@@ -297,8 +307,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	 * <dd>enabled</dd>
 	 * </dl>
 	 *
-	 * @param connectionFactory {@link ValkeyConnectionFactory} used by the {@link ValkeyCacheManager}
-	 * to acquire connections to Valkey when performing {@link ValkeyCache} operations; must not be {@literal null}.
+	 * @param connectionFactory {@link ValkeyConnectionFactory} used by the {@link ValkeyCacheManager} to acquire
+	 *          connections to Valkey when performing {@link ValkeyCache} operations; must not be {@literal null}.
 	 * @return new {@link ValkeyCacheManager}.
 	 * @throws IllegalArgumentException if the given {@link ValkeyConnectionFactory} is {@literal null}.
 	 * @see io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory
@@ -322,16 +332,39 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 		return this.allowRuntimeCacheCreation;
 	}
 
+	@Override
+	public void resetCaches() {
+
+		if (resetStrategy instanceof CacheWriterOperation<?> operation) {
+			operation.doWithCacheWriter(cacheWriter);
+			return;
+		}
+
+		if (this.resetStrategy instanceof ResetStrategies.DefaultResetStrategies strategy) {
+			synchronized (this) {
+				getCacheNames().forEach(it -> {
+					Cache cache = lookupCache(it);
+					if (cache != null) {
+						strategy.doWithCache(cache);
+					}
+				});
+			}
+			return;
+		}
+
+		super.resetCaches();
+	}
+
 	/**
 	 * Return an {@link Collections#unmodifiableMap(Map) unmodifiable Map} containing {@link String caches name} mapped to
 	 * the {@link ValkeyCache} {@link ValkeyCacheConfiguration configuration}.
 	 *
-	 * @return unmodifiable {@link Map} containing {@link String cache name}
-	 * / {@link ValkeyCacheConfiguration configuration} pairs.
+	 * @return unmodifiable {@link Map} containing {@link String cache name} to {@link ValkeyCacheConfiguration
+	 *         configuration} pairs.
 	 */
-	public Map<String, ValkeyCacheConfiguration> getCacheConfigurations() {
+	public Map<String, @Nullable ValkeyCacheConfiguration> getCacheConfigurations() {
 
-		Map<String, ValkeyCacheConfiguration> cacheConfigurationMap = new HashMap<>(getCacheNames().size());
+		Map<String, @Nullable ValkeyCacheConfiguration> cacheConfigurationMap = new HashMap<>(getCacheNames().size());
 
 		getCacheNames().forEach(cacheName -> {
 			ValkeyCache cache = (ValkeyCache) lookupCache(cacheName);
@@ -353,8 +386,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	}
 
 	/**
-	 * Gets a {@link Map} of {@link String cache names} to {@link ValkeyCacheConfiguration} objects as the initial set
-	 * of {@link ValkeyCache Valkey caches} to create on startup.
+	 * Gets a {@link Map} of {@link String cache names} to {@link ValkeyCacheConfiguration} objects as the initial set of
+	 * {@link ValkeyCache Valkey caches} to create on startup.
 	 *
 	 * @return a {@link Map} of {@link String cache names} to {@link ValkeyCacheConfiguration} objects.
 	 */
@@ -363,8 +396,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	}
 
 	/**
-	 * Returns a reference to the configured {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations,
-	 * such as reading from and writing to the cache.
+	 * Returns a reference to the configured {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations, such
+	 * as reading from and writing to the cache.
 	 *
 	 * @return a reference to the configured {@link ValkeyCacheWriter}.
 	 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
@@ -374,7 +407,7 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	}
 
 	@Override
-	protected ValkeyCache getMissingCache(String name) {
+	protected @Nullable ValkeyCache getMissingCache(String name) {
 		return isAllowRuntimeCacheCreation() ? createValkeyCache(name, getDefaultCacheConfiguration()) : null;
 	}
 
@@ -382,8 +415,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	 * Creates a new {@link ValkeyCache} with given {@link String name} and {@link ValkeyCacheConfiguration}.
 	 *
 	 * @param name {@link String name} for the {@link ValkeyCache}; must not be {@literal null}.
-	 * @param cacheConfiguration {@link ValkeyCacheConfiguration} used to configure the {@link ValkeyCache};
-	 * resolves to the {@link #getDefaultCacheConfiguration()} if {@literal null}.
+	 * @param cacheConfiguration {@link ValkeyCacheConfiguration} used to configure the {@link ValkeyCache}; resolves to the
+	 *          {@link #getDefaultCacheConfiguration()} if {@literal null}.
 	 * @return a new {@link ValkeyCache} instance; never {@literal null}.
 	 */
 	protected ValkeyCache createValkeyCache(String name, @Nullable ValkeyCacheConfiguration cacheConfiguration) {
@@ -412,12 +445,32 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 	 */
 	public static class ValkeyCacheManagerBuilder {
 
+		private boolean allowRuntimeCacheCreation = true;
+
+		private boolean enableTransactions;
+
+		private CacheStatisticsCollector statisticsCollector = CacheStatisticsCollector.none();
+
+		private final Map<String, ValkeyCacheConfiguration> initialCaches = new LinkedHashMap<>();
+
+		private ValkeyCacheConfiguration defaultCacheConfiguration = ValkeyCacheConfiguration.defaultCacheConfig();
+
+		private @Nullable ValkeyCacheWriter cacheWriter;
+
+		private ResetStrategy resetStrategy = ResetStrategy.clear();
+
+		private ValkeyCacheManagerBuilder() {}
+
+		private ValkeyCacheManagerBuilder(ValkeyCacheWriter cacheWriter) {
+			this.cacheWriter = cacheWriter;
+		}
+
 		/**
 		 * Factory method returning a new {@literal Builder} used to create and configure a {@link ValkeyCacheManager} using
 		 * the given {@link ValkeyCacheWriter}.
 		 *
-		 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations
-		 * by executing appropriate Valkey commands; must not be {@literal null}.
+		 * @param cacheWriter {@link ValkeyCacheWriter} used to perform {@link ValkeyCache} operations by executing
+		 *          appropriate Valkey commands; must not be {@literal null}.
 		 * @return new {@link ValkeyCacheManagerBuilder}.
 		 * @throws IllegalArgumentException if the given {@link ValkeyCacheWriter} is {@literal null}.
 		 * @see io.valkey.springframework.data.valkey.cache.ValkeyCacheWriter
@@ -433,8 +486,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 		 * Factory method returning a new {@literal Builder} used to create and configure a {@link ValkeyCacheManager} using
 		 * the given {@link ValkeyConnectionFactory}.
 		 *
-		 * @param connectionFactory {@link ValkeyConnectionFactory} used by the {@link ValkeyCacheManager}
-		 * to acquire connections to Valkey when performing {@link ValkeyCache} operations; must not be {@literal null}.
+		 * @param connectionFactory {@link ValkeyConnectionFactory} used by the {@link ValkeyCacheManager} to acquire
+		 *          connections to Valkey when performing {@link ValkeyCache} operations; must not be {@literal null}.
 		 * @return new {@link ValkeyCacheManagerBuilder}.
 		 * @throws IllegalArgumentException if the given {@link ValkeyConnectionFactory} is {@literal null}.
 		 * @see io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory
@@ -448,28 +501,11 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 			return new ValkeyCacheManagerBuilder(cacheWriter);
 		}
 
-		private boolean allowRuntimeCacheCreation = true;
-		private boolean enableTransactions;
-
-		private CacheStatisticsCollector statisticsCollector = CacheStatisticsCollector.none();
-
-		private final Map<String, ValkeyCacheConfiguration> initialCaches = new LinkedHashMap<>();
-
-		private ValkeyCacheConfiguration defaultCacheConfiguration = ValkeyCacheConfiguration.defaultCacheConfig();
-
-		private @Nullable ValkeyCacheWriter cacheWriter;
-
-		private ValkeyCacheManagerBuilder() {}
-
-		private ValkeyCacheManagerBuilder(ValkeyCacheWriter cacheWriter) {
-			this.cacheWriter = cacheWriter;
-		}
-
 		/**
 		 * Configure whether to allow cache creation at runtime.
 		 *
-		 * @param allowRuntimeCacheCreation boolean to allow creation of undeclared caches at runtime;
-		 * {@literal true} by default.
+		 * @param allowRuntimeCacheCreation boolean to allow creation of undeclared caches at runtime; {@literal true} by
+		 *          default.
 		 * @return this {@link ValkeyCacheManagerBuilder}.
 		 */
 		public ValkeyCacheManagerBuilder allowCreateOnMissingCache(boolean allowRuntimeCacheCreation) {
@@ -480,9 +516,9 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 		/**
 		 * Disable {@link ValkeyCache} creation at runtime for non-configured, undeclared caches.
 		 * <p>
-		 * {@link ValkeyCacheManager#getMissingCache(String)} returns {@literal null} for any non-configured,
-		 * undeclared {@link Cache} instead of a new {@link ValkeyCache} instance.
-		 * This allows the {@link org.springframework.cache.support.CompositeCacheManager} to participate.
+		 * {@link ValkeyCacheManager#getMissingCache(String)} returns {@literal null} for any non-configured, undeclared
+		 * {@link Cache} instead of a new {@link ValkeyCache} instance. This allows the
+		 * {@link org.springframework.cache.support.CompositeCacheManager} to participate.
 		 *
 		 * @return this {@link ValkeyCacheManagerBuilder}.
 		 * @see #allowCreateOnMissingCache(boolean)
@@ -525,7 +561,6 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 			Assert.notNull(defaultCacheConfiguration, "DefaultCacheConfiguration must not be null");
 
 			this.defaultCacheConfiguration = defaultCacheConfiguration;
-
 			return this;
 		}
 
@@ -568,7 +603,6 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 			Assert.noNullElements(cacheNames, "CacheNames must not be null");
 
 			cacheNames.forEach(it -> withCacheConfiguration(it, defaultCacheConfiguration));
-
 			return this;
 		}
 
@@ -583,8 +617,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 		}
 
 		/**
-		 * Registers the given {@link String cache name} and {@link ValkeyCacheConfiguration} used to create
-		 * and configure a {@link ValkeyCache} on startup.
+		 * Registers the given {@link String cache name} and {@link ValkeyCacheConfiguration} used to create and configure a
+		 * {@link ValkeyCache} on startup.
 		 *
 		 * @param cacheName {@link String name} of the cache to register for creation on startup.
 		 * @param cacheConfiguration {@link ValkeyCacheConfiguration} used to configure the new cache on startup.
@@ -598,7 +632,6 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 			Assert.notNull(cacheConfiguration, "CacheConfiguration must not be null");
 
 			this.initialCaches.put(cacheName, cacheConfiguration);
-
 			return this;
 		}
 
@@ -616,7 +649,19 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 					String.format("ValkeyCacheConfiguration for cache %s must not be null!", cacheName)));
 
 			this.initialCaches.putAll(cacheConfigurations);
+			return this;
+		}
 
+		/**
+		 * Configure the Cache {@link ResetStrategy} to use when {@link CacheManager#resetCaches() resetting} the cache.
+		 *
+		 * @param resetStrategy the strategy to use when resetting the cache.
+		 * @return this {@link ValkeyCacheManagerBuilder}.
+		 * @since 4.1
+		 * @see ResetStrategy
+		 */
+		public ValkeyCacheManagerBuilder withResetCachesStrategy(ResetStrategy resetStrategy) {
+			this.resetStrategy = resetStrategy;
 			return this;
 		}
 
@@ -634,8 +679,8 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 		/**
 		 * Get the {@link Set} of cache names for which the builder holds {@link ValkeyCacheConfiguration configuration}.
 		 *
-		 * @return an unmodifiable {@link Set} holding the name of caches
-		 * for which a {@link ValkeyCacheConfiguration configuration} has been set.
+		 * @return an unmodifiable {@link Set} holding the name of caches for which a {@link ValkeyCacheConfiguration
+		 *         configuration} has been set.
 		 * @since 2.2
 		 */
 		public Set<String> getConfiguredCaches() {
@@ -657,14 +702,15 @@ public class ValkeyCacheManager extends AbstractTransactionSupportingCacheManage
 					: this.cacheWriter;
 
 			ValkeyCacheManager cacheManager = newValkeyCacheManager(resolvedCacheWriter);
-
 			cacheManager.setTransactionAware(this.enableTransactions);
-
 			return cacheManager;
 		}
 
 		private ValkeyCacheManager newValkeyCacheManager(ValkeyCacheWriter cacheWriter) {
-			return new ValkeyCacheManager(cacheWriter, cacheDefaults(), this.allowRuntimeCacheCreation, this.initialCaches);
+			return new ValkeyCacheManager(cacheWriter, cacheDefaults(), this.allowRuntimeCacheCreation, this.initialCaches,
+					this.resetStrategy);
 		}
+
 	}
+
 }

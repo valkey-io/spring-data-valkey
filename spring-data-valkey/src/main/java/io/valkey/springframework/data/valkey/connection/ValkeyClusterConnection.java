@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ package io.valkey.springframework.data.valkey.connection;
 import java.util.Collection;
 import java.util.Set;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -36,6 +37,7 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @since 1.7
  */
+@NullUnmarked
 public interface ValkeyClusterConnection
 		extends ValkeyConnection, DefaultedValkeyClusterConnection, ValkeyClusterCommandsProvider {
 
@@ -44,8 +46,7 @@ public interface ValkeyClusterConnection
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see ValkeyConnectionCommands#ping()
 	 */
-	@Nullable
-	String ping(ValkeyClusterNode node);
+	String ping(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
@@ -53,8 +54,7 @@ public interface ValkeyClusterConnection
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see ValkeyKeyCommands#keys(byte[])
 	 */
-	@Nullable
-	Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern);
+	Set<byte @NonNull []> keys(@NonNull ValkeyClusterNode node, byte @NonNull [] pattern);
 
 	/**
 	 * Use a {@link Cursor} to iterate over keys.
@@ -65,15 +65,14 @@ public interface ValkeyClusterConnection
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
 	 */
-	Cursor<byte[]> scan(ValkeyClusterNode node, ScanOptions options);
+	Cursor<byte @NonNull []> scan(@NonNull ValkeyClusterNode node, @NonNull ScanOptions options);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @return {@literal null} when no keys stored at node or when used in pipeline / transaction.
 	 * @see ValkeyKeyCommands#randomKey()
 	 */
-	@Nullable
-	byte[] randomKey(ValkeyClusterNode node);
+	byte[] randomKey(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Execute the given command for the {@code key} provided potentially appending args. <br />
@@ -93,8 +92,7 @@ public interface ValkeyClusterConnection
 	 * @return command result as delivered by the underlying Valkey driver. Can be {@literal null}.
 	 * @since 2.1
 	 */
-	@Nullable
-	default <T> T execute(String command, byte[] key, Collection<byte[]> args) {
+	default <T> T execute(@NonNull String command, byte @NonNull [] key, @NonNull Collection<byte @NonNull []> args) {
 
 		Assert.notNull(command, "Command must not be null");
 		Assert.notNull(key, "Key must not be null");

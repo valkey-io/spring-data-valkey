@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 the original author or authors.
+ * Copyright 2019-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,9 +37,11 @@ import io.valkey.springframework.data.valkey.core.convert.ValkeyData;
 public class ValkeyTestData implements AssertProvider<ValkeyTestData.ValkeyBucketAssert> {
 
 	private final ValkeyData valkeyData;
+	private final Map<String, String> stringMap;
 
 	ValkeyTestData(ValkeyData valkeyData) {
 		this.valkeyData = valkeyData;
+		this.stringMap = toStringMap(valkeyData.getBucket().asMap());
 	}
 
 	public static ValkeyTestData from(ValkeyData data) {
@@ -49,6 +51,10 @@ public class ValkeyTestData implements AssertProvider<ValkeyTestData.ValkeyBucke
 	@Override
 	public ValkeyBucketAssert assertThat() {
 		return new ValkeyBucketAssert(valkeyData);
+	}
+
+	public String get(String key) {
+		return stringMap.get(key);
 	}
 
 	public Bucket getBucket() {
@@ -142,7 +148,6 @@ public class ValkeyTestData implements AssertProvider<ValkeyTestData.ValkeyBucke
 
 	}
 
-
 	private static Map<String, String> toStringMap(Map<String, byte[]> source) {
 
 		Map<String, String> converted = new LinkedHashMap<>();
@@ -154,6 +159,6 @@ public class ValkeyTestData implements AssertProvider<ValkeyTestData.ValkeyBucke
 
 	@Override
 	public String toString() {
-		return toStringMap(getBucket().asMap()).toString();
+		return stringMap.toString();
 	}
 }

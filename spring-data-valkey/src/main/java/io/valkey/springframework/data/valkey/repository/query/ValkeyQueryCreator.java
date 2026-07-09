@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package io.valkey.springframework.data.valkey.repository.query;
 import java.util.Collection;
 import java.util.Iterator;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.geo.Circle;
@@ -30,7 +32,6 @@ import org.springframework.data.repository.query.ParameterAccessor;
 import org.springframework.data.repository.query.parser.AbstractQueryCreator;
 import org.springframework.data.repository.query.parser.Part;
 import org.springframework.data.repository.query.parser.PartTree;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 
@@ -137,4 +138,5 @@ public class ValkeyQueryCreator extends AbstractQueryCreator<KeyValueQuery<Valke
 	private static boolean containsExactlyOne(Collection<?> collection) {
 		return !CollectionUtils.isEmpty(collection) && collection.size() == 1;
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.Expirations;
-import org.springframework.lang.Nullable;
 
 /**
  * Valkey map specific operations working on a hash.
@@ -36,7 +39,9 @@ import org.springframework.lang.Nullable;
  * @author Christoph Strobl
  * @author Ninad Divadkar
  * @author Tihomir Mateev
+ * @author Viktoriya Kutsarova
  */
+@NullUnmarked
 public interface HashOperations<H, HK, HV> {
 
 	/**
@@ -46,7 +51,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param hashKeys must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	Long delete(H key, Object... hashKeys);
+	Long delete(@NonNull H key, @NonNull Object @NonNull... hashKeys);
 
 	/**
 	 * Determine if given hash {@code hashKey} exists.
@@ -55,7 +60,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param hashKey must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	Boolean hasKey(H key, Object hashKey);
+	Boolean hasKey(@NonNull H key, @NonNull Object hashKey);
 
 	/**
 	 * Get value for given {@code hashKey} from hash at {@code key}.
@@ -64,8 +69,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param hashKey must not be {@literal null}.
 	 * @return {@literal null} when key or hashKey does not exist or used in pipeline / transaction.
 	 */
-	@Nullable
-	HV get(H key, Object hashKey);
+	HV get(@NonNull H key, @NonNull Object hashKey);
 
 	/**
 	 * Get values for given {@code hashKeys} from hash at {@code key}. Values are in the order of the requested keys
@@ -75,7 +79,47 @@ public interface HashOperations<H, HK, HV> {
 	 * @param hashKeys must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	List<HV> multiGet(H key, Collection<HK> hashKeys);
+	List<HV> multiGet(@NonNull H key, @NonNull Collection<@NonNull HK> hashKeys);
+
+	/**
+	 * Get and remove the value for given {@code hashKeys} from hash at {@code key}. Values are in the order of the
+	 * requested keys. Absent field values are represented using {@literal null} in the resulting {@link List}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param hashKeys must not be {@literal null}.
+	 * @return list of values for the given fields or {@literal null} when used in pipeline / transaction.
+	 * @since 4.0
+	 * @see <a href="https://valkey.io/commands/hgetdel">Valkey Documentation: HGETDEL</a>
+	 */
+	List<HV> getAndDelete(@NonNull H key, @NonNull Collection<@NonNull HK> hashKeys);
+
+	/**
+	 * Get and optionally expire the value for given {@code hashKeys} from hash at {@code key}. Values are in the order of
+	 * the requested keys. Absent field values are represented using {@literal null} in the resulting {@link List}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expiration is optional.
+	 * @param hashKeys must not be {@literal null}.
+	 * @return list of values for the given fields or {@literal null} when used in pipeline / transaction.
+	 * @since 4.0
+	 * @see <a href="https://valkey.io/commands/hgetex">Valkey Documentation: HGETEX</a>
+	 */
+	List<HV> getAndExpire(@NonNull H key, @Nullable Expiration expiration, @NonNull Collection<@NonNull HK> hashKeys);
+
+	/**
+	 * Set multiple hash fields to multiple values using data provided in {@code m} with optional condition and
+	 * expiration.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param m must not be {@literal null}.
+	 * @param condition must not be {@literal}.
+	 * @param expiration is optional.
+	 * @return whether all fields were set or {@literal null} when used in pipeline / transaction.
+	 * @since 4.0
+	 * @see <a href="https://valkey.io/commands/hsetex">Valkey Documentation: HSETEX</a>
+	 */
+	Boolean putAndExpire(@NonNull H key, @NonNull Map<? extends @NonNull HK, ? extends HV> m,
+			ValkeyHashCommands.@NonNull HashFieldSetOption condition, @Nullable Expiration expiration);
 
 	/**
 	 * Increment {@code value} of a hash {@code hashKey} by the given {@code delta}.
@@ -85,7 +129,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param delta
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	Long increment(H key, HK hashKey, long delta);
+	Long increment(@NonNull H key, @NonNull HK hashKey, long delta);
 
 	/**
 	 * Increment {@code value} of a hash {@code hashKey} by the given {@code delta}.
@@ -95,7 +139,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param delta
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	Double increment(H key, HK hashKey, double delta);
+	Double increment(@NonNull H key, @NonNull HK hashKey, double delta);
 
 	/**
 	 * Return a random hash key from the hash stored at {@code key}.
@@ -105,8 +149,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
 	 */
-	@Nullable
-	HK randomKey(H key);
+	HK randomKey(@NonNull H key);
 
 	/**
 	 * Return a random entry from the hash stored at {@code key}.
@@ -116,8 +159,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
 	 */
-	@Nullable
-	Map.Entry<HK, HV> randomEntry(H key);
+	Map.Entry<@NonNull HK, HV> randomEntry(@NonNull H key);
 
 	/**
 	 * Return random hash keys from the hash stored at {@code key}. If the provided {@code count} argument is positive,
@@ -131,8 +173,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
 	 */
-	@Nullable
-	List<HK> randomKeys(H key, long count);
+	List<@NonNull HK> randomKeys(@NonNull H key, long count);
 
 	/**
 	 * Return a random entries from the hash stored at {@code key}.
@@ -143,8 +184,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
 	 */
-	@Nullable
-	Map<HK, HV> randomEntries(H key, long count);
+	Map<@NonNull HK, HV> randomEntries(@NonNull H key, long count);
 
 	/**
 	 * Get key set (fields) of hash at {@code key}.
@@ -152,7 +192,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param key must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	Set<HK> keys(H key);
+	Set<@NonNull HK> keys(@NonNull H key);
 
 	/**
 	 * Returns the length of the value associated with {@code hashKey}. If either the {@code key} or the {@code hashKey}
@@ -163,8 +203,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 2.1
 	 */
-	@Nullable
-	Long lengthOfValue(H key, HK hashKey);
+	Long lengthOfValue(@NonNull H key, @NonNull HK hashKey);
 
 	/**
 	 * Get size of hash at {@code key}.
@@ -172,7 +211,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param key must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	Long size(H key);
+	Long size(@NonNull H key);
 
 	/**
 	 * Set multiple hash fields to multiple values using data provided in {@code m}.
@@ -180,7 +219,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param key must not be {@literal null}.
 	 * @param m must not be {@literal null}.
 	 */
-	void putAll(H key, Map<? extends HK, ? extends HV> m);
+	void putAll(@NonNull H key, @NonNull Map<? extends @NonNull HK, ? extends HV> m);
 
 	/**
 	 * Set the {@code value} of a hash {@code hashKey}.
@@ -189,7 +228,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param hashKey must not be {@literal null}.
 	 * @param value
 	 */
-	void put(H key, HK hashKey, HV value);
+	void put(@NonNull H key, @NonNull HK hashKey, HV value);
 
 	/**
 	 * Set the {@code value} of a hash {@code hashKey} only if {@code hashKey} does not exist.
@@ -199,7 +238,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param value
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	Boolean putIfAbsent(H key, HK hashKey, HV value);
+	Boolean putIfAbsent(@NonNull H key, @NonNull HK hashKey, HV value);
 
 	/**
 	 * Get entry set (values) of hash at {@code key}.
@@ -207,7 +246,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @param key must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	List<HV> values(H key);
+	List<HV> values(@NonNull H key);
 
 	/**
 	 * Get entire hash stored at {@code key}.
@@ -215,19 +254,20 @@ public interface HashOperations<H, HK, HV> {
 	 * @param key must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	Map<HK, HV> entries(H key);
+	Map<@NonNull HK, HV> entries(@NonNull H key);
 
 	/**
 	 * Use a {@link Cursor} to iterate over entries in hash at {@code key}. <br />
 	 * <strong>Important:</strong> Call {@link Cursor#close()} when done to avoid resource leaks.
 	 *
 	 * @param key must not be {@literal null}.
-	 * @param options must not be {@literal null}.
+	 * @param options can be {@literal null}.
 	 * @return the result cursor providing access to the scan result. Must be closed once fully processed (e.g. through a
 	 *         try-with-resources clause).
 	 * @since 1.4
 	 */
-	Cursor<Map.Entry<HK, HV>> scan(H key, ScanOptions options);
+	@NonNull
+	Cursor<Map.Entry<@NonNull HK, HV>> scan(@NonNull H key, @Nullable ScanOptions options);
 
 	/**
 	 * Set time to live for given {@code hashKey} .
@@ -240,8 +280,8 @@ public interface HashOperations<H, HK, HV> {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	ExpireChanges<HK> expire(H key, Duration timeout, Collection<HK> hashKeys);
+	ExpireChanges<@NonNull HK> expire(@NonNull H key, @NonNull Duration timeout,
+			@NonNull Collection<@NonNull HK> hashKeys);
 
 	/**
 	 * Set the expiration for given {@code hashKeys} as a {@literal date} timestamp.
@@ -254,8 +294,8 @@ public interface HashOperations<H, HK, HV> {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation: HEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	ExpireChanges<HK> expireAt(H key, Instant expireAt, Collection<HK> hashKeys);
+	ExpireChanges<@NonNull HK> expireAt(@NonNull H key, @NonNull Instant expireAt,
+			@NonNull Collection<@NonNull HK> hashKeys);
 
 	/**
 	 * Apply the expiration for given {@code hashKeys}.
@@ -273,8 +313,8 @@ public interface HashOperations<H, HK, HV> {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation: HPERSIST</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	ExpireChanges<HK> expire(H key, Expiration expiration, ExpirationOptions options, Collection<HK> hashKeys);
+	ExpireChanges<@NonNull HK> expire(@NonNull H key, @NonNull Expiration expiration, @NonNull ExpirationOptions options,
+			@NonNull Collection<@NonNull HK> hashKeys);
 
 	/**
 	 * Remove the expiration from given {@code hashKeys} .
@@ -285,8 +325,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation: HPERSIST</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	ExpireChanges<HK> persist(H key, Collection<HK> hashKeys);
+	ExpireChanges<@NonNull HK> persist(@NonNull H key, @NonNull Collection<@NonNull HK> hashKeys);
 
 	/**
 	 * Get the time to live for {@code hashKeys} in seconds.
@@ -297,8 +336,7 @@ public interface HashOperations<H, HK, HV> {
 	 * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default Expirations<HK> getTimeToLive(H key, Collection<HK> hashKeys) {
+	default Expirations<@NonNull HK> getTimeToLive(@NonNull H key, Collection<@NonNull HK> hashKeys) {
 		return getTimeToLive(key, TimeUnit.SECONDS, hashKeys);
 	}
 
@@ -312,8 +350,8 @@ public interface HashOperations<H, HK, HV> {
 	 * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	Expirations<HK> getTimeToLive(H key, TimeUnit timeUnit, Collection<HK> hashKeys);
+	Expirations<@NonNull HK> getTimeToLive(@NonNull H key, @NonNull TimeUnit timeUnit,
+			@NonNull Collection<@NonNull HK> hashKeys);
 
 	/**
 	 * Returns a bound operations object to perform operations on the hash field expiration for all hash fields at
@@ -323,7 +361,8 @@ public interface HashOperations<H, HK, HV> {
 	 * @return the bound operations object to perform operations on the hash field expiration.
 	 * @since 3.5
 	 */
-	default BoundHashFieldExpirationOperations<HK> expiration(H key) {
+	@NonNull
+	default BoundHashFieldExpirationOperations<HK> expiration(@NonNull H key) {
 		return new DefaultBoundHashFieldExpirationOperations<>(this, key, () -> keys(key));
 	}
 
@@ -335,7 +374,8 @@ public interface HashOperations<H, HK, HV> {
 	 * @return the bound operations object to perform operations on the hash field expiration.
 	 * @since 3.5
 	 */
-	default BoundHashFieldExpirationOperations<HK> expiration(H key, HK... hashFields) {
+	@NonNull
+	default BoundHashFieldExpirationOperations<HK> expiration(@NonNull H key, @NonNull HK @NonNull... hashFields) {
 		return expiration(key, Arrays.asList(hashFields));
 	}
 
@@ -347,13 +387,16 @@ public interface HashOperations<H, HK, HV> {
 	 * @return the bound operations object to perform operations on the hash field expiration.
 	 * @since 3.5
 	 */
-	default BoundHashFieldExpirationOperations<HK> expiration(H key, Collection<HK> hashFields) {
+	@NonNull
+	default BoundHashFieldExpirationOperations<HK> expiration(@NonNull H key,
+			@NonNull Collection<@NonNull HK> hashFields) {
 		return new DefaultBoundHashFieldExpirationOperations<>(this, key, () -> hashFields);
 	}
 
 	/**
-	 * @return never {@literal null}.
+	 * @return the underlying {@link ValkeyOperations} used to execute commands.
 	 */
+	@NonNull
 	ValkeyOperations<H, ?> getOperations();
 
 }

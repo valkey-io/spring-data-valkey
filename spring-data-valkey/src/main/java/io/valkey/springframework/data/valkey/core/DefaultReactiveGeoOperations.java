@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Distance;
@@ -39,7 +40,6 @@ import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference.GeoMemberReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -91,8 +91,7 @@ class DefaultReactiveGeoOperations<K, V> implements ReactiveGeoOperations<K, V> 
 
 			Mono<List<GeoLocation<ByteBuffer>>> serializedList = Flux
 					.fromIterable(() -> memberCoordinateMap.entrySet().iterator())
-					.map(entry -> new GeoLocation<>(rawValue(entry.getKey()), entry.getValue()))
-					.collectList();
+					.map(entry -> new GeoLocation<>(rawValue(entry.getKey()), entry.getValue())).collectList();
 
 			return serializedList.flatMap(list -> geoCommands.geoAdd(rawKey(key), list));
 		});
@@ -107,8 +106,7 @@ class DefaultReactiveGeoOperations<K, V> implements ReactiveGeoOperations<K, V> 
 		return createMono(geoCommands -> {
 
 			Mono<List<GeoLocation<ByteBuffer>>> serializedList = Flux.fromIterable(geoLocations)
-					.map(location -> new GeoLocation<>(rawValue(location.getName()), location.getPoint()))
-					.collectList();
+					.map(location -> new GeoLocation<>(rawValue(location.getName()), location.getPoint())).collectList();
 
 			return serializedList.flatMap(list -> geoCommands.geoAdd(rawKey(key), list));
 		});
@@ -220,9 +218,8 @@ class DefaultReactiveGeoOperations<K, V> implements ReactiveGeoOperations<K, V> 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(member, "Member must not be null");
 
-		return createFlux(geoCommands ->
-				geoCommands.geoRadiusByMember(rawKey(key), rawValue(member), new Distance(radius)) //
-						.map(this::readGeoResult));
+		return createFlux(geoCommands -> geoCommands.geoRadiusByMember(rawKey(key), rawValue(member), new Distance(radius)) //
+				.map(this::readGeoResult));
 	}
 
 	@Override
@@ -271,29 +268,29 @@ class DefaultReactiveGeoOperations<K, V> implements ReactiveGeoOperations<K, V> 
 	}
 
 	@Override
-	public Flux<GeoResult<GeoLocation<V>>> search(K key, GeoReference<V> reference,
-			GeoShape geoPredicate, ValkeyGeoCommands.GeoSearchCommandArgs args) {
+	public Flux<GeoResult<GeoLocation<V>>> search(K key, GeoReference<V> reference, GeoShape geoPredicate,
+			ValkeyGeoCommands.GeoSearchCommandArgs args) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(reference, "GeoReference must not be null");
 
 		GeoReference<ByteBuffer> rawReference = getGeoReference(reference);
 
-		return createFlux(geoCommands -> geoCommands.geoSearch(rawKey(key), rawReference, geoPredicate, args)
-				.map(this::readGeoResult));
+		return createFlux(
+				geoCommands -> geoCommands.geoSearch(rawKey(key), rawReference, geoPredicate, args).map(this::readGeoResult));
 	}
 
 	@Override
-	public Mono<Long> searchAndStore(K key, K destKey, GeoReference<V> reference,
-			GeoShape geoPredicate, ValkeyGeoCommands.GeoSearchStoreCommandArgs args) {
+	public Mono<Long> searchAndStore(K key, K destKey, GeoReference<V> reference, GeoShape geoPredicate,
+			ValkeyGeoCommands.GeoSearchStoreCommandArgs args) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(reference, "GeoReference must not be null");
 
 		GeoReference<ByteBuffer> rawReference = getGeoReference(reference);
 
-		return createMono(geoCommands -> geoCommands.geoSearchStore(rawKey(destKey), rawKey(key),
-				rawReference, geoPredicate, args));
+		return createMono(
+				geoCommands -> geoCommands.geoSearchStore(rawKey(destKey), rawKey(key), rawReference, geoPredicate, args));
 	}
 
 	private <T> Mono<T> createMono(Function<ReactiveGeoCommands, Publisher<T>> function) {
@@ -325,11 +322,11 @@ class DefaultReactiveGeoOperations<K, V> implements ReactiveGeoOperations<K, V> 
 		return serializationContext.getValueSerializationPair().write(value);
 	}
 
-	@Nullable
-	private V readValue(ByteBuffer buffer) {
+	private @Nullable V readValue(ByteBuffer buffer) {
 		return serializationContext.getValueSerializationPair().read(buffer);
 	}
 
+	@SuppressWarnings("NullAway")
 	private GeoResult<GeoLocation<V>> readGeoResult(GeoResult<GeoLocation<ByteBuffer>> source) {
 
 		return new GeoResult<>(new GeoLocation<>(readValue(source.getContent().getName()), source.getContent().getPoint()),

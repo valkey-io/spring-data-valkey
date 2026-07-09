@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,17 +34,18 @@ class ValkeyUrlSyntaxFailureAnalyzer extends AbstractFailureAnalyzer<ValkeyUrlSy
 	protected FailureAnalysis analyze(Throwable rootFailure, ValkeyUrlSyntaxException cause) {
 		try {
 			URI uri = new URI(cause.getUrl());
-			if ("valkey-sentinel".equals(uri.getScheme())) {
+			if ("redis-sentinel".equals(uri.getScheme()) || "valkey-sentinel".equals(uri.getScheme())) {
 				return new FailureAnalysis(getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
 						"Use spring.data.valkey.sentinel properties instead of spring.data.valkey.url to configure Valkey sentinel addresses.",
 						cause);
 			}
-			if ("valkey-socket".equals(uri.getScheme())) {
+			if ("redis-socket".equals(uri.getScheme()) || "valkey-socket".equals(uri.getScheme())) {
 				return new FailureAnalysis(getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
 						"Configure the appropriate Spring Data Valkey connection beans directly instead of setting the property 'spring.data.valkey.url'.",
 						cause);
 			}
-			if (!"valkey".equals(uri.getScheme()) && !"valkeys".equals(uri.getScheme())) {
+			if (!"redis".equals(uri.getScheme()) && !"rediss".equals(uri.getScheme())
+					&& !"valkey".equals(uri.getScheme()) && !"valkeys".equals(uri.getScheme())) {
 				return new FailureAnalysis(getUnsupportedSchemeDescription(cause.getUrl(), uri.getScheme()),
 						"Use the scheme 'valkey://' for insecure or 'valkeys://' for secure Valkey standalone configuration.",
 						cause);

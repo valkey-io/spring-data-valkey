@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,6 @@ import reactor.util.concurrent.Queues;
 import reactor.util.context.Context;
 
 import java.nio.ByteBuffer;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,6 +31,7 @@ import java.util.function.Function;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscription;
 
@@ -71,7 +71,6 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 	 * @param connectionFactory must not be {@literal null}.
 	 * @param options must not be {@literal null}.
 	 */
-	@SuppressWarnings("unchecked")
 	DefaultStreamReceiver(ReactiveValkeyConnectionFactory connectionFactory, StreamReceiverOptions<K, V> options) {
 
 		receiverOptions = options;
@@ -91,7 +90,7 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 		}
 
 		this.readOptions = readOptions;
-		this.template = new ReactiveValkeyTemplate(connectionFactory, serializationContext);
+		this.template = new ReactiveValkeyTemplate<>(connectionFactory, serializationContext);
 
 		if (options.hasHashMapper()) {
 			this.streamOperations = this.template.opsForStream(options.getRequiredHashMapper());
@@ -118,9 +117,8 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 		return Flux.defer(() -> {
 
 			PollState pollState = PollState.standalone(streamOffset.getOffset());
-			return Flux.create(
-					sink -> new StreamSubscription(sink, streamOffset.getKey(), pollState, readFunction,
-							receiverOptions.getResumeFunction()).arm());
+			return Flux.create(sink -> new StreamSubscription(sink, streamOffset.getKey(), pollState, readFunction,
+					receiverOptions.getResumeFunction()).arm());
 		});
 	}
 
@@ -134,13 +132,11 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 		Function<ReadOffset, Flux<ByteBufferRecord>> readFunction = getConsumeReadFunction(streamOffset.getKey(), consumer,
 				this.readOptions.autoAcknowledge());
 
-
 		return Flux.defer(() -> {
 
 			PollState pollState = PollState.consumer(consumer, streamOffset.getOffset());
-			return Flux.create(
-					sink -> new StreamSubscription(sink, streamOffset.getKey(), pollState, readFunction,
-							receiverOptions.getResumeFunction()).arm());
+			return Flux.create(sink -> new StreamSubscription(sink, streamOffset.getKey(), pollState, readFunction,
+					receiverOptions.getResumeFunction()).arm());
 		});
 	}
 
@@ -156,9 +152,8 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 
 		return Flux.defer(() -> {
 			PollState pollState = PollState.consumer(consumer, streamOffset.getOffset());
-			return Flux.create(
-					sink -> new StreamSubscription(sink, streamOffset.getKey(), pollState, readFunction,
-							receiverOptions.getResumeFunction()).arm());
+			return Flux.create(sink -> new StreamSubscription(sink, streamOffset.getKey(), pollState, readFunction,
+					receiverOptions.getResumeFunction()).arm());
 		});
 	}
 
@@ -179,7 +174,7 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 
 		Function<ByteBufferRecord, MapRecord<K, Object, Object>> deserializer = streamOperations::deserializeRecord;
 
-		if (receiverOptions.getHashMapper() == null) {
+		if (!receiverOptions.hasHashMapper()) {
 			return (Function) deserializer;
 		}
 
@@ -365,8 +360,9 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 
 				@Override
 				public Context currentContext() {
-					return sink.currentContext();
+					return Context.of(sink.contextView());
 				}
+
 			};
 		}
 
@@ -465,6 +461,7 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 				}
 			}
 		}
+
 	}
 
 	/**
@@ -478,9 +475,9 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 
 		private final ReadOffsetStrategy readOffsetStrategy;
 		private final AtomicReference<ReadOffset> currentOffset;
-		private final Optional<Consumer> consumer;
+		private final @Nullable Consumer consumer;
 
-		private PollState(Optional<Consumer> consumer, ReadOffsetStrategy readOffsetStrategy, ReadOffset currentOffset) {
+		private PollState(@Nullable Consumer consumer, ReadOffsetStrategy readOffsetStrategy, ReadOffset currentOffset) {
 
 			this.readOffsetStrategy = readOffsetStrategy;
 			this.currentOffset = new AtomicReference<>(currentOffset);
@@ -496,7 +493,7 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 		static PollState standalone(ReadOffset offset) {
 
 			ReadOffsetStrategy strategy = ReadOffsetStrategy.getStrategy(offset);
-			return new PollState(Optional.empty(), strategy, strategy.getFirst(offset, Optional.empty()));
+			return new PollState(null, strategy, strategy.getFirst(offset, null));
 		}
 
 		/**
@@ -509,8 +506,7 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 		static PollState consumer(Consumer consumer, ReadOffset offset) {
 
 			ReadOffsetStrategy strategy = ReadOffsetStrategy.getStrategy(offset);
-			Optional<Consumer> optionalConsumer = Optional.of(consumer);
-			return new PollState(optionalConsumer, strategy, strategy.getFirst(offset, optionalConsumer));
+			return new PollState(consumer, strategy, strategy.getFirst(offset, consumer));
 		}
 
 		/**
@@ -601,8 +597,11 @@ class DefaultStreamReceiver<K, V extends Record<K, ?>> implements StreamReceiver
 			this.currentOffset.set(next);
 		}
 
+		@SuppressWarnings("NullAway")
 		ReadOffset getCurrentReadOffset() {
 			return currentOffset.get();
 		}
+
 	}
+
 }

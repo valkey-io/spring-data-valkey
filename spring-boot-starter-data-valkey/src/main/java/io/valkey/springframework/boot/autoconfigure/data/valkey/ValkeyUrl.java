@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,9 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.lang.Contract;
 import org.springframework.util.StringUtils;
 
 /**
@@ -41,12 +44,13 @@ import org.springframework.util.StringUtils;
  */
 record ValkeyUrl(URI uri, boolean useSsl, Credentials credentials, int database) {
 
-	static ValkeyUrl of(String url) {
+	@Contract("!null -> !null")
+	static @Nullable ValkeyUrl of(@Nullable String url) {
 		return (url != null) ? of(toUri(url)) : null;
 	}
 
 	private static ValkeyUrl of(URI uri) {
-		boolean useSsl = ("valkeys".equals(uri.getScheme()));
+		boolean useSsl = ("rediss".equals(uri.getScheme()) || "valkeys".equals(uri.getScheme()));
 		Credentials credentials = Credentials.fromUserInfo(uri.getUserInfo());
 		int database = getDatabase(uri);
 		return new ValkeyUrl(uri, useSsl, credentials, database);
@@ -62,7 +66,7 @@ record ValkeyUrl(URI uri, boolean useSsl, Credentials credentials, int database)
 		try {
 			URI uri = new URI(url);
 			String scheme = uri.getScheme();
-			if (!"valkey".equals(scheme) && !"valkeys".equals(scheme)) {
+			if (!"redis".equals(scheme) && !"rediss".equals(scheme) && !"valkey".equals(scheme) && !"valkeys".equals(scheme)) {
 				throw new ValkeyUrlSyntaxException(url);
 			}
 			return uri;
@@ -78,11 +82,11 @@ record ValkeyUrl(URI uri, boolean useSsl, Credentials credentials, int database)
 	 * @param username the username or {@code null}
 	 * @param password the password
 	 */
-	record Credentials(String username, String password) {
+	record Credentials(@Nullable String username, @Nullable String password) {
 
 		private static final Credentials NONE = new Credentials(null, null);
 
-		private static Credentials fromUserInfo(String userInfo) {
+		private static Credentials fromUserInfo(@Nullable String userInfo) {
 			if (userInfo == null) {
 				return NONE;
 			}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -22,7 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -83,8 +84,7 @@ public class ValkeyData {
 	/**
 	 * @return
 	 */
-	@Nullable
-	public String getId() {
+	public @Nullable String getId() {
 		return this.id;
 	}
 
@@ -93,8 +93,7 @@ public class ValkeyData {
 	 *
 	 * @return {@literal null} if not set.
 	 */
-	@Nullable
-	public Long getTimeToLive() {
+	public @Nullable Long getTimeToLive() {
 		return timeToLive;
 	}
 
@@ -126,8 +125,7 @@ public class ValkeyData {
 	/**
 	 * @return
 	 */
-	@Nullable
-	public String getKeyspace() {
+	public @Nullable String getKeyspace() {
 		return keyspace;
 	}
 
@@ -162,10 +160,23 @@ public class ValkeyData {
 	 */
 	public void setTimeToLive(Long timeToLive, TimeUnit timeUnit) {
 
-		Assert.notNull(timeToLive, "TimeToLive must not be null when used with TimeUnit");
+		Assert.notNull(timeToLive, "TTL must not be null when used with TimeUnit");
 		Assert.notNull(timeToLive, "TimeUnit must not be null");
 
 		setTimeToLive(TimeUnit.SECONDS.convert(timeToLive, timeUnit));
+	}
+
+	/**
+	 * Set the time before expiration converting the given arguments to {@link TimeUnit#SECONDS}.
+	 *
+	 * @param timeToLive must not be {@literal null}
+	 * @since 4.1
+	 */
+	public void setTimeToLive(Duration timeToLive) {
+
+		Assert.notNull(timeToLive, "TTL must not be null");
+
+		setTimeToLive(timeToLive.toSeconds());
 	}
 
 	@Override

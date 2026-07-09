@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import io.valkey.springframework.data.valkey.connection.DefaultStringValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
@@ -54,9 +53,5 @@ public class StringValkeyTemplate extends ValkeyTemplate<String, String> {
 		this();
 		setConnectionFactory(connectionFactory);
 		afterPropertiesSet();
-	}
-
-	protected ValkeyConnection preProcessConnection(ValkeyConnection connection, boolean existingConnection) {
-		return new DefaultStringValkeyConnection(connection);
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ package io.valkey.springframework.data.valkey.core.convert;
 import io.valkey.springframework.data.valkey.core.index.IndexDefinition;
 
 /**
- * {@link RemoveIndexedData} represents a removed index entry from a secondary index for a property path in a given keyspace.
+ * {@link RemoveIndexedData} represents a removed index entry from a secondary index for a property path in a given
+ * keyspace.
  *
  * @author Christoph Strobl
  * @author Mark Paluch

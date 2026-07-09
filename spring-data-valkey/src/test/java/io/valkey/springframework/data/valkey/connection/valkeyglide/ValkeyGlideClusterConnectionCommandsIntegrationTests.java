@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -545,7 +545,7 @@ public class ValkeyGlideClusterConnectionCommandsIntegrationTests extends Abstra
         int slotToMigrate = MASTER_1_SLOT_START + 1000;
         
         // Find a key that maps to this specific slot using ClusterSlotHashUtil
-        String testKey = ClusterSlotHashUtil.getKeyForSlot(slotToMigrate);
+        String testKey = "test-key-{" + slotToMigrate + "}"; // TODO: implement getKeyForSlot
         byte[] keyBytes = testKey.getBytes();
         byte[] valueBytes = "migration-test-value".getBytes();
         

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,9 @@ import java.util.Map;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.ObjectFactory;
@@ -58,8 +61,6 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializationConte
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.condition.EnabledIfLongRunningTest;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for {@link ReactiveValkeyTemplate}.
@@ -67,7 +68,9 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author Dahye Anne Lee
+ * @author Yordan Tsintsov
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 
@@ -97,15 +100,14 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		connection.close();
 	}
 
-	@ParameterizedValkeyTest // GH-2040
+	@Test // GH-2040
 	@EnabledOnCommand("COPY")
 	void copy() {
 
 		try (ReactiveValkeyClusterConnection connection = valkeyTemplate.getConnectionFactory()
-				.getReactiveClusterConnection()){
+				.getReactiveClusterConnection()) {
 			assumeThat(connection).isNull();
-		} catch (InvalidDataAccessApiUsageException ignore) {
-		}
+		} catch (InvalidDataAccessApiUsageException ignore) {}
 
 		K key = keyFactory.instance();
 		K targetKey = keyFactory.instance();
@@ -121,7 +123,24 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.opsForValue().get(targetKey).as(StepVerifier::create).expectNext(nextValue).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // GH-3333
+	@EnabledOnCommand("DIGEST")
+	void digest() {
+
+		K key = keyFactory.instance();
+		V value = valueFactory.instance();
+
+		valkeyTemplate.opsForValue().set(key, value).as(StepVerifier::create).expectNext(true).verifyComplete();
+		valkeyTemplate.getDigest(key).as(StepVerifier::create)
+				.assertNext(digest -> assertThat(digest).hasSize(16))
+				.verifyComplete();
+
+		K nonExistingKey = keyFactory.instance();
+		valkeyTemplate.getDigest(nonExistingKey).as(StepVerifier::create)
+				.verifyComplete();
+	}
+
+	@Test // DATAREDIS-602
 	void exists() {
 
 		K key = keyFactory.instance();
@@ -134,7 +153,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.hasKey(key).as(StepVerifier::create).expectNext(true).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2883
+	@Test // GH-2883
 	void countExistingKeysIfValidKeyExists() {
 
 		K key = keyFactory.instance();
@@ -151,14 +170,14 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2883
+	@Test // GH-2883
 	void countExistingKeysIfNotValidKeyExists() {
 
 		K key = keyFactory.instance();
 		valkeyTemplate.countExistingKeys(List.of(key)).as(StepVerifier::create).expectNext(0L).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-743
+	@Test // DATAREDIS-743
 	void scan() {
 
 		assumeThat(valueFactory.instance() instanceof Person).isFalse();
@@ -175,7 +194,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void type() {
 
 		K key = keyFactory.instance();
@@ -188,7 +207,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.type(key).as(StepVerifier::create).expectNext(DataType.STRING).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void rename() {
 
 		K oldName = keyFactory.instance();
@@ -203,7 +222,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verify();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void renameNx() {
 
 		K oldName = keyFactory.instance();
@@ -228,7 +247,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verify();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-693
+	@Test // DATAREDIS-693
 	void unlink() {
 
 		K single = keyFactory.instance();
@@ -241,7 +260,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.hasKey(single).as(StepVerifier::create).expectNext(false).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-693
+	@Test // DATAREDIS-693
 	void unlinkMany() {
 
 		K key1 = keyFactory.instance();
@@ -258,7 +277,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.hasKey(key2).as(StepVerifier::create).expectNext(false).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-913
+	@Test // DATAREDIS-913
 	void unlinkManyPublisher() {
 
 		K key1 = keyFactory.instance();
@@ -277,7 +296,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.hasKey(key2).as(StepVerifier::create).expectNext(false).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-913
+	@Test // DATAREDIS-913
 	void deleteManyPublisher() {
 
 		K key1 = keyFactory.instance();
@@ -296,7 +315,47 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.hasKey(key2).as(StepVerifier::create).expectNext(false).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-683
+	@Test // GH-3318
+	@EnabledOnCommand("DELEX")
+	void deleteCustomized() {
+
+		K key1 = keyFactory.instance();
+		K key2 = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		valkeyTemplate.opsForValue().set(key1, value1).as(StepVerifier::create).expectNext(true).verifyComplete();
+		valkeyTemplate.opsForValue().set(key2, value2).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		valkeyTemplate.delete(key2, DeleteSpec::always).as(StepVerifier::create).expectNext(true)
+				.verifyComplete();
+		valkeyTemplate.hasKey(key2).as(StepVerifier::create).expectNext(false).verifyComplete();
+
+		valkeyTemplate.delete(key1, it -> it.ifNotEquals().value(value1)).as(StepVerifier::create).expectNext(false)
+				.verifyComplete();
+		valkeyTemplate.hasKey(key1).as(StepVerifier::create).expectNext(true).verifyComplete();
+		valkeyTemplate.delete(key1, it -> it.ifEquals().value(value1)).as(StepVerifier::create).expectNext(true)
+				.verifyComplete();
+		valkeyTemplate.hasKey(key1).as(StepVerifier::create).expectNext(false).verifyComplete();
+	}
+
+	@Test // GH-3318
+	@EnabledOnCommand("DELEX")
+	void compareAndDelete() {
+
+		K key = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		valkeyTemplate.opsForValue().set(key, value1).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		valkeyTemplate.compareAndDelete(key, value2).as(StepVerifier::create).expectNext(false).verifyComplete();
+		valkeyTemplate.compareAndDelete(key, value1).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		valkeyTemplate.hasKey(key).as(StepVerifier::create).expectNext(false).verifyComplete();
+	}
+
+	@Test // DATAREDIS-683
 	@SuppressWarnings("unchecked")
 	void executeScript() {
 
@@ -314,7 +373,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		execute.as(StepVerifier::create).expectNext(value).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-683
+	@Test // DATAREDIS-683
 	void executeScriptWithElementReaderAndWriter() {
 
 		K key = keyFactory.instance();
@@ -329,8 +388,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate
 				.execute(new DefaultValkeyScript<>("return redis.call('set', KEYS[1], ARGV[1])", String.class),
 						Collections.singletonList(key), Collections.singletonList(person), json.getWriter(), resultReader)
-				.as(StepVerifier::create)
-				.expectNext("OK").verifyComplete();
+				.as(StepVerifier::create).expectNext("OK").verifyComplete();
 
 		Flux<Person> execute = valkeyTemplate.execute(
 				new DefaultValkeyScript<>("return redis.call('get', KEYS[1])", Person.class), Collections.singletonList(key),
@@ -339,7 +397,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		execute.as(StepVerifier::create).expectNext(person).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void expire() {
 
 		K key = keyFactory.instance();
@@ -353,7 +411,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.consumeNextWith(actual -> assertThat(actual).isGreaterThan(Duration.ofSeconds(8))).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-3114
+	@Test // GH-3114
 	@EnabledOnCommand("SPUBLISH") // Valkey 7.0
 	void expireWithCondition() {
 
@@ -371,7 +429,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.consumeNextWith(actual -> assertThat(actual).isGreaterThan(Duration.ofSeconds(5))).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void preciseExpire() {
 
 		K key = keyFactory.instance();
@@ -385,7 +443,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.consumeNextWith(actual -> assertThat(actual).isGreaterThan(Duration.ofSeconds(8))).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-3114
+	@Test // GH-3114
 	@EnabledOnCommand("SPUBLISH") // Valkey 7.0
 	void preciseExpireWithCondition() {
 
@@ -403,7 +461,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.consumeNextWith(actual -> assertThat(actual).isGreaterThan(Duration.ofSeconds(5))).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void expireAt() {
 
 		K key = keyFactory.instance();
@@ -420,7 +478,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void preciseExpireAt() {
 
 		K key = keyFactory.instance();
@@ -437,7 +495,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void getTtlForAbsentKeyShouldCompleteWithoutValue() {
 
 		K key = keyFactory.instance();
@@ -445,7 +503,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.getExpire(key).as(StepVerifier::create).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void getTtlForKeyWithoutExpiryShouldCompleteWithZeroDuration() {
 
 		K key = keyFactory.instance();
@@ -456,14 +514,13 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.getExpire(key).as(StepVerifier::create).expectNext(Duration.ZERO).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void move() {
 
 		try (ReactiveValkeyClusterConnection connection = valkeyTemplate.getConnectionFactory()
 				.getReactiveClusterConnection()) {
 			assumeThat(connection).isNull();
-		} catch (InvalidDataAccessApiUsageException ignore) {
-		}
+		} catch (InvalidDataAccessApiUsageException ignore) {}
 
 		K key = keyFactory.instance();
 		V value = valueFactory.instance();
@@ -473,7 +530,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valkeyTemplate.hasKey(key).as(StepVerifier::create).expectNext(false).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void shouldApplyCustomSerializationContextToValues() {
 
 		Person key = new PersonObjectFactory().instance();
@@ -494,7 +551,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		valueOperations.get(key).as(StepVerifier::create).expectNext(value).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void shouldApplyCustomSerializationContextToHash() {
 
 		ValkeySerializationContext<K, V> serializationContext = valkeyTemplate.getSerializationContext();
@@ -517,7 +574,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 		hashOperations.get(key, hashField).as(StepVerifier::create).expectNext(hashValue).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-612
+	@Test // DATAREDIS-612
 	@EnabledIfLongRunningTest
 	void listenToChannelShouldReceiveChannelMessagesCorrectly() throws InterruptedException {
 
@@ -539,7 +596,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verify(Duration.ofSeconds(3));
 	}
 
-	@ParameterizedValkeyTest // GH-1622
+	@Test // GH-1622
 	@EnabledIfLongRunningTest
 	void listenToLaterChannelShouldReceiveChannelMessagesCorrectly() {
 
@@ -549,7 +606,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 
 		valkeyTemplate.listenToChannelLater(channel) //
 				.doOnNext(it -> valkeyTemplate.convertAndSend(channel, message).subscribe()).flatMapMany(Function.identity()) //
-				.cast(Message.class)  // why? java16 why?
+				.cast(Message.class) // why? java16 why?
 				.as(StepVerifier::create) //
 				.assertNext(received -> {
 
@@ -562,7 +619,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verify(Duration.ofSeconds(3));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-612
+	@Test // DATAREDIS-612
 	void listenToPatternShouldReceiveChannelMessagesCorrectly() {
 
 		String channel = "my-channel";
@@ -586,7 +643,7 @@ public class ReactiveValkeyTemplateIntegrationTests<K, V> {
 				.verify(Duration.ofSeconds(3));
 	}
 
-	@ParameterizedValkeyTest // GH-1622
+	@Test // GH-1622
 	void listenToPatternLaterShouldReceiveChannelMessagesCorrectly() {
 
 		String channel = "my-channel";

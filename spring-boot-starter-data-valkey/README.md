@@ -4,7 +4,7 @@ A Spring Boot starter that provides auto-configuration for Valkey, enabling seam
 
 This starter simplifies the setup and configuration of Valkey in Spring Boot applications by providing auto-configuration for Valkey connections and Spring Data integration.
 
-The project is a fork of Spring Boot Starter Data Redis 3.5.1 (part of the [Spring Boot](https://github.com/spring-projects/spring-boot) repository).
+The project is a fork of Spring Boot Starter Data Redis 4.0.7 (part of the [Spring Boot](https://github.com/spring-projects/spring-boot) repository).
 
 ## Features
 
@@ -20,6 +20,7 @@ The project is a fork of Spring Boot Starter Data Redis 3.5.1 (part of the [Spri
 * Testcontainers integration with `@ServiceConnection` annotation.
 * Docker Compose support for automatic service detection and startup.
 * Configuration properties with IDE auto-completion support.
+* Observation-based metrics and tracing for Lettuce connections (replacing legacy Micrometer metrics).
 
 For the full list of Spring Data features see [Spring Data Valkey](../spring-data-valkey/).
 
@@ -54,6 +55,15 @@ dependencies {
 To use platform specific Valkey GLIDE dependency and reduce the Jar size, see Valkey GLIDE installation [guide](https://glide.valkey.io/how-to/installation?lang=java).
 
 To use the Lettuce or Jedis driver instead, add their dependencies and set `spring.data.valkey.client-type` accordingly.
+
+If your project inherits from `spring-boot-starter-parent`, you may need to override the managed driver versions to match those required by this starter:
+
+```xml
+<properties>
+    <lettuce.version>7.5.2.RELEASE</lettuce.version>
+    <jedis.version>7.4.1</jedis.version>
+</properties>
+```
 
 ## Getting Started
 

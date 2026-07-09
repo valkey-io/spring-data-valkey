@@ -67,7 +67,7 @@ class WriteToMasterReadFromReplicaConfiguration {
 ```
 
 :::tip
-For environments reporting non-public addresses through the `INFO` command (for example, when using AWS), use `io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration` instead of `io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration`. Please note that `ValkeyStaticMasterReplicaConfiguration` does not support Pub/Sub because of missing Pub/Sub message propagation across individual servers.
+For Lettuce environments reporting non-public addresses through the `INFO` command (for example, when using AWS), use `io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration` instead of `io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration`. This configuration is supported by the Lettuce driver only. Please note that `ValkeyStaticMasterReplicaConfiguration` does not support Pub/Sub because of missing Pub/Sub message propagation across individual servers.
 :::
 
 ## Valkey Sentinel

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,9 @@ import io.lettuce.core.ScanArgs;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
@@ -29,7 +32,6 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClusterCo
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanCursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -37,18 +39,19 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @since 2.0
  */
+@NullUnmarked
 class LettuceClusterKeyCommands extends LettuceKeyCommands {
 
 	private final LettuceClusterConnection connection;
 
-	LettuceClusterKeyCommands(LettuceClusterConnection connection) {
+	LettuceClusterKeyCommands(@NonNull LettuceClusterConnection connection) {
 
 		super(connection);
 		this.connection = connection;
 	}
 
 	@Override
-	public void rename(byte[] oldKey, byte[] newKey) {
+	public void rename(byte @NonNull [] oldKey, byte @NonNull [] newKey) {
 
 		Assert.notNull(oldKey, "Old key must not be null");
 		Assert.notNull(newKey, "New key must not be null");
@@ -68,7 +71,7 @@ class LettuceClusterKeyCommands extends LettuceKeyCommands {
 	}
 
 	@Override
-	public Boolean renameNX(byte[] sourceKey, byte[] targetKey) {
+	public Boolean renameNX(byte @NonNull [] sourceKey, byte @NonNull [] targetKey) {
 
 		Assert.notNull(sourceKey, "Source key must not be null");
 		Assert.notNull(targetKey, "Target key must not be null");
@@ -89,25 +92,24 @@ class LettuceClusterKeyCommands extends LettuceKeyCommands {
 	}
 
 	@Override
-	public Boolean move(byte[] key, int dbIndex) {
+	public Boolean move(byte @NonNull [] key, int dbIndex) {
 		throw new InvalidDataAccessApiUsageException("MOVE not supported in CLUSTER mode");
 	}
 
-	@Nullable
-	public byte[] randomKey(ValkeyClusterNode node) {
+	public byte @Nullable [] randomKey(@NonNull ValkeyClusterNode node) {
 
 		return connection.getClusterCommandExecutor()
 				.executeCommandOnSingleNode((LettuceClusterCommandCallback<byte[]>) client -> client.randomkey(), node)
 				.getValue();
 	}
 
-	@Nullable
-	public Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern) {
+	public Set<byte @NonNull []> keys(@NonNull ValkeyClusterNode node, byte @NonNull [] pattern) {
 
 		Assert.notNull(pattern, "Pattern must not be null");
 
 		return LettuceConverters.toBytesSet(connection.getClusterCommandExecutor()
-				.executeCommandOnSingleNode((LettuceClusterCommandCallback<List<byte[]>>) client -> client.keys(pattern), node)
+				.executeCommandOnSingleNode((LettuceClusterCommandCallback<List<byte[]>>) client ->
+						client.keys(LettuceConverters.toString(pattern)), node)
 				.getValue());
 	}
 
@@ -119,7 +121,7 @@ class LettuceClusterKeyCommands extends LettuceKeyCommands {
 	 * @return never {@literal null}.
 	 * @since 2.1
 	 */
-	Cursor<byte[]> scan(ValkeyClusterNode node, ScanOptions options) {
+	Cursor<byte @NonNull []> scan(@NonNull ValkeyClusterNode node, @NonNull ScanOptions options) {
 
 		Assert.notNull(node, "ValkeyClusterNode must not be null");
 		Assert.notNull(options, "Options must not be null");
@@ -144,7 +146,7 @@ class LettuceClusterKeyCommands extends LettuceKeyCommands {
 	}
 
 	@Override
-	public Long sort(byte[] key, SortParameters params, byte[] storeKey) {
+	public Long sort(byte @NonNull [] key, @NonNull SortParameters params, byte @NonNull [] storeKey) {
 
 		Assert.notNull(key, "Key must not be null");
 

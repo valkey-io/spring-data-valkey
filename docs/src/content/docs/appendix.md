@@ -42,6 +42,8 @@ description: Additional reference information
 | DECR | X |
 | DECRBY | X |
 | DEL | X |
+| DELEX | X |
+| DIGEST | X |
 | DISCARD | X |
 | DUMP | X |
 | ECHO | X |
@@ -76,6 +78,8 @@ description: Additional reference information
 | HPTTL | X |
 | HGET | X |
 | HGETALL | X |
+| HGETDEL | X |
+| HGETEX | X |
 | HINCRBY | X |
 | HINCRBYFLOAT | X |
 | HKEYS | X |
@@ -84,6 +88,7 @@ description: Additional reference information
 | HMSET | X |
 | HSCAN | X |
 | HSET | X |
+| HSETEX | X |
 | HSETNX | X |
 | HVALS | X |
 | INCR | X |
@@ -161,6 +166,7 @@ description: Additional reference information
 | SETRANGE | X |
 | SHUTDOWN | X |
 | SINTER | X |
+| SINTERCARD | X |
 | SINTERSTORE | X |
 | SISMEMBER | X |
 | SLAVEOF | X |
@@ -183,6 +189,22 @@ description: Additional reference information
 | UNSUBSCRIBE | X |
 | UNWATCH | X |
 | WATCH | X |
+| XACK | X |
+| XACKDEL | X |
+| XADD | X |
+| XAUTOCLAIM | X |
+| XCLAIM | X |
+| XDEL | X |
+| XDELEX | X |
+| XGROUP | X |
+| XINFO | X |
+| XLEN | X |
+| XPENDING | X |
+| XRANGE | X |
+| XREAD | X |
+| XREADGROUP | X |
+| XREVRANGE | X |
+| XTRIM | X |
 | ZADD | X |
 | ZCARD | X |
 | ZCOUNT | X |

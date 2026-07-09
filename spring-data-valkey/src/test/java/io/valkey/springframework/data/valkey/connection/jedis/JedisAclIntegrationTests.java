@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ class JedisAclIntegrationTests {
 	@EnabledOnValkeySentinelAvailable(26382)
 	void shouldConnectSentinelWithAclAuthentication() throws IOException {
 
-		// Note: As per https://github.com/valkey/valkey/issues/7708, Sentinel does not support ACL authentication yet.
+		// Note: As per https://github.com/redis/redis/issues/7708, Sentinel does not support ACL authentication yet.
 
 		ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration("mymaster",
 				Collections.singleton("localhost:26382"));

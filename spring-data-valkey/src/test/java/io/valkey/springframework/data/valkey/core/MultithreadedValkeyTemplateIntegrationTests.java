@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
@@ -31,14 +35,13 @@ import io.valkey.springframework.data.valkey.connection.lettuce.extension.Lettuc
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * @author Artem Bilian
  * @author Christoph Strobl
  * @author Mark Paluch
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public class MultithreadedValkeyTemplateIntegrationTests {
 
@@ -52,12 +55,13 @@ public class MultithreadedValkeyTemplateIntegrationTests {
 
 		JedisConnectionFactory jedis = JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 		LettuceConnectionFactory lettuce = LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
-		ValkeyGlideConnectionFactory valkeyGlide = ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 
+		ValkeyGlideConnectionFactory valkeyGlide = ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class);
 		return Arrays.asList(jedis, lettuce, valkeyGlide);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-300
+	@Test
+	// DATAREDIS-300
 	void assertResouresAreReleasedProperlyWhenSharingValkeyTemplate() throws InterruptedException {
 
 		final ValkeyTemplate<Object, Object> template = new ValkeyTemplate<>();

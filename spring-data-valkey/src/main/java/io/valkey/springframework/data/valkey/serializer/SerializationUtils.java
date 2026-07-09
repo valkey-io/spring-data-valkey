@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.CollectionFactory;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
+import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 
 /**
  * Utility class with various serialization-related methods.
@@ -36,17 +39,20 @@ public abstract class SerializationUtils {
 
 	static final byte[] EMPTY_ARRAY = new byte[0];
 
-	static boolean isEmpty(@Nullable byte[] data) {
+	@Contract("null -> true")
+	static boolean isEmpty(byte @Nullable [] data) {
 		return (data == null || data.length == 0);
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "NullAway" })
 	static <T extends Collection<?>> T deserializeValues(@Nullable Collection<byte[]> rawValues, Class<T> type,
 			@Nullable ValkeySerializer<?> valkeySerializer) {
 		// connection in pipeline/multi mode
-		if (rawValues == null) {
+		if (CollectionUtils.isEmpty(rawValues)) {
 			return (T) CollectionFactory.createCollection(type, 0);
 		}
+
+		Assert.notNull(valkeySerializer, "ValkeySerializer must not be null");
 
 		Collection<Object> values = (List.class.isAssignableFrom(type) ? new ArrayList<>(rawValues.size())
 				: new LinkedHashSet<>(rawValues.size()));
@@ -74,25 +80,29 @@ public abstract class SerializationUtils {
 		return deserializeValues(rawValues, List.class, valkeySerializer);
 	}
 
-	public static <T> Map<T, T> deserialize(@Nullable Map<byte[], byte[]> rawValues, ValkeySerializer<T> valkeySerializer) {
+	public static <T> Map<T, @Nullable T> deserialize(@Nullable Map<byte[], byte[]> rawValues,
+			ValkeySerializer<T> valkeySerializer) {
 
-		if (rawValues == null) {
+		if (CollectionUtils.isEmpty(rawValues)) {
 			return Collections.emptyMap();
 		}
-		Map<T, T> ret = new LinkedHashMap<>(rawValues.size());
+
+		Assert.notNull(valkeySerializer, "ValkeySerializer must not be null");
+
+		Map<T, @Nullable T> ret = new LinkedHashMap<>(rawValues.size());
 		for (Map.Entry<byte[], byte[]> entry : rawValues.entrySet()) {
 			ret.put(valkeySerializer.deserialize(entry.getKey()), valkeySerializer.deserialize(entry.getValue()));
 		}
 		return ret;
 	}
 
-	@SuppressWarnings("unchecked")
 	public static <HK, HV> Map<HK, HV> deserialize(@Nullable Map<byte[], byte[]> rawValues,
 			@Nullable ValkeySerializer<HK> hashKeySerializer, @Nullable ValkeySerializer<HV> hashValueSerializer) {
 
-		if (rawValues == null) {
+		if (CollectionUtils.isEmpty(rawValues)) {
 			return Collections.emptyMap();
 		}
+
 		Map<HK, HV> map = new LinkedHashMap<>(rawValues.size());
 		for (Map.Entry<byte[], byte[]> entry : rawValues.entrySet()) {
 			// May want to deserialize only key or value
@@ -103,4 +113,5 @@ public abstract class SerializationUtils {
 		}
 		return map;
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import io.valkey.springframework.data.valkey.core.ValkeyOperations;
  * @author Costin Leau
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Mingi Lee
  */
 public interface ValkeySet<E> extends ValkeyCollection<E>, Set<E> {
 
@@ -121,6 +122,28 @@ public interface ValkeySet<E> extends ValkeyCollection<E>, Set<E> {
 	 * @since 1.0
 	 */
 	ValkeySet<E> intersectAndStore(Collection<? extends ValkeySet<?>> sets, String destKey);
+
+	/**
+	 * Returns the cardinality of the set which would result from the intersection of this set and another
+	 * {@link ValkeySet}.
+	 *
+	 * @param set must not be {@literal null}.
+	 * @return the cardinality of the intersection.
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 * @since 4.0
+	 */
+	Long intersectSize(ValkeySet<?> set);
+
+	/**
+	 * Returns the cardinality of the set which would result from the intersection of this set and other
+	 * {@link ValkeySet}s.
+	 *
+	 * @param sets must not be {@literal null}.
+	 * @return the cardinality of the intersection.
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 * @since 4.0
+	 */
+	Long intersectSize(Collection<? extends ValkeySet<?>> sets);
 
 	/**
 	 * Get random element from the set.

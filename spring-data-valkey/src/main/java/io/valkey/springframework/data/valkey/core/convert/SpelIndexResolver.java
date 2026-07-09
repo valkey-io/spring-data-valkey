@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,18 +21,19 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.context.expression.BeanFactoryResolver;
+import org.springframework.data.core.TypeInformation;
 import io.valkey.springframework.data.valkey.core.index.ConfigurableIndexDefinitionProvider;
 import io.valkey.springframework.data.valkey.core.index.IndexDefinition;
 import io.valkey.springframework.data.valkey.core.index.SpelIndexDefinition;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
-import org.springframework.data.util.TypeInformation;
 import org.springframework.expression.BeanResolver;
 import org.springframework.expression.Expression;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -75,6 +76,7 @@ public class SpelIndexResolver implements IndexResolver {
 		this.parser = parser;
 	}
 
+	@SuppressWarnings("NullAway")
 	public Set<IndexedData> resolveIndexesFor(TypeInformation<?> typeInformation, @Nullable Object value) {
 
 		if (value == null) {
@@ -87,7 +89,7 @@ public class SpelIndexResolver implements IndexResolver {
 			return Collections.emptySet();
 		}
 
-		String keyspace = entity.getKeySpace();
+		String keyspace = entity.getRequiredKeySpace();
 
 		Set<IndexedData> indexes = new HashSet<>();
 
@@ -117,7 +119,7 @@ public class SpelIndexResolver implements IndexResolver {
 
 	@Override
 	public Set<IndexedData> resolveIndexesFor(String keyspace, String path, TypeInformation<?> typeInformation,
-			Object value) {
+			@Nullable Object value) {
 		return Collections.emptySet();
 	}
 
@@ -141,4 +143,5 @@ public class SpelIndexResolver implements IndexResolver {
 	public void setBeanResolver(BeanResolver beanResolver) {
 		this.beanResolver = beanResolver;
 	}
+
 }

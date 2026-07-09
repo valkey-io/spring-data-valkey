@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import org.springframework.util.Assert;
 
 /**
@@ -33,7 +38,10 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @author Jiahe Cai
  * @author Marcin Grzejszczak
+ * @author Chris Bono
+ * @author Yordan Tsintsov
  */
+@NullUnmarked
 public interface ValueOperations<K, V> {
 
 	/**
@@ -43,7 +51,79 @@ public interface ValueOperations<K, V> {
 	 * @param value must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 */
-	void set(K key, V value);
+	void set(@NonNull K key, @NonNull V value);
+
+	/**
+	 * Set the {@code value} and {@code expiration} for {@code key}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	void set(@NonNull K key, @NonNull V value, @NonNull Expiration expiration);
+
+	/**
+	 * Set the {@code value} and expiration {@code timeout} for {@code key}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param timeout the key expiration timeout.
+	 * @param unit must not be {@literal null}.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @deprecated since 4.1 in favor of {@link #set(Object, Object, Expiration)}
+	 */
+	@Deprecated(since = "4.1")
+	default void set(@NonNull K key, @NonNull V value, long timeout, @NonNull TimeUnit unit) {
+		set(key, value, Expiration.from(timeout, unit));
+	}
+
+	/**
+	 * Set the {@code value} and expiration {@code timeout} for {@code key}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param timeout must not be {@literal null}.
+	 * @throws IllegalArgumentException if either {@code key}, {@code value} or {@code timeout} is not present.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 2.1
+	 */
+	default void set(@NonNull K key, @NonNull V value, @NonNull Duration timeout) {
+
+		Assert.notNull(timeout, "Timeout must not be null");
+
+		set(key, value, Expiration.from(timeout));
+	}
+
+	/**
+	 * Set {@code value} for {@code key} and customize the operation through {@link SetSpec}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param setConsumer a function that consumes the {@link SetSpec} to configure the set operation, must not be
+	 *          {@literal null}.
+	 * @return {@literal true} if the operation was successful, {@literal false} otherwise. {@literal null} when used in
+	 *         pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Boolean set(@NonNull K key, @NonNull V value, @NonNull Consumer<SetSpec<@NonNull K, @NonNull V>> setConsumer);
+
+	/**
+	 * Set the {@code value} and {@code expiration} for {@code key}. Return the old string stored at key, or
+	 * {@literal null} if key did not exist. An error is returned and SET aborted if the value stored at key is not a
+	 * string.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @return {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	@Nullable
+	V setGet(@NonNull K key, @NonNull V value, @NonNull Expiration expiration);
 
 	/**
 	 * Set the {@code value} and expiration {@code timeout} for {@code key}. Return the old string stored at key, or
@@ -57,8 +137,13 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 * @since 3.5
+	 * @deprecated since 4.1 in favor of {@link #setGet(Object, Object, Expiration)}.
 	 */
-	V setGet(K key, V value, long timeout, TimeUnit unit);
+	@Deprecated(since = "4.1")
+	@Nullable
+	default V setGet(@NonNull K key, @NonNull V value, long timeout, @NonNull TimeUnit unit) {
+		return setGet(key, value, Expiration.from(timeout, unit));
+	}
 
 	/**
 	 * Set the {@code value} and expiration {@code timeout} for {@code key}. Return the old string stored at key, or
@@ -72,67 +157,68 @@ public interface ValueOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 * @since 3.5
 	 */
-	V setGet(K key, V value, Duration duration);
+	@Nullable
+	default V setGet(@NonNull K key, @NonNull V value, @NonNull Duration duration) {
+		return setGet(key, value, Expiration.from(duration));
+	}
 
 	/**
-	 * Set the {@code value} and expiration {@code timeout} for {@code key}.
+	 * Set {@code value} for {@code key} and customize the operation through {@link SetSpec}. Return the old string stored
+	 * at key, or {@literal null} if key did not exist.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param setConsumer a function that consumes the {@link SetSpec} to configure the set operation, must not be
+	 *          {@literal null}.
+	 * @return {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	V setGet(@NonNull K key, @NonNull V value, @NonNull Consumer<SetSpec<@NonNull K, @NonNull V>> setConsumer);
+
+	/**
+	 * Set the {@code value} for {@code key} if {@code key} is absent.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @return {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 */
+	default Boolean setIfAbsent(@NonNull K key, @NonNull V value) {
+		return setIfAbsent(key, value, Expiration.persistent());
+	}
+
+	/**
+	 * Set the {@code value} and {@code expiration} for {@code key} if {@code key} is absent.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @return {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Boolean setIfAbsent(@NonNull K key, @NonNull V value, @NonNull Expiration expiration);
+
+	/**
+	 * Set the {@code value} and expiration {@code timeout} for {@code key} if {@code key} is absent.
 	 *
 	 * @param key must not be {@literal null}.
 	 * @param value must not be {@literal null}.
 	 * @param timeout the key expiration timeout.
 	 * @param unit must not be {@literal null}.
-	 * @see <a href="https://valkey.io/commands/setex">Valkey Documentation: SETEX</a>
-	 */
-	void set(K key, V value, long timeout, TimeUnit unit);
-
-	/**
-	 * Set the {@code value} and expiration {@code timeout} for {@code key}.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @param timeout must not be {@literal null}.
-	 * @throws IllegalArgumentException if either {@code key}, {@code value} or {@code timeout} is not present.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 2.1
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @deprecated since 4.1 in favor of {@link #setIfAbsent(Object, Object, Expiration)}.
 	 */
-	default void set(K key, V value, Duration timeout) {
-
-		Assert.notNull(timeout, "Timeout must not be null");
-
-		if (TimeoutUtils.hasMillis(timeout)) {
-			set(key, value, timeout.toMillis(), TimeUnit.MILLISECONDS);
-		} else {
-			set(key, value, timeout.getSeconds(), TimeUnit.SECONDS);
-		}
+	@Deprecated(since = "4.1")
+	default Boolean setIfAbsent(@NonNull K key, @NonNull V value, long timeout, @NonNull TimeUnit unit) {
+		return setIfAbsent(key, value, Expiration.from(timeout, unit));
 	}
 
 	/**
-	 * Set {@code key} to hold the string {@code value} if {@code key} is absent.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 */
-	@Nullable
-	Boolean setIfAbsent(K key, V value);
-
-	/**
-	 * Set {@code key} to hold the string {@code value} and expiration {@code timeout} if {@code key} is absent.
-	 *
-	 * @param key must not be {@literal null}.
-	 * @param value must not be {@literal null}.
-	 * @param timeout the key expiration timeout.
-	 * @param unit must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @since 2.1
-	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
-	 */
-	@Nullable
-	Boolean setIfAbsent(K key, V value, long timeout, TimeUnit unit);
-
-	/**
-	 * Set {@code key} to hold the string {@code value} and expiration {@code timeout} if {@code key} is absent.
+	 * Set the {@code value} and expiration {@code timeout} for {@code key} if {@code key} is absent.
 	 *
 	 * @param key must not be {@literal null}.
 	 * @param value must not be {@literal null}.
@@ -142,20 +228,15 @@ public interface ValueOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	default Boolean setIfAbsent(K key, V value, Duration timeout) {
+	default Boolean setIfAbsent(@NonNull K key, @NonNull V value, @NonNull Duration timeout) {
 
 		Assert.notNull(timeout, "Timeout must not be null");
 
-		if (TimeoutUtils.hasMillis(timeout)) {
-			return setIfAbsent(key, value, timeout.toMillis(), TimeUnit.MILLISECONDS);
-		}
-
-		return setIfAbsent(key, value, timeout.getSeconds(), TimeUnit.SECONDS);
+		return setIfAbsent(key, value, Expiration.from(timeout));
 	}
 
 	/**
-	 * Set {@code key} to hold the string {@code value} if {@code key} is present.
+	 * Set the {@code value} for {@code key} if {@code key} is present.
 	 *
 	 * @param key must not be {@literal null}.
 	 * @param value must not be {@literal null}.
@@ -164,11 +245,24 @@ public interface ValueOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	Boolean setIfPresent(K key, V value);
+	default Boolean setIfPresent(@NonNull K key, @NonNull V value) {
+		return setIfPresent(key, value, Expiration.persistent());
+	}
 
 	/**
-	 * Set {@code key} to hold the string {@code value} and expiration {@code timeout} if {@code key} is present.
+	 * Set the {@code value} and {@code expiration} for {@code key} if {@code key} is present.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @return command result indicating if the key has been set.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Boolean setIfPresent(@NonNull K key, @NonNull V value, @NonNull Expiration expiration);
+
+	/**
+	 * Set the {@code value} and expiration {@code timeout} for {@code key} if {@code key} is present.
 	 *
 	 * @param key must not be {@literal null}.
 	 * @param value must not be {@literal null}.
@@ -178,12 +272,15 @@ public interface ValueOperations<K, V> {
 	 * @throws IllegalArgumentException if either {@code key}, {@code value} or {@code timeout} is not present.
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 * @since 2.1
+	 * @deprecated since 4.1 in favor of {@link #setIfPresent(Object, Object, Expiration)}.
 	 */
-	@Nullable
-	Boolean setIfPresent(K key, V value, long timeout, TimeUnit unit);
+	@Deprecated(since = "4.1")
+	default Boolean setIfPresent(@NonNull K key, @NonNull V value, long timeout, @NonNull TimeUnit unit) {
+		return setIfPresent(key, value, Expiration.from(timeout, unit));
+	}
 
 	/**
-	 * Set {@code key} to hold the string {@code value} and expiration {@code timeout} if {@code key} is present.
+	 * Set the {@code value} and expiration {@code timeout} for {@code key} if {@code key} is present.
 	 *
 	 * @param key must not be {@literal null}.
 	 * @param value must not be {@literal null}.
@@ -193,17 +290,24 @@ public interface ValueOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	default Boolean setIfPresent(K key, V value, Duration timeout) {
-
-		Assert.notNull(timeout, "Timeout must not be null");
-
-		if (TimeoutUtils.hasMillis(timeout)) {
-			return setIfPresent(key, value, timeout.toMillis(), TimeUnit.MILLISECONDS);
-		}
-
-		return setIfPresent(key, value, timeout.getSeconds(), TimeUnit.SECONDS);
+	default Boolean setIfPresent(@NonNull K key, @NonNull V value, @NonNull Duration timeout) {
+		return setIfPresent(key, value, Expiration.from(timeout));
 	}
+
+	/**
+	 * Compare the value at {@code key} with {@code expectedValue} and set it to {@code newValue} if they are equal. Use
+	 * {@link #set(Object, Object, Consumer)} to customize the set operation using e.g. a different value comparison
+	 * strategy.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expectedValue the expected current value, must not be {@literal null}.
+	 * @param newValue the new value to set if comparison succeeds, must not be {@literal null}.
+	 * @return {@literal true} if the operation was successful, {@literal false} otherwise. {@literal null} when used in
+	 *         pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Boolean compareAndSet(@NonNull K key, @NonNull V expectedValue, @NonNull V newValue);
 
 	/**
 	 * Set multiple keys to multiple values using key-value pairs provided in {@code tuple}.
@@ -211,7 +315,7 @@ public interface ValueOperations<K, V> {
 	 * @param map must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/mset">Valkey Documentation: MSET</a>
 	 */
-	void multiSet(Map<? extends K, ? extends V> map);
+	void multiSet(Map<? extends @NonNull K, ? extends @NonNull V> map);
 
 	/**
 	 * Set multiple keys to multiple values using key-value pairs provided in {@code tuple} only if the provided key does
@@ -221,8 +325,7 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/msetnx">Valkey Documentation: MSETNX</a>
 	 */
-	@Nullable
-	Boolean multiSetIfAbsent(Map<? extends K, ? extends V> map);
+	Boolean multiSetIfAbsent(Map<? extends @NonNull K, ? extends @NonNull V> map);
 
 	/**
 	 * Get the value of {@code key}.
@@ -243,7 +346,18 @@ public interface ValueOperations<K, V> {
 	 * @since 2.6
 	 */
 	@Nullable
-	V getAndDelete(K key);
+	V getAndDelete(@NonNull K key);
+
+	/**
+	 * Return the value at {@code key} and expire the key by applying {@code expiration}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @return {@literal null} when key does not exist or used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/getex">Valkey Documentation: GETEX</a>
+	 * @since 4.1
+	 */
+	V getAndExpire(@NonNull K key, @NonNull Expiration expiration);
 
 	/**
 	 * Return the value at {@code key} and expire the key by applying {@code timeout}.
@@ -254,9 +368,11 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when key does not exist or used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/getex">Valkey Documentation: GETEX</a>
 	 * @since 2.6
+	 * @deprecated since 4.1 in favor of {@link #getAndExpire(Object, Expiration)}.
 	 */
+	@Deprecated(since = "4.1")
 	@Nullable
-	V getAndExpire(K key, long timeout, TimeUnit unit);
+	V getAndExpire(@NonNull K key, long timeout, @NonNull TimeUnit unit);
 
 	/**
 	 * Return the value at {@code key} and expire the key by applying {@code timeout}.
@@ -268,7 +384,7 @@ public interface ValueOperations<K, V> {
 	 * @since 2.6
 	 */
 	@Nullable
-	V getAndExpire(K key, Duration timeout);
+	V getAndExpire(@NonNull K key, @NonNull Duration timeout);
 
 	/**
 	 * Return the value at {@code key} and persist the key. This operation removes any TTL that is associated with
@@ -280,7 +396,7 @@ public interface ValueOperations<K, V> {
 	 * @since 2.6
 	 */
 	@Nullable
-	V getAndPersist(K key);
+	V getAndPersist(@NonNull K key);
 
 	/**
 	 * Set {@code value} of {@code key} and return its old value.
@@ -290,7 +406,7 @@ public interface ValueOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/getset">Valkey Documentation: GETSET</a>
 	 */
 	@Nullable
-	V getAndSet(K key, V value);
+	V getAndSet(@NonNull K key, @NonNull V value);
 
 	/**
 	 * Get multiple {@code keys}. Values are in the order of the requested keys Absent field values are represented using
@@ -300,8 +416,7 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/mget">Valkey Documentation: MGET</a>
 	 */
-	@Nullable
-	List<V> multiGet(Collection<K> keys);
+	List<@Nullable V> multiGet(@NonNull Collection<@NonNull K> keys);
 
 	/**
 	 * Increment an integer value stored as string value under {@code key} by one.
@@ -311,8 +426,7 @@ public interface ValueOperations<K, V> {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/incr">Valkey Documentation: INCR</a>
 	 */
-	@Nullable
-	Long increment(K key);
+	Long increment(@NonNull K key);
 
 	/**
 	 * Increment an integer value stored as string value under {@code key} by {@code delta}.
@@ -322,8 +436,7 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/incrby">Valkey Documentation: INCRBY</a>
 	 */
-	@Nullable
-	Long increment(K key, long delta);
+	Long increment(@NonNull K key, long delta);
 
 	/**
 	 * Increment a floating point number value stored as string value under {@code key} by {@code delta}.
@@ -333,8 +446,7 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/incrbyfloat">Valkey Documentation: INCRBYFLOAT</a>
 	 */
-	@Nullable
-	Double increment(K key, double delta);
+	Double increment(@NonNull K key, double delta);
 
 	/**
 	 * Decrement an integer value stored as string value under {@code key} by one.
@@ -344,8 +456,7 @@ public interface ValueOperations<K, V> {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/decr">Valkey Documentation: DECR</a>
 	 */
-	@Nullable
-	Long decrement(K key);
+	Long decrement(@NonNull K key);
 
 	/**
 	 * Decrement an integer value stored as string value under {@code key} by {@code delta}.
@@ -356,8 +467,7 @@ public interface ValueOperations<K, V> {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/decrby">Valkey Documentation: DECRBY</a>
 	 */
-	@Nullable
-	Long decrement(K key, long delta);
+	Long decrement(@NonNull K key, long delta);
 
 	/**
 	 * Append a {@code value} to {@code key}.
@@ -367,8 +477,7 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/append">Valkey Documentation: APPEND</a>
 	 */
-	@Nullable
-	Integer append(K key, String value);
+	Integer append(@NonNull K key, @NonNull String value);
 
 	/**
 	 * Get a substring of value of {@code key} between {@code begin} and {@code end}.
@@ -379,8 +488,7 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/getrange">Valkey Documentation: GETRANGE</a>
 	 */
-	@Nullable
-	String get(K key, long start, long end);
+	String get(@NonNull K key, long start, long end);
 
 	/**
 	 * Overwrite parts of {@code key} starting at the specified {@code offset} with given {@code value}.
@@ -390,7 +498,7 @@ public interface ValueOperations<K, V> {
 	 * @param offset
 	 * @see <a href="https://valkey.io/commands/setrange">Valkey Documentation: SETRANGE</a>
 	 */
-	void set(K key, V value, long offset);
+	void set(@NonNull K key, @NonNull V value, long offset);
 
 	/**
 	 * Get the length of the value stored at {@code key}.
@@ -399,8 +507,7 @@ public interface ValueOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/strlen">Valkey Documentation: STRLEN</a>
 	 */
-	@Nullable
-	Long size(K key);
+	Long size(@NonNull K key);
 
 	/**
 	 * Sets the bit at {@code offset} in value stored at {@code key}.
@@ -412,8 +519,7 @@ public interface ValueOperations<K, V> {
 	 * @since 1.5
 	 * @see <a href="https://valkey.io/commands/setbit">Valkey Documentation: SETBIT</a>
 	 */
-	@Nullable
-	Boolean setBit(K key, long offset, boolean value);
+	Boolean setBit(@NonNull K key, long offset, boolean value);
 
 	/**
 	 * Get the bit value at {@code offset} of value at {@code key}.
@@ -424,8 +530,7 @@ public interface ValueOperations<K, V> {
 	 * @since 1.5
 	 * @see <a href="https://valkey.io/commands/getbit">Valkey Documentation: GETBIT</a>
 	 */
-	@Nullable
-	Boolean getBit(K key, long offset);
+	Boolean getBit(@NonNull K key, long offset);
 
 	/**
 	 * Get / Manipulate specific integer fields of varying bit widths and arbitrary non (necessary) aligned offset stored
@@ -437,8 +542,12 @@ public interface ValueOperations<K, V> {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/bitfield">Valkey Documentation: BITFIELD</a>
 	 */
-	@Nullable
-	List<Long> bitField(K key, BitFieldSubCommands subCommands);
+	List<Long> bitField(@NonNull K key, @NonNull BitFieldSubCommands subCommands);
 
+	/**
+	 * @return the underlying {@link ValkeyOperations} used to execute commands.
+	 */
+	@NonNull
 	ValkeyOperations<K, V> getOperations();
+
 }

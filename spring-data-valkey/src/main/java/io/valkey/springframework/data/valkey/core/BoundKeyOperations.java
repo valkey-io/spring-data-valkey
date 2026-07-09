@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.DataType;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import org.springframework.util.Assert;
 
 /**
@@ -33,6 +35,7 @@ import org.springframework.util.Assert;
  * @author Costin Leau
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Yordan Tsintsov
  */
 public interface BoundKeyOperations<K> {
 
@@ -78,13 +81,20 @@ public interface BoundKeyOperations<K> {
 	 * @throws IllegalArgumentException if the timeout is {@literal null}.
 	 * @since 2.3
 	 */
-	@Nullable
-	default Boolean expire(Duration timeout) {
-
-		Assert.notNull(timeout, "Timeout must not be null");
-
-		return expire(timeout.toMillis(), TimeUnit.MILLISECONDS);
+	default @Nullable Boolean expire(@NonNull Duration timeout) {
+		return expire(Expiration.from(timeout));
 	}
+
+	/**
+	 * Sets the key time-to-live/expiration.
+	 *
+	 * @param expiration must not be {@literal null}.
+	 * @return {@literal true} if expiration was set, {@literal false} otherwise. {@literal null} when used in pipeline /
+	 *         transaction.
+	 * @since 4.1
+	 */
+	@Nullable
+	Boolean expire(@NonNull Expiration expiration);
 
 	/**
 	 * Sets the key time-to-live/expiration.
@@ -92,7 +102,9 @@ public interface BoundKeyOperations<K> {
 	 * @param timeout expiration value
 	 * @param unit expiration unit
 	 * @return true if expiration was set, false otherwise. {@literal null} when used in pipeline / transaction.
+	 * @deprecated since 4.1 in favor of {@link #expire(Expiration)}
 	 */
+	@Deprecated(since = "4.1")
 	@Nullable
 	Boolean expire(long timeout, TimeUnit unit);
 
@@ -114,8 +126,7 @@ public interface BoundKeyOperations<K> {
 	 * @throws IllegalArgumentException if the instant is {@literal null} or too large to represent as a {@code Date}.
 	 * @since 2.3
 	 */
-	@Nullable
-	default Boolean expireAt(Instant expireAt) {
+	default @Nullable Boolean expireAt(Instant expireAt) {
 
 		Assert.notNull(expireAt, "ExpireAt must not be null");
 
@@ -139,7 +150,7 @@ public interface BoundKeyOperations<K> {
 	void rename(K newKey);
 
 	/**
-	 * @return never {@literal null}.
+	 * @return the underlying {@link ValkeyOperations} used to execute commands.
 	 */
 	ValkeyOperations<K, ?> getOperations();
 

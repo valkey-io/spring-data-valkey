@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package io.valkey.springframework.data.valkey.core.convert;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.annotation.Reference;
-import org.springframework.lang.Nullable;
 
 /**
  * {@link ReferenceResolver} retrieves Objects marked with {@link Reference} from Valkey.
@@ -36,4 +36,5 @@ public interface ReferenceResolver {
 	 */
 	@Nullable
 	Map<byte[], byte[]> resolveReference(Object id, String keyspace);
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.reactivestreams.Publisher;
+
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ReactiveHashCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
@@ -105,7 +105,7 @@ class LettuceReactiveHashCommands implements ReactiveHashCommands {
 				result = cmd.hget(command.getKey(), key.duplicate()).map(value -> KeyValue.fromNullable(key, value))
 						.defaultIfEmpty(KeyValue.empty(key)).map(Collections::singletonList);
 			} else {
-				result = cmd.hmget(command.getKey(), command.getFields().stream().toArray(ByteBuffer[]::new)).collectList();
+				result = cmd.hmget(command.getKey(), command.getFields().toArray(ByteBuffer[]::new)).collectList();
 			}
 
 			return result.map(value -> new MultiValueResponse<>(command,
@@ -133,7 +133,7 @@ class LettuceReactiveHashCommands implements ReactiveHashCommands {
 			Assert.notNull(command.getKey(), "Key must not be null");
 			Assert.notNull(command.getFields(), "Fields must not be null");
 
-			return cmd.hdel(command.getKey(), command.getFields().stream().toArray(ByteBuffer[]::new))
+			return cmd.hdel(command.getKey(), command.getFields().toArray(ByteBuffer[]::new))
 					.map(value -> new NumericResponse<>(command, value));
 		}));
 	}
@@ -298,7 +298,7 @@ class LettuceReactiveHashCommands implements ReactiveHashCommands {
 
 			if (command.getExpiration().isUnixTimestamp()) {
 
-				if (command.getExpiration().getTimeUnit().equals(TimeUnit.MILLISECONDS)) {
+				if (command.getExpiration().isPrecise()) {
 					return cmd
 							.hpexpireat(command.getKey(), command.getExpiration().getExpirationTimeInMilliseconds(), args, fields)
 							.map(value -> new NumericResponse<>(command, value));
@@ -307,7 +307,7 @@ class LettuceReactiveHashCommands implements ReactiveHashCommands {
 						.map(value -> new NumericResponse<>(command, value));
 			}
 
-			if (command.getExpiration().getTimeUnit().equals(TimeUnit.MILLISECONDS)) {
+			if (command.getExpiration().isPrecise()) {
 				return cmd.hpexpire(command.getKey(), command.getExpiration().getExpirationTimeInMilliseconds(), args, fields)
 						.map(value -> new NumericResponse<>(command, value));
 			}
@@ -353,6 +353,54 @@ class LettuceReactiveHashCommands implements ReactiveHashCommands {
 
 			return cmd.hpttl(command.getKey(), command.getFields().toArray(ByteBuffer[]::new))
 					.map(value -> new NumericResponse<>(command, value));
+		}));
+	}
+
+	@Override
+	public Flux<MultiValueResponse<HGetDelCommand, ByteBuffer>> hGetDel(Publisher<HGetDelCommand> commands) {
+
+		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+
+			Assert.notNull(command.getKey(), "Key must not be null");
+			Assert.notNull(command.getFields(), "Fields must not be null");
+
+			return cmd.hgetdel(command.getKey(), command.getFields().toArray(ByteBuffer[]::new)).collectList()
+					.map(value -> new MultiValueResponse<>(command,
+							value.stream().map(v -> v.getValueOrElse(null)).collect(Collectors.toList())));
+		}));
+	}
+
+	@Override
+	public Flux<MultiValueResponse<HGetExCommand, ByteBuffer>> hGetEx(Publisher<HGetExCommand> commands) {
+
+		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+
+			Assert.notNull(command.getKey(), "Key must not be null");
+			Assert.notNull(command.getFields(), "Fields must not be null");
+
+			return cmd
+					.hgetex(command.getKey(), LettuceConverters.toHGetExArgs(command.getExpiration()),
+							command.getFields().toArray(ByteBuffer[]::new))
+					.collectList().map(value -> new MultiValueResponse<>(command,
+							value.stream().map(v -> v.getValueOrElse(null)).collect(Collectors.toList())));
+		}));
+	}
+
+	@Override
+	public Flux<BooleanResponse<HSetExCommand>> hSetEx(Publisher<HSetExCommand> commands) {
+		return connection.execute(cmd -> Flux.from(commands).concatMap(command -> {
+
+			Assert.notNull(command.getKey(), "Key must not be null");
+			Assert.notNull(command.getFieldValueMap(), "FieldValueMap must not be null");
+			Assert.notNull(command.getCondition(), "Condition must not be null");
+
+			Map<ByteBuffer, ByteBuffer> entries = command.getFieldValueMap();
+
+			return cmd
+					.hsetex(command.getKey(), LettuceConverters.toHSetExArgs(command.getCondition(), command.getExpiration()),
+							entries)
+					.map(LettuceConverters.longToBooleanConverter()::convert).map(value -> new BooleanResponse<>(command, value));
+
 		}));
 	}
 

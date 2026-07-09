@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,8 @@ import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfigu
 
 /**
  * Callback interface that can be implemented by beans wishing to customize the
- * {@link JedisClientConfiguration} through a {@link JedisClientConfigurationBuilder
- * JedisClientConfiguration.JedisClientConfigurationBuilder} whilst retaining default
- * auto-configuration.
+ * {@link JedisClientConfigurationBuilder} to fine-tune its auto-configuration before it
+ * creates the {@link JedisClientConfiguration}.
  *
  * @author Mark Paluch
  * @since 2.0.0

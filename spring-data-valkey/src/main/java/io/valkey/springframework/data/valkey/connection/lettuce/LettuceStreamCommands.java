@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import io.lettuce.core.XAddArgs;
 import io.lettuce.core.XClaimArgs;
 import io.lettuce.core.XGroupCreateArgs;
+import io.lettuce.core.XPendingArgs;
 import io.lettuce.core.XReadArgs;
+import io.lettuce.core.XTrimArgs;
 import io.lettuce.core.api.async.RedisStreamAsyncCommands;
 import io.lettuce.core.cluster.api.async.RedisClusterAsyncCommands;
 
@@ -27,6 +29,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands;
@@ -50,18 +54,20 @@ import org.springframework.util.Assert;
  * @author Dejan Jankov
  * @author Dengliming
  * @author Mark John Moreno
+ * @author Jeonggyu Choi
  * @since 2.2
  */
+@NullUnmarked
 class LettuceStreamCommands implements ValkeyStreamCommands {
 
 	private final LettuceConnection connection;
 
-	LettuceStreamCommands(LettuceConnection connection) {
+	LettuceStreamCommands(@NonNull LettuceConnection connection) {
 		this.connection = connection;
 	}
 
 	@Override
-	public Long xAck(byte[] key, String group, RecordId... recordIds) {
+	public Long xAck(byte @NonNull [] key, @NonNull String group, @NonNull RecordId @NonNull... recordIds) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.hasText(group, "Group name must not be null or empty");
@@ -73,28 +79,21 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public RecordId xAdd(MapRecord<byte[], byte[], byte[]> record, XAddOptions options) {
+	public RecordId xAdd(@NonNull MapRecord<byte @NonNull [], byte @NonNull [], byte @NonNull []> record,
+			@NonNull XAddOptions options) {
 
 		Assert.notNull(record.getStream(), "Stream must not be null");
 		Assert.notNull(record, "Record must not be null");
 
-		XAddArgs args = new XAddArgs();
-		args.id(record.getId().getValue());
-		if (options.hasMaxlen()) {
-			args.maxlen(options.getMaxlen());
-		}
-		if (options.hasMinId()) {
-			args.minId(options.getMinId().toString());
-		}
-		args.nomkstream(options.isNoMkStream());
-		args.approximateTrimming(options.isApproximateTrimming());
+		XAddArgs args = StreamConverters.toXAddArgs(record.getId(), options);
 
 		return connection.invoke().from(RedisStreamAsyncCommands::xadd, record.getStream(), args, record.getValue())
 				.get(RecordId::of);
 	}
 
 	@Override
-	public List<RecordId> xClaimJustId(byte[] key, String group, String newOwner, XClaimOptions options) {
+	public List<@NonNull RecordId> xClaimJustId(byte @NonNull [] key, @NonNull String group, @NonNull String newOwner,
+			@NonNull XClaimOptions options) {
 
 		String[] ids = options.getIdsAsStringArray();
 		io.lettuce.core.Consumer<byte[]> from = io.lettuce.core.Consumer.from(LettuceConverters.toBytes(group),
@@ -106,7 +105,8 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public List<ByteRecord> xClaim(byte[] key, String group, String newOwner, XClaimOptions options) {
+	public List<@NonNull ByteRecord> xClaim(byte @NonNull [] key, @NonNull String group, @NonNull String newOwner,
+			@NonNull XClaimOptions options) {
 
 		String[] ids = options.getIdsAsStringArray();
 		io.lettuce.core.Consumer<byte[]> from = io.lettuce.core.Consumer.from(LettuceConverters.toBytes(group),
@@ -118,7 +118,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public Long xDel(byte[] key, RecordId... recordIds) {
+	public Long xDel(byte @NonNull [] key, @NonNull RecordId @NonNull... recordIds) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(recordIds, "recordIds must not be null");
@@ -127,12 +127,39 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public String xGroupCreate(byte[] key, String groupName, ReadOffset readOffset) {
+	public List<StreamEntryDeletionResult> xDelEx(byte @NonNull [] key, @NonNull XDelOptions options,
+			@NonNull RecordId @NonNull... recordIds) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(options, "Options must not be null");
+		Assert.notNull(recordIds, "recordIds must not be null");
+
+		return connection.invoke().from(RedisStreamAsyncCommands::xdelex, key, StreamConverters.toXDelArgs(options),
+				entryIdsToString(recordIds)).get(StreamConverters::toStreamEntryDeletionResults);
+	}
+
+	@Override
+	public List<StreamEntryDeletionResult> xAckDel(byte @NonNull [] key, @NonNull String group,
+			@NonNull XDelOptions options, @NonNull RecordId @NonNull... recordIds) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(group, "Group must not be null");
+		Assert.notNull(options, "Options must not be null");
+		Assert.notNull(recordIds, "recordIds must not be null");
+
+		return connection.invoke().from(RedisStreamAsyncCommands::xackdel, key, LettuceConverters.toBytes(group),
+				StreamConverters.toXDelArgs(options), entryIdsToString(recordIds))
+				.get(StreamConverters::toStreamEntryDeletionResults);
+	}
+
+	@Override
+	public String xGroupCreate(byte @NonNull [] key, @NonNull String groupName, @NonNull ReadOffset readOffset) {
 		return xGroupCreate(key, groupName, readOffset, false);
 	}
 
 	@Override
-	public String xGroupCreate(byte[] key, String groupName, ReadOffset readOffset, boolean mkSteam) {
+	public String xGroupCreate(byte @NonNull [] key, @NonNull String groupName, @NonNull ReadOffset readOffset,
+			boolean mkSteam) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.hasText(groupName, "Group name must not be null or empty");
@@ -145,7 +172,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public Boolean xGroupDelConsumer(byte[] key, Consumer consumer) {
+	public Boolean xGroupDelConsumer(byte @NonNull [] key, @NonNull Consumer consumer) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(consumer, "Consumer must not be null");
@@ -157,7 +184,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public Boolean xGroupDestroy(byte[] key, String groupName) {
+	public Boolean xGroupDestroy(byte @NonNull [] key, @NonNull String groupName) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.hasText(groupName, "Group name must not be null or empty");
@@ -166,7 +193,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public XInfoStream xInfo(byte[] key) {
+	public XInfoStream xInfo(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -174,7 +201,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public XInfoGroups xInfoGroups(byte[] key) {
+	public XInfoGroups xInfoGroups(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -182,7 +209,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public XInfoConsumers xInfoConsumers(byte[] key, String groupName) {
+	public XInfoConsumers xInfoConsumers(byte @NonNull [] key, @NonNull String groupName) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(groupName, "GroupName must not be null");
@@ -192,7 +219,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public Long xLen(byte[] key) {
+	public Long xLen(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -200,7 +227,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public PendingMessagesSummary xPending(byte[] key, String groupName) {
+	public PendingMessagesSummary xPending(byte @NonNull [] key, @NonNull String groupName) {
 
 		byte[] group = LettuceConverters.toBytes(groupName);
 
@@ -209,7 +236,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public PendingMessages xPending(byte[] key, String groupName, XPendingOptions options) {
+	public PendingMessages xPending(byte @NonNull [] key, @NonNull String groupName, @NonNull XPendingOptions options) {
 
 		byte[] group = LettuceConverters.toBytes(groupName);
 		io.lettuce.core.Range<String> range = RangeConverter.toRangeWithDefault(options.getRange(), "-", "+",
@@ -217,20 +244,22 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 		io.lettuce.core.Limit limit = options.isLimited() ? io.lettuce.core.Limit.from(options.getCount())
 				: io.lettuce.core.Limit.unlimited();
 
+		XPendingArgs<byte[]> xPendingArgs = XPendingArgs.Builder.xpending(group, range, limit);
 		if (options.hasConsumer()) {
-
-			return connection.invoke()
-					.from(RedisStreamAsyncCommands::xpending, key,
-							io.lettuce.core.Consumer.from(group, LettuceConverters.toBytes(options.getConsumerName())), range, limit)
-					.get(it -> StreamConverters.toPendingMessages(groupName, options.getRange(), it));
+			io.lettuce.core.Consumer<byte[]> consumer = io.lettuce.core.Consumer.from(group,
+					LettuceConverters.toBytes(options.getConsumerName()));
+			xPendingArgs.consumer(consumer);
+		}
+		if (options.hasMinIdleTime()) {
+			xPendingArgs.idle(options.getMinIdleTime());
 		}
 
-		return connection.invoke().from(RedisStreamAsyncCommands::xpending, key, group, range, limit)
+		return connection.invoke().from(RedisStreamAsyncCommands::xpending, key, xPendingArgs)
 				.get(it -> StreamConverters.toPendingMessages(groupName, options.getRange(), it));
 	}
 
 	@Override
-	public List<ByteRecord> xRange(byte[] key, Range<String> range, Limit limit) {
+	public List<@NonNull ByteRecord> xRange(byte @NonNull [] key, @NonNull Range<String> range, @NonNull Limit limit) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(range, "Range must not be null");
@@ -244,7 +273,8 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public List<ByteRecord> xRead(StreamReadOptions readOptions, StreamOffset<byte[]>... streams) {
+	public List<@NonNull ByteRecord> xRead(@NonNull StreamReadOptions readOptions,
+			@NonNull StreamOffset<byte[]> @NonNull... streams) {
 
 		Assert.notNull(readOptions, "StreamReadOptions must not be null");
 		Assert.notNull(streams, "StreamOffsets must not be null");
@@ -264,8 +294,8 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public List<ByteRecord> xReadGroup(Consumer consumer, StreamReadOptions readOptions,
-			StreamOffset<byte[]>... streams) {
+	public List<@NonNull ByteRecord> xReadGroup(@NonNull Consumer consumer, @NonNull StreamReadOptions readOptions,
+			@NonNull StreamOffset<byte[]> @NonNull... streams) {
 
 		Assert.notNull(consumer, "Consumer must not be null");
 		Assert.notNull(readOptions, "StreamReadOptions must not be null");
@@ -287,7 +317,7 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 	}
 
 	@Override
-	public List<ByteRecord> xRevRange(byte[] key, Range<String> range, Limit limit) {
+	public List<@NonNull ByteRecord> xRevRange(byte @NonNull [] key, @NonNull Range<String> range, @NonNull Limit limit) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(range, "Range must not be null");
@@ -296,21 +326,31 @@ class LettuceStreamCommands implements ValkeyStreamCommands {
 		io.lettuce.core.Range<String> lettuceRange = RangeConverter.toRange(range, Function.identity());
 		io.lettuce.core.Limit lettuceLimit = LettuceConverters.toLimit(limit);
 
-		return connection.invoke()
-				.fromMany(RedisStreamAsyncCommands::xrevrange, key, lettuceRange, lettuceLimit)
+		return connection.invoke().fromMany(RedisStreamAsyncCommands::xrevrange, key, lettuceRange, lettuceLimit)
 				.toList(StreamConverters.byteRecordConverter());
 	}
 
 	@Override
-	public Long xTrim(byte[] key, long count) {
+	public Long xTrim(byte @NonNull [] key, long count) {
 		return xTrim(key, count, false);
 	}
 
 	@Override
-	public Long xTrim(byte[] key, long count, boolean approximateTrimming) {
+	public Long xTrim(byte @NonNull [] key, long count, boolean approximateTrimming) {
 		Assert.notNull(key, "Key must not be null");
 
 		return connection.invoke().just(RedisStreamAsyncCommands::xtrim, key, approximateTrimming, count);
+	}
+
+	@Override
+	public Long xTrim(byte @NonNull [] key, @NonNull XTrimOptions options) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(options, "XTrimOptions must not be null");
+
+		XTrimArgs xTrimArgs = StreamConverters.toXTrimArgs(options);
+
+		return connection.invoke().just(RedisStreamAsyncCommands::xtrim, key, xTrimArgs);
 	}
 
 	RedisClusterAsyncCommands<byte[], byte[]> getAsyncDedicatedConnection() {

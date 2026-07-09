@@ -1,6 +1,6 @@
 # Spring Data Valkey
 
-Spring Data Valkey provides Spring Data integration for [Valkey](https://valkey.io/), a high-performance, Redis-compatible in-memory database. This module is a fork of Spring Data Redis 3.5.1, created to offer first-class support for Valkey and optimized access to the Valkey ecosystem through Spring's familiar data access patterns.
+Spring Data Valkey provides Spring Data integration for [Valkey](https://valkey.io/), a high-performance, Redis-compatible in-memory database. This module is a fork of Spring Data Redis 4.1.0, created to offer first-class support for Valkey and optimized access to the Valkey ecosystem through Spring's familiar data access patterns.
 
 ## Features
 
@@ -17,6 +17,12 @@ Spring Data Valkey provides Spring Data integration for [Valkey](https://valkey.
 * Valkey implementation for Spring cache abstraction
 * Automatic implementation of `Repository` interfaces with `@EnableValkeyRepositories`
 * CDI support for repositories
+* Annotation-driven Pub/Sub listeners with `@ValkeyListener` for declarative message handling
+* Jackson 3 serialization support (dual-mode: Jackson 2 and Jackson 3 side-by-side)
+* Conditional SET operations with `SetCondition` and `compareAndSet` support
+* Cache reset strategies for fine-grained cache invalidation control
+* Hash field expiration commands (`HGETEX`, `HSETEX`, `HGETDEL`)
+* `ValkeyMessageSendingTemplate` for simplified pub/sub message publishing
 
 ## Installation
 

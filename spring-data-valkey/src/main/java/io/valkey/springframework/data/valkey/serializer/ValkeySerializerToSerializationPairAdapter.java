@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package io.valkey.springframework.data.valkey.serializer;
 
 import java.nio.ByteBuffer;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -31,11 +31,11 @@ import org.springframework.util.Assert;
  */
 class ValkeySerializerToSerializationPairAdapter<T> implements SerializationPair<T> {
 
-	private static final ValkeySerializerToSerializationPairAdapter<?> BYTE_BUFFER =
-			new ValkeySerializerToSerializationPairAdapter<>(null);
+	private static final ValkeySerializerToSerializationPairAdapter<?> BYTE_BUFFER = new ValkeySerializerToSerializationPairAdapter<>(
+			null);
 
-	private static final ValkeySerializerToSerializationPairAdapter<byte[]> BYTE_ARRAY =
-			new ValkeySerializerToSerializationPairAdapter<>(ValkeySerializer.byteArray());
+	private static final ValkeySerializerToSerializationPairAdapter<byte[]> BYTE_ARRAY = new ValkeySerializerToSerializationPairAdapter<>(
+			ValkeySerializer.byteArray());
 
 	private final DefaultSerializationPair<T> pair;
 
@@ -94,4 +94,5 @@ class ValkeySerializerToSerializationPairAdapter<T> implements SerializationPair
 	public ValkeyElementWriter<T> getWriter() {
 		return pair.getWriter();
 	}
+
 }

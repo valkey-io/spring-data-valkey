@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -1010,4 +1010,115 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
             throw new ValkeyGlideExceptionConverter().convert(e);
         }
     }
+
+	@Override
+	public Long xTrim(byte[] key, ValkeyStreamCommands.XTrimOptions options) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(options, "XTrimOptions must not be null");
+		try {
+			TrimOptions trimOptions = options.getTrimOptions();
+			List<Object> args = new ArrayList<>();
+			args.add(key);
+			// Add strategy
+			if (trimOptions.getTrimStrategy() instanceof ValkeyStreamCommands.MaxLenTrimStrategy maxLen) {
+				args.add("MAXLEN");
+				if (trimOptions.getTrimOperator() == ValkeyStreamCommands.TrimOperator.APPROXIMATE) {
+					args.add("~");
+				}
+				args.add(String.valueOf(maxLen.threshold()));
+			} else if (trimOptions.getTrimStrategy() instanceof ValkeyStreamCommands.MinIdTrimStrategy minId) {
+				args.add("MINID");
+				if (trimOptions.getTrimOperator() == ValkeyStreamCommands.TrimOperator.APPROXIMATE) {
+					args.add("~");
+				}
+				args.add(minId.threshold().getValue());
+			}
+			// Add LIMIT if present
+			if (trimOptions.hasLimit()) {
+				args.add("LIMIT");
+				args.add(String.valueOf(trimOptions.getLimit()));
+			}
+			// Add deletion policy if present
+			if (trimOptions.hasDeletionPolicy()) {
+				switch (trimOptions.getDeletionPolicy()) {
+					case KEEP_REFERENCES -> args.add("KEEPREF");
+					case DELETE_REFERENCES -> args.add("DELREF");
+					case ACKNOWLEDGED -> args.add("ACKED");
+				}
+			}
+			return connection.execute("XTRIM",
+				(Long glideResult) -> glideResult,
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public List<ValkeyStreamCommands.StreamEntryDeletionResult> xAckDel(byte[] key, String group, ValkeyStreamCommands.XDelOptions options, RecordId... recordIds) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(group, "Group must not be null");
+		Assert.notNull(options, "Options must not be null");
+		Assert.notNull(recordIds, "RecordIds must not be null");
+		try {
+			List<Object> args = new ArrayList<>();
+			args.add(key);
+			args.add(group.getBytes(StandardCharsets.UTF_8));
+			// Add deletion policy
+			switch (options.getDeletionPolicy()) {
+				case KEEP_REFERENCES -> args.add("KEEPREF");
+				case DELETE_REFERENCES -> args.add("DELREF");
+				case ACKNOWLEDGED -> args.add("ACKED");
+			}
+			// Add record IDs
+			for (RecordId id : recordIds) {
+				args.add(id.getValue());
+			}
+			return connection.execute("XACKDEL",
+				(Object[] glideResult) -> {
+					List<ValkeyStreamCommands.StreamEntryDeletionResult> results = new ArrayList<>(glideResult.length);
+					for (Object item : glideResult) {
+						long code = item instanceof Long l ? l : Long.parseLong(item.toString());
+						results.add(ValkeyStreamCommands.StreamEntryDeletionResult.fromCode(code));
+					}
+					return results;
+				},
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public List<ValkeyStreamCommands.StreamEntryDeletionResult> xDelEx(byte[] key, ValkeyStreamCommands.XDelOptions options, RecordId... recordIds) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(options, "Options must not be null");
+		Assert.notNull(recordIds, "RecordIds must not be null");
+		try {
+			List<Object> args = new ArrayList<>();
+			args.add(key);
+			// Add deletion policy
+			switch (options.getDeletionPolicy()) {
+				case KEEP_REFERENCES -> args.add("KEEPREF");
+				case DELETE_REFERENCES -> args.add("DELREF");
+				case ACKNOWLEDGED -> args.add("ACKED");
+			}
+			// Add record IDs
+			for (RecordId id : recordIds) {
+				args.add(id.getValue());
+			}
+			return connection.execute("XDELEX",
+				(Object[] glideResult) -> {
+					List<ValkeyStreamCommands.StreamEntryDeletionResult> results = new ArrayList<>(glideResult.length);
+					for (Object item : glideResult) {
+						long code = item instanceof Long l ? l : Long.parseLong(item.toString());
+						results.add(ValkeyStreamCommands.StreamEntryDeletionResult.fromCode(code));
+					}
+					return results;
+				},
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
 }

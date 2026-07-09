@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import org.reactivestreams.Publisher;
 
@@ -42,6 +41,7 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
 import io.valkey.springframework.data.valkey.connection.ValueEncoding;
 import io.valkey.springframework.data.valkey.connection.ValueEncoding.ValkeyValueEncoding;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -81,6 +81,17 @@ class LettuceReactiveKeyCommands implements ReactiveKeyCommands {
 
 			return cmd.copy(command.getKey(), command.getTarget(), copyArgs)
 					.map((value) -> new BooleanResponse<>(command, value));
+		}));
+	}
+
+	@Override
+	public Flux<CommandResponse<KeyCommand, String>> digest(Publisher<KeyCommand> keys) {
+
+		return connection.execute(cmd -> Flux.from(keys).concatMap((command) -> {
+
+			Assert.notNull(command.getKey(), "Key must not be null");
+
+			return cmd.digestKey(command.getKey()).map((value) -> new CommandResponse<>(command, value));
 		}));
 	}
 
@@ -126,7 +137,8 @@ class LettuceReactiveKeyCommands implements ReactiveKeyCommands {
 
 			Assert.notNull(pattern, "Pattern must not be null");
 			// TODO: stream elements instead of collection
-			return cmd.keys(pattern).collectList().map(value -> new MultiValueResponse<>(pattern, value));
+			return cmd.keys(ByteUtils.toString(pattern)).collectList().map(value ->
+					new MultiValueResponse<>(pattern, value));
 		}));
 	}
 
@@ -176,6 +188,22 @@ class LettuceReactiveKeyCommands implements ReactiveKeyCommands {
 			Assert.notNull(command.getKey(), "Key must not be null");
 
 			return cmd.del(command.getKey()).map((value) -> new NumericResponse<>(command, value));
+		}));
+	}
+
+	@Override
+	public Flux<BooleanResponse<DelexCommand>> delex(Publisher<DelexCommand> commands) {
+
+		return this.connection.execute(reactiveCommands -> Flux.from(commands).concatMap(command -> {
+
+			Assert.notNull(command.getKey(), "Key must not be null");
+			Assert.notNull(command.getCondition(), "Condition must not be null");
+
+			return reactiveCommands
+					.delex(command.getKey(), LettuceConverters.toCompareCondition(command.getCondition(), ByteBuffer::wrap))
+					.map(LettuceConverters.longToBooleanConverter()::convert)
+					.map((value) -> new BooleanResponse<>(command, value))
+					.defaultIfEmpty(new BooleanResponse<>(command, Boolean.FALSE));
 		}));
 	}
 
@@ -238,7 +266,7 @@ class LettuceReactiveKeyCommands implements ReactiveKeyCommands {
 
 			if (command.getExpiration().isUnixTimestamp()) {
 
-				if (command.getExpiration().getTimeUnit().equals(TimeUnit.MILLISECONDS)) {
+				if (command.getExpiration().isPrecise()) {
 					return cmd.pexpireat(command.getKey(), command.getExpiration().getExpirationTimeInMilliseconds(), args)
 							.map(value -> new BooleanResponse<>(command, value));
 				}
@@ -246,7 +274,7 @@ class LettuceReactiveKeyCommands implements ReactiveKeyCommands {
 						.map(value -> new BooleanResponse<>(command, value));
 			}
 
-			if (command.getExpiration().getTimeUnit().equals(TimeUnit.MILLISECONDS)) {
+			if (command.getExpiration().isPrecise()) {
 				return cmd.pexpire(command.getKey(), command.getExpiration().getExpirationTimeInMilliseconds(), args)
 						.map(value -> new BooleanResponse<>(command, value));
 			}

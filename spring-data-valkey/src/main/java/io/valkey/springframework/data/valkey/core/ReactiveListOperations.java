@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,9 +24,9 @@ import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.Collection;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.core.ListOperations.MoveFrom;
 import io.valkey.springframework.data.valkey.core.ListOperations.MoveTo;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -284,8 +284,7 @@ public interface ReactiveListOperations<K, V> {
 	 * @return
 	 * @since 3.4
 	 */
-	@Nullable
-	default Mono<V> getFirst(K key) {
+	default @Nullable Mono<V> getFirst(K key) {
 		return index(key, 0);
 	}
 
@@ -296,8 +295,7 @@ public interface ReactiveListOperations<K, V> {
 	 * @return
 	 * @since 3.4
 	 */
-	@Nullable
-	default Mono<V> getLast(K key) {
+	default @Nullable Mono<V> getLast(K key) {
 		return index(key, -1);
 	}
 
@@ -362,8 +360,11 @@ public interface ReactiveListOperations<K, V> {
 	 * @param key must not be {@literal null}.
 	 * @param timeout maximal duration to wait until an entry in the list at {@code key} is available. Must be either
 	 *          {@link Duration#ZERO} or greater {@literal 1 second}, must not be {@literal null}. A timeout of zero can
-	 *          be used to wait indefinitely. Durations between zero and one second are not supported.
+	 *          be used to wait indefinitely. Durations between zero and one second are not supported. Durations are
+	 *          expected to be in whole seconds so only the seconds field is used - the other fields (e.g. nanos)
+	 *          are ignored.
 	 * @return
+	 * @throws IllegalArgumentException if {@code timeout} is between {@literal 0} and {@literal 1 sec}
 	 * @see <a href="https://valkey.io/commands/blpop">Valkey Documentation: BLPOP</a>
 	 */
 	Mono<V> leftPop(K key, Duration timeout);
@@ -395,8 +396,11 @@ public interface ReactiveListOperations<K, V> {
 	 * @param key must not be {@literal null}.
 	 * @param timeout maximal duration to wait until an entry in the list at {@code key} is available. Must be either
 	 *          {@link Duration#ZERO} or greater {@literal 1 second}, must not be {@literal null}. A timeout of zero can
-	 *          be used to wait indefinitely. Durations between zero and one second are not supported.
+	 *          be used to wait indefinitely. Durations between zero and one second are not supported. Durations are
+	 *          expected to be in whole seconds so only the seconds field is used - the other fields (e.g. nanos)
+	 *          are ignored.
 	 * @return
+	 * @throws IllegalArgumentException if {@code timeout} is between {@literal 0} and {@literal 1 sec}
 	 * @see <a href="https://valkey.io/commands/brpop">Valkey Documentation: BRPOP</a>
 	 */
 	Mono<V> rightPop(K key, Duration timeout);
@@ -420,7 +424,10 @@ public interface ReactiveListOperations<K, V> {
 	 * @param timeout maximal duration to wait until an entry in the list at {@code sourceKey} is available. Must be
 	 *          either {@link Duration#ZERO} or greater {@literal 1 second}, must not be {@literal null}. A timeout of
 	 *          zero can be used to wait indefinitely. Durations between zero and one second are not supported.
+	 *          Durations are expected to be in whole seconds so only the seconds field is used - the other fields
+	 *          (e.g. nanos) are ignored.
 	 * @return
+	 * @throws IllegalArgumentException if {@code timeout} is between {@literal 0} and {@literal 1 sec}
 	 * @see <a href="https://valkey.io/commands/brpoplpush">Valkey Documentation: BRPOPLPUSH</a>
 	 */
 	Mono<V> rightPopAndLeftPush(K sourceKey, K destinationKey, Duration timeout);

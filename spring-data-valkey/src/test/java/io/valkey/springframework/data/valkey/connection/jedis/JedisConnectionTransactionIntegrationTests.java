@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,11 @@ public class JedisConnectionTransactionIntegrationTests extends AbstractConnecti
 
 	@AfterEach
 	public void tearDown() {
+
+		if (connection.isQueueing()) {
+			connection.discard();
+		}
+
 		try {
 			connection.flushAll();
 			connection.close();
@@ -59,40 +64,35 @@ public class JedisConnectionTransactionIntegrationTests extends AbstractConnecti
 
 	@Test
 	public void testEvalShaNotFound() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> {
-					connection.evalSha("somefakesha", ReturnType.VALUE, 2, "key1", "key2");
-					getResults();
-				});
+		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() -> {
+			connection.evalSha("somefakesha", ReturnType.VALUE, 2, "key1", "key2");
+			getResults();
+		});
 	}
 
 	@Test
 	public void testEvalShaArrayError() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> {
-					connection.evalSha("notasha", ReturnType.MULTI, 1, "key1", "arg1");
-					getResults();
-				});
+		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() -> {
+			connection.evalSha("notasha", ReturnType.MULTI, 1, "key1", "arg1");
+			getResults();
+		});
 	}
 
 	@Test
 	public void testEvalArrayScriptError() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(() -> {
-					connection.eval("return {1,2", ReturnType.MULTI, 1, "foo", "bar");
-					getResults();
-				});
+		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() -> {
+			connection.eval("return {1,2", ReturnType.MULTI, 1, "foo", "bar");
+			getResults();
+		});
 	}
 
 	@Test
 	public void testEvalReturnSingleError() {
-		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
-				.isThrownBy(()-> {
-					connection.eval("return redis.call('expire','foo')", ReturnType.BOOLEAN, 0);
-					getResults();
-				});
+		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class).isThrownBy(() -> {
+			connection.eval("return redis.call('expire','foo')", ReturnType.BOOLEAN, 0);
+			getResults();
+		});
 	}
-
 
 	// Unsupported Ops
 	@Test

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,13 +30,13 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.msgpack.jackson.dataformat.MessagePackFactory;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.cache.support.NullValue;
-import org.springframework.lang.Nullable;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
@@ -189,7 +189,8 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 		assertThat(serializer.deserialize(
 				("{\"@class\":\"io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializerUnitTests$FinalObject\",\"longValue\":1,\"myArray\":[1,2,3],\n"
 						+ "\"simpleObject\":{\"@class\":\"io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializerUnitTests$SimpleObject\",\"longValue\":2}}")
-								.getBytes())).isEqualTo(source);
+						.getBytes()))
+				.isEqualTo(source);
 	}
 
 	@Test // GH-2361
@@ -231,7 +232,7 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 		GenericJackson2JsonValkeySerializer serializer = GenericJackson2JsonValkeySerializer.builder()
 				.writer((mapper, source) -> {
 					return mapper.writerWithView(Views.Basic.class).writeValueAsBytes(source);
-		}).build();
+				}).build();
 
 		byte[] result = serializer.serialize(user);
 
@@ -265,8 +266,7 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 		user.name = "Walter White";
 
 		GenericJackson2JsonValkeySerializer serializer = GenericJackson2JsonValkeySerializer.builder()
-				.reader(
-				(mapper, source, type) -> {
+				.reader((mapper, source, type) -> {
 					if (type.getRawClass() == User.class) {
 						return mapper.readerWithView(Views.Basic.class).forType(type).readValue(source);
 					}
@@ -398,7 +398,8 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 
 		GenericJackson2JsonValkeySerializer serializer = new GenericJackson2JsonValkeySerializer();
 
-		assertThat(serializer.deserialize("\"TWO\"".getBytes(StandardCharsets.UTF_8), EnumType.class)).isEqualTo(EnumType.TWO);
+		assertThat(serializer.deserialize("\"TWO\"".getBytes(StandardCharsets.UTF_8), EnumType.class))
+				.isEqualTo(EnumType.TWO);
 	}
 
 	@Test // GH-2396
@@ -407,9 +408,11 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 		GenericJackson2JsonValkeySerializer serializer = new GenericJackson2JsonValkeySerializer();
 
 		WithJsr310 source = new WithJsr310();
-		source.myDate = java.time.LocalDate.of(2022,9,2);
+		source.myDate = java.time.LocalDate.of(2022, 9, 2);
 
-		assertThat(serializer.serialize(source)).isEqualTo(("{\"@class\":\"io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializerUnitTests$WithJsr310\",\"myDate\":[2022,9,2]}").getBytes(StandardCharsets.UTF_8));
+		assertThat(serializer.serialize(source)).isEqualTo(
+				("{\"@class\":\"io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializerUnitTests$WithJsr310\",\"myDate\":[2022,9,2]}")
+						.getBytes(StandardCharsets.UTF_8));
 	}
 
 	@Test // GH-2396
@@ -417,8 +420,9 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 
 		GenericJackson2JsonValkeySerializer serializer = new GenericJackson2JsonValkeySerializer();
 
-		byte[] source = "{\"@class\":\"io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializerUnitTests$WithJsr310\",\"myDate\":[2022,9,2]}".getBytes(StandardCharsets.UTF_8);
-		assertThat(serializer.deserialize(source, WithJsr310.class).myDate).isEqualTo(java.time.LocalDate.of(2022,9,2));
+		byte[] source = "{\"@class\":\"io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializerUnitTests$WithJsr310\",\"myDate\":[2022,9,2]}"
+				.getBytes(StandardCharsets.UTF_8);
+		assertThat(serializer.deserialize(source, WithJsr310.class).myDate).isEqualTo(java.time.LocalDate.of(2022, 9, 2));
 	}
 
 	@Test // GH-2601
@@ -442,18 +446,15 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 	@Test // GH-2601
 	void configureWithNullConsumerThrowsIllegalArgumentException() {
 
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new GenericJackson2JsonValkeySerializer().configure(null))
-			.withMessage("Consumer used to configure and customize ObjectMapper must not be null")
-			.withNoCause();
+		assertThatIllegalArgumentException().isThrownBy(() -> new GenericJackson2JsonValkeySerializer().configure(null))
+				.withMessage("Consumer used to configure and customize ObjectMapper must not be null").withNoCause();
 	}
 
 	@Test
 	void defaultSerializeAndDeserializeNullValueWithBuilderClass() {
 
 		GenericJackson2JsonValkeySerializer serializer = GenericJackson2JsonValkeySerializer.builder()
-				.objectMapper(new ObjectMapper().enableDefaultTyping(DefaultTyping.EVERYTHING, As.PROPERTY))
-				.build();
+				.objectMapper(new ObjectMapper().enableDefaultTyping(DefaultTyping.EVERYTHING, As.PROPERTY)).build();
 
 		serializeAndDeserializeNullValue(serializer);
 	}
@@ -477,8 +478,7 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 		};
 
 		GenericJackson2JsonValkeySerializer serializer = GenericJackson2JsonValkeySerializer.builder()
-				.nullValueSerializer(nullValueSerializer)
-				.build();
+				.nullValueSerializer(nullValueSerializer).build();
 
 		NullValue nv = BeanUtils.instantiateClass(NullValue.class);
 
@@ -525,8 +525,7 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 		assertThat(deserializedValue).isInstanceOf(NullValue.class);
 	}
 
-	@Nullable
-	private TypeResolverBuilder<?> extractTypeResolver(GenericJackson2JsonValkeySerializer serializer) {
+	private @Nullable TypeResolverBuilder<?> extractTypeResolver(GenericJackson2JsonValkeySerializer serializer) {
 
 		ObjectMapper mapper = (ObjectMapper) getField(serializer, "mapper");
 		return mapper.getSerializationConfig().getDefaultTyper(TypeFactory.defaultInstance().constructType(Object.class));
@@ -555,8 +554,7 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 				return false;
 			}
 
-			return Objects.equals(this.simpleObject, that.simpleObject)
-				&& Objects.equals(this.stringValue, that.stringValue);
+			return Objects.equals(this.simpleObject, that.simpleObject) && Objects.equals(this.stringValue, that.stringValue);
 		}
 
 		@Override
@@ -607,8 +605,8 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 			}
 
 			return Objects.equals(this.getLongValue(), that.getLongValue())
-				&& Arrays.equals(this.getMyArray(), that.getMyArray())
-				&& Objects.equals(this.getSimpleObject(), that.getSimpleObject());
+					&& Arrays.equals(this.getMyArray(), that.getMyArray())
+					&& Objects.equals(this.getSimpleObject(), that.getSimpleObject());
 		}
 
 		@Override
@@ -658,12 +656,8 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 		@Override
 		public String toString() {
 
-			return "User{" +
-				"id=" + id +
-				", name='" + name + '\'' +
-				", email='" + email + '\'' +
-				", mobile='" + mobile + '\'' +
-				'}';
+			return "User{" + "id=" + id + ", name='" + name + '\'' + ", email='" + email + '\'' + ", mobile='" + mobile + '\''
+					+ '}';
 		}
 	}
 
@@ -716,8 +710,8 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 			}
 
 			return Objects.equals(this.getCount(), that.getCount())
-				&& Objects.equals(this.getAvailable(), that.getAvailable())
-				&& Objects.equals(this.getArrayOfPrimitiveWrapper(), that.getArrayOfPrimitiveWrapper());
+					&& Objects.equals(this.getAvailable(), that.getAvailable())
+					&& Objects.equals(this.getArrayOfPrimitiveWrapper(), that.getArrayOfPrimitiveWrapper());
 		}
 
 		@Override
@@ -768,8 +762,8 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 			}
 
 			return Objects.equals(this.getPrimitiveWrapper(), that.getPrimitiveWrapper())
-			 	&& Objects.equals(this.getPrimitiveArrayWrapper(), that.getPrimitiveArrayWrapper())
-			 	&& Objects.equals(this.getSimpleObjectWrapper(), that.getSimpleObjectWrapper());
+					&& Objects.equals(this.getPrimitiveArrayWrapper(), that.getPrimitiveArrayWrapper())
+					&& Objects.equals(this.getSimpleObjectWrapper(), that.getSimpleObjectWrapper());
 		}
 
 		@Override
@@ -785,7 +779,6 @@ class GenericJackson2JsonValkeySerializerUnitTests {
 
 	static class WithJsr310 {
 		@JsonSerialize(using = LocalDateSerializer.class)
-		@JsonDeserialize(using = LocalDateDeserializer.class)
-		private LocalDate myDate;
+		@JsonDeserialize(using = LocalDateDeserializer.class) private LocalDate myDate;
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,10 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 import java.time.Duration;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.StringUtils;
 
 /**
  * Configuration properties for Valkey.
@@ -40,13 +43,13 @@ public class ValkeyProperties {
 	/**
 	 * Database index used by the connection factory.
 	 */
-	private int database = 0;
+	private int database;
 
 	/**
 	 * Connection URL. Overrides host, port, username, password, and database. Example:
 	 * valkey://user:password@example.com:6379/8
 	 */
-	private String url;
+	private @Nullable String url;
 
 	/**
 	 * Valkey server host.
@@ -54,14 +57,14 @@ public class ValkeyProperties {
 	private String host = "localhost";
 
 	/**
-	 * Login username of the valkey server.
+	 * Login username of the Valkey server.
 	 */
-	private String username;
+	private @Nullable String username;
 
 	/**
-	 * Login password of the valkey server.
+	 * Login password of the Valkey server.
 	 */
-	private String password;
+	private @Nullable String password;
 
 	/**
 	 * Valkey server port.
@@ -71,26 +74,28 @@ public class ValkeyProperties {
 	/**
 	 * Read timeout.
 	 */
-	private Duration timeout;
+	private @Nullable Duration timeout;
 
 	/**
 	 * Connection timeout.
 	 */
-	private Duration connectTimeout;
+	private @Nullable Duration connectTimeout;
 
 	/**
 	 * Client name to be set on connections with CLIENT SETNAME.
 	 */
-	private String clientName;
+	private @Nullable String clientName;
 
 	/**
 	 * Type of client to use. By default, auto-detected according to the classpath.
 	 */
-	private ClientType clientType;
+	private @Nullable ClientType clientType;
 
-	private Sentinel sentinel;
+	private @Nullable Sentinel sentinel;
 
-	private Cluster cluster;
+	private @Nullable Cluster cluster;
+
+	private @Nullable Masterreplica masterreplica;
 
 	private final Ssl ssl = new Ssl();
 
@@ -100,6 +105,16 @@ public class ValkeyProperties {
 
 	private final ValkeyGlide valkeyGlide = new ValkeyGlide();
 
+	private final Listener listener = new Listener();
+
+	public ValkeyGlide getValkeyGlide() {
+		return this.valkeyGlide;
+	}
+
+	public Listener getListener() {
+		return this.listener;
+	}
+
 	public int getDatabase() {
 		return this.database;
 	}
@@ -108,11 +123,11 @@ public class ValkeyProperties {
 		this.database = database;
 	}
 
-	public String getUrl() {
+	public @Nullable String getUrl() {
 		return this.url;
 	}
 
-	public void setUrl(String url) {
+	public void setUrl(@Nullable String url) {
 		this.url = url;
 	}
 
@@ -124,19 +139,19 @@ public class ValkeyProperties {
 		this.host = host;
 	}
 
-	public String getUsername() {
+	public @Nullable String getUsername() {
 		return this.username;
 	}
 
-	public void setUsername(String username) {
+	public void setUsername(@Nullable String username) {
 		this.username = username;
 	}
 
-	public String getPassword() {
+	public @Nullable String getPassword() {
 		return this.password;
 	}
 
-	public void setPassword(String password) {
+	public void setPassword(@Nullable String password) {
 		this.password = password;
 	}
 
@@ -152,52 +167,60 @@ public class ValkeyProperties {
 		return this.ssl;
 	}
 
-	public void setTimeout(Duration timeout) {
-		this.timeout = timeout;
-	}
-
-	public Duration getTimeout() {
+	public @Nullable Duration getTimeout() {
 		return this.timeout;
 	}
 
-	public Duration getConnectTimeout() {
+	public void setTimeout(@Nullable Duration timeout) {
+		this.timeout = timeout;
+	}
+
+	public @Nullable Duration getConnectTimeout() {
 		return this.connectTimeout;
 	}
 
-	public void setConnectTimeout(Duration connectTimeout) {
+	public void setConnectTimeout(@Nullable Duration connectTimeout) {
 		this.connectTimeout = connectTimeout;
 	}
 
-	public String getClientName() {
+	public @Nullable String getClientName() {
 		return this.clientName;
 	}
 
-	public void setClientName(String clientName) {
+	public void setClientName(@Nullable String clientName) {
 		this.clientName = clientName;
 	}
 
-	public ClientType getClientType() {
+	public @Nullable ClientType getClientType() {
 		return this.clientType;
 	}
 
-	public void setClientType(ClientType clientType) {
+	public void setClientType(@Nullable ClientType clientType) {
 		this.clientType = clientType;
 	}
 
-	public Sentinel getSentinel() {
+	public @Nullable Sentinel getSentinel() {
 		return this.sentinel;
 	}
 
-	public void setSentinel(Sentinel sentinel) {
+	public void setSentinel(@Nullable Sentinel sentinel) {
 		this.sentinel = sentinel;
 	}
 
-	public Cluster getCluster() {
+	public @Nullable Cluster getCluster() {
 		return this.cluster;
 	}
 
-	public void setCluster(Cluster cluster) {
+	public void setCluster(@Nullable Cluster cluster) {
 		this.cluster = cluster;
+	}
+
+	public @Nullable Masterreplica getMasterreplica() {
+		return this.masterreplica;
+	}
+
+	public void setMasterreplica(@Nullable Masterreplica masterreplica) {
+		this.masterreplica = masterreplica;
 	}
 
 	public Jedis getJedis() {
@@ -206,10 +229,6 @@ public class ValkeyProperties {
 
 	public Lettuce getLettuce() {
 		return this.lettuce;
-	}
-
-	public ValkeyGlide getValkeyGlide() {
-		return this.valkeyGlide;
 	}
 
 	/**
@@ -223,16 +242,17 @@ public class ValkeyProperties {
 		VALKEYGLIDE,
 
 		/**
-		 * Use the Lettuce valkey client.
+		 * Use the Lettuce Valkey client.
 		 */
 		LETTUCE,
 
 		/**
-		 * Use the Jedis valkey client.
+		 * Use the Jedis Valkey client.
 		 */
 		JEDIS
 
 	}
+
 
 	/**
 	 * Pool properties.
@@ -244,7 +264,7 @@ public class ValkeyProperties {
 		 * available. With Jedis, pooling is implicitly enabled in sentinel mode and this
 		 * setting only applies to single node setup.
 		 */
-		private Boolean enabled;
+		private @Nullable Boolean enabled;
 
 		/**
 		 * Maximum number of "idle" connections in the pool. Use a negative value to
@@ -257,7 +277,7 @@ public class ValkeyProperties {
 		 * setting only has an effect if both it and time between eviction runs are
 		 * positive.
 		 */
-		private int minIdle = 0;
+		private int minIdle;
 
 		/**
 		 * Maximum number of connections that can be allocated by the pool at a given
@@ -276,13 +296,13 @@ public class ValkeyProperties {
 		 * Time between runs of the idle object evictor thread. When positive, the idle
 		 * object evictor thread starts, otherwise no idle object eviction is performed.
 		 */
-		private Duration timeBetweenEvictionRuns;
+		private @Nullable Duration timeBetweenEvictionRuns;
 
-		public Boolean getEnabled() {
+		public @Nullable Boolean getEnabled() {
 			return this.enabled;
 		}
 
-		public void setEnabled(Boolean enabled) {
+		public void setEnabled(@Nullable Boolean enabled) {
 			this.enabled = enabled;
 		}
 
@@ -318,11 +338,11 @@ public class ValkeyProperties {
 			this.maxWait = maxWait;
 		}
 
-		public Duration getTimeBetweenEvictionRuns() {
+		public @Nullable Duration getTimeBetweenEvictionRuns() {
 			return this.timeBetweenEvictionRuns;
 		}
 
-		public void setTimeBetweenEvictionRuns(Duration timeBetweenEvictionRuns) {
+		public void setTimeBetweenEvictionRuns(@Nullable Duration timeBetweenEvictionRuns) {
 			this.timeBetweenEvictionRuns = timeBetweenEvictionRuns;
 		}
 
@@ -337,28 +357,48 @@ public class ValkeyProperties {
 		 * List of "host:port" pairs to bootstrap from. This represents an "initial" list
 		 * of cluster nodes and is required to have at least one entry.
 		 */
-		private List<String> nodes;
+		private @Nullable List<String> nodes;
 
 		/**
 		 * Maximum number of redirects to follow when executing commands across the
 		 * cluster.
 		 */
-		private Integer maxRedirects;
+		private @Nullable Integer maxRedirects;
 
-		public List<String> getNodes() {
+		public @Nullable List<String> getNodes() {
 			return this.nodes;
 		}
 
-		public void setNodes(List<String> nodes) {
+		public void setNodes(@Nullable List<String> nodes) {
 			this.nodes = nodes;
 		}
 
-		public Integer getMaxRedirects() {
+		public @Nullable Integer getMaxRedirects() {
 			return this.maxRedirects;
 		}
 
-		public void setMaxRedirects(Integer maxRedirects) {
+		public void setMaxRedirects(@Nullable Integer maxRedirects) {
 			this.maxRedirects = maxRedirects;
+		}
+
+	}
+
+	/**
+	 * Master Replica properties.
+	 */
+	public static class Masterreplica {
+
+		/**
+		 * Static list of "host:port" pairs to use, at least one entry is required.
+		 */
+		private @Nullable List<String> nodes;
+
+		public @Nullable List<String> getNodes() {
+			return this.nodes;
+		}
+
+		public void setNodes(@Nullable List<String> nodes) {
+			this.nodes = nodes;
 		}
 
 	}
@@ -371,52 +411,52 @@ public class ValkeyProperties {
 		/**
 		 * Name of the Valkey server.
 		 */
-		private String master;
+		private @Nullable String master;
 
 		/**
 		 * List of "host:port" pairs.
 		 */
-		private List<String> nodes;
+		private @Nullable List<String> nodes;
 
 		/**
 		 * Login username for authenticating with sentinel(s).
 		 */
-		private String username;
+		private @Nullable String username;
 
 		/**
 		 * Password for authenticating with sentinel(s).
 		 */
-		private String password;
+		private @Nullable String password;
 
-		public String getMaster() {
+		public @Nullable String getMaster() {
 			return this.master;
 		}
 
-		public void setMaster(String master) {
+		public void setMaster(@Nullable String master) {
 			this.master = master;
 		}
 
-		public List<String> getNodes() {
+		public @Nullable List<String> getNodes() {
 			return this.nodes;
 		}
 
-		public void setNodes(List<String> nodes) {
+		public void setNodes(@Nullable List<String> nodes) {
 			this.nodes = nodes;
 		}
 
-		public String getUsername() {
+		public @Nullable String getUsername() {
 			return this.username;
 		}
 
-		public void setUsername(String username) {
+		public void setUsername(@Nullable String username) {
 			this.username = username;
 		}
 
-		public String getPassword() {
+		public @Nullable String getPassword() {
 			return this.password;
 		}
 
-		public void setPassword(String password) {
+		public void setPassword(@Nullable String password) {
 			this.password = password;
 		}
 
@@ -428,26 +468,26 @@ public class ValkeyProperties {
 		 * Whether to enable SSL support. Enabled automatically if "bundle" is provided
 		 * unless specified otherwise.
 		 */
-		private Boolean enabled;
+		private @Nullable Boolean enabled;
 
 		/**
 		 * SSL bundle name.
 		 */
-		private String bundle;
+		private @Nullable String bundle;
 
 		public boolean isEnabled() {
-			return (this.enabled != null) ? this.enabled : this.bundle != null;
+			return (this.enabled != null) ? this.enabled : StringUtils.hasText(this.bundle);
 		}
 
 		public void setEnabled(boolean enabled) {
 			this.enabled = enabled;
 		}
 
-		public String getBundle() {
+		public @Nullable String getBundle() {
 			return this.bundle;
 		}
 
-		public void setBundle(String bundle) {
+		public void setBundle(@Nullable String bundle) {
 			this.bundle = bundle;
 		}
 
@@ -482,7 +522,7 @@ public class ValkeyProperties {
 		/**
 		 * Defines from which Valkey nodes data is read.
 		 */
-		private String readFrom;
+		private @Nullable String readFrom;
 
 		/**
 		 * Lettuce pool configuration.
@@ -499,12 +539,12 @@ public class ValkeyProperties {
 			this.shutdownTimeout = shutdownTimeout;
 		}
 
-		public void setReadFrom(String readFrom) {
-			this.readFrom = readFrom;
+		public @Nullable String getReadFrom() {
+			return this.readFrom;
 		}
 
-		public String getReadFrom() {
-			return this.readFrom;
+		public void setReadFrom(@Nullable String readFrom) {
+			this.readFrom = readFrom;
 		}
 
 		public Pool getPool() {
@@ -535,7 +575,7 @@ public class ValkeyProperties {
 				/**
 				 * Cluster topology refresh period.
 				 */
-				private Duration period;
+				private @Nullable Duration period;
 
 				/**
 				 * Whether adaptive topology refreshing using all available refresh
@@ -551,11 +591,11 @@ public class ValkeyProperties {
 					this.dynamicRefreshSources = dynamicRefreshSources;
 				}
 
-				public Duration getPeriod() {
+				public @Nullable Duration getPeriod() {
 					return this.period;
 				}
 
-				public void setPeriod(Duration period) {
+				public void setPeriod(@Nullable Duration period) {
 					this.period = period;
 				}
 
@@ -840,6 +880,88 @@ public class ValkeyProperties {
 			}
 
 		}
+
+	}
+
+	/**
+	 * Listener properties.
+	 */
+	public static class Listener {
+
+		/**
+		 * Whether to start the container automatically on startup.
+		 */
+		private boolean autoStartup = true;
+
+		/**
+		 * Maximum amount of time to wait for the subscription to become active.
+		 */
+		private Duration subscriptionRegistrationTimeout = Duration.ofSeconds(2);
+
+		private final Recovery recovery = new Recovery();
+
+		public boolean isAutoStartup() {
+			return this.autoStartup;
+		}
+
+		public void setAutoStartup(boolean autoStartup) {
+			this.autoStartup = autoStartup;
+		}
+
+		public Duration getSubscriptionRegistrationTimeout() {
+			return this.subscriptionRegistrationTimeout;
+		}
+
+		public void setSubscriptionRegistrationTimeout(Duration subscriptionRegistrationTimeout) {
+			this.subscriptionRegistrationTimeout = subscriptionRegistrationTimeout;
+		}
+
+		public Recovery getRecovery() {
+			return this.recovery;
+		}
+
+	}
+
+	/**
+	 * Recovery properties.
+	 */
+	public static class Recovery {
+
+		/**
+		 * Maximum number of recovery attempts.
+		 */
+		private long maxRetries = Long.MAX_VALUE;
+
+		/**
+		 * Base delay for a recovery attempt.
+		 */
+		private Duration delay = Duration.ofSeconds(5);
+
+		/**
+		 * Multiplier for a delay for the next retry attempt.
+		 */
+		private double multiplier = 1.0;
+
+		/**
+		 * Maximum delay for any retry attempt.
+		 */
+		private Duration maxDelay = Duration.ofSeconds(30);
+
+		/**
+		 * Jitter value for the base retry attempt.
+		 */
+		private Duration jitter = Duration.ZERO;
+
+		public long getMaxRetries() { return this.maxRetries; }
+		public void setMaxRetries(long maxRetries) { this.maxRetries = maxRetries; }
+		public Duration getDelay() { return this.delay; }
+		public void setDelay(Duration delay) { this.delay = delay; }
+		public double getMultiplier() { return this.multiplier; }
+		public void setMultiplier(double multiplier) { this.multiplier = multiplier; }
+		public Duration getMaxDelay() { return this.maxDelay; }
+		public void setMaxDelay(Duration maxDelay) { this.maxDelay = maxDelay; }
+		public Duration getJitter() { return this.jitter; }
+		public void setJitter(Duration jitter) { this.jitter = jitter; }
 
 	}
 

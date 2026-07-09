@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,16 @@ import org.springframework.data.geo.Metric;
 import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
 import io.valkey.springframework.data.valkey.domain.geo.BoundingBox;
+import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.BoxShape;
+import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
+import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
+import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.RadiusShape;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 import glide.api.models.GlideString;

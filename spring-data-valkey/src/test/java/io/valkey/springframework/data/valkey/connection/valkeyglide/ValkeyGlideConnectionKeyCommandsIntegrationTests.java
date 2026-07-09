@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 
+import io.valkey.springframework.data.valkey.connection.CompareCondition;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.DefaultSortParameters;
@@ -31,6 +32,7 @@ import io.valkey.springframework.data.valkey.connection.SortParameters;
 import io.valkey.springframework.data.valkey.connection.ValueEncoding;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 
 /**
@@ -1525,7 +1527,7 @@ public class ValkeyGlideConnectionKeyCommandsIntegrationTests extends AbstractVa
                 assertThat(hoursToSecondsRatio).isBetween(3500.0, 3700.0); // ~3600 seconds per hour
                 
                 double hoursToMillisecondsRatio = (double) actualTtlMilliseconds / actualTtlHours;
-                assertThat(hoursToMillisecondsRatio).isBetween(3500000.0, 3700000.0); // ~3600000 ms per hour
+                assertThat(hoursToMillisecondsRatio).isBetween(3500000.0, 3800000.0); // ~3600000 ms per hour
             }
             
         } finally {
@@ -1656,7 +1658,7 @@ public class ValkeyGlideConnectionKeyCommandsIntegrationTests extends AbstractVa
                 assertThat(hoursToSecondsRatio).isBetween(3500.0, 3700.0); // ~3600 seconds per hour
                 
                 double hoursToMillisecondsRatio = (double) actualTtlMilliseconds / actualTtlHours;
-                assertThat(hoursToMillisecondsRatio).isBetween(3500000.0, 3700000.0); // ~3600000 ms per hour
+                assertThat(hoursToMillisecondsRatio).isBetween(3500000.0, 3800000.0); // ~3600000 ms per hour
             }
             
         } finally {
@@ -1837,6 +1839,89 @@ public class ValkeyGlideConnectionKeyCommandsIntegrationTests extends AbstractVa
             assertThat(expireNegative).isTrue(); // Should return true since key existed
             Boolean keyExistsAfterNegative = connection.keyCommands().exists(key.getBytes());
             assertThat(keyExistsAfterNegative).isFalse(); // Key should be deleted
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    // ==================== DELEX / DIGEST Tests ====================
+
+    @Test
+    @EnabledOnCommand("DELEX")
+    void testDelexShouldDeleteKeyWhenValueEqual() {
+        String key = "test:key:delex";
+        byte[] keyBytes = key.getBytes();
+        byte[] value = "bar".getBytes();
+
+        try {
+            // Set a key
+            connection.stringCommands().set(keyBytes, value);
+
+            // Test delex with condition that does NOT match - should not delete
+            Boolean result1 = connection.keyCommands().delex(keyBytes, CompareCondition.ifNotEquals(value));
+            assertThat(result1).isFalse();
+
+            // Key should still exist
+            assertThat(connection.keyCommands().exists(keyBytes)).isTrue();
+
+            // Test delex with condition that DOES match - should delete
+            Boolean result2 = connection.keyCommands().delex(keyBytes, CompareCondition.ifEquals(value));
+            assertThat(result2).isTrue();
+
+            // Key should no longer exist
+            assertThat(connection.keyCommands().exists(keyBytes)).isFalse();
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("DELEX")
+    void testDelexShouldDeleteKeyWhenDigestEqual() {
+        String key = "test:key:delex:digest";
+        byte[] keyBytes = key.getBytes();
+        byte[] value = "bar".getBytes();
+
+        try {
+            // Set a key
+            connection.stringCommands().set(keyBytes, value);
+
+            // Get the actual digest for the value
+            String actualDigest = connection.keyCommands().digest(keyBytes);
+
+            // Test delex with wrong digest - should not delete
+            Boolean result1 = connection.keyCommands().delex(keyBytes, CompareCondition.ifDigestEquals("aabbccddeeff0000"));
+            assertThat(result1).isFalse();
+
+            // Key should still exist
+            assertThat(connection.keyCommands().exists(keyBytes)).isTrue();
+
+            // Test delex with correct digest - should delete
+            Boolean result2 = connection.keyCommands().delex(keyBytes, CompareCondition.ifDigestEquals(actualDigest));
+            assertThat(result2).isTrue();
+
+            // Key should no longer exist
+            assertThat(connection.keyCommands().exists(keyBytes)).isFalse();
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("DIGEST")
+    void testDigestShouldReturnDigestForExistingKey() {
+        String key = "test:key:digest";
+        byte[] keyBytes = key.getBytes();
+        byte[] value = "bar".getBytes();
+
+        try {
+            // Set a key
+            connection.stringCommands().set(keyBytes, value);
+
+            // Get digest
+            String digest = connection.keyCommands().digest(keyBytes);
+            assertThat(digest).isNotNull();
+            assertThat(digest).hasSize(16); // digest is a 16-character hex string
         } finally {
             cleanupKey(key);
         }

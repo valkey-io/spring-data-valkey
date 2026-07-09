@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,9 @@ import static org.assertj.core.api.Assertions.*;
 import java.util.Collection;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -27,8 +30,6 @@ import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.ValueOperations;
 import io.valkey.springframework.data.valkey.serializer.GenericToStringSerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for {@link CompareAndSet}.
@@ -36,6 +37,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author Christoph Strobl
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public class CompareAndSetIntegrationIntegrationTests {
 
@@ -70,7 +72,8 @@ public class CompareAndSetIntegrationIntegrationTests {
 		connection.close();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-843
+	@Test
+	// DATAREDIS-843
 	void shouldUpdateCounter() {
 
 		long expected = 5;
@@ -84,7 +87,7 @@ public class CompareAndSetIntegrationIntegrationTests {
 		assertThat(valueOps.get(KEY)).isEqualTo(update);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-843
+	@Test // DATAREDIS-843
 	void expectationNotMet() {
 
 		long expected = 5;
@@ -98,7 +101,7 @@ public class CompareAndSetIntegrationIntegrationTests {
 		assertThat(valueOps.get(KEY)).isNull();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-843
+	@Test // DATAREDIS-843
 	void concurrentUpdate() {
 
 		long expected = 5;

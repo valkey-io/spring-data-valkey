@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package io.valkey.springframework.data.valkey.test.extension;
 import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
+import redis.clients.jedis.RedisClient;
+import redis.clients.jedis.RedisClusterClient;
 
 import java.lang.reflect.Parameter;
 import java.lang.reflect.Type;
@@ -26,7 +28,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.junit.jupiter.api.extension.BeforeEachCallback;
@@ -38,6 +39,7 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 
 import org.springframework.core.ResolvableType;
 import io.valkey.springframework.data.valkey.SettingsUtils;
+import io.valkey.springframework.data.valkey.test.ValkeyTestExtensionSupport;
 import org.springframework.data.util.Lazy;
 
 /**
@@ -45,7 +47,9 @@ import org.springframework.data.util.Lazy;
  * callbacks. The following resource types are supported by this extension:
  * <ul>
  * <li>{@link Jedis} (singleton)</li>
- * <li>{@link JediCluster} (singleton)</li>
+ * <li>{@link RedisClient} (singleton)</li>
+ * <li>{@link JedisCluster} (singleton)</li>
+ * <li>{@link RedisClusterClient} (singleton)</li>
  * </ul>
  *
  * <pre class="code">
@@ -69,42 +73,27 @@ import org.springframework.data.util.Lazy;
  * @see ParameterResolver
  * @see BeforeEachCallback
  */
-public class JedisExtension implements ParameterResolver {
+public class JedisExtension extends ValkeyTestExtensionSupport implements ParameterResolver {
 
 	private final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace.create(JedisExtension.class);
 
 	private static final Set<Class<?>> SUPPORTED_INJECTABLE_TYPES = new HashSet<>(
-			Arrays.asList(Jedis.class, JedisCluster.class));
+			Arrays.asList(Jedis.class, JedisCluster.class, RedisClient.class, RedisClusterClient.class));
 
-	private static final List<Supplier<?>> SUPPLIERS = Arrays.asList(JedisSupplier.INSTANCE,
-			JedisClusterSupplier.INSTANCE);
+	private static final List<Supplier<?>> SUPPLIERS = Arrays.asList(JedisSupplier.INSTANCE, ValkeyClientSupplier.INSTANCE,
+			JedisClusterSupplier.INSTANCE, ValkeyClusterClientSupplier.INSTANCE);
 
 	@Override
-	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
+	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext context)
 			throws ParameterResolutionException {
 		return SUPPORTED_INJECTABLE_TYPES.contains(parameterContext.getParameter().getType());
 	}
 
-	/**
-	 * Attempt to resolve the {@code requestedResourceType}.
-	 *
-	 * @param extensionContext
-	 * @param requestedResourceType
-	 * @param <T>
-	 * @return
-	 */
-	public <T> T resolve(ExtensionContext extensionContext, Class<T> requestedResourceType) {
-
-		ExtensionContext.Store store = getStore(extensionContext);
-
-		return (T) store.getOrComputeIfAbsent(requestedResourceType, it -> findSupplier(requestedResourceType).get());
-	}
-
 	@Override
-	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
+	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext context)
 			throws ParameterResolutionException {
 
-		ExtensionContext.Store store = getStore(extensionContext);
+		ExtensionContext.Store store = getStore(context);
 		Parameter parameter = parameterContext.getParameter();
 		Type parameterizedType = parameter.getParameterizedType();
 
@@ -133,21 +122,8 @@ public class JedisExtension implements ParameterResolver {
 		return findSupplier(parameterizedType).get();
 	}
 
-	private ExtensionContext.Store getStore(ExtensionContext extensionContext) {
-		return extensionContext.getStore(NAMESPACE);
-	}
-
-	static class ResourceFunction {
-
-		final ResolvableType dependsOn;
-		final ResolvableType provides;
-		final Function<Object, Object> function;
-
-		public ResourceFunction(ResolvableType dependsOn, ResolvableType provides, Function<?, ?> function) {
-			this.dependsOn = dependsOn;
-			this.provides = provides;
-			this.function = (Function) function;
-		}
+	private ExtensionContext.Store getStore(ExtensionContext context) {
+		return getSessionStore(context, NAMESPACE);
 	}
 
 	enum JedisSupplier implements Supplier<Jedis> {
@@ -155,6 +131,7 @@ public class JedisExtension implements ParameterResolver {
 		INSTANCE;
 
 		final Lazy<Jedis> lazy = Lazy.of(() -> {
+
 			Jedis client = new Jedis(SettingsUtils.getHost(), SettingsUtils.getPort());
 
 			ShutdownQueue.INSTANCE.register(client);
@@ -167,11 +144,30 @@ public class JedisExtension implements ParameterResolver {
 		}
 	}
 
+	enum ValkeyClientSupplier implements Supplier<RedisClient> {
+
+		INSTANCE;
+
+		final Lazy<RedisClient> lazy = Lazy.of(() -> {
+
+			RedisClient client = RedisClient.create(SettingsUtils.getHost(), SettingsUtils.getPort());
+
+			ShutdownQueue.INSTANCE.register(client);
+			return client;
+		});
+
+		@Override
+		public RedisClient get() {
+			return lazy.get();
+		}
+	}
+
 	enum JedisClusterSupplier implements Supplier<JedisCluster> {
 
 		INSTANCE;
 
 		final Lazy<JedisCluster> lazy = Lazy.of(() -> {
+
 			JedisCluster client = new JedisCluster(new HostAndPort(SettingsUtils.getHost(), SettingsUtils.getClusterPort()));
 
 			ShutdownQueue.INSTANCE.register(client);
@@ -180,6 +176,25 @@ public class JedisExtension implements ParameterResolver {
 
 		@Override
 		public JedisCluster get() {
+			return lazy.get();
+		}
+	}
+
+	enum ValkeyClusterClientSupplier implements Supplier<RedisClusterClient> {
+
+		INSTANCE;
+
+		final Lazy<RedisClusterClient> lazy = Lazy.of(() -> {
+
+			RedisClusterClient client = RedisClusterClient
+					.create(new HostAndPort(SettingsUtils.getHost(), SettingsUtils.getClusterPort()));
+
+			ShutdownQueue.INSTANCE.register(client);
+			return client;
+		});
+
+		@Override
+		public RedisClusterClient get() {
 			return lazy.get();
 		}
 	}

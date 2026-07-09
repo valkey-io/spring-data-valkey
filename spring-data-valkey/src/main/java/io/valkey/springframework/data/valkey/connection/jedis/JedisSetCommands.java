@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.commands.JedisBinaryCommands;
 import redis.clients.jedis.commands.PipelineBinaryCommands;
 import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.resps.ScanResult;
@@ -24,6 +24,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ValkeySetCommands;
 import io.valkey.springframework.data.valkey.core.Cursor;
@@ -34,138 +36,159 @@ import io.valkey.springframework.data.valkey.core.ScanOptions;
 import org.springframework.util.Assert;
 
 /**
+ * {@link ValkeySetCommands} implementation for Jedis.
+ *
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Mingi Lee
+ * @author Tihomir Mateev
  * @since 2.0
  */
+@NullUnmarked
 class JedisSetCommands implements ValkeySetCommands {
 
 	private final JedisConnection connection;
 
-	JedisSetCommands(JedisConnection connection) {
+	JedisSetCommands(@NonNull JedisConnection connection) {
 		this.connection = connection;
 	}
 
+	/**
+	 * @return the {@link JedisConnection} used for command execution.
+	 */
+	protected JedisConnection getConnection() {
+		return connection;
+	}
+
 	@Override
-	public Long sAdd(byte[] key, byte[]... values) {
+	public Long sAdd(byte @NonNull [] key, byte @NonNull []... values) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(values, "Values must not be null");
 		Assert.noNullElements(values, "Values must not contain null elements");
 
-		return connection.invoke().just(Jedis::sadd, PipelineBinaryCommands::sadd, key, values);
+		return connection.invoke().just(JedisBinaryCommands::sadd, PipelineBinaryCommands::sadd, key, values);
 	}
 
 	@Override
-	public Long sCard(byte[] key) {
+	public Long sCard(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::scard, PipelineBinaryCommands::scard, key);
+		return connection.invoke().just(JedisBinaryCommands::scard, PipelineBinaryCommands::scard, key);
 	}
 
 	@Override
-	public Set<byte[]> sDiff(byte[]... keys) {
+	public Set<byte @NonNull []> sDiff(byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		return connection.invoke().just(Jedis::sdiff, PipelineBinaryCommands::sdiff, keys);
+		return connection.invoke().just(JedisBinaryCommands::sdiff, PipelineBinaryCommands::sdiff, keys);
 	}
 
 	@Override
-	public Long sDiffStore(byte[] destKey, byte[]... keys) {
+	public Long sDiffStore(byte @NonNull [] destKey, byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(destKey, "Destination key must not be null");
 		Assert.notNull(keys, "Source keys must not be null");
 		Assert.noNullElements(keys, "Source keys must not contain null elements");
 
-		return connection.invoke().just(Jedis::sdiffstore, PipelineBinaryCommands::sdiffstore, destKey, keys);
+		return connection.invoke().just(JedisBinaryCommands::sdiffstore, PipelineBinaryCommands::sdiffstore, destKey, keys);
 	}
 
 	@Override
-	public Set<byte[]> sInter(byte[]... keys) {
+	public Set<byte @NonNull []> sInter(byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		return connection.invoke().just(Jedis::sinter, PipelineBinaryCommands::sinter, keys);
+		return connection.invoke().just(JedisBinaryCommands::sinter, PipelineBinaryCommands::sinter, keys);
 	}
 
 	@Override
-	public Long sInterStore(byte[] destKey, byte[]... keys) {
+	public Long sInterStore(byte @NonNull [] destKey, byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(destKey, "Destination key must not be null");
 		Assert.notNull(keys, "Source keys must not be null");
 		Assert.noNullElements(keys, "Source keys must not contain null elements");
 
-		return connection.invoke().just(Jedis::sinterstore, PipelineBinaryCommands::sinterstore, destKey, keys);
+		return connection.invoke().just(JedisBinaryCommands::sinterstore, PipelineBinaryCommands::sinterstore, destKey, keys);
 	}
 
 	@Override
-	public Boolean sIsMember(byte[] key, byte[] value) {
+	public Long sInterCard(byte @NonNull [] @NonNull... keys) {
+
+		Assert.notNull(keys, "Keys must not be null");
+		Assert.noNullElements(keys, "Keys must not contain null elements");
+
+		return connection.invoke().just(JedisBinaryCommands::sintercard, PipelineBinaryCommands::sintercard, keys);
+	}
+
+	@Override
+	public Boolean sIsMember(byte @NonNull [] key, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().just(Jedis::sismember, PipelineBinaryCommands::sismember, key, value);
+		return connection.invoke().just(JedisBinaryCommands::sismember, PipelineBinaryCommands::sismember, key, value);
 	}
 
 	@Override
-	public List<Boolean> sMIsMember(byte[] key, byte[]... values) {
+	public List<@NonNull Boolean> sMIsMember(byte @NonNull [] key, byte @NonNull [] @NonNull... values) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(values, "Values must not be null");
 		Assert.noNullElements(values, "Values must not contain null elements");
 
-		return connection.invoke().just(Jedis::smismember, PipelineBinaryCommands::smismember, key, values);
+		return connection.invoke().just(JedisBinaryCommands::smismember, PipelineBinaryCommands::smismember, key, values);
 	}
 
 	@Override
-	public Set<byte[]> sMembers(byte[] key) {
+	public Set<byte @NonNull []> sMembers(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::smembers, PipelineBinaryCommands::smembers, key);
+		return connection.invoke().just(JedisBinaryCommands::smembers, PipelineBinaryCommands::smembers, key);
 	}
 
 	@Override
-	public Boolean sMove(byte[] srcKey, byte[] destKey, byte[] value) {
+	public Boolean sMove(byte @NonNull [] srcKey, byte @NonNull [] destKey, byte @NonNull [] value) {
 
 		Assert.notNull(srcKey, "Source key must not be null");
 		Assert.notNull(destKey, "Destination key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().from(Jedis::smove, PipelineBinaryCommands::smove, srcKey, destKey, value)
+		return connection.invoke().from(JedisBinaryCommands::smove, PipelineBinaryCommands::smove, srcKey, destKey, value)
 				.get(JedisConverters::toBoolean);
 	}
 
 	@Override
-	public byte[] sPop(byte[] key) {
+	public byte[] sPop(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::spop, PipelineBinaryCommands::spop, key);
+		return connection.invoke().just(JedisBinaryCommands::spop, PipelineBinaryCommands::spop, key);
 	}
 
 	@Override
-	public List<byte[]> sPop(byte[] key, long count) {
+	public List<byte @NonNull []> sPop(byte @NonNull [] key, long count) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().from(Jedis::spop, PipelineBinaryCommands::spop, key, count).get(ArrayList::new);
+		return connection.invoke().from(JedisBinaryCommands::spop, PipelineBinaryCommands::spop, key, count).get(ArrayList::new);
 	}
 
 	@Override
-	public byte[] sRandMember(byte[] key) {
+	public byte[] sRandMember(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::srandmember, PipelineBinaryCommands::srandmember, key);
+		return connection.invoke().just(JedisBinaryCommands::srandmember, PipelineBinaryCommands::srandmember, key);
 	}
 
 	@Override
-	public List<byte[]> sRandMember(byte[] key, long count) {
+	public List<byte @NonNull []> sRandMember(byte @NonNull [] key, long count) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -173,40 +196,40 @@ class JedisSetCommands implements ValkeySetCommands {
 			throw new IllegalArgumentException("Count must be less than Integer.MAX_VALUE for sRandMember in Jedis");
 		}
 
-		return connection.invoke().just(Jedis::srandmember, PipelineBinaryCommands::srandmember, key, (int) count);
+		return connection.invoke().just(JedisBinaryCommands::srandmember, PipelineBinaryCommands::srandmember, key, (int) count);
 	}
 
 	@Override
-	public Long sRem(byte[] key, byte[]... values) {
+	public Long sRem(byte @NonNull [] key, byte @NonNull [] @NonNull... values) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(values, "Values must not be null");
 		Assert.noNullElements(values, "Values must not contain null elements");
 
-		return connection.invoke().just(Jedis::srem, PipelineBinaryCommands::srem, key, values);
+		return connection.invoke().just(JedisBinaryCommands::srem, PipelineBinaryCommands::srem, key, values);
 	}
 
 	@Override
-	public Set<byte[]> sUnion(byte[]... keys) {
+	public Set<byte[]> sUnion(byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		return connection.invoke().just(Jedis::sunion, PipelineBinaryCommands::sunion, keys);
+		return connection.invoke().just(JedisBinaryCommands::sunion, PipelineBinaryCommands::sunion, keys);
 	}
 
 	@Override
-	public Long sUnionStore(byte[] destKey, byte[]... keys) {
+	public Long sUnionStore(byte @NonNull [] destKey, byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(destKey, "Destination key must not be null");
 		Assert.notNull(keys, "Source keys must not be null");
 		Assert.noNullElements(keys, "Source keys must not contain null elements");
 
-		return connection.invoke().just(Jedis::sunionstore, PipelineBinaryCommands::sunionstore, destKey, keys);
+		return connection.invoke().just(JedisBinaryCommands::sunionstore, PipelineBinaryCommands::sunionstore, destKey, keys);
 	}
 
 	@Override
-	public Cursor<byte[]> sScan(byte[] key, ScanOptions options) {
+	public Cursor<byte[]> sScan(byte @NonNull [] key, @NonNull ScanOptions options) {
 		return sScan(key, CursorId.initial(), options);
 	}
 
@@ -217,16 +240,18 @@ class JedisSetCommands implements ValkeySetCommands {
 	 * @return
 	 * @since 3.2.1
 	 */
-	public Cursor<byte[]> sScan(byte[] key, CursorId cursorId, ScanOptions options) {
+	public Cursor<byte @NonNull []> sScan(byte @NonNull [] key, @NonNull CursorId cursorId,
+			@NonNull ScanOptions options) {
 
 		Assert.notNull(key, "Key must not be null");
 
 		return new KeyBoundCursor<byte[]>(key, cursorId, options) {
 
 			@Override
-			protected ScanIteration<byte[]> doScan(byte[] key, CursorId cursorId, ScanOptions options) {
+			protected ScanIteration<byte[]> doScan(byte @NonNull [] key, @NonNull CursorId cursorId,
+					@NonNull ScanOptions options) {
 
-				if (isQueueing() || isPipelined()) {
+				if (connection.isQueueing() || connection.isPipelined()) {
 					throw new InvalidDataAccessApiUsageException("'SSCAN' cannot be called in pipeline / transaction mode");
 				}
 
@@ -240,14 +265,6 @@ class JedisSetCommands implements ValkeySetCommands {
 				JedisSetCommands.this.connection.close();
 			};
 		}.open();
-	}
-
-	private boolean isPipelined() {
-		return connection.isPipelined();
-	}
-
-	private boolean isQueueing() {
-		return connection.isQueueing();
 	}
 
 }

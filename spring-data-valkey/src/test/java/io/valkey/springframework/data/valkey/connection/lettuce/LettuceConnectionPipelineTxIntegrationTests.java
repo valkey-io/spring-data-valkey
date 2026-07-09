@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,33 +32,27 @@ class LettuceConnectionPipelineTxIntegrationTests extends LettuceConnectionTrans
 
 	@Test
 	@Disabled("Different exception")
-	public void testEvalShaNotFound() {
-	}
+	public void testEvalShaNotFound() {}
 
 	@Test
 	@Disabled("Different exception")
-	public void testEvalReturnSingleError() {
-	}
+	public void testEvalReturnSingleError() {}
 
 	@Test
 	@Disabled("Different exception")
-	public void testRestoreBadData() {
-	}
+	public void testRestoreBadData() {}
 
 	@Test
 	@Disabled("Different exception")
-	public void testRestoreExistingKey() {
-	}
+	public void testRestoreExistingKey() {}
 
 	@Test
 	@Disabled("Different exception")
-	public void testEvalArrayScriptError() {
-	}
+	public void testEvalArrayScriptError() {}
 
 	@Test
 	@Disabled("Different exception")
-	public void testEvalShaArrayError() {
-	}
+	public void testEvalShaArrayError() {}
 
 	protected void initConnection() {
 		connection.openPipeline();

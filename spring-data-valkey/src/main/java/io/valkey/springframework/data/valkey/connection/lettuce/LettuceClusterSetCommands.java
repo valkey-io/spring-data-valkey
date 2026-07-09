@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,11 +26,13 @@ import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClusterConnection.LettuceMultiKeyClusterCommandCallback;
 import io.valkey.springframework.data.valkey.connection.util.ByteArraySet;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
+import io.valkey.springframework.data.valkey.util.KeyUtils;
 import org.springframework.util.Assert;
 
 /**
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Mingi Lee
  * @since 2.0
  */
 class LettuceClusterSetCommands extends LettuceSetCommands {
@@ -119,6 +121,21 @@ class LettuceClusterSetCommands extends LettuceSetCommands {
 	}
 
 	@Override
+	public Long sInterCard(byte[]... keys) {
+
+		Assert.notNull(keys, "Keys must not be null");
+		Assert.noNullElements(keys, "Keys must not contain null elements");
+
+		if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
+			return super.sInterCard(keys);
+		}
+
+		// For multi-slot clusters, calculate intersection cardinality by performing intersection
+		Set<byte[]> result = sInter(keys);
+		return (long) result.size();
+	}
+
+	@Override
 	public Set<byte[]> sUnion(byte[]... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
@@ -175,24 +192,24 @@ class LettuceClusterSetCommands extends LettuceSetCommands {
 			return super.sDiff(keys);
 		}
 
-		byte[] source = keys[0];
-		byte[][] others = Arrays.copyOfRange(keys, 1, keys.length);
+		return KeyUtils.splitKeys(keys, (source, others) -> {
 
-		ByteArraySet values = new ByteArraySet(sMembers(source));
-		Collection<Set<byte[]>> nodeResult = connection.getClusterCommandExecutor()
-				.executeMultiKeyCommand((LettuceMultiKeyClusterCommandCallback<Set<byte[]>>) RedisSetCommands::smembers,
-						Arrays.asList(others))
-				.resultsAsList();
+			ByteArraySet values = new ByteArraySet(sMembers(source));
+			Collection<Set<byte[]>> nodeResult = connection.getClusterCommandExecutor()
+					.executeMultiKeyCommand((LettuceMultiKeyClusterCommandCallback<Set<byte[]>>) RedisSetCommands::smembers,
+							Arrays.asList(others))
+					.resultsAsList();
 
-		if (values.isEmpty()) {
-			return Collections.emptySet();
-		}
+			if (values.isEmpty()) {
+				return Collections.emptySet();
+			}
 
-		for (Set<byte[]> toSubstract : nodeResult) {
-			values.removeAll(toSubstract);
-		}
+			for (Set<byte[]> toSubstract : nodeResult) {
+				values.removeAll(toSubstract);
+			}
 
-		return values.asRawSet();
+			return values.asRawSet();
+		});
 	}
 
 	@Override

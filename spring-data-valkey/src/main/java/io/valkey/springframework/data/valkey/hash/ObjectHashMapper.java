@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,10 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.convert.CustomConversions;
+import org.springframework.data.core.TypeInformation;
 import io.valkey.springframework.data.valkey.core.convert.IndexResolver;
 import io.valkey.springframework.data.valkey.core.convert.IndexedData;
 import io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverter;
@@ -28,8 +31,7 @@ import io.valkey.springframework.data.valkey.core.convert.ValkeyCustomConversion
 import io.valkey.springframework.data.valkey.core.convert.ValkeyData;
 import io.valkey.springframework.data.valkey.core.convert.ReferenceResolver;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
-import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 
 /**
@@ -71,7 +73,7 @@ import org.springframework.util.Assert;
  */
 public class ObjectHashMapper implements HashMapper<Object, byte[], byte[]> {
 
-	@Nullable private volatile static ObjectHashMapper sharedInstance;
+	private volatile static @Nullable ObjectHashMapper sharedInstance;
 
 	private final ValkeyConverter converter;
 
@@ -137,7 +139,8 @@ public class ObjectHashMapper implements HashMapper<Object, byte[], byte[]> {
 	}
 
 	@Override
-	public Map<byte[], byte[]> toHash(Object source) {
+	@Contract("null -> !null")
+	public Map<byte[], byte[]> toHash(@Nullable Object source) {
 
 		if (source == null) {
 			return Collections.emptyMap();
@@ -149,7 +152,8 @@ public class ObjectHashMapper implements HashMapper<Object, byte[], byte[]> {
 	}
 
 	@Override
-	public Object fromHash(Map<byte[], byte[]> hash) {
+	@Contract("null -> null")
+	public @Nullable Object fromHash(@Nullable Map<byte[], byte[]> hash) {
 
 		if (hash == null || hash.isEmpty()) {
 			return null;
@@ -166,7 +170,7 @@ public class ObjectHashMapper implements HashMapper<Object, byte[], byte[]> {
 	 * @param <T>
 	 * @return
 	 */
-	public <T> T fromHash(Map<byte[], byte[]> hash, Class<T> type) {
+	public <T> @Nullable T fromHash(Map<byte[], byte[]> hash, Class<T> type) {
 		return type.cast(fromHash(hash));
 	}
 
@@ -183,6 +187,7 @@ public class ObjectHashMapper implements HashMapper<Object, byte[], byte[]> {
 		public Map<byte[], byte[]> resolveReference(Object id, String keyspace) {
 			return NO_REFERENCE;
 		}
+
 	}
 
 	/**
@@ -195,14 +200,16 @@ public class ObjectHashMapper implements HashMapper<Object, byte[], byte[]> {
 		private static final Set<IndexedData> NO_INDEXES = Collections.emptySet();
 
 		@Override
-		public Set<IndexedData> resolveIndexesFor(TypeInformation<?> typeInformation, Object value) {
+		public Set<IndexedData> resolveIndexesFor(TypeInformation<?> typeInformation, @Nullable Object value) {
 			return NO_INDEXES;
 		}
 
 		@Override
 		public Set<IndexedData> resolveIndexesFor(String keyspace, String path, TypeInformation<?> typeInformation,
-				Object value) {
+				@Nullable Object value) {
 			return NO_INDEXES;
 		}
+
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
@@ -37,7 +40,7 @@ import io.valkey.springframework.data.valkey.core.Cursor.CursorId;
 import io.valkey.springframework.data.valkey.core.KeyBoundCursor;
 import io.valkey.springframework.data.valkey.core.ScanIteration;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -47,6 +50,7 @@ import org.springframework.util.ObjectUtils;
  * @author Tihomir Mateev
  * @since 2.0
  */
+@NullUnmarked
 class LettuceHashCommands implements ValkeyHashCommands {
 
 	private final LettuceConnection connection;
@@ -56,7 +60,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Boolean hSet(byte[] key, byte[] field, byte[] value) {
+	public Boolean hSet(byte @NonNull [] key, byte @NonNull [] field, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
@@ -66,7 +70,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Boolean hSetNX(byte[] key, byte[] field, byte[] value) {
+	public Boolean hSetNX(byte @NonNull [] key, byte @NonNull [] field, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
@@ -76,7 +80,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Long hDel(byte[] key, byte[]... fields) {
+	public Long hDel(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(fields, "Fields must not be null");
@@ -85,7 +89,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Boolean hExists(byte[] key, byte[] field) {
+	public Boolean hExists(byte @NonNull [] key, byte @NonNull [] field) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Fields must not be null");
@@ -94,7 +98,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public byte[] hGet(byte[] key, byte[] field) {
+	public byte[] hGet(byte @NonNull [] key, byte @NonNull [] field) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
@@ -103,16 +107,15 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Map<byte[], byte[]> hGetAll(byte[] key) {
+	public Map<byte[], byte[]> hGetAll(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
 		return connection.invoke().just(RedisHashAsyncCommands::hgetall, key);
 	}
 
-	@Nullable
 	@Override
-	public byte[] hRandField(byte[] key) {
+	public byte @Nullable [] hRandField(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -121,7 +124,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 
 	@Nullable
 	@Override
-	public Entry<byte[], byte[]> hRandFieldWithValues(byte[] key) {
+	public Entry<byte[], byte[]> hRandFieldWithValues(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -131,7 +134,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 
 	@Nullable
 	@Override
-	public List<byte[]> hRandField(byte[] key, long count) {
+	public List<byte[]> hRandField(byte @NonNull [] key, long count) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -140,7 +143,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 
 	@Nullable
 	@Override
-	public List<Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count) {
+	public List<Entry<byte[], byte[]>> hRandFieldWithValues(byte @NonNull [] key, long count) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -149,7 +152,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Long hIncrBy(byte[] key, byte[] field, long delta) {
+	public Long hIncrBy(byte @NonNull [] key, byte @NonNull [] field, long delta) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
@@ -158,7 +161,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Double hIncrBy(byte[] key, byte[] field, double delta) {
+	public Double hIncrBy(byte @NonNull [] key, byte @NonNull [] field, double delta) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
@@ -167,7 +170,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Set<byte[]> hKeys(byte[] key) {
+	public Set<byte[]> hKeys(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -175,7 +178,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Long hLen(byte[] key) {
+	public Long hLen(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -183,7 +186,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public List<byte[]> hMGet(byte[] key, byte[]... fields) {
+	public List<byte[]> hMGet(byte @NonNull [] key, byte @NonNull []... fields) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(fields, "Fields must not be null");
@@ -193,7 +196,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public void hMSet(byte[] key, Map<byte[], byte[]> hashes) {
+	public void hMSet(byte @NonNull [] key, Map<byte[], byte[]> hashes) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(hashes, "Hashes must not be null");
@@ -202,7 +205,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public List<byte[]> hVals(byte[] key) {
+	public List<byte[]> hVals(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -210,54 +213,91 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Cursor<Entry<byte[], byte[]>> hScan(byte[] key, ScanOptions options) {
+	public Cursor<Entry<byte[], byte[]>> hScan(byte @NonNull [] key, @NonNull ScanOptions options) {
 		return hScan(key, CursorId.initial(), options);
 	}
 
 	@Override
-	public List<Long> hExpire(byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields) {
+	public List<Long> hExpire(byte @NonNull [] key, long seconds, ExpirationOptions.@NonNull Condition condition,
+			byte @NonNull [] @NonNull... fields) {
 		return connection.invoke().fromMany(RedisHashAsyncCommands::hexpire, key, seconds, getExpireArgs(condition), fields)
 				.toList();
 	}
 
 	@Override
-	public List<Long> hpExpire(byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields) {
+	public List<Long> hpExpire(byte @NonNull [] key, long millis, ExpirationOptions.@NonNull Condition condition,
+			byte @NonNull [] @NonNull... fields) {
 		return connection.invoke().fromMany(RedisHashAsyncCommands::hpexpire, key, millis, getExpireArgs(condition), fields)
 				.toList();
 	}
 
 	@Override
-	public List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields) {
+	public List<Long> hExpireAt(byte @NonNull [] key, long unixTime, ExpirationOptions.@NonNull Condition condition,
+			byte @NonNull [] @NonNull... fields) {
 		return connection.invoke()
 				.fromMany(RedisHashAsyncCommands::hexpireat, key, unixTime, getExpireArgs(condition), fields).toList();
 	}
 
 	@Override
-	public List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition,
-			byte[]... fields) {
+	public List<Long> hpExpireAt(byte @NonNull [] key, long unixTimeInMillis,
+			ExpirationOptions.@NonNull Condition condition, byte @NonNull [] @NonNull... fields) {
 		return connection.invoke()
 				.fromMany(RedisHashAsyncCommands::hpexpireat, key, unixTimeInMillis, getExpireArgs(condition), fields).toList();
 	}
 
 	@Override
-	public List<Long> hPersist(byte[] key, byte[]... fields) {
+	public List<Long> hPersist(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
 		return connection.invoke().fromMany(RedisHashAsyncCommands::hpersist, key, fields).toList();
 	}
 
 	@Override
-	public List<Long> hTtl(byte[] key, byte[]... fields) {
+	public List<Long> hTtl(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
 		return connection.invoke().fromMany(RedisHashAsyncCommands::httl, key, fields).toList();
 	}
 
 	@Override
-	public List<Long> hTtl(byte[] key, TimeUnit timeUnit, byte[]... fields) {
+	public List<Long> hTtl(byte @NonNull [] key, @NonNull TimeUnit timeUnit, byte @NonNull [] @NonNull... fields) {
 		return connection.invoke().fromMany(RedisHashAsyncCommands::httl, key, fields)
 				.toList(Converters.secondsToTimeUnit(timeUnit));
 	}
 
 	@Override
-	public List<Long> hpTtl(byte[] key, byte[]... fields) {
+	public List<Long> hpTtl(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
 		return connection.invoke().fromMany(RedisHashAsyncCommands::hpttl, key, fields).toList();
+	}
+
+	@Override
+	public List<byte[]> hGetDel(byte @NonNull [] key, byte @NonNull []... fields) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(fields, "Fields must not be null");
+
+		return connection.invoke().fromMany(RedisHashAsyncCommands::hgetdel, key, fields)
+				.toList(source -> source.getValueOrElse(null));
+	}
+
+	@Override
+	public List<byte[]> hGetEx(byte @NonNull [] key, Expiration expiration, byte @NonNull []... fields) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(fields, "Fields must not be null");
+
+		return connection.invoke()
+				.fromMany(RedisHashAsyncCommands::hgetex, key, LettuceConverters.toHGetExArgs(expiration), fields)
+				.toList(source -> source.getValueOrElse(null));
+	}
+
+	@Override
+	public Boolean hSetEx(byte @NonNull [] key, @NonNull Map<byte[], byte[]> hashes,
+			@NonNull HashFieldSetOption condition, @Nullable Expiration expiration) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(hashes, "Hashes must not be null");
+		Assert.notNull(condition, "Condition must not be null");
+
+		return connection.invoke()
+				.from(RedisHashAsyncCommands::hsetex, key, LettuceConverters.toHSetExArgs(condition, expiration), hashes)
+				.get(LettuceConverters.longToBooleanConverter());
 	}
 
 	/**
@@ -267,14 +307,16 @@ class LettuceHashCommands implements ValkeyHashCommands {
 	 * @return
 	 * @since 1.4
 	 */
-	public Cursor<Entry<byte[], byte[]>> hScan(byte[] key, CursorId cursorId, ScanOptions options) {
+	public Cursor<Entry<byte[], byte[]>> hScan(byte @NonNull [] key, @NonNull CursorId cursorId,
+			@NonNull ScanOptions options) {
 
 		Assert.notNull(key, "Key must not be null");
 
 		return new KeyBoundCursor<Entry<byte[], byte[]>>(key, cursorId, options) {
 
 			@Override
-			protected ScanIteration<Entry<byte[], byte[]>> doScan(byte[] key, CursorId cursorId, ScanOptions options) {
+			protected ScanIteration<Entry<byte[], byte[]>> doScan(byte @NonNull [] key, @NonNull CursorId cursorId,
+					@NonNull ScanOptions options) {
 
 				if (connection.isQueueing() || connection.isPipelined()) {
 					throw new InvalidDataAccessApiUsageException("'HSCAN' cannot be called in pipeline / transaction mode");
@@ -301,7 +343,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 
 	@Nullable
 	@Override
-	public Long hStrLen(byte[] key, byte[] field) {
+	public Long hStrLen(byte @NonNull [] key, byte @NonNull [] field) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
@@ -309,8 +351,7 @@ class LettuceHashCommands implements ValkeyHashCommands {
 		return connection.invoke().just(RedisHashAsyncCommands::hstrlen, key, field);
 	}
 
-	@Nullable
-	private static Entry<byte[], byte[]> toEntry(KeyValue<byte[], byte[]> value) {
+	private @Nullable static Entry<byte[], byte[]> toEntry(KeyValue<byte[], byte[]> value) {
 		return value.hasValue() ? Converters.entryOf(value.getKey(), value.getValue()) : null;
 	}
 

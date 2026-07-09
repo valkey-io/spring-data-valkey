@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,26 @@
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import static io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.*;
+
+import static io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.*;
 import static io.valkey.springframework.data.valkey.domain.geo.GeoReference.*;
 
 import io.lettuce.core.*;
+import io.lettuce.core.CompareCondition;
 import io.lettuce.core.cluster.models.partitions.Partitions;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode.NodeFlag;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.function.LongFunction;
 import java.util.stream.Collectors;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.geo.Distance;
@@ -61,14 +71,15 @@ import io.valkey.springframework.data.valkey.domain.geo.BoxShape;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
 import io.valkey.springframework.data.valkey.domain.geo.RadiusShape;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
 /**
- * Lettuce type converters
+ * Lettuce type converters. This is an internal class not intended to by used outside of the framework.
  *
  * @author Jennifer Hickey
  * @author Christoph Strobl
@@ -80,6 +91,7 @@ import org.springframework.util.StringUtils;
  * @author Vikas Garg
  * @author John Blum
  * @author Roman Osadchuk
+ * @author Yordan Tsintsov
  */
 @SuppressWarnings("ConstantConditions")
 public abstract class LettuceConverters extends Converters {
@@ -99,10 +111,9 @@ public abstract class LettuceConverters extends Converters {
 		NEGATIVE_INFINITY_BYTES = toBytes("-inf");
 	}
 
-	public static Point geoCoordinatesToPoint(@Nullable GeoCoordinates geoCoordinate) {
+	public static @Nullable Point geoCoordinatesToPoint(@Nullable GeoCoordinates geoCoordinate) {
 
-		return geoCoordinate != null
-				? new Point(geoCoordinate.getX().doubleValue(), geoCoordinate.getY().doubleValue())
+		return geoCoordinate != null ? new Point(geoCoordinate.getX().doubleValue(), geoCoordinate.getY().doubleValue())
 				: null;
 	}
 
@@ -110,7 +121,8 @@ public abstract class LettuceConverters extends Converters {
 		return LettuceConverters::toListOfValkeyClientInformation;
 	}
 
-	public static Converter<List<ScoredValue<byte[]>>, List<Tuple>> scoredValuesToTupleList() {
+	@SuppressWarnings("NullAway")
+	public static Converter<List<ScoredValue<byte[]>>, @Nullable List<Tuple>> scoredValuesToTupleList() {
 
 		return source -> {
 
@@ -139,15 +151,18 @@ public abstract class LettuceConverters extends Converters {
 		return Converters::toBoolean;
 	}
 
-	public static Long toLong(@Nullable Date source) {
+	@Contract("null -> null;!null -> !null")
+	public static @Nullable Long toLong(@Nullable Date source) {
 		return source != null ? source.getTime() : null;
 	}
 
-	public static Set<byte[]> toBytesSet(@Nullable List<byte[]> source) {
+	@Contract("null -> null;!null -> !null")
+	public static @Nullable Set<byte[]> toBytesSet(@Nullable List<byte[]> source) {
 		return source != null ? new LinkedHashSet<>(source) : null;
 	}
 
-	public static List<byte[]> toBytesList(KeyValue<byte[], byte[]> source) {
+	@Contract("null -> null;!null -> !null")
+	public static @Nullable List<byte[]> toBytesList(@Nullable KeyValue<byte[], byte[]> source) {
 
 		if (source == null) {
 			return null;
@@ -161,29 +176,17 @@ public abstract class LettuceConverters extends Converters {
 		return list;
 	}
 
-	public static List<byte[]> toBytesList(Collection<byte[]> source) {
-
-		if (source instanceof List) {
-			return (List<byte[]>) source;
-		}
-
-		return source != null ? new ArrayList<>(source) : null;
-	}
-
+	@Contract("null -> null;!null -> !null")
+	@SuppressWarnings("NullAway")
 	public static Tuple toTuple(@Nullable ScoredValue<byte[]> source) {
 
-		return source != null && source.hasValue()
-				? new DefaultTuple(source.getValue(), Double.valueOf(source.getScore()))
+		return source != null && source.hasValue() ? new DefaultTuple(source.getValue(), Double.valueOf(source.getScore()))
 				: null;
 	}
 
-	public static String toString(@Nullable byte[] source) {
-
-		if (source == null || Arrays.equals(source, new byte[0])) {
-			return null;
-		}
-
-		return new String(source);
+	@Contract("null -> null")
+	public static @Nullable String toString(byte @Nullable [] source) {
+		return Arrays.equals(source, new byte[0]) ? null : ByteUtils.toString(source);
 	}
 
 	public static ScriptOutputType toScriptOutputType(ReturnType returnType) {
@@ -232,7 +235,7 @@ public abstract class LettuceConverters extends Converters {
 			return args;
 		}
 		if (params.getByPattern() != null) {
-			args.by(new String(params.getByPattern(), StandardCharsets.US_ASCII));
+			args.by(ByteUtils.toAsciiString(params.getByPattern()));
 		}
 		if (params.getLimit() != null) {
 			args.limit(params.getLimit().getStart(), params.getLimit().getCount());
@@ -240,7 +243,7 @@ public abstract class LettuceConverters extends Converters {
 		if (params.getGetPattern() != null) {
 			byte[][] pattern = params.getGetPattern();
 			for (byte[] bs : pattern) {
-				args.get(new String(bs, StandardCharsets.US_ASCII));
+				args.get(ByteUtils.toAsciiString(bs));
 			}
 		}
 		if (params.getOrder() != null) {
@@ -281,7 +284,7 @@ public abstract class LettuceConverters extends Converters {
 	}
 
 	/**
-	 * Convert a {@link io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.Range} to a lettuce {@link Range}.
+	 * Convert a {@link ValkeyZSetCommands.Range} to a lettuce {@link Range}.
 	 *
 	 * @since 2.0
 	 */
@@ -294,7 +297,7 @@ public abstract class LettuceConverters extends Converters {
 	 *
 	 * @since 2.2
 	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings({ "rawtypes", "unchecked", "NullAway" })
 	public static <T> Range<T> toRange(org.springframework.data.domain.Range<T> range, boolean convertNumberToBytes) {
 
 		Range.Boundary upper = RangeConverter.convertBound(range.getUpperBound(), convertNumberToBytes, null,
@@ -311,7 +314,7 @@ public abstract class LettuceConverters extends Converters {
 	 *
 	 * @since 2.0
 	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings({ "rawtypes", "unchecked", "NullAway" })
 	public static <T> Range<T> toRevRange(org.springframework.data.domain.Range<T> range) {
 
 		Range.Boundary upper = RangeConverter.convertBound(range.getUpperBound(), false, null,
@@ -350,7 +353,7 @@ public abstract class LettuceConverters extends Converters {
 	 * @return A {@link RedisURI} containing Valkey Sentinel addresses of {@link ValkeySentinelConfiguration}
 	 * @since 1.5
 	 */
-	public static RedisURI sentinelConfigurationToValkeyURI(ValkeySentinelConfiguration sentinelConfiguration) {
+	public static RedisURI sentinelConfigurationToRedisURI(ValkeySentinelConfiguration sentinelConfiguration) {
 
 		Assert.notNull(sentinelConfiguration, "ValkeySentinelConfiguration is required");
 
@@ -360,7 +363,7 @@ public abstract class LettuceConverters extends Converters {
 
 		for (ValkeyNode sentinel : sentinels) {
 
-			RedisURI.Builder sentinelBuilder = RedisURI.Builder.redis(sentinel.getHost(), sentinel.getPort());
+			RedisURI.Builder sentinelBuilder = RedisURI.Builder.redis(sentinel.getRequiredHost(), sentinel.getRequiredPort());
 
 			String sentinelUsername = sentinelConfiguration.getSentinelUsername();
 			if (StringUtils.hasText(sentinelUsername) && sentinelPassword.isPresent()) {
@@ -383,7 +386,9 @@ public abstract class LettuceConverters extends Converters {
 			password.toOptional().ifPresent(builder::withPassword);
 		}
 
-		builder.withSentinelMasterId(sentinelConfiguration.getMaster().getName());
+		if (sentinelConfiguration.getMaster() != null && sentinelConfiguration.getMaster().getName() != null) {
+			builder.withSentinelMasterId(sentinelConfiguration.getMaster().getName());
+		}
 
 		return builder.build();
 	}
@@ -395,7 +400,7 @@ public abstract class LettuceConverters extends Converters {
 	 * @return a {@link ValkeyStandaloneConfiguration} representing the connection information in the Valkey URI.
 	 * @since 2.5.3
 	 */
-	static ValkeyStandaloneConfiguration createValkeyStandaloneConfiguration(RedisURI redisURI) {
+	static ValkeyStandaloneConfiguration createRedisStandaloneConfiguration(RedisURI redisURI) {
 
 		ValkeyStandaloneConfiguration standaloneConfiguration = new ValkeyStandaloneConfiguration();
 
@@ -415,7 +420,7 @@ public abstract class LettuceConverters extends Converters {
 	 * @return a {@link ValkeySocketConfiguration} representing the connection information in the Valkey URI.
 	 * @since 2.5.3
 	 */
-	static ValkeySocketConfiguration createValkeySocketConfiguration(RedisURI redisURI) {
+	static ValkeySocketConfiguration createRedisSocketConfiguration(RedisURI redisURI) {
 
 		ValkeySocketConfiguration socketConfiguration = new ValkeySocketConfiguration();
 
@@ -444,12 +449,13 @@ public abstract class LettuceConverters extends Converters {
 
 		sentinelConfiguration.setDatabase(redisURI.getDatabase());
 
-		for (RedisURI sentinelNodeValkeyUri : redisURI.getSentinels()) {
+		for (RedisURI sentinelNodeRedisUri : redisURI.getSentinels()) {
 
-			ValkeyNode sentinelNode = new ValkeyNode(sentinelNodeValkeyUri.getHost(), sentinelNodeValkeyUri.getPort());
+			ValkeyNode sentinelNode = new ValkeyNode(sentinelNodeRedisUri.getHost(), sentinelNodeRedisUri.getPort());
 
-			if (sentinelNodeValkeyUri.getPassword() != null) {
-				sentinelConfiguration.setSentinelPassword(sentinelNodeValkeyUri.getPassword());
+			RedisCredentials sentinelCredentials = sentinelNodeRedisUri.getCredentialsProvider().resolveCredentials().block();
+			if (sentinelCredentials != null && sentinelCredentials.getPassword() != null) {
+				sentinelConfiguration.setSentinelPassword(sentinelCredentials.getPassword());
 			}
 
 			sentinelConfiguration.addSentinel(sentinelNode);
@@ -460,18 +466,24 @@ public abstract class LettuceConverters extends Converters {
 		return sentinelConfiguration;
 	}
 
-	private static void applyAuthentication(RedisURI redisURI, ValkeyConfiguration.WithAuthentication valkeyConfiguration) {
+	private static void applyAuthentication(RedisURI redisURI, ValkeyConfiguration.WithAuthentication redisConfiguration) {
 
-		if (StringUtils.hasText(redisURI.getUsername())) {
-			valkeyConfiguration.setUsername(redisURI.getUsername());
+		RedisCredentials credentials = redisURI.getCredentialsProvider().resolveCredentials().block();
+		if (credentials == null) {
+			return;
 		}
 
-		if (redisURI.getPassword() != null) {
-			valkeyConfiguration.setPassword(redisURI.getPassword());
+		if (StringUtils.hasText(credentials.getUsername())) {
+			redisConfiguration.setUsername(credentials.getUsername());
+		}
+
+		if (credentials.getPassword() != null) {
+			redisConfiguration.setPassword(credentials.getPassword());
 		}
 	}
 
-	public static byte[] toBytes(@Nullable String source) {
+	@Contract("null -> null;!null -> !null")
+	public static byte @Nullable [] toBytes(@Nullable String source) {
 		return source != null ? source.getBytes() : null;
 	}
 
@@ -499,7 +511,7 @@ public abstract class LettuceConverters extends Converters {
 		List<ValkeyClusterNode> nodes = new ArrayList<>();
 
 		for (io.lettuce.core.cluster.models.partitions.RedisClusterNode node : source) {
-			nodes.add(toValkeyClusterNode(node));
+			nodes.add(toRedisClusterNode(node));
 		}
 
 		return nodes;
@@ -508,7 +520,7 @@ public abstract class LettuceConverters extends Converters {
 	/**
 	 * @since 1.7
 	 */
-	public static ValkeyClusterNode toValkeyClusterNode(io.lettuce.core.cluster.models.partitions.RedisClusterNode source) {
+	public static ValkeyClusterNode toRedisClusterNode(io.lettuce.core.cluster.models.partitions.RedisClusterNode source) {
 
 		Set<Flag> flags = parseFlags(source.getFlags());
 
@@ -520,6 +532,10 @@ public abstract class LettuceConverters extends Converters {
 	}
 
 	private static Set<Flag> parseFlags(@Nullable Set<NodeFlag> source) {
+
+		if (source == null) {
+			return Collections.emptySet();
+		}
 
 		Set<Flag> flags = new LinkedHashSet<>(source != null ? source.size() : 8, 1);
 
@@ -547,44 +563,85 @@ public abstract class LettuceConverters extends Converters {
 	 * @param expiration can be {@literal null}.
 	 * @param option can be {@literal null}.
 	 * @since 1.7
+	 * @deprecated since 4.1.
 	 */
+	@Deprecated(since = "4.1", forRemoval = true)
 	public static SetArgs toSetArgs(@Nullable Expiration expiration, @Nullable SetOption option) {
+		return toSetArgs(expiration != null ? expiration : Expiration.persistent(),
+				option != null ? option.toSetCondition() : SetCondition.upsert());
+	}
 
-		SetArgs args = new SetArgs();
+	static SetArgs toSetArgs(Expiration expiration, SetCondition condition) {
+		return toSetArgs(expiration, condition, Function.identity());
+	}
 
-		if (expiration != null) {
+	static <T> SetArgs toSetArgs(Expiration expiration, SetCondition condition, Function<byte[], T> valueConverter) {
 
-			if (expiration.isKeepTtl()) {
-				args.keepttl();
-			} else if (!expiration.isPersistent()) {
+		SetArgs args = applySetExpiration(new SetArgs(), expiration);
 
-				switch (expiration.getTimeUnit()) {
-					case MILLISECONDS -> {
-						if (expiration.isUnixTimestamp()) {
-							args.pxAt(expiration.getConverted(TimeUnit.MILLISECONDS));
-						} else {
-							args.px(expiration.getConverted(TimeUnit.MILLISECONDS));
-						}
-					}
-					default -> {
-						if (expiration.isUnixTimestamp()) {
-							args.exAt(expiration.getConverted(TimeUnit.SECONDS));
-						} else {
-							args.ex(expiration.getConverted(TimeUnit.SECONDS));
-						}
-					}
-				}
-			}
+		switch (condition.getKeyCondition()) {
+			case IF_ABSENT -> args.nx();
+			case IF_PRESENT -> args.xx();
+			case UPSERT -> {}
 		}
 
-		if (option != null) {
-			switch (option) {
-				case SET_IF_ABSENT -> args.nx();
-				case SET_IF_PRESENT -> args.xx();
-			}
+		io.valkey.springframework.data.valkey.connection.CompareCondition compareCondition = condition.getCompareCondition();
+
+		if (compareCondition != null) {
+			args.compareCondition(toCompareCondition(compareCondition, valueConverter));
 		}
 
 		return args;
+	}
+
+	private static SetArgs applySetExpiration(SetArgs args, Expiration expiration) {
+
+		if (expiration.isKeepTtl()) {
+			return args.keepttl();
+		}
+
+		if (expiration.isPersistent()) {
+			return args;
+		}
+
+		ExpirationAdapter adapter = ExpirationAdapter.of(expiration);
+
+		if (adapter.isPrecise()) {
+			return adapter.apply(args::px, args::pxAt);
+		}
+
+		return adapter.apply(args::ex, args::exAt);
+	}
+
+	/**
+	 * Converts a given {@link CompareCondition} to the according {@code DELEX} command argument.
+	 *
+	 * @param condition must not be {@literal null}.
+	 * @since 4.1
+	 */
+	static CompareCondition<byte[]> toCompareCondition(
+			io.valkey.springframework.data.valkey.connection.CompareCondition condition) {
+		return toCompareCondition(condition, Function.identity());
+	}
+
+	/**
+	 * Converts a given {@link CompareCondition} to the according {@code DELEX} command argument.
+	 *
+	 * @param condition must not be {@literal null}.
+	 * @since 4.1
+	 */
+	static <T> CompareCondition<T> toCompareCondition(
+			io.valkey.springframework.data.valkey.connection.CompareCondition condition, Function<byte[], T> valueConverter) {
+		return switch (condition.getComparison()) {
+			case DIGEST ->
+				condition.getOperator() == io.valkey.springframework.data.valkey.connection.CompareCondition.ComparisonOperator.EQUALS
+						? CompareCondition.digestEq(condition.getValue().toString())
+						: CompareCondition.digestNe(condition.getValue().toString());
+			case VALUE ->
+				condition.getOperator() == io.valkey.springframework.data.valkey.connection.CompareCondition.ComparisonOperator.EQUALS
+						? CompareCondition.valueEq(valueConverter.apply(condition.getValue().asBytes()))
+						: CompareCondition.valueNe(valueConverter.apply(condition.getValue().asBytes()));
+		};
 	}
 
 	/**
@@ -605,17 +662,96 @@ public abstract class LettuceConverters extends Converters {
 			return args.persist();
 		}
 
-		if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
-			if (expiration.isUnixTimestamp()) {
-				return args.pxAt(expiration.getExpirationTime());
-			}
-			return args.px(expiration.getExpirationTime());
+		ExpirationAdapter adapter = ExpirationAdapter.of(expiration);
+
+		if (adapter.isPrecise()) {
+			return adapter.apply(args::px, args::pxAt);
 		}
 
-		return expiration.isUnixTimestamp() ? args.exAt(expiration.getConverted(TimeUnit.SECONDS))
-				: args.ex(expiration.getConverted(TimeUnit.SECONDS));
+		return adapter.apply(args::ex, args::exAt);
 	}
 
+	/**
+	 * Convert {@link Expiration} to {@link HGetExArgs}.
+	 *
+	 * @param expiration can be {@literal null}.
+	 * @since 4.0
+	 */
+	static HGetExArgs toHGetExArgs(@Nullable Expiration expiration) {
+
+		HGetExArgs args = new HGetExArgs();
+
+		if (expiration == null) {
+			return args;
+		}
+
+		if (expiration.isPersistent()) {
+			return args.persist();
+		}
+
+		ExpirationAdapter adapter = ExpirationAdapter.of(expiration);
+
+		if (adapter.isPrecise()) {
+			return adapter.applyTemporal(args::px, args::pxAt);
+		}
+
+		return adapter.applyTemporal(args::ex, args::exAt);
+	}
+
+	/**
+	 * Convert {@link ValkeyHashCommands.HashFieldSetOption} and {@link Expiration} to {@link HSetExArgs} for the Valkey
+	 * {@code HSETEX} command.
+	 * <p>
+	 * Condition mapping:
+	 * </p>
+	 * <ul>
+	 * <li>{@code IF_NONE_EXIST} {@code FNX}</li>
+	 * <li>{@code IF_ALL_EXIST} {@code FXX}</li>
+	 * <li>{@code UPSERT} no condition flag</li>
+	 * </ul>
+	 * <p>
+	 * Expiration mapping:
+	 * </p>
+	 * <ul>
+	 * <li>{@link Expiration#keepTtl()} {@code KEEPTTL}</li>
+	 * <li>Unix timestamp {@code EXAT}/{@code PXAT} depending on time unit</li>
+	 * <li>Relative expiration {@code EX}/{@code PX} depending on time unit</li>
+	 * <li>{@code null} expiration no TTL argument</li>
+	 * </ul>
+	 *
+	 * @param condition must not be {@literal null}; use {@code UPSERT} to omit FNX/FXX.
+	 * @param expiration can be {@literal null} to omit TTL.
+	 * @return never {@literal null}.
+	 * @since 4.0
+	 */
+	static HSetExArgs toHSetExArgs(ValkeyHashCommands.@NonNull HashFieldSetOption condition,
+			@Nullable Expiration expiration) {
+
+		HSetExArgs args = new HSetExArgs();
+
+		switch (condition) {
+			case IF_NONE_EXIST -> args.fnx();
+			case IF_ALL_EXIST -> args.fxx();
+		}
+
+		if (expiration == null || expiration.isPersistent()) {
+			return args;
+		}
+
+		if (expiration.isKeepTtl()) {
+			return args.keepttl();
+		}
+
+		ExpirationAdapter adapter = ExpirationAdapter.of(expiration);
+
+		if (adapter.isPrecise()) {
+			return adapter.applyTemporal(args::px, args::pxAt);
+		}
+
+		return adapter.applyTemporal(args::ex, args::exAt);
+	}
+
+	@SuppressWarnings("NullAway")
 	static Converter<List<byte[]>, Long> toTimeConverter(TimeUnit timeUnit) {
 
 		return source -> {
@@ -635,8 +771,8 @@ public abstract class LettuceConverters extends Converters {
 	 */
 	public static GeoArgs.Unit toGeoArgsUnit(Metric metric) {
 
-		Metric metricToUse = metric == null
-				|| ObjectUtils.nullSafeEquals(Metrics.NEUTRAL, metric) ? DistanceUnit.METERS : metric;
+		Metric metricToUse = metric == null || ObjectUtils.nullSafeEquals(Metrics.NEUTRAL, metric) ? DistanceUnit.METERS
+				: metric;
 
 		return ObjectUtils.caseInsensitiveValueOf(GeoArgs.Unit.values(), metricToUse.getAbbreviation());
 	}
@@ -655,6 +791,7 @@ public abstract class LettuceConverters extends Converters {
 	 *
 	 * @since 2.6
 	 */
+	@SuppressWarnings("NullAway")
 	public static GeoArgs toGeoArgs(GeoCommandArgs args) {
 
 		GeoArgs geoArgs = new GeoArgs();
@@ -688,9 +825,12 @@ public abstract class LettuceConverters extends Converters {
 	 *
 	 * @since 2.1
 	 */
-	public static BitFieldArgs toBitFieldArgs(BitFieldSubCommands subCommands) {
+	public static BitFieldArgs toBitFieldArgs(@Nullable BitFieldSubCommands subCommands) {
 
 		BitFieldArgs args = new BitFieldArgs();
+		if (subCommands == null) {
+			return args;
+		}
 
 		for (BitFieldSubCommand subCommand : subCommands) {
 
@@ -716,7 +856,7 @@ public abstract class LettuceConverters extends Converters {
 						case SAT -> BitFieldArgs.OverflowType.SAT;
 						case FAIL -> BitFieldArgs.OverflowType.FAIL;
 						case WRAP -> BitFieldArgs.OverflowType.WRAP;
-          			};
+					};
 
 					args = args.overflow(type);
 				}
@@ -766,6 +906,7 @@ public abstract class LettuceConverters extends Converters {
 	 *
 	 * @since 1.8
 	 */
+	@SuppressWarnings("NullAway")
 	public static Converter<Set<byte[]>, GeoResults<GeoLocation<byte[]>>> bytesSetToGeoResultsConverter() {
 
 		return source -> {
@@ -888,7 +1029,7 @@ public abstract class LettuceConverters extends Converters {
 		throw new IllegalArgumentException("Cannot convert %s to Lettuce GeoRef".formatted(reference));
 	}
 
-	static FlushMode toFlushMode(@Nullable ValkeyServerCommands.FlushOption option) {
+	static FlushMode toFlushMode(ValkeyServerCommands.@Nullable FlushOption option) {
 
 		if (option == null) {
 			return FlushMode.SYNC;
@@ -897,7 +1038,7 @@ public abstract class LettuceConverters extends Converters {
 		return switch (option) {
 			case ASYNC -> FlushMode.ASYNC;
 			case SYNC -> FlushMode.SYNC;
-    	};
+		};
 	}
 
 	/**
@@ -909,8 +1050,8 @@ public abstract class LettuceConverters extends Converters {
 		INSTANCE;
 
 		Converter<List<GeoWithin<byte[]>>, GeoResults<GeoLocation<byte[]>>> forMetric(Metric metric) {
-			return new GeoResultsConverter(metric == null
-					|| ObjectUtils.nullSafeEquals(Metrics.NEUTRAL, metric) ? DistanceUnit.METERS : metric);
+			return new GeoResultsConverter(
+					metric == null || ObjectUtils.nullSafeEquals(Metrics.NEUTRAL, metric) ? DistanceUnit.METERS : metric);
 		}
 
 		private static class GeoResultsConverter
@@ -950,6 +1091,7 @@ public abstract class LettuceConverters extends Converters {
 			return new GeoResultConverter(metric);
 		}
 
+		@SuppressWarnings("NullAway")
 		private static class GeoResultConverter implements Converter<GeoWithin<byte[]>, GeoResult<GeoLocation<byte[]>>> {
 
 			private final Metric metric;
@@ -967,5 +1109,60 @@ public abstract class LettuceConverters extends Converters {
 						new Distance(source.getDistance() != null ? source.getDistance() : 0D, metric));
 			}
 		}
+	}
+
+	/**
+	 * Adapter to apply {@link Expiration}.
+	 */
+	record ExpirationAdapter(Expiration expiration) {
+
+		ExpirationAdapter {
+			Assert.isTrue(!expiration.isPersistent(), "Expiration does not define an expiry");
+		}
+
+		/**
+		 * Create a new ExpirationAdapter.
+		 *
+		 * @param expiration
+		 * @return
+		 */
+		public static ExpirationAdapter of(Expiration expiration) {
+			return new ExpirationAdapter(expiration);
+		}
+
+		public boolean isPrecise() {
+			return expiration.isPrecise();
+		}
+
+		/**
+		 * Apply expiration to
+		 *
+		 * @param expire expiration mapping function.
+		 * @param expireAt expiration-at mapping function.
+		 */
+		public <T> T applyTemporal(Function<Duration, T> expire, Function<Instant, T> expireAt) {
+
+			TimeUnit precision = expiration.isPrecise() ? TimeUnit.MILLISECONDS : TimeUnit.SECONDS;
+
+			if (expiration.isUnixTimestamp()) {
+				return expireAt.apply(expiration.getExpirationInstant(precision));
+			}
+
+			return expire.apply(expiration.getExpirationDuration(precision));
+		}
+
+		/**
+		 * Apply expiration to
+		 *
+		 * @param expire expiration mapping function.
+		 * @param expireAt expiration-at mapping function.
+		 */
+		public <T> T apply(LongFunction<T> expire, LongFunction<T> expireAt) {
+
+			long ttl = isPrecise() ? expiration.getExpirationTimeInMilliseconds() : expiration.getExpirationTimeInSeconds();
+
+			return expiration.isUnixTimestamp() ? expireAt.apply(ttl) : expire.apply(ttl);
+		}
+
 	}
 }

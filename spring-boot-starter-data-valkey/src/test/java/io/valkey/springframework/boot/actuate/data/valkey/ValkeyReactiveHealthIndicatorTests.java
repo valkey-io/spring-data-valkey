@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@ import java.time.Duration;
 import java.util.Properties;
 
 import io.lettuce.core.RedisConnectionException;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.Status;
-
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.Status;
 import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
 import io.valkey.springframework.data.valkey.connection.ClusterInfo;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyClusterConnection;
@@ -53,7 +53,7 @@ class ValkeyReactiveHealthIndicatorTests {
 	@Test
 	void valkeyIsUp() {
 		Properties info = new Properties();
-		info.put("redis_version", "8.0.1");
+		info.put("redis_version", "2.8.9");
 		ReactiveValkeyConnection valkeyConnection = mock(ReactiveValkeyConnection.class);
 		given(valkeyConnection.closeLater()).willReturn(Mono.empty());
 		ReactiveServerCommands commands = mock(ReactiveServerCommands.class);
@@ -63,7 +63,24 @@ class ValkeyReactiveHealthIndicatorTests {
 		StepVerifier.create(health).consumeNextWith((h) -> {
 			assertThat(h.getStatus()).isEqualTo(Status.UP);
 			assertThat(h.getDetails()).containsOnlyKeys("version");
-			assertThat(h.getDetails()).containsEntry("version", "8.0.1");
+			assertThat(h.getDetails()).containsEntry("version", "2.8.9");
+		}).expectComplete().verify(Duration.ofSeconds(30));
+		then(valkeyConnection).should().closeLater();
+	}
+
+	@Test
+	void valkeyIsUpWithMissingVersion() {
+		Properties info = new Properties();
+		ReactiveValkeyConnection valkeyConnection = mock(ReactiveValkeyConnection.class);
+		given(valkeyConnection.closeLater()).willReturn(Mono.empty());
+		ReactiveServerCommands commands = mock(ReactiveServerCommands.class);
+		given(commands.info("server")).willReturn(Mono.just(info));
+		ValkeyReactiveHealthIndicator healthIndicator = createHealthIndicator(valkeyConnection, commands);
+		Mono<Health> health = healthIndicator.health();
+		StepVerifier.create(health).consumeNextWith((h) -> {
+			assertThat(h.getStatus()).isEqualTo(Status.UP);
+			assertThat(h.getDetails()).containsOnlyKeys("version");
+			assertThat(h.getDetails()).containsEntry("version", "unknown");
 		}).expectComplete().verify(Duration.ofSeconds(30));
 		then(valkeyConnection).should().closeLater();
 	}
@@ -143,7 +160,7 @@ class ValkeyReactiveHealthIndicatorTests {
 		return new ValkeyReactiveHealthIndicator(valkeyConnectionFactory);
 	}
 
-	private ReactiveValkeyConnectionFactory createClusterConnectionFactory(String state) {
+	private ReactiveValkeyConnectionFactory createClusterConnectionFactory(@Nullable String state) {
 		Properties clusterProperties = new Properties();
 		if (state != null) {
 			clusterProperties.setProperty("cluster_state", state);

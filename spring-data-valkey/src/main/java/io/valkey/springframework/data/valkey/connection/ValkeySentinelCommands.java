@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,9 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.Collection;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+
 /**
  * Valkey Sentinel-specific commands.
  *
@@ -25,6 +28,7 @@ import java.util.Collection;
  * @since 1.4
  * @see <a href="https://valkey.io/topics/sentinel">Valkey Sentinel Documentation</a>
  */
+@NullUnmarked
 public interface ValkeySentinelCommands {
 
 	/**
@@ -32,14 +36,14 @@ public interface ValkeySentinelCommands {
 	 *
 	 * @param master must not be {@literal null}.
 	 */
-	void failover(NamedNode master);
+	void failover(@NonNull NamedNode master);
 
 	/**
 	 * Get a {@link Collection} of monitored masters and their state.
 	 *
 	 * @return Collection of {@link ValkeyServer}s. Never {@literal null}.
 	 */
-	Collection<ValkeyServer> masters();
+	Collection<@NonNull ValkeyServer> masters();
 
 	/**
 	 * Show list of replicas for given {@literal master}.
@@ -47,7 +51,7 @@ public interface ValkeySentinelCommands {
 	 * @param master must not be {@literal null}.
 	 * @return Collection of {@link ValkeyServer}s. Never {@literal null}.
 	 */
-	Collection<ValkeyServer> replicas(NamedNode master);
+	Collection<@NonNull ValkeyServer> replicas(@NonNull NamedNode master);
 
 	/**
 	 * Removes given {@literal master}. The server will no longer be monitored and will no longer be returned by
@@ -55,7 +59,7 @@ public interface ValkeySentinelCommands {
 	 *
 	 * @param master must not be {@literal null}.
 	 */
-	void remove(NamedNode master);
+	void remove(@NonNull NamedNode master);
 
 	/**
 	 * Tell sentinel to start monitoring a new {@literal master} with the specified {@link ValkeyServer#getName()},
@@ -63,6 +67,6 @@ public interface ValkeySentinelCommands {
 	 *
 	 * @param master must not be {@literal null}.
 	 */
-	void monitor(ValkeyServer master);
+	void monitor(@NonNull ValkeyServer master);
 
 }

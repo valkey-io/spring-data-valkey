@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Interface defining the commands supported by Valkey.
@@ -24,6 +25,7 @@ import org.springframework.lang.Nullable;
  * @author Christoph Strobl
  * @author Mark Paluch
  */
+@NullUnmarked
 public interface ValkeyCommands extends ValkeyKeyCommands, ValkeyStringCommands, ValkeyListCommands, ValkeySetCommands,
 		ValkeyZSetCommands, ValkeyHashCommands, ValkeyTxCommands, ValkeyPubSubCommands, ValkeyConnectionCommands,
 		ValkeyServerCommands, ValkeyStreamCommands, ValkeyScriptingCommands, ValkeyGeoCommands, ValkeyHyperLogLogCommands {
@@ -31,8 +33,8 @@ public interface ValkeyCommands extends ValkeyKeyCommands, ValkeyStringCommands,
 	/**
 	 * {@literal Native} or {@literal raw} execution of the given Valkey command along with the given arguments.
 	 * <p>
-	 * The command is executed as is, with as little interpretation as possible - it is up to the caller to take care
-	 * of any processing of arguments or the result.
+	 * The command is executed as is, with as little interpretation as possible - it is up to the caller to take care of
+	 * any processing of arguments or the result.
 	 *
 	 * @param command Valkey {@link String command} to execute; must not be {@literal null}.
 	 * @param args optional array of command arguments; may be empty;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,8 @@ package io.valkey.springframework.data.valkey.serializer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 
 import com.fasterxml.jackson.databind.JavaType;
@@ -34,13 +35,16 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
  * This serializer can be used to bind to typed beans, or untyped {@link java.util.HashMap HashMap} instances.
  * <b>Note:</b>Null objects are serialized as empty arrays and vice versa.
  * <p>
- * JSON reading and writing can be customized by configuring {@link JacksonObjectReader} respective
- * {@link JacksonObjectWriter}.
+ * JSON reading and writing can be customized by configuring {@link Jackson2ObjectReader} respective
+ * {@link Jackson2ObjectWriter}.
  *
  * @author Thomas Darimont
  * @author Mark Paluch
  * @since 1.2
+ * @deprecated since 4.0 in favor of {@link JacksonJsonValkeySerializer}.
  */
+@SuppressWarnings("removal")
+@Deprecated(since = "4.0", forRemoval = true)
 public class Jackson2JsonValkeySerializer<T> implements ValkeySerializer<T> {
 
 	/**
@@ -53,9 +57,9 @@ public class Jackson2JsonValkeySerializer<T> implements ValkeySerializer<T> {
 
 	private ObjectMapper mapper;
 
-	private final JacksonObjectReader reader;
+	private final Jackson2ObjectReader reader;
 
-	private final JacksonObjectWriter writer;
+	private final Jackson2ObjectWriter writer;
 
 	/**
 	 * Creates a new {@link Jackson2JsonValkeySerializer} for the given target {@link Class}.
@@ -89,8 +93,8 @@ public class Jackson2JsonValkeySerializer<T> implements ValkeySerializer<T> {
 
 		this.javaType = getJavaType(type);
 		this.mapper = mapper;
-		this.reader = JacksonObjectReader.create();
-		this.writer = JacksonObjectWriter.create();
+		this.reader = Jackson2ObjectReader.create();
+		this.writer = Jackson2ObjectWriter.create();
 	}
 
 	/**
@@ -101,7 +105,7 @@ public class Jackson2JsonValkeySerializer<T> implements ValkeySerializer<T> {
 	 * @since 3.0
 	 */
 	public Jackson2JsonValkeySerializer(ObjectMapper mapper, JavaType javaType) {
-		this(mapper, javaType, JacksonObjectReader.create(), JacksonObjectWriter.create());
+		this(mapper, javaType, Jackson2ObjectReader.create(), Jackson2ObjectWriter.create());
 	}
 
 	/**
@@ -109,12 +113,12 @@ public class Jackson2JsonValkeySerializer<T> implements ValkeySerializer<T> {
 	 *
 	 * @param mapper must not be {@literal null}.
 	 * @param javaType must not be {@literal null}.
-	 * @param reader the {@link JacksonObjectReader} function to read objects using {@link ObjectMapper}.
-	 * @param writer the {@link JacksonObjectWriter} function to write objects using {@link ObjectMapper}.
+	 * @param reader the {@link Jackson2ObjectReader} function to read objects using {@link ObjectMapper}.
+	 * @param writer the {@link Jackson2ObjectWriter} function to write objects using {@link ObjectMapper}.
 	 * @since 3.0
 	 */
-	public Jackson2JsonValkeySerializer(ObjectMapper mapper, JavaType javaType, JacksonObjectReader reader,
-			JacksonObjectWriter writer) {
+	public Jackson2JsonValkeySerializer(ObjectMapper mapper, JavaType javaType, Jackson2ObjectReader reader,
+			Jackson2ObjectWriter writer) {
 
 		Assert.notNull(mapper, "ObjectMapper must not be null!");
 		Assert.notNull(reader, "Reader must not be null!");
@@ -161,7 +165,7 @@ public class Jackson2JsonValkeySerializer<T> implements ValkeySerializer<T> {
 	@Nullable
 	@Override
 	@SuppressWarnings("unchecked")
-	public T deserialize(@Nullable byte[] bytes) throws SerializationException {
+	public T deserialize(byte @Nullable [] bytes) throws SerializationException {
 
 		if (SerializationUtils.isEmpty(bytes)) {
 			return null;
@@ -195,4 +199,5 @@ public class Jackson2JsonValkeySerializer<T> implements ValkeySerializer<T> {
 	protected JavaType getJavaType(Class<?> clazz) {
 		return TypeFactory.defaultInstance().constructType(clazz);
 	}
+
 }

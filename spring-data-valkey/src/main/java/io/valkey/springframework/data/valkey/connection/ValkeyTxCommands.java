@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,10 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.List;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 /**
  * Transaction/Batch specific commands supported by Valkey.
  *
@@ -24,6 +28,7 @@ import java.util.List;
  * @author Christoph Strobl
  * @author Mark Paluch
  */
+@NullUnmarked
 public interface ValkeyTxCommands {
 
 	/**
@@ -41,7 +46,7 @@ public interface ValkeyTxCommands {
 	 * @return List of replies for each executed command.
 	 * @see <a href="https://valkey.io/commands/exec">Valkey Documentation: EXEC</a>
 	 */
-	List<Object> exec();
+	List<@Nullable Object> exec();
 
 	/**
 	 * Discard all commands issued after {@link #multi()}.
@@ -56,7 +61,7 @@ public interface ValkeyTxCommands {
 	 * @param keys must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/watch">Valkey Documentation: WATCH</a>
 	 */
-	void watch(byte[]... keys);
+	void watch(byte @NonNull []... keys);
 
 	/**
 	 * Flushes all the previously {@link #watch(byte[]...)} keys.

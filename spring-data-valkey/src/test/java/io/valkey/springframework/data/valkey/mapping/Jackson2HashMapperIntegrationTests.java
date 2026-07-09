@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.mapping;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -24,6 +24,9 @@ import java.util.List;
 import java.util.Objects;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.beans.factory.InitializingBean;
 import io.valkey.springframework.data.valkey.Address;
@@ -35,8 +38,6 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.Va
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.hash.Jackson2HashMapper;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for {@link Jackson2HashMapper}.
@@ -45,6 +46,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author John Blum
  */
+@ParameterizedClass
 @MethodSource("params")
 public class Jackson2HashMapperIntegrationTests {
 
@@ -63,8 +65,8 @@ public class Jackson2HashMapperIntegrationTests {
 	public static Collection<ValkeyConnectionFactory> params() {
 
 		return Arrays.asList(JedisConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class),
-				LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class),
-				ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class));
+				ValkeyGlideConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class),
+				LettuceConnectionFactoryExtension.getConnectionFactory(ValkeyStandalone.class));
 	}
 
 	@BeforeEach
@@ -77,7 +79,7 @@ public class Jackson2HashMapperIntegrationTests {
 		this.mapper = new Jackson2HashMapper(true);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-423
+	@Test // DATAREDIS-423
 	public void shouldWriteReadHashCorrectly() {
 
 		Person jon = new Person("jon", "snow", 19);
@@ -92,16 +94,14 @@ public class Jackson2HashMapperIntegrationTests {
 		assertThat(result).isEqualTo(jon);
 	}
 
-	@ParameterizedValkeyTest // GH-2565
+	@Test // GH-2565
 	public void shouldPreserveListPropertyOrderOnHashedSource() {
 
-		User jonDoe = User.as("Jon Doe")
-			.withPhoneNumber(9, 7, 1, 5, 5, 5, 4, 1, 8, 2);
+		User jonDoe = User.as("Jon Doe").withPhoneNumber(9, 7, 1, 5, 5, 5, 4, 1, 8, 2);
 
 		template.opsForHash().putAll("JON-DOE", mapper.toHash(jonDoe));
 
-		User deserializedJonDoe =
-			(User) mapper.fromHash(template.<String, Object>opsForHash().entries("JON-DOE"));
+		User deserializedJonDoe = (User) mapper.fromHash(template.<String, Object> opsForHash().entries("JON-DOE"));
 
 		assertThat(deserializedJonDoe).isNotNull();
 		assertThat(deserializedJonDoe).isNotSameAs(jonDoe);
@@ -118,7 +118,7 @@ public class Jackson2HashMapperIntegrationTests {
 		private String name;
 		private List<Integer> phoneNumber;
 
-		User() { }
+		User() {}
 
 		User(String name) {
 			this.name = name;
@@ -157,7 +157,7 @@ public class Jackson2HashMapperIntegrationTests {
 			}
 
 			return Objects.equals(this.getName(), that.getName())
-				&& Objects.equals(this.getPhoneNumber(), that.getPhoneNumber());
+					&& Objects.equals(this.getPhoneNumber(), that.getPhoneNumber());
 		}
 
 		@Override

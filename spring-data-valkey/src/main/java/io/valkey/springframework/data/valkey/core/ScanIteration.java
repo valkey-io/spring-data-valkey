@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * {@link ScanIteration} holds the values contained in Valkey {@literal Multibulk reply} on exectuting {@literal SCAN}
@@ -40,34 +40,12 @@ public class ScanIteration<T> implements Iterable<T> {
 	/**
 	 * @param cursorId
 	 * @param items
-	 * @deprecated since 3.3.0, use {@link ScanIteration#ScanIteration(CursorId, Collection)} instead as {@code cursorId}
-	 *             can exceed {@link Long#MAX_VALUE}.
-	 */
-	@Deprecated(since = "3.3.0")
-	public ScanIteration(long cursorId, @Nullable Collection<T> items) {
-		this(CursorId.of(cursorId), items);
-	}
-
-	/**
-	 * @param cursorId
-	 * @param items
 	 * @since 3.3.0
 	 */
 	public ScanIteration(CursorId cursorId, @Nullable Collection<T> items) {
 
 		this.cursorId = cursorId;
 		this.items = (items != null ? new ArrayList<>(items) : Collections.emptyList());
-	}
-
-	/**
-	 * The cursor id to be used for subsequent requests.
-	 *
-	 * @return
-	 * @deprecated since 3.3.0, use {@link #getId()} instead as the cursorId can exceed {@link Long#MAX_VALUE}.
-	 */
-	@Deprecated(since="3.3.3")
-	public long getCursorId() {
-		return Long.parseLong(getId().getCursorId());
 	}
 
 	/**

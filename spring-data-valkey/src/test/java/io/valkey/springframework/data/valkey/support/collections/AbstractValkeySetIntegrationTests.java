@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,13 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.core.BoundSetOperations;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -69,10 +69,10 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 		return new DefaultValkeySet<>((BoundSetOperations<String, T>) set.getOperations().boundSetOps(key));
 	}
 
-	@ParameterizedValkeyTest // GH-2037
+	@Test // GH-2037
 	@EnabledOnCommand("SMISMEMBER")
 	void testContainsAll() {
-		
+
 		T t1 = getT();
 		T t2 = getT();
 		T t3 = getT();
@@ -85,7 +85,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 		assertThat(set.containsAll(Collections.emptyList())).isTrue();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testDiff() {
 		ValkeySet<T> diffSet1 = createSetFor("test:set:diff1");
 		ValkeySet<T> diffSet2 = createSetFor("test:set:diff2");
@@ -106,7 +106,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 		assertThat(diff).contains(t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testDiffAndStore() {
 		ValkeySet<T> diffSet1 = createSetFor("test:set:diff1");
 		ValkeySet<T> diffSet2 = createSetFor("test:set:diff2");
@@ -132,7 +132,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 		assertThat(diff.getKey()).isEqualTo(resultName);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIntersect() {
 		ValkeySet<T> intSet1 = createSetFor("test:set:int1");
 		ValkeySet<T> intSet2 = createSetFor("test:set:int2");
@@ -182,7 +182,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testUnion() {
 		ValkeySet<T> unionSet1 = createSetFor("test:set:union1");
 		ValkeySet<T> unionSet2 = createSetFor("test:set:union2");
@@ -205,7 +205,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testUnionAndStore() {
 		ValkeySet<T> unionSet1 = createSetFor("test:set:union1");
 		ValkeySet<T> unionSet2 = createSetFor("test:set:union2");
@@ -229,7 +229,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 		assertThat(union.getKey()).isEqualTo(resultName);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	public void testIterator() {
 		T t1 = getT();
 		T t2 = getT();
@@ -258,7 +258,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	public void testToArray() {
 		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
 		List<T> list = (List<T>) Arrays.asList(expectedArray);
@@ -283,7 +283,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	public void testToArrayWithGenerics() {
 		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
 		List<T> list = (List<T>) Arrays.asList(expectedArray);
@@ -308,7 +308,7 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 
 	// DATAREDIS-314
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testScanWorksCorrectly() throws IOException {
 
 		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
@@ -321,10 +321,10 @@ public abstract class AbstractValkeySetIntegrationTests<T> extends AbstractValke
 		cursor.close();
 	}
 
-	@ParameterizedValkeyTest // GH-2049
+	@Test // GH-2049
 	void randMemberReturnsSomething() {
 
-		Object[] valuesArray = new Object[]{getT(), getT(), getT()};
+		Object[] valuesArray = new Object[] { getT(), getT(), getT() };
 
 		collection.addAll((List<T>) Arrays.asList(valuesArray));
 

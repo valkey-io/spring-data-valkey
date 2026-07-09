@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.springframework.data.domain.Sort.Direction;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.CommandResponse;
@@ -43,7 +44,6 @@ import io.valkey.springframework.data.valkey.connection.zset.DefaultTuple;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.core.TimeoutUtils;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -392,6 +392,7 @@ class LettuceReactiveZSetCommands implements ReactiveZSetCommands {
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public Flux<CommandResponse<BZPopCommand, Flux<Tuple>>> bZPop(Publisher<BZPopCommand> commands) {
 
 		return this.connection.execute(reactiveCommands -> Flux.from(commands).map(command -> {

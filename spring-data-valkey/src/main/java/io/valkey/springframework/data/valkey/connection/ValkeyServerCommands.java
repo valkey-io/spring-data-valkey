@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
-import org.springframework.lang.Nullable;
 
 /**
  * Server-specific commands supported by Valkey.
@@ -30,7 +32,9 @@ import org.springframework.lang.Nullable;
  * @author Thomas Darimont
  * @author Mark Paluch
  * @author Dennis Neufeld
+ * @see ValkeyCommands
  */
+@NullUnmarked
 public interface ValkeyServerCommands {
 
 	enum ShutdownOption {
@@ -72,7 +76,6 @@ public interface ValkeyServerCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lastsave">Valkey Documentation: LASTSAVE</a>
 	 */
-	@Nullable
 	Long lastSave();
 
 	/**
@@ -88,7 +91,6 @@ public interface ValkeyServerCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/dbsize">Valkey Documentation: DBSIZE</a>
 	 */
-	@Nullable
 	Long dbSize();
 
 	/**
@@ -105,23 +107,23 @@ public interface ValkeyServerCommands {
 	 * @see <a href="https://valkey.io/commands/flushdb">Valkey Documentation: FLUSHDB</a>
 	 * @since 2.7
 	 */
-	void flushDb(FlushOption option);
+	void flushDb(@NonNull FlushOption option);
 
 	/**
-	 * Delete all <b>all keys</b> from <b>all databases</b>.
+	 * Delete <b>all keys</b> from <b>all databases</b>.
 	 *
 	 * @see <a href="https://valkey.io/commands/flushall">Valkey Documentation: FLUSHALL</a>
 	 */
 	void flushAll();
 
 	/**
-	 * Delete all <b>all keys</b> from <b>all databases</b> using the specified {@link FlushOption}.
+	 * Delete <b>all keys</b> from <b>all databases</b> using the specified {@link FlushOption}.
 	 *
 	 * @param option
 	 * @see <a href="https://valkey.io/commands/flushall">Valkey Documentation: FLUSHALL</a>
 	 * @since 2.7
 	 */
-	void flushAll(FlushOption option);
+	void flushAll(@NonNull FlushOption option);
 
 	/**
 	 * Load {@literal default} server information like
@@ -134,7 +136,6 @@ public interface ValkeyServerCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/info">Valkey Documentation: INFO</a>
 	 */
-	@Nullable
 	Properties info();
 
 	/**
@@ -143,8 +144,7 @@ public interface ValkeyServerCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/info">Valkey Documentation: INFO</a>
 	 */
-	@Nullable
-	Properties info(String section);
+	Properties info(@NonNull String section);
 
 	/**
 	 * Shutdown server.
@@ -156,10 +156,11 @@ public interface ValkeyServerCommands {
 	/**
 	 * Shutdown server.
 	 *
+	 * @param option shutdown options if applicable.
 	 * @see <a href="https://valkey.io/commands/shutdown">Valkey Documentation: SHUTDOWN</a>
 	 * @since 1.3
 	 */
-	void shutdown(ShutdownOption option);
+	void shutdown(@Nullable ShutdownOption option);
 
 	/**
 	 * Load configuration parameters for given {@code pattern} from server.
@@ -168,8 +169,7 @@ public interface ValkeyServerCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/config-get">Valkey Documentation: CONFIG GET</a>
 	 */
-	@Nullable
-	Properties getConfig(String pattern);
+	Properties getConfig(@NonNull String pattern);
 
 	/**
 	 * Set server configuration for {@code param} to {@code value}.
@@ -178,7 +178,7 @@ public interface ValkeyServerCommands {
 	 * @param value must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/config-set">Valkey Documentation: CONFIG SET</a>
 	 */
-	void setConfig(String param, String value);
+	void setConfig(@NonNull String param, @NonNull String value);
 
 	/**
 	 * Reset statistic counters on server. <br>
@@ -203,7 +203,6 @@ public interface ValkeyServerCommands {
 	 * @since 1.1
 	 * @see <a href="https://valkey.io/commands/time">Valkey Documentation: TIME</a>
 	 */
-	@Nullable
 	default Long time() {
 		return time(TimeUnit.MILLISECONDS);
 	}
@@ -216,8 +215,7 @@ public interface ValkeyServerCommands {
 	 * @since 2.5
 	 * @see <a href="https://valkey.io/commands/time">Valkey Documentation: TIME</a>
 	 */
-	@Nullable
-	Long time(TimeUnit timeUnit);
+	Long time(@NonNull TimeUnit timeUnit);
 
 	/**
 	 * Closes a given client connection identified by {@literal host:port}.
@@ -227,7 +225,7 @@ public interface ValkeyServerCommands {
 	 * @since 1.3
 	 * @see <a href="https://valkey.io/commands/client-kill">Valkey Documentation: CLIENT KILL</a>
 	 */
-	void killClient(String host, int port);
+	void killClient(@NonNull String host, int port);
 
 	/**
 	 * Assign given name to current connection.
@@ -236,7 +234,7 @@ public interface ValkeyServerCommands {
 	 * @since 1.3
 	 * @see <a href="https://valkey.io/commands/client-setname">Valkey Documentation: CLIENT SETNAME</a>
 	 */
-	void setClientName(byte[] name);
+	void setClientName(byte @NonNull [] name);
 
 	/**
 	 * Returns the name of the current connection.
@@ -245,7 +243,6 @@ public interface ValkeyServerCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 1.3
 	 */
-	@Nullable
 	String getClientName();
 
 	/**
@@ -255,18 +252,17 @@ public interface ValkeyServerCommands {
 	 * @since 1.3
 	 * @see <a href="https://valkey.io/commands/client-list">Valkey Documentation: CLIENT LIST</a>
 	 */
-	@Nullable
-	List<ValkeyClientInfo> getClientList();
+	List<@NonNull ValkeyClientInfo> getClientList();
 
 	/**
-	 * Change valkey replication setting to new master.
+	 * Change Valkey replication setting to new master.
 	 *
 	 * @param host must not be {@literal null}.
 	 * @param port
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/replicaof">Valkey Documentation: REPLICAOF</a>
 	 */
-	void replicaOf(String host, int port);
+	void replicaOf(@NonNull String host, int port);
 
 	/**
 	 * Change server into master.
@@ -287,7 +283,7 @@ public interface ValkeyServerCommands {
 	 * @since 1.7
 	 * @see <a href="https://valkey.io/commands/migrate">Valkey Documentation: MIGRATE</a>
 	 */
-	void migrate(byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option);
+	void migrate(byte @NonNull [] key, @NonNull ValkeyNode target, int dbIndex, @Nullable MigrateOption option);
 
 	/**
 	 * Atomically transfer a key from a source Valkey instance to a destination Valkey instance. On success the key is
@@ -301,6 +297,7 @@ public interface ValkeyServerCommands {
 	 * @since 1.7
 	 * @see <a href="https://valkey.io/commands/migrate">Valkey Documentation: MIGRATE</a>
 	 */
-	void migrate(byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option, long timeout);
+	void migrate(byte @NonNull [] key, @NonNull ValkeyNode target, int dbIndex, @Nullable MigrateOption option,
+			long timeout);
 
 }

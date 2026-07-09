@@ -1,6 +1,6 @@
 # Spring Data Valkey
 
-Spring Data Valkey is a dedicated integration module for the [Valkey](https://valkey.io/) data store, a high-performance, Redis-compatible in-memory database. The project is a fork of Spring Data Redis 3.5.1, created to offer first-class support for Valkey and to ensure seamless, optimized access to the Valkey ecosystem.
+Spring Data Valkey is a dedicated integration module for the [Valkey](https://valkey.io/) data store, a high-performance, Redis-compatible in-memory database. The project is a fork of Spring Data Redis, currently synced with upstream version 4.1.0, created to offer first-class support for Valkey and to ensure seamless, optimized access to the Valkey ecosystem.
 
 This project provides both the [core Spring Data Valkey library](spring-data-valkey/) and a [Spring Boot starter](spring-boot-starter-data-valkey/) for auto-configuration. It is purpose-built to provide the best possible experience when using Valkey from Spring applications, leveraging the specialized [Valkey-GLIDE](https://github.com/valkey-io/valkey-glide) client library for high-performance, cross-language connectivity. By aligning API compatibility with Spring Data Redis, Spring Data Valkey enables developers to migrate with minimal friction while benefiting from improved performance, modern driver capabilities, and long-term support for the Valkey platform.
 
@@ -24,6 +24,12 @@ This project provides both the [core Spring Data Valkey library](spring-data-val
 * Valkey implementation for Spring cache abstraction.
 * Automatic implementation of `Repository` interfaces including support for custom finder methods using `@EnableValkeyRepositories`.
 * CDI support for repositories.
+* Annotation-driven Pub/Sub listeners with `@ValkeyListener` for declarative message handling.
+* Jackson 3 serialization support (dual-mode: Jackson 2 and Jackson 3 side-by-side).
+* Conditional SET operations with `SetCondition` and `compareAndSet` support.
+* Cache reset strategies for fine-grained cache invalidation control.
+* Hash field expiration commands (`HGETEX`, `HSETEX`, `HGETDEL`).
+* `ValkeyMessageSendingTemplate` for simplified pub/sub message publishing.
 
 ### Spring Boot Starter
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Christoph Strobl
@@ -24,16 +24,16 @@ import org.springframework.lang.Nullable;
  */
 public abstract class KeyBoundCursor<T> extends ScanCursor<T> {
 
-	private byte[] key;
+	private final byte[] key;
 
 	/**
 	 * Crates new {@link ScanCursor}
 	 *
 	 * @param cursorId
 	 * @param options Defaulted to {@link ScanOptions#NONE} if nulled.
-	 * @deprecated since 3.3.0 - Use {@link KeyBoundCursor#KeyBoundCursor(byte[], CursorId, ScanOptions)} instead.
+	 * @deprecated since 3.3 - Use {@link KeyBoundCursor#KeyBoundCursor(byte[], CursorId, ScanOptions)} instead.
 	 */
-	@Deprecated(since = "3.3.0")
+	@Deprecated(since = "3.3")
 	public KeyBoundCursor(byte[] key, long cursorId, @Nullable ScanOptions options) {
 		super(cursorId, options != null ? options : ScanOptions.NONE);
 		this.key = key;

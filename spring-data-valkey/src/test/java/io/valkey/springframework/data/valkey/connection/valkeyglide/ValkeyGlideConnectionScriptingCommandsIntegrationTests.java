@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,9 +27,9 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersi
 
 /**
  * Comprehensive low-level integration tests for {@link ValkeyGlideConnection} 
- * Scripting functionality using the RedisScriptingCommands interface directly.
+ * Scripting functionality using the ValkeyScriptingCommands interface directly.
  * 
- * These tests validate the implementation of all RedisScriptingCommands methods:
+ * These tests validate the implementation of all ValkeyScriptingCommands methods:
  * - eval: Execute Lua scripts directly
  * - evalSha: Execute Lua scripts by SHA hash
  * - scriptLoad: Load scripts into cache
@@ -145,7 +145,7 @@ public class ValkeyGlideConnectionScriptingCommandsIntegrationTests extends Abst
     }
 
     @Test
-    @EnabledOnValkeyVersion("7.0") // Error handling for scriptExists() with no args differs in Redis < 7.0
+    @EnabledOnValkeyVersion("7.0") // Error handling for scriptExists() with no args differs in Valkey < 7.0
     void testScriptLoadAndExists() {
         try {
             // Test scriptLoad

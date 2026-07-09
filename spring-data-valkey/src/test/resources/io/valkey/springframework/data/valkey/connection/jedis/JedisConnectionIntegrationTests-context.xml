@@ -5,16 +5,17 @@
 
 
 	<bean id="jedisConnectionFactory"
-		class="io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory" p:timeout="60000" p:usePool="false">
+	      class="io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory"
+	      p:timeout="60000" p:usePool="false" p:useUnifiedJedis="false">
 		<property name="hostName">
 			<bean class="io.valkey.springframework.data.valkey.SettingsUtils"
-				factory-method="getHost" />
+			      factory-method="getHost"/>
 		</property>
 		<property name="port">
 			<bean class="io.valkey.springframework.data.valkey.SettingsUtils"
-				factory-method="getPort" />
+			      factory-method="getPort"/>
 		</property>
-		<property name="clientName" value="jedis-client" />
+		<property name="clientName" value="jedis-client"/>
 	</bean>
 
 </beans>

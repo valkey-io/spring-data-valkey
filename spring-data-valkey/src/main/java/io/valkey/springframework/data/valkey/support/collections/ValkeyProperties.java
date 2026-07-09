@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,13 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.core.BoundHashFieldExpirationOperations;
 import io.valkey.springframework.data.valkey.core.BoundHashOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 
 /**
  * {@link Properties} extension for a Valkey back-store. Useful for reading (and storing) properties inside a Valkey hash.
@@ -148,13 +150,13 @@ public class ValkeyProperties extends Properties implements ValkeyMap<Object, Ob
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public synchronized Enumeration<Object> elements() {
 		return Collections.enumeration((Collection) delegate.values());
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Set<Entry<Object, Object>> entrySet() {
 		return (Set) delegate.entrySet();
 	}
@@ -190,7 +192,7 @@ public class ValkeyProperties extends Properties implements ValkeyMap<Object, Ob
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Set<Object> keySet() {
 		return (Set) delegate.keySet();
 	}
@@ -206,7 +208,7 @@ public class ValkeyProperties extends Properties implements ValkeyMap<Object, Ob
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Collection<Object> values() {
 		return (Collection) delegate.values();
 	}
@@ -227,6 +229,7 @@ public class ValkeyProperties extends Properties implements ValkeyMap<Object, Ob
 	}
 
 	@Override
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Entry<Object, Object> randomEntry() {
 		return (Entry) delegate.randomEntry();
 	}
@@ -237,6 +240,12 @@ public class ValkeyProperties extends Properties implements ValkeyMap<Object, Ob
 	}
 
 	@Override
+	public Boolean expire(@NonNull Expiration expiration) {
+		return hashOps.expire(expiration);
+	}
+
+	@Override
+	@Deprecated
 	public Boolean expire(long timeout, TimeUnit unit) {
 		return hashOps.expire(timeout, unit);
 	}
@@ -302,16 +311,19 @@ public class ValkeyProperties extends Properties implements ValkeyMap<Object, Ob
 	}
 
 	@Override
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public Iterator<java.util.Map.Entry<Object, Object>> scan() {
 		return (Iterator) delegate.scan();
 	}
 
 	@Override
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public BoundHashFieldExpirationOperations<Object> hashFieldExpiration() {
 		return (BoundHashFieldExpirationOperations) delegate.hashFieldExpiration();
 	}
 
 	@Override
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public BoundHashFieldExpirationOperations<Object> hashFieldExpiration(Collection<Object> hashFields) {
 		return (BoundHashFieldExpirationOperations) delegate.hashFieldExpiration((Collection) hashFields);
 	}

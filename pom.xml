@@ -26,41 +26,51 @@
 		<maven.deploy.skip>true</maven.deploy.skip>
 
 		<!-- Spring versions -->
-		<spring-boot.version>3.5.1</spring-boot.version>
-		<springdata.parent.version>3.5.1</springdata.parent.version>
+		<spring-boot.version>4.0.7</spring-boot.version>
+		<springdata.parent.version>4.1.0</springdata.parent.version>
 
 		<!-- Valkey/Redis client versions -->
 		<valkey-glide.version>2.4.0</valkey-glide.version>
-		<lettuce.version>6.6.0.RELEASE</lettuce.version>
-		<jedis.version>6.0.0</jedis.version>
-		<pool.version>2.11.1</pool.version>
+		<lettuce.version>7.5.2.RELEASE</lettuce.version>
+		<jedis.version>7.4.1</jedis.version>
+		<pool.version>2.12.0</pool.version>
 
 		<!-- Utility library versions -->
-		<jackson.version>2.19.1</jackson.version>
-		<micrometer.version>1.14.2</micrometer.version>
+		<jackson.version>2.21.4</jackson.version>
+		<jackson3.version>3.1.4</jackson3.version>
+		<micrometer.version>1.17.0</micrometer.version>
+		<spring-messaging.version>7.0.8</spring-messaging.version>
 		<beanutils.version>1.9.4</beanutils.version>
 		<xstream.version>1.4.21</xstream.version>
-		<netty.version>4.1.121.Final</netty.version>
+		<jspecify.version>1.0.0</jspecify.version>
+		<netty.version>4.2.10.Final</netty.version>
 		<slf4j.version>2.0.9</slf4j.version>
 
 		<!-- Test dependency versions -->
-		<junit.version>5.12.2</junit.version>
-		<junit-platform.version>1.12.2</junit-platform.version>
-		<logback.version>1.5.12</logback.version>
+		<junit.version>6.0.3</junit.version>
+		<logback.version>1.5.34</logback.version>
 		<multithreadedtc.version>1.01</multithreadedtc.version>
 		<awaitility.version>4.2.2</awaitility.version>
-		<mockk.version>1.13.13</mockk.version>
-		<kotlin-coroutines.version>1.9.0</kotlin-coroutines.version>
-		<kotlin.version>1.9.25</kotlin.version>
-		<kotlin.api.target>1.7</kotlin.api.target>
+		<mockk.version>1.14.11</mockk.version>
+		<kotlin-coroutines.version>1.10.2</kotlin-coroutines.version>
+		<kotlin.version>2.3.21</kotlin.version>
+		<kotlin.api.target>2.2</kotlin.api.target>
 		<cdi.version>4.1.0</cdi.version>
 		<webbeans.version>4.0.3</webbeans.version>
+		<testcontainers.version>1.20.4</testcontainers.version>
+		<testcontainers-redis.version>2.2.2</testcontainers-redis.version>
+		<junit4.version>4.13.2</junit4.version>
+		<jackson-dataformat-msgpack.version>0.9.8</jackson-dataformat-msgpack.version>
 
 		<!-- Maven plugin versions -->
 		<maven-resolver.version>1.9.18</maven-resolver.version>
 		<maven-resolver-provider.version>3.9.10</maven-resolver-provider.version>
-		<maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
+		<maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
 		<maven-javadoc-plugin.version>3.10.1</maven-javadoc-plugin.version>
+		<maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
+		<maven-source-plugin.version>3.3.1</maven-source-plugin.version>
+		<maven-gpg-plugin.version>3.1.0</maven-gpg-plugin.version>
+		<nexus-staging-plugin.version>1.6.13</nexus-staging-plugin.version>
 	</properties>
 
 	<dependencyManagement>
@@ -184,18 +194,6 @@
 				<scope>test</scope>
 			</dependency>
 			<dependency>
-				<groupId>org.junit.platform</groupId>
-				<artifactId>junit-platform-engine</artifactId>
-				<version>${junit-platform.version}</version>
-				<scope>test</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.junit.platform</groupId>
-				<artifactId>junit-platform-launcher</artifactId>
-				<version>${junit-platform.version}</version>
-				<scope>test</scope>
-			</dependency>
-			<dependency>
 				<groupId>io.mockk</groupId>
 				<artifactId>mockk-jvm</artifactId>
 				<version>${mockk.version}</version>
@@ -243,6 +241,11 @@
 	<build>
 		<pluginManagement>
 			<plugins>
+				<plugin>
+					<groupId>org.apache.maven.plugins</groupId>
+					<artifactId>maven-compiler-plugin</artifactId>
+					<version>${maven-compiler-plugin.version}</version>
+				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-surefire-plugin</artifactId>

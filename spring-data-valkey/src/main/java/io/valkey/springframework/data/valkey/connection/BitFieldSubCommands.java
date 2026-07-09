@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,9 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldSubCommand;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -231,7 +232,7 @@ public class BitFieldSubCommands implements Iterable<BitFieldSubCommand> {
 	 */
 	public static class BitFieldGetBuilder {
 
-		private BitFieldSubCommands ref;
+		private final BitFieldSubCommands ref;
 
 		BitFieldGet get = new BitFieldGet();
 
@@ -573,6 +574,7 @@ public class BitFieldSubCommands implements Iterable<BitFieldSubCommand> {
 	/**
 	 * @author Christoph Strobl
 	 */
+	@NullUnmarked
 	public static abstract class AbstractBitFieldSubCommand implements BitFieldSubCommand {
 
 		BitFieldType type;
@@ -772,7 +774,7 @@ public class BitFieldSubCommands implements Iterable<BitFieldSubCommand> {
 		 * @param type must not be {@literal null}.
 		 * @param offset must not be {@literal null}.
 		 * @param value must not be {@literal null}.
-		 * @param overflow can be {@literal null} to use valkey defaults.
+		 * @param overflow can be {@literal null} to use Valkey defaults.
 		 * @since 2.5.2
 		 * @return
 		 */
@@ -805,12 +807,11 @@ public class BitFieldSubCommands implements Iterable<BitFieldSubCommand> {
 		}
 
 		/**
-		 * Get the overflow to apply. Can be {@literal null} to use valkey defaults.
+		 * Get the overflow to apply. Can be {@literal null} to use Valkey defaults.
 		 *
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Overflow getOverflow() {
+		public @Nullable Overflow getOverflow() {
 			return overflow;
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.annotation.AnnotationUtils;
+import org.springframework.data.core.TypeInformation;
 import org.springframework.data.keyvalue.annotation.KeySpace;
 import org.springframework.data.keyvalue.core.mapping.KeySpaceResolver;
 import org.springframework.data.keyvalue.core.mapping.context.KeyValueMappingContext;
@@ -40,8 +43,6 @@ import io.valkey.springframework.data.valkey.core.convert.KeyspaceConfiguration.
 import io.valkey.springframework.data.valkey.core.convert.MappingConfiguration;
 import io.valkey.springframework.data.valkey.core.convert.ValkeyCustomConversions;
 import io.valkey.springframework.data.valkey.core.index.IndexConfiguration;
-import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.NumberUtils;
@@ -92,6 +93,14 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 	}
 
 	@Override
+	protected boolean shouldCreatePersistentEntityFor(TypeInformation<?> typeInformation) {
+		if (typeInformation.isMap() || typeInformation.isCollectionLike()) {
+			return false;
+		}
+		return super.shouldCreatePersistentEntityFor(typeInformation);
+	}
+
+	@Override
 	protected ValkeyPersistentProperty createPersistentProperty(Property property, ValkeyPersistentEntity<?> owner,
 			SimpleTypeHolder simpleTypeHolder) {
 		return new ValkeyPersistentProperty(property, owner, simpleTypeHolder);
@@ -122,7 +131,8 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 		}
 
 		@Override
-		public String resolveKeySpace(Class<?> type) {
+		@SuppressWarnings("NullAway")
+		public @Nullable String resolveKeySpace(Class<?> type) {
 
 			Assert.notNull(type, "Type must not be null");
 			if (keyspaceConfig.hasSettingsFor(type)) {
@@ -135,6 +145,7 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 
 			return null;
 		}
+
 	}
 
 	/**
@@ -153,6 +164,7 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 			Assert.notNull(type, "Type must not be null");
 			return ClassUtils.getUserClass(type).getName();
 		}
+
 	}
 
 	/**
@@ -188,8 +200,8 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 		}
 
 		@Override
-		@SuppressWarnings({ "rawtypes" })
-		public Long getTimeToLive(Object source) {
+		@SuppressWarnings({ "rawtypes", "NullAway" })
+		public @Nullable Long getTimeToLive(Object source) {
 
 			Assert.notNull(source, "Source must not be null");
 			Class<?> type = source instanceof Class<?> ? (Class<?>) source
@@ -273,8 +285,8 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 			return resolveTimeMethod(type) != null;
 		}
 
-		@Nullable
-		private Long resolveDefaultTimeOut(Class<?> type) {
+		@SuppressWarnings("NullAway")
+		private @Nullable Long resolveDefaultTimeOut(Class<?> type) {
 
 			if (this.defaultTimeouts.containsKey(type)) {
 				return defaultTimeouts.get(type);
@@ -295,8 +307,8 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 			return defaultTimeout;
 		}
 
-		@Nullable
-		private PersistentProperty<?> resolveTtlProperty(Class<?> type) {
+		@SuppressWarnings("NullAway")
+		private @Nullable PersistentProperty<?> resolveTtlProperty(Class<?> type) {
 
 			if (timeoutProperties.containsKey(type)) {
 				return timeoutProperties.get(type);
@@ -328,8 +340,7 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 			return null;
 		}
 
-		@Nullable
-		private Method resolveTimeMethod(Class<?> type) {
+		private @Nullable Method resolveTimeMethod(Class<?> type) {
 
 			if (timeoutMethods.containsKey(type)) {
 				return timeoutMethods.get(type);
@@ -342,6 +353,7 @@ public class ValkeyMappingContext extends KeyValueMappingContext<ValkeyPersisten
 
 			return timeoutMethods.get(type);
 		}
+
 	}
 
 }

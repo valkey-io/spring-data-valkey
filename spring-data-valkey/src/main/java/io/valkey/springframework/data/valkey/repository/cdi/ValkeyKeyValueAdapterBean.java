@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Set;
 
-import org.springframework.beans.factory.DisposableBean;
 import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import org.springframework.util.Assert;
@@ -83,12 +82,10 @@ public class ValkeyKeyValueAdapterBean extends CdiBean<ValkeyKeyValueAdapter> {
 	@Override
 	public void destroy(ValkeyKeyValueAdapter instance, CreationalContext<ValkeyKeyValueAdapter> creationalContext) {
 
-		if (instance instanceof DisposableBean) {
-			try {
-				instance.destroy();
-			} catch (Exception ex) {
-				throw new IllegalStateException(ex);
-			}
+		try {
+			instance.destroy();
+		} catch (Exception ex) {
+			throw new IllegalStateException(ex);
 		}
 
 		super.destroy(instance, creationalContext);

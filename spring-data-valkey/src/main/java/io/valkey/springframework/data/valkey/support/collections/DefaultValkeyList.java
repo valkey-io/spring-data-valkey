@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.support.collections;
 
+import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.ConcurrentModificationException;
@@ -24,11 +25,11 @@ import java.util.ListIterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands;
 import io.valkey.springframework.data.valkey.core.BoundListOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -119,6 +120,20 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 	}
 
 	@Override
+	public E moveFirstTo(ValkeyList<E> destination, ValkeyListCommands.Direction destinationPosition, Duration timeout) {
+
+		Assert.notNull(destination, "Destination must not be null");
+		Assert.notNull(destinationPosition, "Destination position must not be null");
+		Assert.notNull(timeout, "Timeout must not be null");
+		Assert.isTrue(!timeout.isNegative(), "Timeout must not be negative");
+
+		E result = listOps.move(ValkeyListCommands.Direction.first(), destination.getKey(), destinationPosition, timeout);
+		potentiallyCap(destination);
+		return result;
+	}
+
+	@Override
+	@Deprecated
 	public E moveFirstTo(ValkeyList<E> destination, ValkeyListCommands.Direction destinationPosition, long timeout,
 			TimeUnit unit) {
 
@@ -144,6 +159,20 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 	}
 
 	@Override
+	public E moveLastTo(ValkeyList<E> destination, ValkeyListCommands.Direction destinationPosition, Duration timeout) {
+
+		Assert.notNull(destination, "Destination must not be null");
+		Assert.notNull(destinationPosition, "Destination position must not be null");
+		Assert.notNull(timeout, "Timeout must not be null");
+		Assert.isTrue(!timeout.isNegative(), "Timeout must not be negative");
+
+		E result = listOps.move(ValkeyListCommands.Direction.last(), destination.getKey(), destinationPosition, timeout);
+		potentiallyCap(destination);
+		return result;
+	}
+
+	@Override
+	@Deprecated
 	public E moveLastTo(ValkeyList<E> destination, ValkeyListCommands.Direction destinationPosition, long timeout,
 			TimeUnit unit) {
 
@@ -157,7 +186,6 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 		return result;
 	}
 
-	@SuppressWarnings("unchecked")
 	private void potentiallyCap(ValkeyList<E> destination) {
 		if (destination instanceof DefaultValkeyList<?> valkeyList) {
 			valkeyList.cap();
@@ -240,8 +268,7 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 
 		// insert collection in reverse
 		if (index == 0) {
-			CollectionUtils.reverse(collection)
-					.forEach(this::addFirst);
+			CollectionUtils.reverse(collection).forEach(this::addFirst);
 			return true;
 		}
 
@@ -335,14 +362,12 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 	}
 
 	@Override
-	@Nullable
-	public E peek() {
+	public @Nullable E peek() {
 		return listOps.getFirst();
 	}
 
 	@Override
-	@Nullable
-	public E poll() {
+	public @Nullable E poll() {
 		return listOps.leftPop();
 	}
 
@@ -406,26 +431,22 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 	}
 
 	@Override
-	@Nullable
-	public E peekFirst() {
+	public @Nullable E peekFirst() {
 		return peek();
 	}
 
 	@Override
-	@Nullable
-	public E peekLast() {
+	public @Nullable E peekLast() {
 		return listOps.getLast();
 	}
 
 	@Override
-	@Nullable
-	public E pollFirst() {
+	public @Nullable E pollFirst() {
 		return poll();
 	}
 
 	@Override
-	@Nullable
-	public E pollLast() {
+	public @Nullable E pollLast() {
 		return listOps.rightPop();
 	}
 
@@ -499,8 +520,7 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 	}
 
 	@Override
-	@Nullable
-	public E poll(long timeout, TimeUnit unit) throws InterruptedException {
+	public @Nullable E poll(long timeout, TimeUnit unit) throws InterruptedException {
 		return listOps.leftPop(timeout, unit);
 	}
 
@@ -515,8 +535,7 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 	}
 
 	@Override
-	@Nullable
-	public E take() throws InterruptedException {
+	public @Nullable E take() throws InterruptedException {
 		return poll(0, TimeUnit.SECONDS);
 	}
 
@@ -535,14 +554,12 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 	}
 
 	@Override
-	@Nullable
-	public E pollFirst(long timeout, TimeUnit unit) throws InterruptedException {
+	public @Nullable E pollFirst(long timeout, TimeUnit unit) throws InterruptedException {
 		return poll(timeout, unit);
 	}
 
 	@Override
-	@Nullable
-	public E pollLast(long timeout, TimeUnit unit) {
+	public @Nullable E pollLast(long timeout, TimeUnit unit) {
 		return listOps.rightPop(timeout, unit);
 	}
 
@@ -557,14 +574,12 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 	}
 
 	@Override
-	@Nullable
-	public E takeFirst() throws InterruptedException {
+	public @Nullable E takeFirst() throws InterruptedException {
 		return take();
 	}
 
 	@Override
-	@Nullable
-	public E takeLast() {
+	public @Nullable E takeLast() {
 		return pollLast(0, TimeUnit.SECONDS);
 	}
 
@@ -632,8 +647,7 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 		@SuppressWarnings("all")
 		public void remove() {
 
-			Assert.state(this.lastReturnedElement != null,
-				"Next must be called before remove");
+			Assert.state(this.lastReturnedElement != null, "Next must be called before remove");
 
 			if (!DefaultValkeyList.this.remove(this.lastReturnedElement)) {
 				throw new ConcurrentModificationException();
@@ -698,8 +712,7 @@ public class DefaultValkeyList<E> extends AbstractValkeyCollection<E> implements
 
 		public void set(E element) {
 
-			Assert.state(this.lastReturnedElement != null,
-				"next() or previous() must be called before set(:E)");
+			Assert.state(this.lastReturnedElement != null, "next() or previous() must be called before set(:E)");
 
 			try {
 				DefaultValkeyList.this.set(this.lastReturnedElementIndex, element);

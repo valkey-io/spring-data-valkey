@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+import org.springframework.data.core.TypeInformation;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -46,6 +46,7 @@ public class CompositeIndexResolver implements IndexResolver {
 	 *
 	 * @param resolvers must not be {@literal null}.
 	 */
+	@SuppressWarnings("NullAway")
 	public CompositeIndexResolver(Collection<IndexResolver> resolvers) {
 
 		Assert.notNull(resolvers, "Resolvers must not be null");

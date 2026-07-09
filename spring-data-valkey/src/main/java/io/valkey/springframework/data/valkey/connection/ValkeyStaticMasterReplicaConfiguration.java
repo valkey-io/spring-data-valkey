@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +19,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.StaticMasterReplicaConfiguration;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
  * Configuration class used for setting up {@link ValkeyConnection} via {@link ValkeyConnectionFactory} using the provided
- * Master / Replica configuration to nodes know to not change address. Eg. when connecting to
- * <a href="https://aws.amazon.com/documentation/elasticache/">AWS ElastiCache with Read Replicas</a>. <br/>
- * Please also note that a Master/Replica connection cannot be used for Pub/Sub operations.
+ * Master / Replica configuration to nodes know to not change address. Useful when connecting to
+ * <a href="https://aws.amazon.com/documentation/elasticache/">AWS ElastiCache with Read Replicas</a>.
+ * <p>
+ * A Master/Replica connection cannot be used for Pub/Sub operations as Pub/Sub messages are not broadcasted across
+ * replicas. Pub/Sub broadcasting is only available using {@link ValkeyClusterConfiguration Valkey Cluster}.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -39,13 +41,20 @@ public class ValkeyStaticMasterReplicaConfiguration implements ValkeyConfigurati
 
 	private static final int DEFAULT_PORT = 6379;
 
-	private List<ValkeyStandaloneConfiguration> nodes = new ArrayList<>();
+	private final List<ValkeyStandaloneConfiguration> nodes = new ArrayList<>();
 	private int database;
 	private @Nullable String username = null;
 	private ValkeyPassword password = ValkeyPassword.none();
 
 	/**
-	 * Create a new {@link StaticMasterReplicaConfiguration} given {@code hostName}.
+	 * Create a new default {@link ValkeyStaticMasterReplicaConfiguration}.
+	 *
+	 * @since 4.0
+	 */
+	public ValkeyStaticMasterReplicaConfiguration() {}
+
+	/**
+	 * Create a new {@code StaticMasterReplicaConfiguration} given {@code hostName}.
 	 *
 	 * @param hostName must not be {@literal null} or empty.
 	 */
@@ -54,7 +63,7 @@ public class ValkeyStaticMasterReplicaConfiguration implements ValkeyConfigurati
 	}
 
 	/**
-	 * Create a new {@link StaticMasterReplicaConfiguration} given {@code hostName} and {@code port}.
+	 * Create a new {@code StaticMasterReplicaConfiguration} given {@code hostName} and {@code port}.
 	 *
 	 * @param hostName must not be {@literal null} or empty.
 	 * @param port a valid TCP port (1-65535).
@@ -91,7 +100,7 @@ public class ValkeyStaticMasterReplicaConfiguration implements ValkeyConfigurati
 	 * Add a {@link ValkeyStandaloneConfiguration node} to the list of nodes given {@code hostName}.
 	 *
 	 * @param hostName must not be {@literal null} or empty.
-	 * @return {@code this} {@link StaticMasterReplicaConfiguration}.
+	 * @return {@code this} {@code StaticMasterReplicaConfiguration}.
 	 */
 	public ValkeyStaticMasterReplicaConfiguration node(String hostName) {
 		return node(hostName, DEFAULT_PORT);
@@ -102,7 +111,7 @@ public class ValkeyStaticMasterReplicaConfiguration implements ValkeyConfigurati
 	 *
 	 * @param hostName must not be {@literal null} or empty.
 	 * @param port a valid TCP port (1-65535).
-	 * @return {@code this} {@link StaticMasterReplicaConfiguration}.
+	 * @return {@code this} {@code StaticMasterReplicaConfiguration}.
 	 */
 	public ValkeyStaticMasterReplicaConfiguration node(String hostName, int port) {
 
@@ -129,9 +138,8 @@ public class ValkeyStaticMasterReplicaConfiguration implements ValkeyConfigurati
 		this.username = username;
 	}
 
-	@Nullable
 	@Override
-	public String getUsername() {
+	public @Nullable String getUsername() {
 		return this.username;
 	}
 

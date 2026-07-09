@@ -1,6 +1,5 @@
 /**
  * Valkey specific query execution engine.
  */
-@org.springframework.lang.NonNullApi
-@org.springframework.lang.NonNullFields
+@org.jspecify.annotations.NullMarked
 package io.valkey.springframework.data.valkey.repository.query;

@@ -60,11 +60,11 @@ The following example shows two sample byte array converters:
 @WritingConverter
 public class AddressToBytesConverter implements Converter<Address, byte[]> {
 
-  private final Jackson2JsonValkeySerializer<Address> serializer;
+  private final JacksonJsonValkeySerializer<Address> serializer;
 
   public AddressToBytesConverter() {
 
-    serializer = new Jackson2JsonValkeySerializer<Address>(Address.class);
+    serializer = new JacksonJsonValkeySerializer<Address>(Address.class);
     serializer.setObjectMapper(new ObjectMapper());
   }
 
@@ -77,11 +77,11 @@ public class AddressToBytesConverter implements Converter<Address, byte[]> {
 @ReadingConverter
 public class BytesToAddressConverter implements Converter<byte[], Address> {
 
-  private final Jackson2JsonValkeySerializer<Address> serializer;
+  private final JacksonJsonValkeySerializer<Address> serializer;
 
   public BytesToAddressConverter() {
 
-    serializer = new Jackson2JsonValkeySerializer<Address>(Address.class);
+    serializer = new JacksonJsonValkeySerializer<Address>(Address.class);
     serializer.setObjectMapper(new ObjectMapper());
   }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.core.mapping;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.keyvalue.core.mapping.KeyValuePersistentEntity;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.PersistentProperty;
 import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
-import org.springframework.lang.Nullable;
 
 /**
  * Valkey specific {@link PersistentEntity}.
@@ -36,16 +36,6 @@ public interface ValkeyPersistentEntity<T> extends KeyValuePersistentEntity<T, V
 	 * @return never {@literal null}.
 	 */
 	TimeToLiveAccessor getTimeToLiveAccessor();
-
-	/**
-	 * @return {@literal true} when a property is annotated with {@link io.valkey.springframework.data.valkey.core.TimeToLive}.
-	 * @since 1.8
-	 * @deprecated in favor of {@link #hasExplicitTimeToLiveProperty()}.
-	 */
-	@Deprecated(forRemoval = true)
-	default boolean hasExplictTimeToLiveProperty() {
-		return hasExplicitTimeToLiveProperty();
-	}
 
 	/**
 	 * @return {@literal true} when a property is annotated with {@link io.valkey.springframework.data.valkey.core.TimeToLive}.
@@ -71,4 +61,5 @@ public interface ValkeyPersistentEntity<T> extends KeyValuePersistentEntity<T, V
 	default boolean isExpiring() {
 		return getTimeToLiveAccessor().isExpiringEntity(getType());
 	}
+
 }

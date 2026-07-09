@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package io.valkey.springframework.data.valkey.core;
 
 import java.util.StringJoiner;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.DataType;
-import org.springframework.lang.Nullable;
 import org.springframework.util.StringUtils;
 
 /**
@@ -37,8 +37,7 @@ public class KeyScanOptions extends ScanOptions {
 
 	private final @Nullable String type;
 
-	KeyScanOptions(@Nullable Long count, @Nullable String pattern, @Nullable byte[] bytePattern,
-			@Nullable String type) {
+	KeyScanOptions(@Nullable Long count, @Nullable String pattern, byte @Nullable [] bytePattern, @Nullable String type) {
 
 		super(count, pattern, bytePattern);
 		this.type = type;
@@ -47,15 +46,14 @@ public class KeyScanOptions extends ScanOptions {
 	/**
 	 * Static factory method that returns a new {@link ScanOptionsBuilder}.
 	 *
-	 * @param type 
+	 * @param type
 	 * @return
 	 */
 	public static ScanOptionsBuilder scanOptions(DataType type) {
 		return new ScanOptionsBuilder().type(type);
 	}
 
-	@Nullable
-	public String getType() {
+	public @Nullable String getType() {
 		return type;
 	}
 
@@ -74,4 +72,5 @@ public class KeyScanOptions extends ScanOptions {
 
 		return joiner.toString();
 	}
+
 }

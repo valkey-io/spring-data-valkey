@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import static io.valkey.springframework.data.valkey.connection.lettuce.LettuceCo
 
 import io.lettuce.core.AbstractRedisClient;
 import io.lettuce.core.ClientOptions;
+import io.lettuce.core.DriverInfo;
 import io.lettuce.core.ReadFrom;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisConnectionException;
@@ -50,6 +51,7 @@ import java.util.stream.Collectors;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -64,8 +66,7 @@ import io.valkey.springframework.data.valkey.connection.*;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.ClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.WithDatabaseIndex;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.WithPassword;
-import org.springframework.data.util.Optionals;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.util.ValkeyClientLibraryInfo;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
@@ -116,6 +117,7 @@ import org.springframework.util.StringUtils;
  * @author Chris Bono
  * @author John Blum
  * @author Zhian Chen
+ * @author UHyeon Jeong
  */
 public class LettuceConnectionFactory implements ValkeyConnectionFactory, ReactiveValkeyConnectionFactory,
 		InitializingBean, DisposableBean, SmartLifecycle {
@@ -346,10 +348,10 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		}
 
 		if (!ObjectUtils.isEmpty(redisUri.getSocket())) {
-			return LettuceConverters.createValkeySocketConfiguration(redisUri);
+			return LettuceConverters.createRedisSocketConfiguration(redisUri);
 		}
 
-		return LettuceConverters.createValkeyStandaloneConfiguration(redisUri);
+		return LettuceConverters.createRedisStandaloneConfiguration(redisUri);
 	}
 
 	ClusterCommandExecutor getRequiredClusterCommandExecutor() {
@@ -620,8 +622,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 * @return the client name or {@literal null} if not set.
 	 * @since 2.1
 	 */
-	@Nullable
-	public String getClientName() {
+	public @Nullable String getClientName() {
 		return clientConfiguration.getClientName().orElse(null);
 	}
 
@@ -649,8 +650,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 * @since 2.5
 	 * @see #afterPropertiesSet()
 	 */
-	@Nullable
-	public AbstractRedisClient getNativeClient() {
+	public @Nullable AbstractRedisClient getNativeClient() {
 		assertStarted();
 		return this.client;
 	}
@@ -676,8 +676,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		return client;
 	}
 
-	@Nullable
-	private String getValkeyUsername() {
+	private @Nullable String getValkeyUsername() {
 		return ValkeyConfiguration.getUsernameOrElse(configuration, standaloneConfig::getUsername);
 	}
 
@@ -686,8 +685,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 *
 	 * @return password for authentication or {@literal null} if not set.
 	 */
-	@Nullable
-	public String getPassword() {
+	public @Nullable String getPassword() {
 		return getValkeyPassword().map(String::new).orElse(null);
 	}
 
@@ -742,8 +740,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 * @return {@literal null} if not set.
 	 * @since 1.7
 	 */
-	@Nullable
-	public ClientResources getClientResources() {
+	public @Nullable ClientResources getClientResources() {
 		return clientConfiguration.getClientResources().orElse(null);
 	}
 
@@ -781,8 +778,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 * @return the {@link ValkeySocketConfiguration} or {@literal null} if not set.
 	 * @since 2.1
 	 */
-	@Nullable
-	public ValkeySocketConfiguration getSocketConfiguration() {
+	public @Nullable ValkeySocketConfiguration getSocketConfiguration() {
 		return isDomainSocketAware() ? (ValkeySocketConfiguration) this.configuration : null;
 	}
 
@@ -790,8 +786,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 * @return the {@link ValkeySentinelConfiguration}, may be {@literal null}.
 	 * @since 2.0
 	 */
-	@Nullable
-	public ValkeySentinelConfiguration getSentinelConfiguration() {
+	public @Nullable ValkeySentinelConfiguration getSentinelConfiguration() {
 		return isValkeySentinelAware() ? (ValkeySentinelConfiguration) this.configuration : null;
 	}
 
@@ -799,8 +794,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 * @return the {@link ValkeyClusterConfiguration}, may be {@literal null}.
 	 * @since 2.0
 	 */
-	@Nullable
-	public ValkeyClusterConfiguration getClusterConfiguration() {
+	public @Nullable ValkeyClusterConfiguration getClusterConfiguration() {
 		return isClusterAware() ? (ValkeyClusterConfiguration) this.configuration : null;
 	}
 
@@ -973,25 +967,17 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 
 			resetConnection();
 
+			dispose(clusterCommandExecutor);
+			clusterCommandExecutor = null;
+
 			dispose(connectionProvider);
 			connectionProvider = null;
 
 			dispose(reactiveConnectionProvider);
 			reactiveConnectionProvider = null;
 
-			if (client != null) {
-				try {
-					Duration quietPeriod = clientConfiguration.getShutdownQuietPeriod();
-					Duration timeout = clientConfiguration.getShutdownTimeout();
-
-					client.shutdown(quietPeriod.toMillis(), timeout.toMillis(), TimeUnit.MILLISECONDS);
-					client = null;
-				} catch (Exception ex) {
-					if (log.isWarnEnabled()) {
-						log.warn(ClassUtils.getShortName(client.getClass()) + " did not shut down gracefully.", ex);
-					}
-				}
-			}
+			dispose(client);
+			client = null;
 		}
 
 		state.set(State.STOPPED);
@@ -1014,20 +1000,18 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	public void destroy() {
 
 		stop();
-		this.client = null;
+		this.state.set(State.DESTROYED);
+	}
 
-		ClusterCommandExecutor clusterCommandExecutor = this.clusterCommandExecutor;
+	private void dispose(@Nullable ClusterCommandExecutor commandExecutor) {
 
-		if (clusterCommandExecutor != null) {
+		if (commandExecutor != null) {
 			try {
-				clusterCommandExecutor.destroy();
-				this.clusterCommandExecutor = null;
+				commandExecutor.destroy();
 			} catch (Exception ex) {
 				log.warn("Cannot properly close cluster command executor", ex);
 			}
 		}
-
-		this.state.set(State.DESTROYED);
 	}
 
 	private void dispose(@Nullable LettuceConnectionProvider connectionProvider) {
@@ -1043,7 +1027,24 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		}
 	}
 
+	private void dispose(@Nullable AbstractRedisClient client) {
+
+		if (client != null) {
+			try {
+				Duration quietPeriod = clientConfiguration.getShutdownQuietPeriod();
+				Duration timeout = clientConfiguration.getShutdownTimeout();
+
+				client.shutdown(quietPeriod.toMillis(), timeout.toMillis(), TimeUnit.MILLISECONDS);
+			} catch (Exception ex) {
+				if (log.isWarnEnabled()) {
+					log.warn(ClassUtils.getShortName(client.getClass()) + " did not shut down gracefully.", ex);
+				}
+			}
+		}
+	}
+
 	@Override
+	@SuppressWarnings("NullAway")
 	public ValkeyConnection getConnection() {
 
 		assertStarted();
@@ -1061,6 +1062,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public ValkeyClusterConnection getClusterConnection() {
 
 		assertStarted();
@@ -1080,6 +1082,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public ValkeySentinelConnection getSentinelConnection() {
 
 		assertStarted();
@@ -1137,6 +1140,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public LettuceReactiveValkeyConnection getReactiveConnection() {
 
 		assertStarted();
@@ -1151,6 +1155,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public LettuceReactiveValkeyClusterConnection getReactiveClusterConnection() {
 
 		assertStarted();
@@ -1190,8 +1195,13 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 
 		doInLock(() -> {
 
-			Optionals.toStream(Optional.ofNullable(this.connection), Optional.ofNullable(this.reactiveConnection))
-					.forEach(SharedConnection::resetConnection);
+			if (this.connection != null) {
+				this.connection.resetConnection();
+			}
+
+			if (this.reactiveConnection != null) {
+				this.reactiveConnection.resetConnection();
+			}
 
 			this.connection = null;
 			this.reactiveConnection = null;
@@ -1209,6 +1219,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		getOrCreateSharedReactiveConnection().validateConnection();
 	}
 
+	@SuppressWarnings("NullAway")
 	private SharedConnection<byte[]> getOrCreateSharedConnection() {
 
 		return doInLock(() -> {
@@ -1221,6 +1232,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		});
 	}
 
+	@SuppressWarnings("NullAway")
 	private SharedConnection<ByteBuffer> getOrCreateSharedReactiveConnection() {
 
 		return doInLock(() -> {
@@ -1234,7 +1246,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	}
 
 	@Override
-	public DataAccessException translateExceptionIfPossible(RuntimeException ex) {
+	public @Nullable DataAccessException translateExceptionIfPossible(RuntimeException ex) {
 		return EXCEPTION_TRANSLATION.translate(ex);
 	}
 
@@ -1242,8 +1254,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 * @return the shared connection using {@code byte[]} encoding for imperative API use. {@literal null} if
 	 *         {@link #getShareNativeConnection() connection sharing} is disabled or when connected to Valkey Cluster.
 	 */
-	@Nullable
-	protected StatefulRedisConnection<byte[], byte[]> getSharedConnection() {
+	protected @Nullable StatefulRedisConnection<byte[], byte[]> getSharedConnection() {
 
 		return shareNativeConnection && !isClusterAware()
 				? (StatefulRedisConnection<byte[], byte[]>) getOrCreateSharedConnection().getConnection()
@@ -1256,8 +1267,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 *         Standalone/Sentinel/Master-Replica.
 	 * @since 2.5.7
 	 */
-	@Nullable
-	protected StatefulRedisClusterConnection<byte[], byte[]> getSharedClusterConnection() {
+	protected @Nullable StatefulRedisClusterConnection<byte[], byte[]> getSharedClusterConnection() {
 
 		return shareNativeConnection && isClusterAware()
 				? (StatefulRedisClusterConnection<byte[], byte[]>) getOrCreateSharedConnection().getConnection()
@@ -1269,8 +1279,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	 *         {@link #getShareNativeConnection() connection sharing} is disabled.
 	 * @since 2.0.1
 	 */
-	@Nullable
-	protected StatefulConnection<ByteBuffer, ByteBuffer> getSharedReactiveConnection() {
+	protected @Nullable StatefulConnection<ByteBuffer, ByteBuffer> getSharedReactiveConnection() {
 		return shareNativeConnection ? getOrCreateSharedReactiveConnection().getConnection() : null;
 	}
 
@@ -1309,7 +1318,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 			RedisCodec<?, ?> codec) {
 
 		List<RedisURI> nodes = ((ValkeyStaticMasterReplicaConfiguration) this.configuration).getNodes().stream()
-				.map(it -> createValkeyURIAndApplySettings(it.getHostName(), it.getPort()))
+				.map(it -> createRedisURIAndApplySettings(it.getHostName(), it.getPort()))
 				.peek(it -> it.setDatabase(getDatabase())).collect(Collectors.toList());
 
 		return new StaticMasterReplicaConnectionProvider(client, codec, nodes,
@@ -1333,33 +1342,33 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 
 	private RedisClient createStaticMasterReplicaClient() {
 
-		RedisClient valkeyClient = this.clientConfiguration.getClientResources().map(RedisClient::create)
+		RedisClient redisClient = this.clientConfiguration.getClientResources().map(RedisClient::create)
 				.orElseGet(RedisClient::create);
 
-		this.clientConfiguration.getClientOptions().ifPresent(valkeyClient::setOptions);
+		this.clientConfiguration.getClientOptions().ifPresent(redisClient::setOptions);
 
-		return valkeyClient;
+		return redisClient;
 	}
 
 	private RedisClient createSentinelClient() {
 
-		RedisURI redisURI = getSentinelValkeyURI();
+		RedisURI redisURI = getSentinelRedisURI();
 
-		RedisClient valkeyClient = this.clientConfiguration.getClientResources()
+		RedisClient redisClient = this.clientConfiguration.getClientResources()
 				.map(clientResources -> RedisClient.create(clientResources, redisURI))
 				.orElseGet(() -> RedisClient.create(redisURI));
 
-		this.clientConfiguration.getClientOptions().ifPresent(valkeyClient::setOptions);
+		this.clientConfiguration.getClientOptions().ifPresent(redisClient::setOptions);
 
-		return valkeyClient;
+		return redisClient;
 	}
 
 	@SuppressWarnings("all")
-	private RedisURI getSentinelValkeyURI() {
+	private RedisURI getSentinelRedisURI() {
 
 		ValkeySentinelConfiguration sentinelConfiguration = (ValkeySentinelConfiguration) this.configuration;
 
-		RedisURI redisUri = LettuceConverters.sentinelConfigurationToValkeyURI(sentinelConfiguration);
+		RedisURI redisUri = LettuceConverters.sentinelConfigurationToRedisURI(sentinelConfiguration);
 
 		applyToAll(redisUri, it -> {
 
@@ -1373,7 +1382,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 
 		redisUri.setDatabase(getDatabase());
 
-		this.clientConfiguration.getValkeyCredentialsProviderFactory().ifPresent(factory -> {
+		this.clientConfiguration.getRedisCredentialsProviderFactory().ifPresent(factory -> {
 
 			redisUri.setCredentialsProvider(factory.createCredentialsProvider(this.configuration));
 
@@ -1394,7 +1403,8 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		ClusterConfiguration clusterConfiguration = (ClusterConfiguration) this.configuration;
 
 		clusterConfiguration.getClusterNodes().stream()
-				.map(node -> createValkeyURIAndApplySettings(node.getHost(), node.getPort())).forEach(initialUris::add);
+				.map(node -> createRedisURIAndApplySettings(node.getRequiredHost(), node.getRequiredPort()))
+				.forEach(initialUris::add);
 
 		RedisClusterClient clusterClient = this.clientConfiguration.getClientResources()
 				.map(clientResources -> RedisClusterClient.create(clientResources, initialUris))
@@ -1425,17 +1435,18 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 	@SuppressWarnings("all")
 	private RedisClient createBasicClient() {
 
-		RedisURI uri = isDomainSocketAware() ? createValkeySocketURIAndApplySettings(getSocketConfiguration().getSocket())
-				: createValkeyURIAndApplySettings(getHostName(), getPort());
+		RedisURI uri = isDomainSocketAware() ? createRedisSocketURIAndApplySettings(getSocketConfiguration().getSocket())
+				: createRedisURIAndApplySettings(getHostName(), getPort());
 
-		RedisClient valkeyClient = this.clientConfiguration.getClientResources()
+		RedisClient redisClient = this.clientConfiguration.getClientResources()
 				.map(clientResources -> RedisClient.create(clientResources, uri)).orElseGet(() -> RedisClient.create(uri));
 
-		this.clientConfiguration.getClientOptions().ifPresent(valkeyClient::setOptions);
+		this.clientConfiguration.getClientOptions().ifPresent(redisClient::setOptions);
 
-		return valkeyClient;
+		return redisClient;
 	}
 
+	@SuppressWarnings("NullAway")
 	private void assertStarted() {
 
 		State current = this.state.get();
@@ -1459,7 +1470,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		source.getSentinels().forEach(action);
 	}
 
-	private RedisURI createValkeyURIAndApplySettings(String host, int port) {
+	private RedisURI createRedisURIAndApplySettings(String host, int port) {
 
 		RedisURI.Builder builder = RedisURI.Builder.redis(host, port);
 
@@ -1473,15 +1484,19 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		builder.withStartTls(clientConfiguration.isStartTls());
 		builder.withTimeout(clientConfiguration.getCommandTimeout());
 
+		builder.withDriverInfo(DriverInfo.builder().addUpstreamDriver(ValkeyClientLibraryInfo.FRAMEWORK_NAME,
+				ValkeyClientLibraryInfo.getVersion()).build());
+
 		return builder.build();
 	}
 
-	private RedisURI createValkeySocketURIAndApplySettings(String socketPath) {
+	private RedisURI createRedisSocketURIAndApplySettings(String socketPath) {
 
 		return applyAuthentication(RedisURI.Builder.socket(socketPath))
 				.withTimeout(this.clientConfiguration.getCommandTimeout()).withDatabase(getDatabase()).build();
 	}
 
+	@SuppressWarnings("NullAway")
 	private RedisURI.Builder applyAuthentication(RedisURI.Builder builder) {
 
 		String username = getValkeyUsername();
@@ -1493,7 +1508,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 			getValkeyPassword().toOptional().ifPresent(builder::withPassword);
 		}
 
-		this.clientConfiguration.getValkeyCredentialsProviderFactory()
+		this.clientConfiguration.getRedisCredentialsProviderFactory()
 				.ifPresent(factory -> builder.withAuthentication(factory.createCredentialsProvider(this.configuration)));
 
 		return builder;
@@ -1727,7 +1742,7 @@ public class LettuceConnectionFactory implements ValkeyConnectionFactory, Reacti
 		}
 
 		@Override
-		public Optional<ValkeyCredentialsProviderFactory> getValkeyCredentialsProviderFactory() {
+		public Optional<ValkeyCredentialsProviderFactory> getRedisCredentialsProviderFactory() {
 			return Optional.empty();
 		}
 

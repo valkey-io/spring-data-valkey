@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,11 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
+
+import redis.clients.jedis.ConnectionPool;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.JedisCluster;
 
 import java.util.Random;
 
@@ -25,10 +29,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
 import io.valkey.springframework.data.valkey.test.extension.JedisExtension;
 import org.springframework.util.StringUtils;
-
-import redis.clients.jedis.ConnectionPool;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCluster;
 
 /**
  * Unit tests for {@link ClusterSlotHashUtil}.
@@ -57,12 +57,6 @@ public class ClusterSlotHashUtilsTests {
 
 			String key = randomString();
 			int slot = ClusterSlotHashUtil.calculateSlot(key);
-
-			// Guard against closed connection
-			if (!jedis.isConnected()) {
-				jedis.connect();
-			}
-
 			Long serverSlot = jedis.clusterKeySlot(key);
 
 			assertThat(slot)
@@ -90,13 +84,8 @@ public class ClusterSlotHashUtilsTests {
 			int slot2 = ClusterSlotHashUtil.calculateSlot(key2);
 
 			assertThat(slot2)
-				.describedAs("Expected slot for prefixed keys '%s' and '%s' to be %s but was  %s.", key1, key2, slot1, slot2)
-				.isEqualTo(slot1);
-
-			// Guard against closed connection
-			if (!jedis.isConnected()) {
-				jedis.connect();
-			}
+					.describedAs("Expected slot for prefixed keys '%s' and '%s' to be %s but was  %s.", key1, key2, slot1, slot2)
+					.isEqualTo(slot1);
 
 			Long serverSlot1 = jedis.clusterKeySlot(key1);
 			Long serverSlot2 = jedis.clusterKeySlot(key2);

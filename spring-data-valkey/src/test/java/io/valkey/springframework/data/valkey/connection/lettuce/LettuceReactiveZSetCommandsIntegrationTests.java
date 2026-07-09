@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,9 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.function.Function;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
 import io.valkey.springframework.data.valkey.connection.ReactiveZSetCommands.ZAddCommand;
@@ -35,7 +38,6 @@ import io.valkey.springframework.data.valkey.connection.zset.DefaultTuple;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for {@link LettuceReactiveZSetCommands}.
@@ -44,6 +46,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author Michele Mancioppi
  */
+@ParameterizedClass
 public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactiveCommandsTestSupport {
 
 	private static final Range<Long> ONE_TO_TWO = Range.closed(1L, 2L);
@@ -56,12 +59,12 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		super(fixture);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zAddShouldAddValuesWithScores() {
 		assertThat(connection.zSetCommands().zAdd(KEY_1_BBUFFER, 3.5D, VALUE_1_BBUFFER).block()).isEqualTo(1L);
 	}
 
-	@ParameterizedValkeyTest // GH-2731
+	@Test // GH-2731
 	void zAddShouldConsiderAbsentPresentUpsertFlags() {
 
 		Tuple tuple = Tuple.of(VALUE_1_BYTES, 3.5D);
@@ -99,7 +102,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2731
+	@Test // GH-2731
 	void zAddShouldConsiderLessThan() {
 
 		Tuple tuple = Tuple.of(VALUE_1_BYTES, 3.5D);
@@ -130,7 +133,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2731
+	@Test // GH-2731
 	void zAddShouldConsiderGreaterThan() {
 
 		Tuple tuple = Tuple.of(VALUE_1_BYTES, 3.5D);
@@ -161,7 +164,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2731
+	@Test // GH-2731
 	void zAddShouldConsiderIncrFlag() {
 
 		Tuple tuple = Tuple.of(VALUE_1_BYTES, 3.5D);
@@ -178,7 +181,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2731
+	@Test // GH-2731
 	void zAddShouldConsiderChFlag() {
 
 		Tuple tuple = Tuple.of(VALUE_1_BYTES, 3.5D);
@@ -204,7 +207,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.map(NumericResponse::getOutput);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRemShouldRemoveValuesFromSet() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -215,7 +218,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zIncrByShouldInreaseAndReturnScore() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -223,7 +226,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zIncrBy(KEY_1_BBUFFER, 3.5D, VALUE_1_BBUFFER).block()).isEqualTo(4.5D);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRankShouldReturnIndexCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -233,7 +236,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zRank(KEY_1_BBUFFER, VALUE_3_BBUFFER).block()).isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRankShouldReturnIndexCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -243,7 +246,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zRevRank(KEY_1_BBUFFER, VALUE_3_BBUFFER).block()).isEqualTo(0L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeShouldReturnValuesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -255,7 +258,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeWithScoreShouldReturnTuplesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -267,7 +270,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeShouldReturnValuesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -279,7 +282,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeWithScoreShouldReturnTuplesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -291,7 +294,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeByScoreShouldReturnValuesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -303,7 +306,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-852
+	@Test // DATAREDIS-852
 	void zRangeByScoreShouldReturnValuesCorrectlyWithMinUnbounded() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -316,7 +319,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-852
+	@Test // DATAREDIS-852
 	void zRangeByScoreShouldReturnValuesCorrectlyWithMaxUnbounded() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -329,7 +332,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeByScoreShouldReturnValuesCorrectlyWithMinExclusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -341,7 +344,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeByScoreShouldReturnValuesCorrectlyWithMaxExclusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -353,7 +356,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeByScoreWithScoreShouldReturnTuplesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -366,7 +369,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeByScoreWithScoreShouldReturnTuplesCorrectlyWithMinExclusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -379,7 +382,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeByScoreWithScoreShouldReturnTuplesCorrectlyWithMaxExclusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -392,7 +395,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeByScoreShouldReturnValuesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -404,7 +407,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeByScoreShouldReturnValuesCorrectlyWithMinExclusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -416,7 +419,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeByScoreShouldReturnValuesCorrectlyWithMaxExclusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -428,7 +431,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeByScoreWithScoreShouldReturnTuplesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -441,7 +444,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeByScoreWithScoreShouldReturnTuplesCorrectlyWithMinExclusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -454,7 +457,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeByScoreWithScoreShouldReturnTuplesCorrectlyWithMaxExclusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -467,7 +470,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-743
+	@Test // DATAREDIS-743
 	void zScanShouldIterateOverSortedSet() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -483,7 +486,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zCountShouldCountValuesInRange() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -493,7 +496,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zCount(KEY_1_BBUFFER, TWO_TO_THREE_ALL_INCLUSIVE).block()).isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zCountShouldCountValuesInRangeWithMinExlusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -503,7 +506,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zCount(KEY_1_BBUFFER, TWO_EXCLUSIVE_TO_THREE_INCLUSIVE).block()).isEqualTo(1L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zCountShouldCountValuesInRangeWithMaxExlusion() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -513,7 +516,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zCount(KEY_1_BBUFFER, TWO_INCLUSIVE_TO_THREE_EXCLUSIVE).block()).isEqualTo(1L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zCountShouldCountValuesInRangeWithNegativeInfinity() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -524,7 +527,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zCountShouldCountValuesInRangeWithPositiveInfinity() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -535,7 +538,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // GH-2007
+	@Test // GH-2007
 	@EnabledOnCommand("ZPOPMIN")
 	void zPopMinShouldReturnCorrectly() {
 
@@ -551,7 +554,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2007
+	@Test // GH-2007
 	@EnabledOnCommand("BZPOPMIN")
 	void bzPopMinShouldReturnCorrectly() {
 
@@ -563,7 +566,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.expectNext(new DefaultTuple(VALUE_1_BYTES, 1D)).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2007
+	@Test // GH-2007
 	@EnabledOnCommand("ZPOPMAX")
 	void zPopMaxShouldReturnCorrectly() {
 
@@ -579,7 +582,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2007
+	@Test // GH-2007
 	@EnabledOnCommand("BZPOPMAX")
 	void bzPopMaxShouldReturnCorrectly() {
 
@@ -591,7 +594,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.expectNext(new DefaultTuple(VALUE_3_BYTES, 3D)).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zCardShouldReturnSizeCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -601,7 +604,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zCard(KEY_1_BBUFFER).block()).isEqualTo(3L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zScoreShouldReturnScoreCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 2D, VALUE_2);
@@ -609,7 +612,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zScore(KEY_1_BBUFFER, VALUE_2_BBUFFER).block()).isEqualTo(2D);
 	}
 
-	@ParameterizedValkeyTest // GH-2038
+	@Test // GH-2038
 	@EnabledOnCommand("ZMSCORE")
 	void zMScoreShouldReturnScoreCorrectly() {
 
@@ -620,7 +623,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.as(StepVerifier::create).expectNext(Arrays.asList(1D, 2D)).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRemRangeByRankShouldRemoveValuesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -630,7 +633,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zRemRangeByRank(KEY_1_BBUFFER, ONE_TO_TWO).block()).isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // GH-1816
+	@Test // GH-1816
 	void zRemRangeByLexRemovesValuesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 0D, "aaaa");
@@ -650,7 +653,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRemRangeByScoreShouldRemoveValuesCorrectly() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -660,7 +663,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 		assertThat(connection.zSetCommands().zRemRangeByScore(KEY_1_BBUFFER, Range.closed(1D, 2D)).block()).isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRemRangeByScoreShouldRemoveValuesCorrectlyWithNegativeInfinity() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -671,7 +674,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRemRangeByScoreShouldRemoveValuesCorrectlyWithPositiveInfinity() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -682,7 +685,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRemRangeByScoreShouldRemoveValuesCorrectlyWithExcludingMinRange() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -693,7 +696,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.isEqualTo(1L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRemRangeByScoreShouldRemoveValuesCorrectlyWithExcludingMaxRange() {
 
 		nativeCommands.zadd(KEY_1, 1D, VALUE_1);
@@ -704,7 +707,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.isEqualTo(1L);
 	}
 
-	@ParameterizedValkeyTest // GH-2041
+	@Test // GH-2041
 	void zDiffShouldWorkCorrectly() {
 
 		assumeThat(nativeCommands).isInstanceOf(io.lettuce.core.api.sync.RedisCommands.class);
@@ -730,7 +733,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2041
+	@Test // GH-2041
 	void zDiffStoreShouldWorkCorrectly() {
 
 		assumeThat(nativeCommands).isInstanceOf(io.lettuce.core.api.sync.RedisCommands.class);
@@ -746,7 +749,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				.expectNext(1L).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2042
+	@Test // GH-2042
 	void zInterShouldWorkCorrectly() {
 
 		assumeThat(nativeCommands).isInstanceOf(io.lettuce.core.api.sync.RedisCommands.class);
@@ -772,7 +775,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zInterStoreShouldWorkCorrectly() {
 
 		assumeThat(nativeCommands).isInstanceOf(io.lettuce.core.api.sync.RedisCommands.class);
@@ -785,10 +788,10 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 
 		assertThat(connection.zSetCommands()
 				.zInterStore(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), Arrays.asList(2D, 3D)).block())
-						.isEqualTo(2L);
+				.isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // GH-2042
+	@Test // GH-2042
 	void zUnionShouldWorkCorrectly() {
 
 		assumeThat(nativeCommands).isInstanceOf(io.lettuce.core.api.sync.RedisCommands.class);
@@ -815,7 +818,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zUnionStoreShouldWorkCorrectly() {
 
 		assumeThat(nativeCommands).isInstanceOf(io.lettuce.core.api.sync.RedisCommands.class);
@@ -828,10 +831,10 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 
 		assertThat(connection.zSetCommands()
 				.zUnionStore(KEY_3_BBUFFER, Arrays.asList(KEY_1_BBUFFER, KEY_2_BBUFFER), Arrays.asList(2D, 3D)).block())
-						.isEqualTo(3L);
+				.isEqualTo(3L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRangeByLex() {
 
 		nativeCommands.zadd(KEY_1, 0D, "a");
@@ -855,7 +858,7 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 						ByteBuffer.wrap("d".getBytes()), ByteBuffer.wrap("e".getBytes()), ByteBuffer.wrap("f".getBytes()));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void zRevRangeByLex() {
 
 		nativeCommands.zadd(KEY_1, 0D, "a");
@@ -875,8 +878,8 @@ public class LettuceReactiveZSetCommandsIntegrationTests extends LettuceReactive
 
 		assertThat(
 				connection.zSetCommands().zRevRangeByLex(KEY_1_BBUFFER, Range.rightOpen("aaa", "g")).collectList().block())
-						.containsExactly(ByteBuffer.wrap("f".getBytes()), ByteBuffer.wrap("e".getBytes()),
-								ByteBuffer.wrap("d".getBytes()), ByteBuffer.wrap("c".getBytes()), ByteBuffer.wrap("b".getBytes()));
+				.containsExactly(ByteBuffer.wrap("f".getBytes()), ByteBuffer.wrap("e".getBytes()),
+						ByteBuffer.wrap("d".getBytes()), ByteBuffer.wrap("c".getBytes()), ByteBuffer.wrap("b".getBytes()));
 	}
 
 }

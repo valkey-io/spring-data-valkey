@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,38 +18,40 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import static org.assertj.core.api.Assertions.*;
 import static org.assertj.core.data.Offset.offset;
 
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 
 /**
  * @author Christoph Strobl
  */
+@ParameterizedClass
 public class LettuceReactiveNumberCommandsIntegrationTests extends LettuceReactiveCommandsTestSupport {
 
 	public LettuceReactiveNumberCommandsIntegrationTests(Fixture fixture) {
 		super(fixture);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void incrByDoubleShouldIncreaseValueCorrectly() {
 		assertThat(connection.numberCommands().incrBy(KEY_1_BBUFFER, 1.5D).block()).isCloseTo(1.5D, offset(0D));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void incrByIntegerShouldIncreaseValueCorrectly() {
 		assertThat(connection.numberCommands().incrBy(KEY_1_BBUFFER, 3).block()).isEqualTo(3);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void decrByDoubleShouldDecreaseValueCorrectly() {
 		assertThat(connection.numberCommands().decrBy(KEY_1_BBUFFER, 1.5D).block()).isCloseTo(-1.5D, offset(0D));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void decrByIntegerShouldDecreaseValueCorrectly() {
 		assertThat(connection.numberCommands().decrBy(KEY_1_BBUFFER, 3).block()).isEqualTo(-3);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void hIncrByDoubleShouldIncreaseValueCorrectly() {
 
 		nativeCommands.hset(KEY_1, KEY_1, "2");
@@ -58,7 +60,7 @@ public class LettuceReactiveNumberCommandsIntegrationTests extends LettuceReacti
 				offset(0D));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-525
+	@Test // DATAREDIS-525
 	void hIncrByIntegerShouldIncreaseValueCorrectly() {
 
 		nativeCommands.hset(KEY_1, KEY_1, "2");

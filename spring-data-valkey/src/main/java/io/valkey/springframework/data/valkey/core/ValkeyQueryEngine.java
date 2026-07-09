@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.GeoResult;
@@ -48,7 +49,6 @@ import io.valkey.springframework.data.valkey.repository.query.ValkeyOperationCha
 import io.valkey.springframework.data.valkey.repository.query.ValkeyOperationChain.PathAndValue;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.lang.Nullable;
 import org.springframework.util.CollectionUtils;
 
 /**
@@ -82,8 +82,8 @@ class ValkeyQueryEngine extends QueryEngine<ValkeyKeyValueAdapter, ValkeyOperati
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public <T> List<T> execute(ValkeyOperationChain criteria, Comparator<?> sort, long offset, int rows, String keyspace,
-			Class<T> type) {
+	public <T> List<T> execute(@Nullable ValkeyOperationChain criteria, @Nullable Comparator<?> sort, long offset,
+			int rows, String keyspace, Class<T> type) {
 		List<T> result = doFind(criteria, offset, rows, keyspace, type);
 
 		if (sort != null) {
@@ -93,7 +93,9 @@ class ValkeyQueryEngine extends QueryEngine<ValkeyKeyValueAdapter, ValkeyOperati
 		return result;
 	}
 
-	private <T> List<T> doFind(ValkeyOperationChain criteria, long offset, int rows, String keyspace, Class<T> type) {
+	@SuppressWarnings("NullAway")
+	private <T> List<T> doFind(@Nullable ValkeyOperationChain criteria, long offset, int rows, String keyspace,
+			Class<T> type) {
 
 		if (criteria == null
 				|| (CollectionUtils.isEmpty(criteria.getOrSismember()) && CollectionUtils.isEmpty(criteria.getSismember()))
@@ -146,6 +148,7 @@ class ValkeyQueryEngine extends QueryEngine<ValkeyKeyValueAdapter, ValkeyOperati
 		return result;
 	}
 
+	@SuppressWarnings("NullAway")
 	private List<byte[]> findKeys(ValkeyOperationChain criteria, int rows, String keyspace, Class<?> domainType,
 			ValkeyConnection connection) {
 
@@ -200,12 +203,14 @@ class ValkeyQueryEngine extends QueryEngine<ValkeyKeyValueAdapter, ValkeyOperati
 	}
 
 	@Override
-	public List<?> execute(ValkeyOperationChain criteria, Comparator<?> sort, long offset, int rows, String keyspace) {
+	public List<?> execute(@Nullable ValkeyOperationChain criteria, @Nullable Comparator<?> sort, long offset, int rows,
+			String keyspace) {
 		return execute(criteria, sort, offset, rows, keyspace, Object.class);
 	}
 
 	@Override
-	public long count(ValkeyOperationChain criteria, String keyspace) {
+	@SuppressWarnings("NullAway")
+	public long count(@Nullable ValkeyOperationChain criteria, String keyspace) {
 
 		if (criteria == null || criteria.isEmpty()) {
 			return this.getRequiredAdapter().count(keyspace);
@@ -227,6 +232,7 @@ class ValkeyQueryEngine extends QueryEngine<ValkeyKeyValueAdapter, ValkeyOperati
 		});
 	}
 
+	@SuppressWarnings("NullAway")
 	private byte[][] keys(String prefix, Collection<PathAndValue> source) {
 
 		ConversionService conversionService = getRequiredAdapter().getConverter().getConversionService();
@@ -243,6 +249,7 @@ class ValkeyQueryEngine extends QueryEngine<ValkeyKeyValueAdapter, ValkeyOperati
 		return keys;
 	}
 
+	@SuppressWarnings("NullAway")
 	private byte[] geoKey(String prefix, NearPath source) {
 
 		String path = GeoIndexedPropertyValue.geoIndexName(source.getPath());
@@ -257,7 +264,7 @@ class ValkeyQueryEngine extends QueryEngine<ValkeyKeyValueAdapter, ValkeyOperati
 	static class ValkeyCriteriaAccessor implements CriteriaAccessor<ValkeyOperationChain> {
 
 		@Override
-		public ValkeyOperationChain resolve(KeyValueQuery<?> query) {
+		public @Nullable ValkeyOperationChain resolve(KeyValueQuery<?> query) {
 			return (ValkeyOperationChain) query.getCriteria();
 		}
 	}
@@ -291,5 +298,7 @@ class ValkeyQueryEngine extends QueryEngine<ValkeyKeyValueAdapter, ValkeyOperati
 
 			return new KeySelector(keys, remainder);
 		}
+
 	}
+
 }

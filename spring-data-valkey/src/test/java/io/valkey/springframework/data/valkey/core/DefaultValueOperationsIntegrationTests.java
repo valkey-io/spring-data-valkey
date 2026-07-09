@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,12 +27,15 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import io.valkey.springframework.data.valkey.DoubleObjectFactory;
 import io.valkey.springframework.data.valkey.ObjectFactory;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.test.condition.EnabledIfLongRunningTest;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration test of {@link DefaultValueOperations}
@@ -44,7 +47,10 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Jiahe Cai
  * @author Mark Paluch
  * @author Hendrik Duerkop
+ * @author Chris Bono
+ * @author Yordan Tsintsov
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public class DefaultValueOperationsIntegrationTests<K, V> {
 
@@ -74,7 +80,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-784
+	@Test // DATAREDIS-784
 	void testIncrement() {
 
 		K key = keyFactory.instance();
@@ -88,7 +94,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo((Long) value + 1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIncrementLong() {
 
 		K key = keyFactory.instance();
@@ -105,7 +111,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo((Long) value - 20);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-247
+	@Test // DATAREDIS-247
 	void testIncrementDouble() {
 
 		assumeThat(valueFactory).isInstanceOf(DoubleObjectFactory.class);
@@ -122,7 +128,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat((Double) valueOps.get(key)).isBetween(value + 1.39 - 10, value + 1.41 - 10);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-784
+	@Test // DATAREDIS-784
 	void testDecrement() {
 
 		K key = keyFactory.instance();
@@ -136,7 +142,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo((Long) value - 1);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-784
+	@Test // DATAREDIS-784
 	void testDecrementByLong() {
 
 		K key = keyFactory.instance();
@@ -150,7 +156,22 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo((Long) value - 5);
 	}
 
-	@ParameterizedValkeyTest
+	@Test // GH-3223
+	void testMultiGet() {
+
+		K key1 = keyFactory.instance();
+		K key2 = keyFactory.instance();
+		K noSuchKey = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		valueOps.set(key1, value1);
+		valueOps.set(key2, value2);
+
+		assertThat(valueOps.multiGet(Arrays.asList(key1, noSuchKey, key2))).containsExactly(value1, null, value2);
+	}
+
+	@Test
 	void testMultiSetIfAbsent() {
 
 		Map<K, V> keysAndValues = new HashMap<>();
@@ -166,7 +187,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.multiGet(keysAndValues.keySet())).containsExactlyElementsOf(keysAndValues.values());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testMultiSetIfAbsentFailure() {
 
 		K key1 = keyFactory.instance();
@@ -184,7 +205,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.multiSetIfAbsent(keysAndValues)).isFalse();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testMultiSet() {
 
 		Map<K, V> keysAndValues = new HashMap<>();
@@ -201,7 +222,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.multiGet(keysAndValues.keySet())).containsExactlyElementsOf(keysAndValues.values());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetSet() {
 
 		K key = keyFactory.instance();
@@ -210,11 +231,30 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		valueOps.set(key, value);
 
 		assertThat(valueOps.get(key)).isEqualTo(value);
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.get(noSuchKey)).isNull();
 	}
 
-	@ParameterizedValkeyTest // GH-2050
+	@Test
 	@EnabledOnCommand("GETEX")
-	void testGetAndExpire() {
+	void testGetAndExpireWithExpiration() {
+
+		K key = keyFactory.instance();
+		V value = valueFactory.instance();
+
+		valueOps.set(key, value);
+
+		assertThat(valueOps.getAndExpire(key, Expiration.seconds(10))).isEqualTo(value);
+		assertThat(valkeyTemplate.getExpire(key)).isGreaterThan(1);
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.getAndExpire(noSuchKey, Expiration.seconds(10))).isNull();
+	}
+
+	@Test // GH-2050
+	@EnabledOnCommand("GETEX")
+	void testGetAndExpireWithDuration() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -224,9 +264,12 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 
 		assertThat(valueOps.getAndExpire(key, Duration.ofSeconds(10))).isEqualTo(value1);
 		assertThat(valkeyTemplate.getExpire(key)).isGreaterThan(1);
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.getAndExpire(noSuchKey, Duration.ofSeconds(10))).isNull();
 	}
 
-	@ParameterizedValkeyTest // GH-2050
+	@Test // GH-2050
 	@EnabledOnCommand("GETEX")
 	void testGetAndPersist() {
 
@@ -237,9 +280,12 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 
 		assertThat(valueOps.getAndPersist(key)).isEqualTo(value1);
 		assertThat(valkeyTemplate.getExpire(key)).isEqualTo(-1);
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.getAndPersist(noSuchKey)).isNull();
 	}
 
-	@ParameterizedValkeyTest // GH-2050
+	@Test // GH-2050
 	@EnabledOnCommand("GETDEL")
 	void testGetAndDelete() {
 
@@ -250,9 +296,12 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 
 		assertThat(valueOps.getAndDelete(key)).isEqualTo(value1);
 		assertThat(valkeyTemplate.hasKey(key)).isFalse();
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.getAndDelete(noSuchKey)).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetAndSet() {
 
 		K key = keyFactory.instance();
@@ -262,10 +311,26 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		valueOps.set(key, value1);
 
 		assertThat(valueOps.getAndSet(key, value2)).isEqualTo(value1);
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.getAndSet(noSuchKey, value2)).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSetWithExpiration() {
+
+		K key = keyFactory.instance();
+		V value = valueFactory.instance();
+
+		valueOps.set(key, value, Expiration.seconds(5));
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+	}
+
+	@Test
+	void testSetWithDuration() {
 
 		K key = keyFactory.instance();
 		V value = valueFactory.instance();
@@ -277,8 +342,21 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-815
+	@Test
 	void testSetWithExpirationEX() {
+
+		K key = keyFactory.instance();
+		V value = valueFactory.instance();
+
+		valueOps.set(key, value, Expiration.seconds(5));
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+	}
+
+	@Test // DATAREDIS-815
+	void testSetWithDurationEX() {
 
 		K key = keyFactory.instance();
 		V value = valueFactory.instance();
@@ -290,8 +368,22 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-815
+	@Test
 	void testSetWithExpirationPX() {
+
+		K key = keyFactory.instance();
+		V value = valueFactory.instance();
+
+		valueOps.set(key, value, Expiration.milliseconds(5500));
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6));
+		assertThat(expire).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+	}
+
+	@Test // DATAREDIS-815
+	void testSetWithDurationPX() {
 
 		K key = keyFactory.instance();
 		V value = valueFactory.instance();
@@ -304,7 +396,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(expire).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-271
+	@Test // DATAREDIS-271
 	@EnabledIfLongRunningTest
 	void testSetWithExpirationWithTimeUnitMilliseconds() {
 
@@ -316,8 +408,24 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		await().atMost(Duration.ofMillis(500L)).until(() -> !valkeyTemplate.hasKey(key));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSetGetWithExpiration() {
+
+		K key = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		valueOps.set(key, value1);
+
+		assertThat(valueOps.setGet(key, value2, Expiration.seconds(1))).isEqualTo(value1);
+		assertThat(valueOps.get(key)).isEqualTo(value2);
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.setGet(noSuchKey, value2, Expiration.seconds(1))).isNull();
+	}
+
+	@Test
+	void testSetGetWithTimeUnit() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -327,10 +435,13 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 
 		assertThat(valueOps.setGet(key, value2, 1, TimeUnit.SECONDS)).isEqualTo(value1);
 		assertThat(valueOps.get(key)).isEqualTo(value2);
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.setGet(noSuchKey, value2, 1, TimeUnit.SECONDS)).isNull();
 	}
 
-	@ParameterizedValkeyTest
-	void testSetGetWithExpirationDuration() {
+	@Test
+	void testSetGetWithDuration() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -340,9 +451,12 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 
 		assertThat(valueOps.setGet(key, value2, Duration.ofMillis(1000))).isEqualTo(value1);
 		assertThat(valueOps.get(key)).isEqualTo(value2);
+
+		K noSuchKey = keyFactory.instance();
+		assertThat(valueOps.setGet(noSuchKey, value2, Duration.ofMillis(1000))).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAppend() {
 
 		K key = keyFactory.instance();
@@ -356,7 +470,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo(value + "aaa");
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetRange() {
 
 		K key = keyFactory.instance();
@@ -369,7 +483,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key, 0, 1)).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSetRange() {
 
 		K key = keyFactory.instance();
@@ -384,7 +498,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo(value2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSetIfAbsent() {
 
 		K key = keyFactory.instance();
@@ -395,8 +509,23 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.setIfAbsent(key, value2)).isFalse();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-782
+	@Test
 	void testSetIfAbsentWithExpiration() {
+
+		K key = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		assertThat(valueOps.setIfAbsent(key, value1, Expiration.seconds(5))).isTrue();
+		assertThat(valueOps.setIfAbsent(key, value2, Expiration.seconds(5))).isFalse();
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+	}
+
+	@Test // DATAREDIS-782
+	void testSetIfAbsentWithTimeUnit() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -410,8 +539,23 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-815
+	@Test
 	void testSetIfAbsentWithExpirationEX() {
+
+		K key = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		assertThat(valueOps.setIfAbsent(key, value1, Expiration.seconds(5))).isTrue();
+		assertThat(valueOps.setIfAbsent(key, value2, Expiration.seconds(5))).isFalse();
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+	}
+
+	@Test // DATAREDIS-815
+	void testSetIfAbsentWithDurationEX() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -425,8 +569,23 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-815
+	@Test
 	void testSetIfAbsentWithExpirationPX() {
+
+		K key = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		assertThat(valueOps.setIfAbsent(key, value1, Expiration.milliseconds(5500))).isTrue();
+		assertThat(valueOps.setIfAbsent(key, value2, Expiration.milliseconds(5500))).isFalse();
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+	}
+
+	@Test // DATAREDIS-815
+	void testSetIfAbsentWithDurationPX() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -440,7 +599,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-786
+	@Test // DATAREDIS-786
 	void setIfPresentReturnsTrueWhenKeyExists() {
 
 		K key = keyFactory.instance();
@@ -453,13 +612,30 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo(value2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-786
+	@Test // DATAREDIS-786
 	void setIfPresentReturnsFalseWhenKeyDoesNotExist() {
 		assertThat(valueOps.setIfPresent(keyFactory.instance(), valueFactory.instance())).isFalse();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-786
+	@Test
 	void setIfPresentShouldSetExpirationCorrectly() {
+
+		K key = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		assertThat(valueOps.setIfPresent(key, value1, Expiration.seconds(5))).isFalse();
+		valueOps.set(key, value1);
+
+		assertThat(valueOps.setIfPresent(key, value2, Expiration.seconds(5))).isTrue();
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+		assertThat(valueOps.get(key)).isEqualTo(value2);
+	}
+
+	@Test // DATAREDIS-786
+	void setIfPresentShouldSetExpirationWithTimeUnitCorrectly() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -475,8 +651,25 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo(value2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-815
+	@Test
 	void testSetIfPresentWithExpirationEX() {
+
+		K key = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		assertThat(valueOps.setIfPresent(key, value1, Expiration.seconds(5))).isFalse();
+		valueOps.set(key, value1);
+
+		assertThat(valueOps.setIfPresent(key, value2, Expiration.seconds(5))).isTrue();
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+		assertThat(valueOps.get(key)).isEqualTo(value2);
+	}
+
+	@Test // DATAREDIS-815
+	void testSetIfPresentWithDurationExpirationEX() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -492,8 +685,25 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo(value2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-815
+	@Test
 	void testSetIfPresentWithExpirationPX() {
+
+		K key = keyFactory.instance();
+		V value1 = valueFactory.instance();
+		V value2 = valueFactory.instance();
+
+		assertThat(valueOps.setIfPresent(key, value1, Expiration.milliseconds(5500))).isFalse();
+		valueOps.set(key, value1);
+
+		assertThat(valueOps.setIfPresent(key, value2, Expiration.milliseconds(5500))).isTrue();
+
+		Long expire = valkeyTemplate.getExpire(key, TimeUnit.MILLISECONDS);
+		assertThat(expire).isLessThan(TimeUnit.SECONDS.toMillis(6)).isGreaterThan(TimeUnit.MILLISECONDS.toMillis(1));
+		assertThat(valueOps.get(key)).isEqualTo(value2);
+	}
+
+	@Test // DATAREDIS-815
+	void testSetIfPresentWithDurationExpirationPX() {
 
 		K key = keyFactory.instance();
 		V value1 = valueFactory.instance();
@@ -509,7 +719,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(valueOps.get(key)).isEqualTo(value2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSize() {
 
 		K key = keyFactory.instance();
@@ -521,7 +731,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@ParameterizedValkeyTest
+	@Test
 	void testRawKeys() {
 
 		K key1 = keyFactory.instance();
@@ -533,7 +743,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@ParameterizedValkeyTest
+	@Test
 	void testRawKeysCollection() {
 
 		K key1 = keyFactory.instance();
@@ -545,7 +755,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings("rawtypes")
-	@ParameterizedValkeyTest
+	@Test
 	void testDeserializeKey() {
 
 		K key = keyFactory.instance();
@@ -555,7 +765,7 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		assertThat(((DefaultValueOperations) valueOps).deserializeKey((byte[]) key)).isNotNull();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-197
+	@Test // DATAREDIS-197
 	void testSetAndGetBit() {
 
 		assumeThat(valkeyTemplate).isInstanceOf(StringValkeyTemplate.class);
@@ -565,5 +775,44 @@ public class DefaultValueOperationsIntegrationTests<K, V> {
 		valueOps.setBit(key, bitOffset, true);
 
 		assertThat(valueOps.getBit(key, bitOffset)).isTrue();
+	}
+
+	@Test // GH-3304
+	void testSetWithSetSpecAlwaysWhenKeyExists() {
+
+		K key = keyFactory.instance();
+		V value = valueFactory.instance();
+
+		assertThat(valueOps.set(key, value, SetSpec::always)).isTrue();
+		assertThat(valueOps.get(key)).isEqualTo(value);
+	}
+
+
+	@Test
+	@EnabledOnCommand("DELEX")
+	void testSetWithSetSpecIfEqualsWhenValueMatches() {
+
+		K key = keyFactory.instance();
+		V value = valueFactory.instance();
+		V otherValue = valueFactory.instance();
+
+		valueOps.set(key, value);
+
+		assertThat(valueOps.set(key, otherValue, spec -> spec.ifEquals().value(value))).isTrue();
+		assertThat(valueOps.get(key)).isEqualTo(otherValue);
+	}
+
+	@Test // GH-3304
+	@EnabledOnCommand("DELEX")
+	void testCompareAndSetWillSucceed() {
+
+		K key = keyFactory.instance();
+		V value = valueFactory.instance();
+		V otherValue = valueFactory.instance();
+
+		valueOps.set(key, value);
+
+		assertThat(valueOps.compareAndSet(key, value, otherValue)).isTrue();
+		assertThat(valueOps.get(key)).isEqualTo(otherValue);
 	}
 }

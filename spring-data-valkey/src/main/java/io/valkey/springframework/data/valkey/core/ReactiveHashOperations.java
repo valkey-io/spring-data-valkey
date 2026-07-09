@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.Expirations;
-import org.springframework.lang.Nullable;
 
 /**
  * Reactive Valkey operations for Hash Commands.
@@ -41,6 +44,7 @@ import org.springframework.lang.Nullable;
  *
  * @author Mark Paluch
  * @author Christoph Strobl
+ * @author Viktoriya Kutsarova
  * @since 2.0
  */
 public interface ReactiveHashOperations<H, HK, HV> {
@@ -81,6 +85,44 @@ public interface ReactiveHashOperations<H, HK, HV> {
 	 * @return
 	 */
 	Mono<List<HV>> multiGet(H key, Collection<HK> hashKeys);
+
+	/**
+	 * Get and remove the value for given {@code hashKeys} from hash at {@code key}. Values are in the order of the
+	 * requested keys. Absent field values are represented using {@literal null} in the resulting {@link List}. When the
+	 * last field is deleted, the key will also be deleted.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param hashKeys must not be {@literal null}.
+	 * @return never {@literal null}.
+	 * @since 4.0
+	 */
+	Mono<List<HV>> getAndDelete(H key, Collection<HK> hashKeys);
+
+	/**
+	 * Set multiple hash fields to multiple values using data provided in {@code m} with optional condition and
+	 * expiration.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param map must not be {@literal null}.
+	 * @param condition must not be {@literal null}.
+	 * @param expiration is optional.
+	 * @return never {@literal null}.
+	 * @since 4.0
+	 */
+	Mono<Boolean> putAndExpire(H key, Map<? extends HK, ? extends HV> map,
+			ValkeyHashCommands.@NonNull HashFieldSetOption condition, @Nullable Expiration expiration);
+
+	/**
+	 * Get and optionally expire the value for given {@code hashKeys} from hash at {@code key}. Values are in the order of
+	 * the requested keys. Absent field values are represented using {@literal null} in the resulting {@link List}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expiration is optional.
+	 * @param hashKeys must not be {@literal null}.
+	 * @return never {@literal null}.
+	 * @since 4.0
+	 */
+	Mono<List<HV>> getAndExpire(H key, @Nullable Expiration expiration, Collection<HK> hashKeys);
 
 	/**
 	 * Increment {@code value} of a hash {@code hashKey} by the given {@code delta}.
@@ -300,8 +342,7 @@ public interface ReactiveHashOperations<H, HK, HV> {
 	 * @see <a href="https://valkey.io/docs/latest/commands/httl/">Valkey Documentation: HTTL</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default Mono<Expirations<HK>> getTimeToLive(H key, Collection<HK> hashKeys) {
+	default @Nullable Mono<Expirations<HK>> getTimeToLive(H key, Collection<HK> hashKeys) {
 		return getTimeToLive(key, TimeUnit.SECONDS, hashKeys);
 	}
 

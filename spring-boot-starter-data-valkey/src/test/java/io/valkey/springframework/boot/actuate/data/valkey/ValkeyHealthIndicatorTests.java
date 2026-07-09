@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.Status;
-
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.Status;
 import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
 import io.valkey.springframework.data.valkey.connection.ClusterInfo;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
@@ -51,7 +51,7 @@ class ValkeyHealthIndicatorTests {
 	@Test
 	void valkeyIsUp() {
 		Properties info = new Properties();
-		info.put("redis_version", "8.0.1");
+		info.put("redis_version", "2.8.9");
 		ValkeyConnection valkeyConnection = mock(ValkeyConnection.class);
 		ValkeyServerCommands serverCommands = mock(ValkeyServerCommands.class);
 		given(valkeyConnection.serverCommands()).willReturn(serverCommands);
@@ -59,7 +59,20 @@ class ValkeyHealthIndicatorTests {
 		ValkeyHealthIndicator healthIndicator = createHealthIndicator(valkeyConnection);
 		Health health = healthIndicator.health();
 		assertThat(health.getStatus()).isEqualTo(Status.UP);
-		assertThat(health.getDetails()).containsEntry("version", "8.0.1");
+		assertThat(health.getDetails()).containsEntry("version", "2.8.9");
+	}
+
+	@Test
+	void valkeyIsUpWithMissingVersion() {
+		Properties info = new Properties();
+		ValkeyConnection valkeyConnection = mock(ValkeyConnection.class);
+		ValkeyServerCommands serverCommands = mock(ValkeyServerCommands.class);
+		given(valkeyConnection.serverCommands()).willReturn(serverCommands);
+		given(serverCommands.info()).willReturn(info);
+		ValkeyHealthIndicator healthIndicator = createHealthIndicator(valkeyConnection);
+		Health health = healthIndicator.health();
+		assertThat(health.getStatus()).isEqualTo(Status.UP);
+		assertThat(health.getDetails()).containsEntry("version", "unknown");
 	}
 
 	@Test
@@ -116,7 +129,7 @@ class ValkeyHealthIndicatorTests {
 		return new ValkeyHealthIndicator(valkeyConnectionFactory);
 	}
 
-	private ValkeyConnectionFactory createClusterConnectionFactory(String state) {
+	private ValkeyConnectionFactory createClusterConnectionFactory(@Nullable String state) {
 		Properties clusterProperties = new Properties();
 		if (state != null) {
 			clusterProperties.setProperty("cluster_state", state);

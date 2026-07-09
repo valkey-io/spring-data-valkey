@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author Andrey Shlykov
+ * @author Vinoth Selvaraj
  */
 public class DefaultValkeyZSet<E> extends AbstractValkeyCollection<E> implements ValkeyZSet<E> {
 
@@ -304,9 +305,7 @@ public class DefaultValkeyZSet<E> extends AbstractValkeyCollection<E> implements
 
 	@Override
 	public boolean add(E e) {
-		Boolean result = add(e, getDefaultScore());
-		checkResult(result);
-		return result;
+		return add(e, getDefaultScore());
 	}
 
 	@Override
@@ -455,6 +454,11 @@ public class DefaultValkeyZSet<E> extends AbstractValkeyCollection<E> implements
 	@Override
 	public Double score(Object o) {
 		return boundZSetOps.score(o);
+	}
+
+	@Override
+	public Double incrementScore(E e, double increment) {
+		return boundZSetOps.incrementScore(e, increment);
 	}
 
 	@Override

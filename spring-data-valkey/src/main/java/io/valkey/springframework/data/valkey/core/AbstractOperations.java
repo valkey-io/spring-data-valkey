@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.geo.GeoResults;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
@@ -34,7 +37,6 @@ import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.SerializationUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -48,6 +50,8 @@ import org.springframework.util.CollectionUtils;
  * @author Mark Paluch
  * @author Denis Zavedeev
  */
+@NullUnmarked
+@SuppressWarnings("rawtypes")
 abstract class AbstractOperations<K, V> {
 
 	// utility methods for the template internal methods
@@ -58,13 +62,12 @@ abstract class AbstractOperations<K, V> {
 			this.key = key;
 		}
 
-		public final V doInValkey(ValkeyConnection connection) {
+		public final V doInValkey(@NonNull ValkeyConnection connection) {
 			byte[] result = inValkey(rawKey(key), connection);
 			return deserializeValue(result);
 		}
 
-		@Nullable
-		protected abstract byte[] inValkey(byte[] rawKey, ValkeyConnection connection);
+		protected abstract byte @Nullable [] inValkey(byte[] rawKey, ValkeyConnection connection);
 	}
 
 	private class FunctionalValueDeserializingValkeyCallback extends ValueDeserializingValkeyCallback {
@@ -76,15 +79,14 @@ abstract class AbstractOperations<K, V> {
 			this.function = function;
 		}
 
-		@Nullable
-		protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+		protected byte @Nullable [] inValkey(byte[] rawKey, ValkeyConnection connection) {
 			return function.apply(connection, rawKey);
 		}
 	}
 
 	final ValkeyTemplate<K, V> template;
 
-	AbstractOperations(ValkeyTemplate<K, V> template) {
+	AbstractOperations(@NonNull ValkeyTemplate<K, V> template) {
 		this.template = template;
 	}
 
@@ -92,37 +94,84 @@ abstract class AbstractOperations<K, V> {
 		return new FunctionalValueDeserializingValkeyCallback(key, function);
 	}
 
+	@Nullable
 	ValkeySerializer keySerializer() {
 		return template.getKeySerializer();
 	}
 
+	ValkeySerializer requiredKeySerializer() {
+
+		ValkeySerializer serializer = keySerializer();
+
+		if (serializer == null) {
+			throw new IllegalStateException("No key serializer configured");
+		}
+
+		return serializer;
+	}
+
+	@Nullable
 	ValkeySerializer valueSerializer() {
 		return template.getValueSerializer();
 	}
 
+	ValkeySerializer requiredValueSerializer() {
+
+		ValkeySerializer serializer = valueSerializer();
+
+		if (serializer == null) {
+			throw new IllegalStateException("No value serializer configured");
+		}
+
+		return serializer;
+	}
+
+	@Nullable
 	ValkeySerializer hashKeySerializer() {
 		return template.getHashKeySerializer();
 	}
 
+	ValkeySerializer requiredHashKeySerializer() {
+
+		ValkeySerializer serializer = hashKeySerializer();
+
+		if (serializer == null) {
+			throw new IllegalStateException("No hash key serializer configured");
+		}
+
+		return serializer;
+	}
+
+	@Nullable
 	ValkeySerializer hashValueSerializer() {
 		return template.getHashValueSerializer();
+	}
+
+	ValkeySerializer requiredHashValueSerializer() {
+
+		ValkeySerializer serializer = hashValueSerializer();
+
+		if (serializer == null) {
+			throw new IllegalStateException("No hash value serializer configured");
+		}
+
+		return serializer;
 	}
 
 	ValkeySerializer stringSerializer() {
 		return template.getStringSerializer();
 	}
 
-	@Nullable
-	<T> T execute(ValkeyCallback<T> callback) {
+	<T extends @Nullable Object> T execute(@NonNull ValkeyCallback<T> callback) {
 		return template.execute(callback, true);
 	}
 
-	public ValkeyOperations<K, V> getOperations() {
+	public @NonNull ValkeyOperations<K, V> getOperations() {
 		return template;
 	}
 
 	@SuppressWarnings("unchecked")
-	byte[] rawKey(Object key) {
+	byte[] rawKey(@NonNull Object key) {
 
 		Assert.notNull(key, "non null key required");
 
@@ -130,7 +179,7 @@ abstract class AbstractOperations<K, V> {
 			return bytes;
 		}
 
-		return keySerializer().serialize(key);
+		return requiredKeySerializer().serialize(key);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -145,7 +194,7 @@ abstract class AbstractOperations<K, V> {
 			return bytes;
 		}
 
-		return valueSerializer().serialize(value);
+		return requiredValueSerializer().serialize(value);
 	}
 
 	byte[][] rawValues(Object... values) {
@@ -244,8 +293,7 @@ abstract class AbstractOperations<K, V> {
 		return SerializationUtils.deserialize(rawValues, valueSerializer());
 	}
 
-	@Nullable
-	Set<TypedTuple<V>> deserializeTupleValues(@Nullable Set<Tuple> rawValues) {
+	Set<TypedTuple<V>> deserializeTupleValues(Set<Tuple> rawValues) {
 		if (rawValues == null) {
 			return null;
 		}
@@ -268,8 +316,7 @@ abstract class AbstractOperations<K, V> {
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Nullable
-	TypedTuple<V> deserializeTuple(@Nullable Tuple tuple) {
+	TypedTuple<V> deserializeTuple(Tuple tuple) {
 		if (tuple == null) {
 			return null;
 		}
@@ -311,7 +358,7 @@ abstract class AbstractOperations<K, V> {
 		if (hashKeySerializer() == null) {
 			return (Set<T>) rawKeys;
 		}
-		return SerializationUtils.deserialize(rawKeys, hashKeySerializer());
+		return SerializationUtils.deserialize(rawKeys, requiredHashKeySerializer());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -319,7 +366,7 @@ abstract class AbstractOperations<K, V> {
 		if (hashKeySerializer() == null) {
 			return (List<T>) rawKeys;
 		}
-		return SerializationUtils.deserialize(rawKeys, hashKeySerializer());
+		return SerializationUtils.deserialize(rawKeys, requiredHashKeySerializer());
 	}
 
 	@SuppressWarnings("unchecked")
@@ -327,11 +374,11 @@ abstract class AbstractOperations<K, V> {
 		if (hashValueSerializer() == null) {
 			return (List<T>) rawValues;
 		}
-		return SerializationUtils.deserialize(rawValues, hashValueSerializer());
+		return SerializationUtils.deserialize(rawValues, requiredHashValueSerializer());
 	}
 
 	@SuppressWarnings("unchecked")
-	<HK, HV> Map<HK, HV> deserializeHashMap(@Nullable Map<byte[], byte[]> entries) {
+	<HK, HV> Map<HK, HV> deserializeHashMap(Map<byte[], byte[]> entries) {
 		// connection in pipeline/multi mode
 
 		if (entries == null) {
@@ -352,7 +399,7 @@ abstract class AbstractOperations<K, V> {
 		if (keySerializer() == null) {
 			return (K) value;
 		}
-		return (K) keySerializer().deserialize(value);
+		return (K) requiredKeySerializer().deserialize(value);
 	}
 
 	/**
@@ -377,7 +424,7 @@ abstract class AbstractOperations<K, V> {
 		if (valueSerializer() == null) {
 			return (V) value;
 		}
-		return (V) valueSerializer().deserialize(value);
+		return (V) requiredValueSerializer().deserialize(value);
 	}
 
 	String deserializeString(byte[] value) {
@@ -389,7 +436,7 @@ abstract class AbstractOperations<K, V> {
 		if (hashKeySerializer() == null) {
 			return (HK) value;
 		}
-		return (HK) hashKeySerializer().deserialize(value);
+		return (HK) requiredHashKeySerializer().deserialize(value);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -397,7 +444,7 @@ abstract class AbstractOperations<K, V> {
 		if (hashValueSerializer() == null) {
 			return (HV) value;
 		}
-		return (HV) hashValueSerializer().deserialize(value);
+		return (HV) requiredHashValueSerializer().deserialize(value);
 	}
 
 	/**
@@ -407,8 +454,7 @@ abstract class AbstractOperations<K, V> {
 	 * @return converted or {@literal null}.
 	 * @since 1.8
 	 */
-	@Nullable
-	GeoResults<GeoLocation<V>> deserializeGeoResults(@Nullable GeoResults<GeoLocation<byte[]>> source) {
+	GeoResults<GeoLocation<V>> deserializeGeoResults(GeoResults<GeoLocation<byte[]>> source) {
 
 		if (source == null) {
 			return null;
@@ -420,4 +466,5 @@ abstract class AbstractOperations<K, V> {
 
 		return Converters.deserializingGeoResultsConverter((ValkeySerializer<V>) valueSerializer()).convert(source);
 	}
+
 }

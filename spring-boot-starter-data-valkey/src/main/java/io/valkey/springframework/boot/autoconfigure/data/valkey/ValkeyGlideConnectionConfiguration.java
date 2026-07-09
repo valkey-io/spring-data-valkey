@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,15 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.thread.Threading;
+import org.springframework.boot.thread.Threading;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnThreading;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.util.StringUtils;
+import org.springframework.util.Assert;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
@@ -48,8 +50,9 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 			ValkeyConnectionDetails connectionDetails,
 			ObjectProvider<ValkeyStandaloneConfiguration> standaloneConfigurationProvider,
 			ObjectProvider<ValkeySentinelConfiguration> sentinelConfigurationProvider,
-			ObjectProvider<ValkeyClusterConfiguration> clusterConfigurationProvider) {
-		super(properties, connectionDetails, standaloneConfigurationProvider, sentinelConfigurationProvider, clusterConfigurationProvider);
+			ObjectProvider<ValkeyClusterConfiguration> clusterConfigurationProvider,
+			ObjectProvider<ValkeyStaticMasterReplicaConfiguration> masterReplicaConfiguration) {
+		super(properties, connectionDetails, standaloneConfigurationProvider, sentinelConfigurationProvider, clusterConfigurationProvider, masterReplicaConfiguration);
 	}
 
 	@Bean
@@ -77,9 +80,13 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 		ValkeyGlideClientConfiguration clientConfiguration = getValkeyGlideClientConfiguration(builderCustomizers);
 		ValkeyGlideConnectionFactory factory = switch (this.mode) {
 			case STANDALONE -> new ValkeyGlideConnectionFactory(getStandaloneConfig(), clientConfiguration);
-			case CLUSTER -> new ValkeyGlideConnectionFactory(getClusterConfiguration(), clientConfiguration);
-			case SENTINEL -> new ValkeyGlideConnectionFactory(getSentinelConfig(), clientConfiguration);
-			default -> new ValkeyGlideConnectionFactory(getStandaloneConfig(), clientConfiguration);
+			case CLUSTER -> {
+				ValkeyClusterConfiguration clusterConfiguration = getClusterConfiguration();
+				Assert.state(clusterConfiguration != null, "'clusterConfiguration' must not be null");
+				yield new ValkeyGlideConnectionFactory(clusterConfiguration, clientConfiguration);
+			}
+			case SENTINEL -> throw new IllegalStateException("Valkey GLIDE does not support Sentinel. Use Lettuce or Jedis.");
+			case MASTER_REPLICA -> throw new IllegalStateException("Valkey GLIDE does not support Master/Replica topology configuration. Use Lettuce.");
 		};
 
 		// Disable early startup for Spring Boot to avoid connection attempts during bean creation
@@ -162,7 +169,7 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 	}
 
 	private void customizeConfigurationFromUrl(ValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder builder) {
-		if (urlUsesSsl()) {
+		if (urlUsesSsl(getProperties().getUrl())) {
 			builder.useSsl();
 		}
 	}

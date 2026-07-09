@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.DoubleAsStringObjectFactory;
@@ -42,8 +45,6 @@ import io.valkey.springframework.data.valkey.connection.zset.Aggregate;
 import io.valkey.springframework.data.valkey.connection.zset.Weights;
 import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration test of {@link DefaultZSetOperations}
@@ -57,6 +58,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @param <V> Value type
  */
 @SuppressWarnings("unchecked")
+@ParameterizedClass
 @MethodSource("testParams")
 public class DefaultZSetOperationsIntegrationTests<K, V> {
 
@@ -86,7 +88,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		});
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testCount() {
 
 		K key1 = keyFactory.instance();
@@ -99,7 +101,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.count(key1, 2.7, 5.7)).isEqualTo(Long.valueOf(1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-729
+	@Test // DATAREDIS-729
 	void testLexCountUnbounded() {
 
 		assumeThat(valueFactory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -117,7 +119,8 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.lexCount(key, Range.unbounded())).isEqualTo(3);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-729
+	@Test
+	// DATAREDIS-729
 	void testLexCountBounded() {
 
 		assumeThat(valueFactory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -135,7 +138,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.lexCount(key, Range.rightUnbounded(Range.Bound.exclusive(value1.toString())))).isEqualTo(2);
 	}
 
-	@ParameterizedValkeyTest // GH-2007
+	@Test // GH-2007
 	@EnabledOnCommand("ZPOPMIN")
 	void testPopMin() {
 
@@ -159,7 +162,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.popMin(key, 1, TimeUnit.SECONDS)).isEqualTo(new DefaultTypedTuple<>(value4, 4d));
 	}
 
-	@ParameterizedValkeyTest // GH-2007
+	@Test // GH-2007
 	@EnabledOnCommand("ZPOPMAX")
 	void testPopMax() {
 
@@ -183,7 +186,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.popMax(key, 1, TimeUnit.SECONDS)).isEqualTo(new DefaultTypedTuple<>(value1, 1d));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIncrementScore() {
 
 		K key1 = keyFactory.instance();
@@ -198,7 +201,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(tuple).isEqualTo(new DefaultTypedTuple<>(value1, 5.7));
 	}
 
-	@ParameterizedValkeyTest // GH-2049
+	@Test // GH-2049
 	@EnabledOnCommand("ZRANDMEMBER")
 	void testRandomMember() {
 
@@ -216,8 +219,8 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.distinctRandomMembers(key, 2)).hasSize(2).containsAnyOf(value1, value2, value3);
 	}
 
-	@ParameterizedValkeyTest // GH-2049
-	@Disabled("https://github.com/valkey/valkey/issues/9160")
+	@Test // GH-2049
+	@Disabled("https://github.com/redis/redis/issues/9160")
 	@EnabledOnCommand("ZRANDMEMBER")
 	void testRandomMemberWithScore() {
 
@@ -241,7 +244,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 				new DefaultTypedTuple<>(value3, 5.8d));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRangeByScoreOffsetCount() {
 
 		K key = keyFactory.instance();
@@ -256,7 +259,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.rangeByScore(key, 1.5, 4.7, 0, 1)).containsOnly(value1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRangeByScoreWithScoresOffsetCount() {
 
 		K key = keyFactory.instance();
@@ -272,7 +275,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(tuples).hasSize(1).contains(new DefaultTypedTuple<>(value1, 1.9));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReverseRangeByScoreOffsetCount() {
 
 		K key = keyFactory.instance();
@@ -287,7 +290,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.reverseRangeByScore(key, 1.5, 4.7, 0, 1)).containsOnly(value2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReverseRangeByScoreWithScoresOffsetCount() {
 
 		K key = keyFactory.instance();
@@ -304,7 +307,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(tuples).hasSize(1).contains(new DefaultTypedTuple<>(value2, 3.7));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-407
+	@Test // DATAREDIS-407
 	void testRangeByLexUnbounded() {
 
 		assumeThat(valueFactory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -323,7 +326,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(tuples).hasSize(3).contains(value1);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-407
+	@Test // DATAREDIS-407
 	void testRangeByLexBounded() {
 
 		assumeThat(valueFactory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -342,7 +345,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(tuples).hasSize(1).contains(value2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-407
+	@Test // DATAREDIS-407
 	void testRangeByLexUnboundedWithLimit() {
 
 		assumeThat(valueFactory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -361,7 +364,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(tuples).hasSize(2).containsSequence(value2, value3);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-729
+	@Test // DATAREDIS-729
 	void testReverseRangeByLexUnboundedWithLimit() {
 
 		assumeThat(valueFactory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -380,7 +383,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(tuples).hasSize(2).containsSequence(value2, value1);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-407
+	@Test // DATAREDIS-407
 	void testRangeByLexBoundedWithLimit() {
 
 		assumeThat(valueFactory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -400,7 +403,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(tuples).hasSize(1).startsWith(value2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAddMultiple() {
 
 		K key = keyFactory.instance();
@@ -417,7 +420,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.range(key, 0, -1)).containsExactly(value3, value1, value2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemove() {
 
 		K key = keyFactory.instance();
@@ -435,7 +438,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.range(key, 0, -1)).containsOnly(value2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testScore() {
 
 		K key = keyFactory.instance();
@@ -450,7 +453,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.score(key, value1, value2, valueFactory.instance())).containsExactly(1.9d, 3.7d, null);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void zCardRetrievesDataCorrectly() {
 
 		K key = keyFactory.instance();
@@ -467,7 +470,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.zCard(key)).isEqualTo(3L);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void sizeRetrievesDataCorrectly() {
 
 		K key = keyFactory.instance();
@@ -484,7 +487,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.size(key)).isEqualTo(3L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-306
+	@Test // DATAREDIS-306
 	void testZScanShouldReadEntireValueRange() throws IOException {
 
 		K key = keyFactory.instance();
@@ -514,7 +517,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(count).isEqualTo(3);
 	}
 
-	@ParameterizedValkeyTest // GH-2042
+	@Test // GH-2042
 	@EnabledOnCommand("ZDIFF")
 	void testZsetDiff() {
 
@@ -532,7 +535,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.differenceWithScores(key1, key2)).containsOnly(new DefaultTypedTuple<>(value1, 1d));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-746, GH-2042
+	@Test // DATAREDIS-746, GH-2042
 	@EnabledOnCommand("ZDIFFSTORE")
 	void testZsetDiffStore() {
 
@@ -552,7 +555,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.rangeWithScores(key3, 0, -1)).containsOnly(new DefaultTypedTuple<>(value1, 1d));
 	}
 
-	@ParameterizedValkeyTest // GH-2042
+	@Test // GH-2042
 	@EnabledOnCommand("ZINTER")
 	void testZsetIntersect() {
 
@@ -569,7 +572,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.intersect(key1, Collections.singletonList(key2))).containsExactly(value2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-746, GH-2042
+	@Test // DATAREDIS-746, GH-2042
 	@EnabledOnCommand("ZINTER")
 	void testZsetIntersectWithAggregate() {
 
@@ -590,7 +593,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.score(key1, value2)).isCloseTo(2.0, offset(0.1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-746
+	@Test // DATAREDIS-746
 	void testZsetIntersectWithAggregateWeights() {
 
 		K key1 = keyFactory.instance();
@@ -600,13 +603,12 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		zSetOps.add(key1, value1, 4.0);
 		zSetOps.add(key2, value1, 3.0);
 
-		zSetOps.intersectAndStore(key1, Collections.singletonList(key2), key1, Aggregate.MAX,
-				Weights.of(1, 2));
+		zSetOps.intersectAndStore(key1, Collections.singletonList(key2), key1, Aggregate.MAX, Weights.of(1, 2));
 
 		assertThat(zSetOps.score(key1, value1)).isCloseTo(6.0, offset(0.1));
 	}
 
-	@ParameterizedValkeyTest // GH-2042
+	@Test // GH-2042
 	@EnabledOnCommand("ZUNION")
 	void testZsetUnion() {
 
@@ -623,7 +625,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.union(key1, Collections.singletonList(key2))).containsOnly(value1, value2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-746, GH-2042
+	@Test // DATAREDIS-746, GH-2042
 	@EnabledOnCommand("ZUNION")
 	void testZsetUnionWithAggregate() {
 
@@ -645,7 +647,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		assertThat(zSetOps.score(key1, value2)).isCloseTo(2.0, offset(0.1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-746
+	@Test // DATAREDIS-746
 	void testZsetUnionWithAggregateWeights() {
 
 		K key1 = keyFactory.instance();
@@ -655,8 +657,7 @@ public class DefaultZSetOperationsIntegrationTests<K, V> {
 		zSetOps.add(key1, value1, 4.0);
 		zSetOps.add(key2, value1, 3.0);
 
-		zSetOps.unionAndStore(key1, Collections.singletonList(key2), key1, Aggregate.MAX,
-				Weights.of(1, 2));
+		zSetOps.unionAndStore(key1, Collections.singletonList(key2), key1, Aggregate.MAX, Weights.of(1, 2));
 
 		assertThat(zSetOps.score(key1, value1)).isCloseTo(6.0, offset(0.1));
 	}

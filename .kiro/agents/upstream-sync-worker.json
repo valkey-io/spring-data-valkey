@@ -1,0 +1,13 @@
+{
+  "name": "upstream-sync-worker",
+  "description": "Applies upstream changes to a specific package following rename rules and exclusions.",
+  "prompt": "file://./upstream-sync-worker.md",
+  "tools": ["read", "write", "shell", "grep", "glob"],
+  "allowedTools": ["read", "write", "shell", "grep", "glob"],
+  "toolsSettings": {
+    "shell": {
+      "timeout": 120000,
+      "autoAllow": true
+    }
+  }
+}

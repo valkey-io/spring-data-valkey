@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
 import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
@@ -30,7 +31,6 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
 import io.valkey.springframework.data.valkey.core.convert.ValkeyCustomConversions;
 import io.valkey.springframework.data.valkey.hash.HashMapper;
 import io.valkey.springframework.data.valkey.hash.ObjectHashMapper;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -65,7 +65,7 @@ class StreamObjectMapper {
 	 *
 	 * @param mapper the configured {@link HashMapper}.
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked", "rawtypes", "NullAway" })
 	StreamObjectMapper(HashMapper<?, ?, ?> mapper) {
 
 		Assert.notNull(mapper, "HashMapper must not be null");
@@ -84,9 +84,9 @@ class StreamObjectMapper {
 				@Override
 				public Object fromHash(Map<Object, Object> hash) {
 
-					Map<byte[], byte[]> map = hash.entrySet().stream().collect(Collectors.toMap(
-							keyMapper -> conversionService.convert(keyMapper.getKey(), byte[].class),
-							valueMapper -> conversionService.convert(valueMapper.getValue(), byte[].class)));
+					Map<byte[], byte[]> map = hash.entrySet().stream()
+							.collect(Collectors.toMap(keyMapper -> conversionService.convert(keyMapper.getKey(), byte[].class),
+									valueMapper -> conversionService.convert(valueMapper.getValue(), byte[].class)));
 
 					return ohm.fromHash(map);
 				}
@@ -103,7 +103,7 @@ class StreamObjectMapper {
 	 * @param source the source value.
 	 * @return the converted {@link MapRecord}.
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({ "unchecked", "rawtypes", "NullAway" })
 	static <K, V, HK, HV> MapRecord<K, HK, HV> toMapRecord(HashMapperProvider<HK, HV> provider, Record<K, V> source) {
 
 		if (source instanceof ObjectRecord entry) {
@@ -207,4 +207,5 @@ class StreamObjectMapper {
 	ConversionService getConversionService() {
 		return conversionService;
 	}
+
 }

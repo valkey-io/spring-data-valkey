@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 package io.valkey.springframework.data.valkey.connection.jedis;
 
 import redis.clients.jedis.GeoCoordinate;
+import redis.clients.jedis.HostAndPort;
+import redis.clients.jedis.Protocol;
 import redis.clients.jedis.args.BitOP;
 import redis.clients.jedis.args.FlushMode;
 import redis.clients.jedis.args.GeoUnit;
@@ -23,6 +25,8 @@ import redis.clients.jedis.args.ListPosition;
 import redis.clients.jedis.params.GeoRadiusParam;
 import redis.clients.jedis.params.GeoSearchParam;
 import redis.clients.jedis.params.GetExParams;
+import redis.clients.jedis.params.HGetExParams;
+import redis.clients.jedis.params.HSetExParams;
 import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.params.SetParams;
 import redis.clients.jedis.params.SortingParams;
@@ -40,6 +44,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongFunction;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.domain.Sort;
@@ -53,25 +61,26 @@ import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldIncrBy;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldSet;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands.BitFieldSubCommand;
-import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import io.valkey.springframework.data.valkey.connection.CompareCondition;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.DistanceUnit;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoRadiusCommandArgs;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoRadiusCommandArgs.Flag;
+import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands.Position;
+import io.valkey.springframework.data.valkey.connection.ValkeyNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyServer;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.BitOperation;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
 import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.ZAddArgs;
+import io.valkey.springframework.data.valkey.connection.SetCondition;
 import io.valkey.springframework.data.valkey.connection.SortParameters;
 import io.valkey.springframework.data.valkey.connection.SortParameters.Order;
 import io.valkey.springframework.data.valkey.connection.SortParameters.Range;
 import io.valkey.springframework.data.valkey.connection.ValueEncoding;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.connection.convert.ListConverter;
-import io.valkey.springframework.data.valkey.connection.convert.SetConverter;
 import io.valkey.springframework.data.valkey.connection.convert.StringToValkeyClientInfoConverter;
 import io.valkey.springframework.data.valkey.connection.zset.DefaultTuple;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
@@ -84,7 +93,7 @@ import io.valkey.springframework.data.valkey.domain.geo.BoxShape;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
 import io.valkey.springframework.data.valkey.domain.geo.RadiusShape;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -101,6 +110,8 @@ import org.springframework.util.StringUtils;
  * @author Guy Korland
  * @author dengliming
  * @author John Blum
+ * @author Viktoriya Kutsarova
+ * @author Yordan Tsintsov
  */
 @SuppressWarnings("ConstantConditions")
 abstract class JedisConverters extends Converters {
@@ -124,7 +135,8 @@ abstract class JedisConverters extends Converters {
 		return list != null ? new LinkedHashSet<>(list) : null;
 	}
 
-	public static Converter<String, byte[]> stringToBytes() {
+	@SuppressWarnings("NullAway")
+	public static Converter<String, @Nullable byte[]> stringToBytes() {
 		return JedisConverters::toBytes;
 	}
 
@@ -147,10 +159,6 @@ abstract class JedisConverters extends Converters {
 
 	static List<Tuple> toTupleList(List<redis.clients.jedis.resps.Tuple> source) {
 		return tuplesToTuples().convert(source);
-	}
-
-	static Set<Tuple> toTupleSet(Set<redis.clients.jedis.resps.Tuple> source) {
-		return new SetConverter<>(JedisConverters::toTuple).convert(source);
 	}
 
 	/**
@@ -187,13 +195,13 @@ abstract class JedisConverters extends Converters {
 		return toBytes(source.getCursorId());
 	}
 
-	@Nullable
-	public static byte[] toBytes(@Nullable String source) {
+	@Contract("null -> null;!null -> !null")
+	public static byte @Nullable [] toBytes(@Nullable String source) {
 		return source == null ? null : SafeEncoder.encode(source);
 	}
 
-	@Nullable
-	public static String toString(@Nullable byte[] source) {
+	@Contract("null -> null;!null -> !null")
+	public static @Nullable String toString(byte @Nullable [] source) {
 		return source == null ? null : SafeEncoder.encode(source);
 	}
 
@@ -204,25 +212,8 @@ abstract class JedisConverters extends Converters {
 	 * @return the {@link ValueEncoding} for given {@code source}. Never {@literal null}.
 	 * @since 2.1
 	 */
-	public static ValueEncoding toEncoding(byte[] source) {
+	public static ValueEncoding toEncoding(byte @Nullable [] source) {
 		return ValueEncoding.of(toString(source));
-	}
-
-	/**
-	 * @since 1.7
-	 */
-	@SuppressWarnings("unchecked")
-	public static ValkeyClusterNode toNode(Object source) {
-
-		List<Object> values = (List<Object>) source;
-
-		ValkeyClusterNode.SlotRange range = new ValkeyClusterNode.SlotRange(((Number) values.get(0)).intValue(),
-				((Number) values.get(1)).intValue());
-
-		List<Object> nodeInfo = (List<Object>) values.get(2);
-
-		return new ValkeyClusterNode(toString((byte[]) nodeInfo.get(0)), ((Number) nodeInfo.get(1)).intValue(), range);
-
 	}
 
 	/**
@@ -259,33 +250,33 @@ abstract class JedisConverters extends Converters {
 		return result;
 	}
 
-	@Nullable
-	public static SortingParams toSortingParams(@Nullable SortParameters params) {
+	@Contract("null -> null;!null -> !null")
+	public static @Nullable SortingParams toSortingParams(@Nullable SortParameters params) {
 
-		SortingParams jedisParams = null;
+		if (params == null) {
+			return null;
+		}
 
-		if (params != null) {
-			jedisParams = new SortingParams();
-			byte[] byPattern = params.getByPattern();
-			if (byPattern != null) {
-				jedisParams.by(params.getByPattern());
-			}
-			byte[][] getPattern = params.getGetPattern();
-			if (getPattern != null) {
-				jedisParams.get(getPattern);
-			}
-			Range limit = params.getLimit();
-			if (limit != null) {
-				jedisParams.limit((int) limit.getStart(), (int) limit.getCount());
-			}
-			Order order = params.getOrder();
-			if (order != null && order.equals(Order.DESC)) {
-				jedisParams.desc();
-			}
-			Boolean isAlpha = params.isAlphabetic();
-			if (isAlpha != null && isAlpha) {
-				jedisParams.alpha();
-			}
+		SortingParams jedisParams = new SortingParams();
+		byte[] byPattern = params.getByPattern();
+		if (byPattern != null) {
+			jedisParams.by(params.getByPattern());
+		}
+		byte[][] getPattern = params.getGetPattern();
+		if (getPattern != null) {
+			jedisParams.get(getPattern);
+		}
+		Range limit = params.getLimit();
+		if (limit != null) {
+			jedisParams.limit((int) limit.getStart(), (int) limit.getCount());
+		}
+		Order order = params.getOrder();
+		if (order != null && order.equals(Order.DESC)) {
+			jedisParams.desc();
+		}
+		Boolean isAlpha = params.isAlphabetic();
+		if (isAlpha != null && isAlpha) {
+			jedisParams.alpha();
 		}
 
 		return jedisParams;
@@ -298,6 +289,10 @@ abstract class JedisConverters extends Converters {
 			case OR -> BitOP.OR;
 			case NOT -> BitOP.NOT;
 			case XOR -> BitOP.XOR;
+			case DIFF -> BitOP.DIFF;
+			case DIFF1 -> BitOP.DIFF1;
+			case ANDOR -> BitOP.ANDOR;
+			case ONE -> BitOP.ONE;
 		};
 	}
 
@@ -307,7 +302,7 @@ abstract class JedisConverters extends Converters {
 	 *
 	 * @since 1.6
 	 */
-	public static byte[] boundaryToBytesForZRange(@Nullable org.springframework.data.domain.Range.Bound<?> boundary,
+	public static byte[] boundaryToBytesForZRange(org.springframework.data.domain.Range.@Nullable Bound<?> boundary,
 			byte[] defaultValue) {
 
 		if (boundary == null || !boundary.isBounded()) {
@@ -324,7 +319,7 @@ abstract class JedisConverters extends Converters {
 	 * @since 1.6
 	 */
 	public static byte[] boundaryToBytesForZRangeByLex(
-			@Nullable org.springframework.data.domain.Range.Bound<byte[]> boundary, byte[] defaultValue) {
+			org.springframework.data.domain.Range.@Nullable Bound<byte[]> boundary, byte[] defaultValue) {
 
 		if (boundary == null || !boundary.isBounded()) {
 			return defaultValue;
@@ -373,13 +368,13 @@ abstract class JedisConverters extends Converters {
 			return paramsToUse;
 		}
 
-		if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
-			return expiration.isUnixTimestamp() ? paramsToUse.pxAt(expiration.getExpirationTime())
-					: paramsToUse.px(expiration.getExpirationTime());
+		ExpirationAdapter adapter = ExpirationAdapter.of(expiration);
+
+		if (adapter.isPrecise()) {
+			return adapter.apply(paramsToUse::px, paramsToUse::pxAt);
 		}
 
-		return expiration.isUnixTimestamp() ? paramsToUse.exAt(expiration.getConverted(TimeUnit.SECONDS))
-				: paramsToUse.ex(expiration.getConverted(TimeUnit.SECONDS));
+		return adapter.apply(paramsToUse::ex, paramsToUse::exAt);
 	}
 
 	/**
@@ -405,58 +400,142 @@ abstract class JedisConverters extends Converters {
 			return params.persist();
 		}
 
-		if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
-			if (expiration.isUnixTimestamp()) {
-				return params.pxAt(expiration.getExpirationTime());
-			}
-			return params.px(expiration.getExpirationTime());
+		ExpirationAdapter adapter = ExpirationAdapter.of(expiration);
+
+		if (adapter.isPrecise()) {
+			return adapter.apply(e -> params.px(e), a -> params.pxAt(a));
 		}
 
-		return expiration.isUnixTimestamp() ? params.exAt(expiration.getConverted(TimeUnit.SECONDS))
-				: params.ex(expiration.getConverted(TimeUnit.SECONDS));
+		return adapter.apply(e -> params.ex(e), a -> params.exAt(a));
 	}
 
 	/**
-	 * Converts a given {@link SetOption} to the according {@code SET} command argument.<br />
-	 * <dl>
-	 * <dt>{@link SetOption#SET_IF_PRESENT}</dt>
-	 * <dd>{@code XX}</dd>
-	 * <dt>{@link SetOption#SET_IF_ABSENT}</dt>
-	 * <dd>{@code NX}</dd>
-	 * <dt>{@link SetOption#UPSERT}</dt>
-	 * <dd>{@code byte[0]}</dd>
-	 * </dl>
+	 * Converts a given {@link Expiration} and {@link SetCondition} to the according {@link SetParams}.
 	 *
-	 * @param option must not be {@literal null}.
-	 * @since 2.2
+	 * @param expiration can be {@literal null}.
+	 * @param condition can be {@literal null}.
+	 * @since 4.1
 	 */
-	public static SetParams toSetCommandNxXxArgument(SetOption option) {
-		return toSetCommandNxXxArgument(option, SetParams.setParams());
+	static SetParams toSetParams(Expiration expiration, SetCondition condition) {
+
+		SetParams params = toSetCommandExPxArgument(expiration, SetParams.setParams());
+
+		switch (condition.getKeyCondition()) {
+			case UPSERT -> {}
+			case IF_ABSENT -> params.nx();
+			case IF_PRESENT -> params.xx();
+		}
+
+		CompareCondition compareCondition = condition.getCompareCondition();
+
+		if (compareCondition != null) {
+			params.condition(toCompareCondition(compareCondition));
+		}
+
+		return params;
 	}
 
 	/**
-	 * Converts a given {@link SetOption} to the according {@code SET} command argument.<br />
-	 * <dl>
-	 * <dt>{@link SetOption#SET_IF_PRESENT}</dt>
-	 * <dd>{@code XX}</dd>
-	 * <dt>{@link SetOption#SET_IF_ABSENT}</dt>
-	 * <dd>{@code NX}</dd>
-	 * <dt>{@link SetOption#UPSERT}</dt>
-	 * <dd>{@code byte[0]}</dd>
-	 * </dl>
+	 * Converts a given {@link CompareCondition} to the according {@code DELEX} command argument.
 	 *
-	 * @param option must not be {@literal null}.
-	 * @since 2.2
+	 * @param condition must not be {@literal null}.
+	 * @since 4.1
 	 */
-	public static SetParams toSetCommandNxXxArgument(SetOption option, SetParams params) {
-
-		SetParams paramsToUse = params == null ? SetParams.setParams() : params;
-
-		return switch (option) {
-			case SET_IF_PRESENT -> paramsToUse.xx();
-			case SET_IF_ABSENT -> paramsToUse.nx();
-			default -> paramsToUse;
+	static redis.clients.jedis.util.CompareCondition toCompareCondition(CompareCondition condition) {
+		return switch (condition.getComparison()) {
+			case DIGEST ->
+				condition.getOperator() == io.valkey.springframework.data.valkey.connection.CompareCondition.ComparisonOperator.EQUALS
+						? redis.clients.jedis.util.CompareCondition.digestEq(condition.getValue().toString())
+						: redis.clients.jedis.util.CompareCondition.digestNe(condition.getValue().toString());
+			case VALUE ->
+				condition.getOperator() == io.valkey.springframework.data.valkey.connection.CompareCondition.ComparisonOperator.EQUALS
+						? redis.clients.jedis.util.CompareCondition.valueEq(condition.getValue().asBytes())
+						: redis.clients.jedis.util.CompareCondition.valueNe(condition.getValue().asBytes());
 		};
+	}
+
+	/**
+	 * Converts a given {@link Expiration} to the according {@code HGETEX} command argument depending on
+	 * {@link Expiration#isUnixTimestamp()}.
+	 * <dl>
+	 * <dt>{@link TimeUnit#MILLISECONDS}</dt>
+	 * <dd>{@code PX|PXAT}</dd>
+	 * <dt>{@link TimeUnit#SECONDS}</dt>
+	 * <dd>{@code EX|EXAT}</dd>
+	 * </dl>
+	 *
+	 * @param expiration can be {@literal null}.
+	 * @since 4.0
+	 */
+	static HGetExParams toHGetExParams(@Nullable Expiration expiration) {
+
+		HGetExParams params = new HGetExParams();
+
+		if (expiration == null) {
+			return params;
+		}
+
+		if (expiration.isPersistent()) {
+			return params.persist();
+		}
+
+		ExpirationAdapter adapter = ExpirationAdapter.of(expiration);
+
+		if (adapter.isPrecise()) {
+			return adapter.apply(e -> params.px(e), a -> params.pxAt(a));
+		}
+
+		return adapter.apply(e -> params.ex(e), a -> params.exAt(a));
+	}
+
+	/**
+	 * Converts a given {@link ValkeyHashCommands.HashFieldSetOption} and {@link Expiration} to the according
+	 * {@code HSETEX} command argument.
+	 * <dl>
+	 * <dt>{@link ValkeyHashCommands.HashFieldSetOption#ifNoneExist()}</dt>
+	 * <dd>{@code FNX}</dd>
+	 * <dt>{@link ValkeyHashCommands.HashFieldSetOption#ifAllExist()}</dt>
+	 * <dd>{@code FXX}</dd>
+	 * <dt>{@link ValkeyHashCommands.HashFieldSetOption#upsert()}</dt>
+	 * <dd>no condition flag</dd>
+	 * </dl>
+	 * <dl>
+	 * <dt>{@link TimeUnit#MILLISECONDS}</dt>
+	 * <dd>{@code PX|PXAT}</dd>
+	 * <dt>{@link TimeUnit#SECONDS}</dt>
+	 * <dd>{@code EX|EXAT}</dd>
+	 * </dl>
+	 *
+	 * @param condition must not be {@literal null}; use {@code UPSERT} to omit FNX/FXX.
+	 * @param expiration can be {@literal null} to omit TTL.
+	 * @return never {@literal null}.
+	 * @since 4.0
+	 */
+	static HSetExParams toHSetExParams(ValkeyHashCommands.@NonNull HashFieldSetOption condition,
+			@Nullable Expiration expiration) {
+
+		HSetExParams params = new HSetExParams();
+
+		switch (condition) {
+			case IF_NONE_EXIST -> params.fnx();
+			case IF_ALL_EXIST -> params.fxx();
+		}
+
+		if (expiration == null || expiration.isPersistent()) {
+			return params;
+		}
+
+		if (expiration.isKeepTtl()) {
+			return params.keepTtl();
+		}
+
+		ExpirationAdapter adapter = ExpirationAdapter.of(expiration);
+
+		if (adapter.isPrecise()) {
+			return adapter.apply(e -> params.px(e), a -> params.pxAt(a));
+		}
+
+		return adapter.apply(e -> params.ex(e), a -> params.exAt(a));
 	}
 
 	private static byte[] boundaryToBytes(org.springframework.data.domain.Range.Bound<?> boundary, byte[] inclPrefix,
@@ -514,11 +593,12 @@ abstract class JedisConverters extends Converters {
 	/**
 	 * @since 1.8
 	 */
+	@SuppressWarnings("NullAway")
 	public static List<String> toStrings(List<byte[]> source) {
 		return toList(JedisConverters::toString, source);
 	}
 
-	private static <S, T> List<T> toList(Converter<S, T> converter, @Nullable Collection<S> source) {
+	private static <S, T> List<T> toList(Converter<S, @Nullable T> converter, @Nullable Collection<S> source) {
 
 		if (source == null || source.isEmpty()) {
 			return Collections.emptyList();
@@ -536,7 +616,8 @@ abstract class JedisConverters extends Converters {
 	/**
 	 * @since 1.8
 	 */
-	public static ListConverter<redis.clients.jedis.GeoCoordinate, Point> geoCoordinateToPointConverter() {
+	@SuppressWarnings("NullAway")
+	public static ListConverter<redis.clients.jedis.GeoCoordinate, @Nullable Point> geoCoordinateToPointConverter() {
 		return new ListConverter<>(JedisConverters::toPoint);
 	}
 
@@ -544,7 +625,7 @@ abstract class JedisConverters extends Converters {
 	 * @since 2.5
 	 */
 	@Nullable
-	static Point toPoint(@Nullable redis.clients.jedis.GeoCoordinate geoCoordinate) {
+	static Point toPoint(redis.clients.jedis.@Nullable GeoCoordinate geoCoordinate) {
 		return geoCoordinate == null ? null : new Point(geoCoordinate.getLongitude(), geoCoordinate.getLatitude());
 	}
 
@@ -618,6 +699,7 @@ abstract class JedisConverters extends Converters {
 	 *
 	 * @since 1.8
 	 */
+	@SuppressWarnings("NullAway")
 	public static GeoRadiusParam toGeoRadiusParam(GeoRadiusCommandArgs source) {
 
 		GeoRadiusParam param = GeoRadiusParam.geoRadiusParam();
@@ -700,7 +782,7 @@ abstract class JedisConverters extends Converters {
 		return args.toArray(new byte[0][0]);
 	}
 
-	static FlushMode toFlushMode(@Nullable ValkeyServerCommands.FlushOption option) {
+	static FlushMode toFlushMode(ValkeyServerCommands.@Nullable FlushOption option) {
 
 		if (option == null) {
 			return FlushMode.SYNC;
@@ -790,6 +872,10 @@ abstract class JedisConverters extends Converters {
 		throw new IllegalArgumentException("Cannot extract Geo Reference from %s".formatted(reference));
 	}
 
+	public static HostAndPort toHostAndPort(ValkeyNode node) {
+		return new HostAndPort(node.getRequiredHost(), node.getPortOr(Protocol.DEFAULT_PORT));
+	}
+
 	/**
 	 * @author Christoph Strobl
 	 * @since 1.8
@@ -849,6 +935,7 @@ abstract class JedisConverters extends Converters {
 			}
 
 			@Override
+			@SuppressWarnings("NullAway")
 			public GeoResult<GeoLocation<byte[]>> convert(GeoRadiusResponse source) {
 
 				Point point = JedisConverters.toPoint(source.getCoordinate());
@@ -858,4 +945,43 @@ abstract class JedisConverters extends Converters {
 			}
 		}
 	}
+
+	/**
+	 * Adapter to apply {@link Expiration}.
+	 */
+	record ExpirationAdapter(Expiration expiration) {
+
+		ExpirationAdapter {
+			Assert.isTrue(!expiration.isPersistent(), "Expiration does not define an expiry");
+		}
+
+		/**
+		 * Create a new ExpirationAdapter.
+		 *
+		 * @param expiration
+		 * @return
+		 */
+		public static ExpirationAdapter of(Expiration expiration) {
+			return new ExpirationAdapter(expiration);
+		}
+
+		public boolean isPrecise() {
+			return expiration.isPrecise();
+		}
+
+		/**
+		 * Apply expiration to
+		 *
+		 * @param expire expiration mapping function.
+		 * @param expireAt expiration-at mapping function.
+		 */
+		public <T> T apply(LongFunction<T> expire, LongFunction<T> expireAt) {
+
+			long ttl = isPrecise() ? expiration.getExpirationTimeInMilliseconds() : expiration.getExpirationTimeInSeconds();
+
+			return expiration.isUnixTimestamp() ? expireAt.apply(ttl) : expire.apply(ttl);
+		}
+
+	}
+
 }

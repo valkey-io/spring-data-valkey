@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,8 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.List;
 
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
 
 /**
@@ -30,6 +32,12 @@ import org.springframework.dao.DataAccessException;
  * <p>
  * {@link ValkeyConnection Valkey connections}, unlike perhaps their underlying native connection are not Thread-safe and
  * should not be shared across multiple threads, concurrently or simultaneously.
+ * <p>
+ * Valkey command methods are exempted from the default {@literal non-nullable} return value assumption as nullness
+ * depends not only on the command but also on the connection state. Methods invoked during a transaction or while
+ * pipelining are required to return {@literal null} at the time invoking a command as the response is not available
+ * until the transaction is executed or the pipeline is closed. To avoid excessive null checks in calling code and to
+ * not express a faulty assumption of non-nullness, all command interfaces are annotated with {@code @NullUnmarked}.
  *
  * @author Costin Leau
  * @author Christoph Strobl
@@ -37,6 +45,7 @@ import org.springframework.dao.DataAccessException;
  * @author James Howe
  * @author John Blum
  */
+@NullUnmarked
 public interface ValkeyConnection extends ValkeyCommandsProvider, DefaultedValkeyConnection, AutoCloseable {
 
 	/**
@@ -102,7 +111,7 @@ public interface ValkeyConnection extends ValkeyCommandsProvider, DefaultedValke
 	 * @throws ValkeyPipelineException if the pipeline contains any incorrect/invalid statements
 	 * @return the result of the executed commands.
 	 */
-	List<Object> closePipeline() throws ValkeyPipelineException;
+	List<@Nullable Object> closePipeline() throws ValkeyPipelineException;
 
 	/**
 	 * @return the {@link ValkeySentinelConnection} when using Valkey Sentinel.

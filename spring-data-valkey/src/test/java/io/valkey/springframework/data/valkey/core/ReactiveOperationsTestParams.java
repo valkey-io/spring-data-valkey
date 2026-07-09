@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.ByteBufferObjectFactory;
 import io.valkey.springframework.data.valkey.DoubleObjectFactory;
 import io.valkey.springframework.data.valkey.LongObjectFactory;
@@ -32,8 +33,10 @@ import io.valkey.springframework.data.valkey.StringObjectFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.GenericJacksonJsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.GenericToStringSerializer;
 import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.JacksonJsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.JdkSerializationValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
@@ -43,7 +46,6 @@ import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import org.springframework.lang.Nullable;
 
 /**
  * Parameters for testing implementations of {@link ReactiveValkeyTemplate}
@@ -100,9 +102,18 @@ abstract public class ReactiveOperationsTestParams {
 		ReactiveValkeyTemplate<String, Person> jackson2JsonPersonTemplate = new ReactiveValkeyTemplate(
 				lettuceConnectionFactory, ValkeySerializationContext.fromSerializer(jackson2JsonSerializer));
 
+		JacksonJsonValkeySerializer<Person> jackson3JsonSerializer = new JacksonJsonValkeySerializer<>(Person.class);
+		ReactiveValkeyTemplate<String, Person> jackson3JsonPersonTemplate = new ReactiveValkeyTemplate(
+				lettuceConnectionFactory, ValkeySerializationContext.fromSerializer(jackson3JsonSerializer));
+
 		GenericJackson2JsonValkeySerializer genericJackson2JsonSerializer = new GenericJackson2JsonValkeySerializer();
 		ReactiveValkeyTemplate<String, Person> genericJackson2JsonPersonTemplate = new ReactiveValkeyTemplate(
 				lettuceConnectionFactory, ValkeySerializationContext.fromSerializer(genericJackson2JsonSerializer));
+
+		GenericJacksonJsonValkeySerializer genericJacksonJsonSerializer = GenericJacksonJsonValkeySerializer
+				.create(it -> it.enableSpringCacheNullValueSupport().enableUnsafeDefaultTyping());
+		ReactiveValkeyTemplate<String, Person> genericJacksonJsonPersonTemplate = new ReactiveValkeyTemplate(
+				lettuceConnectionFactory, ValkeySerializationContext.fromSerializer(genericJacksonJsonSerializer));
 
 		List<Fixture<?, ?>> list = Arrays.asList( //
 				new Fixture<>(stringTemplate, stringFactory, stringFactory, stringValkeySerializer, "String"), //
@@ -115,8 +126,11 @@ abstract public class ReactiveOperationsTestParams {
 				new Fixture<>(xstreamStringTemplate, stringFactory, stringFactory, oxmSerializer, "String/OXM"), //
 				new Fixture<>(xstreamPersonTemplate, stringFactory, personFactory, oxmSerializer, "String/Person/OXM"), //
 				new Fixture<>(jackson2JsonPersonTemplate, stringFactory, personFactory, jackson2JsonSerializer, "Jackson2"), //
+				new Fixture<>(jackson3JsonPersonTemplate, stringFactory, personFactory, jackson2JsonSerializer, "Jackson3"), //
 				new Fixture<>(genericJackson2JsonPersonTemplate, stringFactory, personFactory, genericJackson2JsonSerializer,
-						"Generic Jackson 2"));
+						"Generic Jackson 2"),
+				new Fixture<>(genericJacksonJsonPersonTemplate, stringFactory, personFactory, genericJacksonJsonSerializer,
+						"Generic Jackson 3"));
 
 		if (clusterAvailable()) {
 
@@ -170,8 +184,7 @@ abstract public class ReactiveOperationsTestParams {
 			return valueFactory;
 		}
 
-		@Nullable
-		public ValkeySerializer getSerializer() {
+		public @Nullable ValkeySerializer getSerializer() {
 			return serializer;
 		}
 

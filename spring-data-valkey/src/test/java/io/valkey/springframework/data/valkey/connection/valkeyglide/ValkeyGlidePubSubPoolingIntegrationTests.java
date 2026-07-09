@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,8 +47,6 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
 import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.lang.Nullable;
 
 /**
@@ -53,6 +54,7 @@ import org.springframework.lang.Nullable;
  * These tests specifically target issues that can arise when clients are pooled
  * and their state may persist between uses.
  */
+@ParameterizedClass
 @MethodSource("testParams")
 class ValkeyGlidePubSubPoolingIntegrationTests {
 
@@ -156,7 +158,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
     // ==================== Single Client Pool Tests ====================
     // These tests use pool size 1 to guarantee client reuse
 
-    @ParameterizedValkeyTest
+    @Test
     void sameClientShouldNotReceiveMessagesFromPreviousSubscription() throws Exception {
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
@@ -197,7 +199,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         conn2.close();
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void rapidSubscribeUnsubscribeCyclesOnSameClient() throws Exception {
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
@@ -227,7 +229,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         }
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void subscriptionCallbacksWithCompositeListener() throws Exception {
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
@@ -277,7 +279,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         }
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void partialUnsubscribeThenReuseClient() throws Exception {
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
@@ -323,7 +325,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         conn2.close();
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void clientStateShouldBeCleanAfterNoOpConnection() throws Exception {
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
@@ -348,7 +350,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         conn2.close();
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void mixedChannelAndPatternSubscriptionsOnSameConnection() throws Exception {
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(1);
 
@@ -407,7 +409,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
     // ==================== Concurrent Usage Tests ====================
     // These tests use pool size 3 with semaphore to force reuse
 
-    @ParameterizedValkeyTest
+    @Test
     void concurrentThreadsReceiveOnlyTheirOwnMessages() throws Exception {
         int poolSize = 3;
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
@@ -460,7 +462,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         assertThat(errorCount.get()).isZero();
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void concurrentPatternSubscriptions() throws Exception {
         int poolSize = 3;
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
@@ -514,7 +516,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         assertThat(errorCount.get()).isZero();
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void rapidConcurrentSubscribeUnsubscribeCycles() throws Exception {
         int poolSize = 3;
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
@@ -570,7 +572,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         assertThat(successCount.get()).isEqualTo(threadCount * cyclesPerThread);
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void concurrentMixedChannelAndPatternSubscriptions() throws Exception {
         int poolSize = 3;
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);
@@ -639,7 +641,7 @@ class ValkeyGlidePubSubPoolingIntegrationTests {
         assertThat(errorCount.get()).isZero();
     }
 
-    @ParameterizedValkeyTest
+    @Test
     void highThroughputMessaging() throws Exception {
         int poolSize = 3;
         ValkeyGlideConnectionFactory connectionFactory = createTestFactory(poolSize);

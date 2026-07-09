@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ public interface Task extends SchedulingAwareRunnable, Cancelable {
 	/**
 	 * Get the current lifecycle phase.
 	 *
-	 * @return never {@literal null}.
+	 * @return the current {@link State} of the task.
 	 */
 	State getState();
 
@@ -60,4 +60,5 @@ public interface Task extends SchedulingAwareRunnable, Cancelable {
 	enum State {
 		CREATED, STARTING, RUNNING, CANCELLED;
 	}
+
 }

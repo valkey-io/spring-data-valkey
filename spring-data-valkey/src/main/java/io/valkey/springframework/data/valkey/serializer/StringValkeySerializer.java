@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package io.valkey.springframework.data.valkey.serializer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -80,15 +80,14 @@ public class StringValkeySerializer implements ValkeySerializer<String> {
 		this.charset = charset;
 	}
 
-	@Nullable
 	@Override
 	public byte[] serialize(@Nullable String value) {
-		return (value == null ? null : value.getBytes(charset));
+		return (value == null ? SerializationUtils.EMPTY_ARRAY : value.getBytes(charset));
 	}
 
 	@Nullable
 	@Override
-	public String deserialize(@Nullable byte[] bytes) {
+	public String deserialize(byte @Nullable [] bytes) {
 		return (bytes == null ? null : new String(bytes, charset));
 	}
 
@@ -96,4 +95,5 @@ public class StringValkeySerializer implements ValkeySerializer<String> {
 	public Class<?> getTargetType() {
 		return String.class;
 	}
+
 }

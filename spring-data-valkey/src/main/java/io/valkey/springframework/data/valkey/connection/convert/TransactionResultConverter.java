@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.ValkeySystemException;
@@ -33,7 +34,7 @@ import io.valkey.springframework.data.valkey.connection.FutureResult;
  * @author Mark Paluch
  * @param <T> The type of {@link FutureResult} of the individual tx operations
  */
-public class TransactionResultConverter<T> implements Converter<List<Object>, List<Object>> {
+public class TransactionResultConverter<T> implements Converter<List<Object>, @Nullable List<@Nullable Object>> {
 
 	private final Queue<FutureResult<T>> txResults;
 	private final Converter<Exception, DataAccessException> exceptionConverter;
@@ -46,7 +47,8 @@ public class TransactionResultConverter<T> implements Converter<List<Object>, Li
 	}
 
 	@Override
-	public List<Object> convert(List<Object> execResults) {
+	@SuppressWarnings("NullAway")
+	public @Nullable List<@Nullable Object> convert(List<Object> execResults) {
 
 		if (execResults.size() != txResults.size()) {
 
@@ -54,7 +56,7 @@ public class TransactionResultConverter<T> implements Converter<List<Object>, Li
 					"Incorrect number of transaction results; Expected: " + txResults.size() + " Actual: " + execResults.size());
 		}
 
-		List<Object> convertedResults = new ArrayList<>();
+		List<@Nullable Object> convertedResults = new ArrayList<>();
 
 		for (Object result : execResults) {
 			FutureResult<T> futureResult = txResults.remove();

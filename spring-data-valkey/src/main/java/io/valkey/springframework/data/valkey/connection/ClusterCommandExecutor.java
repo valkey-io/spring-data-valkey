@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -34,7 +36,7 @@ import io.valkey.springframework.data.valkey.ExceptionTranslationStrategy;
 import io.valkey.springframework.data.valkey.TooManyClusterRedirectionsException;
 import io.valkey.springframework.data.valkey.connection.util.ByteArraySet;
 import io.valkey.springframework.data.valkey.connection.util.ByteArrayWrapper;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -226,6 +228,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 		return collectResults(futures);
 	}
 
+	@SuppressWarnings("NullAway")
 	<T> MultiNodeResult<T> collectResults(Map<NodeExecution, Future<NodeResult<T>>> futures) {
 
 		MultiNodeResult<T> result = new MultiNodeResult<>();
@@ -254,8 +257,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 				} catch (ExecutionException ex) {
 					entryIterator.remove();
 					exceptionCollector.addException(nodeExecution, ex.getCause());
-				} catch (TimeoutException ignore) {
-				} catch (InterruptedException ex) {
+				} catch (TimeoutException ignore) {} catch (InterruptedException ex) {
 					Thread.currentThread().interrupt();
 					exceptionCollector.addException(nodeExecution, ex);
 					break OUT;
@@ -332,8 +334,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 		return this.topologyProvider.getTopology();
 	}
 
-	@Nullable
-	private DataAccessException convertToDataAccessException(Exception cause) {
+	private @Nullable DataAccessException convertToDataAccessException(Exception cause) {
 		return this.exceptionTranslationStrategy.translate(cause);
 	}
 
@@ -413,6 +414,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 		 *
 		 * @since 2.0.3
 		 */
+		@Nullable
 		PositionalKey getPositionalKey() {
 			return this.positionalKey;
 		}
@@ -484,8 +486,20 @@ public class ClusterCommandExecutor implements DisposableBean {
 		 *
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public T getValue() {
+		public @Nullable T getValue() {
+			return this.value;
+		}
+
+		/**
+		 * Get the actual value of the command execution or raise an error if {@literal null}.
+		 *
+		 * @return can be {@literal null}.
+		 * @throws IllegalArgumentException in case the value is {@literal null}.
+		 * @since 4.0
+		 */
+		public T getRequiredValue() {
+
+			Assert.notNull(this.value, "Expected non null value, but was null");
 			return this.value;
 		}
 
@@ -497,8 +511,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 		 * @return the mapped value.
 		 * @since 2.1
 		 */
-		@Nullable
-		public <U> U mapValue(Function<? super T, ? extends U> mapper) {
+		public <U> @Nullable U mapValue(Function<? super T, ? extends U> mapper) {
 
 			Assert.notNull(mapper, "Mapper function must not be null");
 
@@ -601,8 +614,8 @@ public class ClusterCommandExecutor implements DisposableBean {
 		 * @param returnValue can be {@literal null}.
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public T getFirstNonNullNotEmptyOrDefault(@Nullable T returnValue) {
+		@Contract("!null -> !null")
+		public @Nullable T getFirstNonNullNotEmptyOrDefault(@Nullable T returnValue) {
 
 			for (NodeResult<T> nodeResult : nodeResults) {
 				if (nodeResult.getValue() != null) {
@@ -682,15 +695,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 	 * @author Christoph Strobl
 	 * @since 2.0.3
 	 */
-	private static class PositionalKey {
-
-		private final ByteArrayWrapper key;
-		private final int position;
-
-		private PositionalKey(ByteArrayWrapper key, int position) {
-			this.key = key;
-			this.position = position;
-		}
+	private record PositionalKey(ByteArrayWrapper key, int position) {
 
 		static PositionalKey of(byte[] key, int index) {
 			return new PositionalKey(new ByteArrayWrapper(key), index);
@@ -700,36 +705,9 @@ public class ClusterCommandExecutor implements DisposableBean {
 		 * @return binary key.
 		 */
 		byte[] getBytes() {
-			return getKey().getArray();
+			return key().getArray();
 		}
 
-		public ByteArrayWrapper getKey() {
-			return this.key;
-		}
-
-		public int getPosition() {
-			return this.position;
-		}
-
-		@Override
-		public boolean equals(@Nullable Object obj) {
-
-			if (this == obj) {
-				return true;
-			}
-
-			if (!(obj instanceof PositionalKey that))
-				return false;
-
-			return this.getPosition() == that.getPosition() && ObjectUtils.nullSafeEquals(this.getKey(), that.getKey());
-		}
-
-		@Override
-		public int hashCode() {
-			int result = ObjectUtils.nullSafeHashCode(getKey());
-			result = 31 * result + ObjectUtils.nullSafeHashCode(getPosition());
-			return result;
-		}
 	}
 
 	/**
@@ -739,13 +717,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 	 * @author Christoph Strobl
 	 * @since 2.0.3
 	 */
-	private static class PositionalKeys implements Iterable<PositionalKey> {
-
-		private final List<PositionalKey> keys;
-
-		private PositionalKeys(List<PositionalKey> keys) {
-			this.keys = keys;
-		}
+	private record PositionalKeys(List<PositionalKey> keys) implements Iterable<PositionalKey> {
 
 		/**
 		 * Create an empty {@link PositionalKeys}.
@@ -805,7 +777,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 	 */
 	private class NodeExceptionCollector {
 
-		private final Map<ValkeyClusterNode, Throwable> exceptions = new HashMap<>();
+		private final Map<ValkeyClusterNode, @Nullable Throwable> exceptions = new HashMap<>();
 
 		/**
 		 * @return {@code true} if the collector contains at least one exception.
@@ -814,7 +786,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 			return !exceptions.isEmpty();
 		}
 
-		public void addException(NodeExecution execution, Throwable throwable) {
+		public void addException(NodeExecution execution, @Nullable Throwable throwable) {
 
 			Throwable translated = throwable instanceof Exception e ? convertToDataAccessException(e) : throwable;
 			Throwable resolvedException = translated != null ? translated : throwable;
@@ -825,7 +797,7 @@ public class ClusterCommandExecutor implements DisposableBean {
 		/**
 		 * @return the collected exceptions.
 		 */
-		public List<? extends Throwable> getExceptions() {
+		public List<? extends @Nullable Throwable> getExceptions() {
 			return new ArrayList<>(exceptions.values());
 		}
 	}

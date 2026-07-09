@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -75,8 +75,7 @@ public abstract class ValkeyIndexDefinition implements IndexDefinition {
 		return indexName;
 	}
 
-	@Nullable
-	public String getPath() {
+	public @Nullable String getPath() {
 		return this.path;
 	}
 
@@ -120,7 +119,7 @@ public abstract class ValkeyIndexDefinition implements IndexDefinition {
 	 * @author Christoph Strobl
 	 * @since 1.7
 	 */
-	public static enum NoOpValueTransformer implements IndexValueTransformer {
+	public enum NoOpValueTransformer implements IndexValueTransformer {
 		INSTANCE;
 
 		@Override
@@ -133,7 +132,7 @@ public abstract class ValkeyIndexDefinition implements IndexDefinition {
 	 * @author Christoph Strobl
 	 * @since 1.7
 	 */
-	public static enum LowercaseIndexValueTransformer implements IndexValueTransformer {
+	public enum LowercaseIndexValueTransformer implements IndexValueTransformer {
 		INSTANCE;
 
 		@Override
@@ -160,7 +159,8 @@ public abstract class ValkeyIndexDefinition implements IndexDefinition {
 		}
 
 		@Override
-		public Object convert(Object source) {
+		@SuppressWarnings("NullAway")
+		public @Nullable Object convert(Object source) {
 
 			Object tmp = source;
 			for (IndexValueTransformer transformer : transformers) {
@@ -194,6 +194,7 @@ public abstract class ValkeyIndexDefinition implements IndexDefinition {
 			}
 			return false;
 		}
+
 	}
 
 	/**
@@ -217,5 +218,7 @@ public abstract class ValkeyIndexDefinition implements IndexDefinition {
 
 			return ObjectUtils.nullSafeEquals(context.getPath(), path);
 		}
+
 	}
+
 }

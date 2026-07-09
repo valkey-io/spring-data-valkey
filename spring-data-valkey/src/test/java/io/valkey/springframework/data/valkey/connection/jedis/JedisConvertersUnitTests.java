@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,19 @@
 package io.valkey.springframework.data.valkey.connection.jedis;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import redis.clients.jedis.Protocol;
 import redis.clients.jedis.params.GetExParams;
+import redis.clients.jedis.params.HGetExParams;
+import redis.clients.jedis.params.HSetExParams;
 import redis.clients.jedis.params.SetParams;
+import redis.clients.jedis.util.CompareCondition;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -36,14 +37,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import org.springframework.data.domain.Range;
+import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyServer;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
+import io.valkey.springframework.data.valkey.connection.SetCondition;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
-import org.springframework.lang.Nullable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
@@ -52,24 +55,25 @@ import org.springframework.test.util.ReflectionTestUtils;
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author John Blum
+ * @author Yordan Tsintsov
  */
 class JedisConvertersUnitTests {
 
 	private static final String CLIENT_ALL_SINGLE_LINE_RESPONSE = "addr=127.0.0.1:60311 fd=6 name= age=4059 idle=0 flags=N db=0 sub=0 psub=0 multi=-1 qbuf=0 qbuf-free=32768 obl=0 oll=0 omem=0 events=r cmd=client";
 
 	@Test // DATAREDIS-268
-	void convertingEmptyStringToListOfValkeyClientInfoShouldReturnEmptyList() {
+	void convertingEmptyStringToListOfRedisClientInfoShouldReturnEmptyList() {
 		assertThat(JedisConverters.toListOfValkeyClientInformation("")).isEqualTo(Collections.<ValkeyClientInfo> emptyList());
 	}
 
 	@Test // DATAREDIS-268
-	void convertingNullToListOfValkeyClientInfoShouldReturnEmptyList() {
+	void convertingNullToListOfRedisClientInfoShouldReturnEmptyList() {
 		assertThat(JedisConverters.toListOfValkeyClientInformation(null))
 				.isEqualTo(Collections.<ValkeyClientInfo> emptyList());
 	}
 
 	@Test // DATAREDIS-268
-	void convertingMultipleLiesToListOfValkeyClientInfoReturnsListCorrectly() {
+	void convertingMultipleLiesToListOfRedisClientInfoReturnsListCorrectly() {
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(CLIENT_ALL_SINGLE_LINE_RESPONSE);
@@ -201,7 +205,7 @@ class JedisConvertersUnitTests {
 
 		assertThat(
 				JedisConverters.boundaryToBytesForZRange(org.springframework.data.domain.Range.Bound.exclusive(1L), null))
-						.isEqualTo(JedisConverters.toBytes("(1"));
+				.isEqualTo(JedisConverters.toBytes("(1"));
 	}
 
 	@Test // DATAREDIS-352
@@ -248,21 +252,6 @@ class JedisConvertersUnitTests {
 
 		verify(mockSetParams, times(1)).exAt(eq(60L));
 		verifyNoMoreInteractions(mockSetParams);
-	}
-
-	@Test // DATAREDIS-316, DATAREDIS-749
-	void toSetCommandNxXxOptionShouldReturnNXforAbsent() {
-		assertThat(toString(JedisConverters.toSetCommandNxXxArgument(SetOption.ifAbsent()))).isEqualTo("nx");
-	}
-
-	@Test // DATAREDIS-316, DATAREDIS-749
-	void toSetCommandNxXxOptionShouldReturnXXforAbsent() {
-		assertThat(toString(JedisConverters.toSetCommandNxXxArgument(SetOption.ifPresent()))).isEqualTo("xx");
-	}
-
-	@Test // DATAREDIS-316, DATAREDIS-749
-	void toSetCommandNxXxOptionShouldReturnEmptyArrayforUpsert() {
-		assertThat(toString(JedisConverters.toSetCommandNxXxArgument(SetOption.upsert()))).isEqualTo("");
 	}
 
 	@Test // GH-2050
@@ -405,4 +394,212 @@ class JedisConvertersUnitTests {
 		map.put("parallel-syncs", "1");
 		return map;
 	}
+
+	@Nested
+	class ToHGetExParamsShould {
+
+		@Test
+		void notSetAnyFieldsForNullExpiration() {
+
+			assertThatParamsHasExpiration(JedisConverters.toHGetExParams(null), null, null);
+		}
+
+		@Test
+		void setPersistForNonExpiringExpiration() {
+
+			assertThatParamsHasExpiration(JedisConverters.toHGetExParams(Expiration.persistent()), Protocol.Keyword.PERSIST,
+					null);
+		}
+
+		@Test
+		void setPxForExpirationWithMillisTimeUnit() {
+
+			HGetExParams params = JedisConverters.toHGetExParams(Expiration.from(30_000, TimeUnit.MILLISECONDS));
+			assertThatParamsHasExpiration(params, Protocol.Keyword.PX, 30_000L);
+		}
+
+		@Test
+		void setPxAtForExpirationWithMillisUnixTimestamp() {
+
+			long fourHoursFromNowMillis = Instant.now().plus(4L, ChronoUnit.HOURS).toEpochMilli();
+			HGetExParams params = JedisConverters
+					.toHGetExParams(Expiration.unixTimestamp(fourHoursFromNowMillis, TimeUnit.MILLISECONDS));
+			assertThatParamsHasExpiration(params, Protocol.Keyword.PXAT, fourHoursFromNowMillis);
+		}
+
+		@Test
+		void setExForExpirationWithNonMillisTimeUnit() {
+
+			HGetExParams params = JedisConverters.toHGetExParams(Expiration.from(30, TimeUnit.SECONDS));
+			assertThatParamsHasExpiration(params, Protocol.Keyword.EX, 30L);
+		}
+
+		@Test
+		void setExAtForExpirationWithNonMillisUnixTimestamp() {
+
+			long fourHoursFromNowSecs = Instant.now().plus(4L, ChronoUnit.HOURS).getEpochSecond();
+			HGetExParams params = JedisConverters
+					.toHGetExParams(Expiration.unixTimestamp(fourHoursFromNowSecs, TimeUnit.SECONDS));
+			assertThatParamsHasExpiration(params, Protocol.Keyword.EXAT, fourHoursFromNowSecs);
+		}
+
+		private void assertThatParamsHasExpiration(HGetExParams params, Protocol.Keyword expirationType,
+				Long expirationValue) {
+			assertThat(params).extracting("expiration", "expirationValue").containsExactly(expirationType, expirationValue);
+		}
+	}
+
+	@Nested
+	class ToHSetExParamsShould {
+
+		@Test
+		void setFnxForNoneExistCondition() {
+
+			HSetExParams params = JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.IF_NONE_EXIST, null);
+			assertThatParamsHasExistance(params, Protocol.Keyword.FNX);
+		}
+
+		@Test
+		void setFxxForAllExistCondition() {
+
+			HSetExParams params = JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.IF_ALL_EXIST, null);
+			assertThatParamsHasExistance(params, Protocol.Keyword.FXX);
+		}
+
+		@Test
+		void notSetFnxNorFxxForUpsertCondition() {
+
+			HSetExParams params = JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.UPSERT, null);
+			assertThatParamsHasExistance(params, null);
+		}
+
+		@Test
+		void notSetAnyTimeFieldsForNullExpiration() {
+
+			HSetExParams params = JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.UPSERT, null);
+			assertThatParamsHasExpiration(params, null, null);
+		}
+
+		@Test
+		void notSetAnyTimeFieldsForNonExpiringExpiration() {
+
+			HSetExParams params = JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.UPSERT,
+					Expiration.persistent());
+			assertThatParamsHasExpiration(params, null, null);
+		}
+
+		@Test
+		void setKeepTtlForKeepTtlExpiration() {
+
+			HSetExParams params = JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.UPSERT,
+					Expiration.keepTtl());
+			assertThatParamsHasExpiration(params, Protocol.Keyword.KEEPTTL, null);
+		}
+
+		@Test
+		void setPxForExpirationWithMillisTimeUnit() {
+
+			Expiration expiration = Expiration.from(30_000, TimeUnit.MILLISECONDS);
+			assertThatParamsHasExpiration(
+					JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.UPSERT, expiration), Protocol.Keyword.PX,
+					30_000L);
+		}
+
+		@Test
+		void setPxAtForExpirationWithMillisUnixTimestamp() {
+
+			long fourHoursFromNowMillis = Instant.now().plus(4L, ChronoUnit.HOURS).toEpochMilli();
+			Expiration expiration = Expiration.unixTimestamp(fourHoursFromNowMillis, TimeUnit.MILLISECONDS);
+			assertThatParamsHasExpiration(
+					JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.UPSERT, expiration),
+					Protocol.Keyword.PXAT, fourHoursFromNowMillis);
+		}
+
+		@Test
+		void setExForExpirationWithNonMillisTimeUnit() {
+
+			Expiration expiration = Expiration.from(30, TimeUnit.SECONDS);
+			assertThatParamsHasExpiration(
+					JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.UPSERT, expiration), Protocol.Keyword.EX,
+					30L);
+		}
+
+		@Test
+		void setExAtForExpirationWithNonMillisUnixTimestamp() {
+
+			long fourHoursFromNowSecs = Instant.now().plus(4L, ChronoUnit.HOURS).getEpochSecond();
+			Expiration expiration = Expiration.unixTimestamp(fourHoursFromNowSecs, TimeUnit.SECONDS);
+			assertThatParamsHasExpiration(
+					JedisConverters.toHSetExParams(ValkeyHashCommands.HashFieldSetOption.UPSERT, expiration),
+					Protocol.Keyword.EXAT, fourHoursFromNowSecs);
+		}
+
+		private void assertThatParamsHasExistance(HSetExParams params, Protocol.Keyword existance) {
+			assertThat(params).extracting("existance").isEqualTo(existance);
+		}
+
+		private void assertThatParamsHasExpiration(HSetExParams params, Protocol.Keyword expirationType,
+				Long expirationValue) {
+			assertThat(params).extracting("expiration", "expirationValue").containsExactly(expirationType, expirationValue);
+		}
+	}
+
+	@Test // GH-3318
+	void convertCompareConditionIfValue() {
+
+		byte[] value = "foo".getBytes();
+		CompareCondition condition = JedisConverters
+				.toCompareCondition(io.valkey.springframework.data.valkey.connection.CompareCondition.ifEquals(value));
+
+		assertThat(condition).isEqualTo(CompareCondition.valueEq(value));
+
+		condition = JedisConverters
+				.toCompareCondition(io.valkey.springframework.data.valkey.connection.CompareCondition.ifNotEquals(value));
+
+		assertThat(condition).isEqualTo(CompareCondition.valueNe(value));
+	}
+
+	@Test // GH-3318
+	void convertCompareConditionIfDigest() {
+
+		CompareCondition condition = JedisConverters
+				.toCompareCondition(io.valkey.springframework.data.valkey.connection.CompareCondition.ifDigestEquals("aabbcc"));
+
+		assertThat(condition).isEqualTo(CompareCondition.digestEq("aabbcc"));
+
+		condition = JedisConverters
+				.toCompareCondition(io.valkey.springframework.data.valkey.connection.CompareCondition.ifDigestNotEquals("aabbcc"));
+
+		assertThat(condition).isEqualTo(CompareCondition.digestNe("aabbcc"));
+	}
+
+	@Test
+	void convertToEmptySetParams() {
+		assertThat(JedisConverters.toSetParams(Expiration.persistent(), SetCondition.upsert()))
+				.isEqualTo(SetParams.setParams());
+	}
+
+	@Test
+	void considersSetCondition() {
+
+		assertThat(JedisConverters.toSetParams(Expiration.persistent(), SetCondition.ifAbsent()))
+				.isEqualTo(SetParams.setParams().nx());
+		assertThat(JedisConverters.toSetParams(Expiration.persistent(), SetCondition.ifPresent()))
+				.isEqualTo(SetParams.setParams().xx());
+
+		assertThat(JedisConverters.toSetParams(Expiration.persistent(),
+				SetCondition.ifEquals("foo".getBytes(StandardCharsets.UTF_8))))
+				.isEqualTo(SetParams.setParams().condition(CompareCondition.valueEq("foo".getBytes(StandardCharsets.UTF_8))));
+
+		assertThat(JedisConverters.toSetParams(Expiration.persistent(),
+				SetCondition.ifNotEquals("foo".getBytes(StandardCharsets.UTF_8))))
+				.isEqualTo(SetParams.setParams().condition(CompareCondition.valueNe("foo".getBytes(StandardCharsets.UTF_8))));
+
+		assertThat(JedisConverters.toSetParams(Expiration.persistent(), SetCondition.ifDigestEquals("aabbcc")))
+				.isEqualTo(SetParams.setParams().condition(CompareCondition.digestEq("aabbcc")));
+
+		assertThat(JedisConverters.toSetParams(Expiration.persistent(), SetCondition.ifDigestNotEquals("aabbcc")))
+				.isEqualTo(SetParams.setParams().condition(CompareCondition.digestNe("aabbcc")));
+	}
+
 }

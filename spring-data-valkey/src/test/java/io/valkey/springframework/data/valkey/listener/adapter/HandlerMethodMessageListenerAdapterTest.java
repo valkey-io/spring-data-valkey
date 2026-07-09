@@ -1,0 +1,92 @@
+/*
+ * Copyright 2026-present the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package io.valkey.springframework.data.valkey.listener.adapter;
+
+import static org.assertj.core.api.AssertionsForClassTypes.*;
+
+import java.lang.reflect.Method;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import io.valkey.springframework.data.valkey.connection.DefaultMessage;
+import io.valkey.springframework.data.valkey.listener.StringMessage;
+import org.springframework.messaging.converter.StringMessageConverter;
+import org.springframework.messaging.handler.annotation.support.DefaultMessageHandlerMethodFactory;
+import org.springframework.messaging.handler.invocation.InvocableHandlerMethod;
+
+/**
+ * Unit tests for {@link HandlerMethodMessageListenerAdapter}
+ *
+ * @author Ilyass Bougati
+ */
+@ExtendWith(MockitoExtension.class)
+class HandlerMethodMessageListenerAdapterTest {
+
+	@Test // GH-1004
+	void shouldConvertBytesToStringAndInvokeMethod() throws NoSuchMethodException {
+
+		DefaultMessageHandlerMethodFactory factory = new DefaultMessageHandlerMethodFactory();
+		StringMessageConverter stringConverter = new StringMessageConverter();
+		factory.setMessageConverter(stringConverter);
+
+		factory.afterPropertiesSet();
+
+		TestDelegate delegate = new TestDelegate();
+		Method method = TestDelegate.class.getMethod("handleString", String.class);
+
+		InvocableHandlerMethod invocableMethod = factory.createInvocableHandlerMethod(delegate, method);
+		HandlerMethodMessageListenerAdapter adapter = new HandlerMethodMessageListenerAdapter(invocableMethod, null);
+
+		adapter.onMessage(new StringMessage("channel", "Hello World"), null);
+
+		assertThat(delegate.capturedPayload).isEqualTo("Hello World");
+	}
+
+	@Test // GH-1004
+	void shouldPassRawBytes_WhenArgumentIsByteArray() throws NoSuchMethodException {
+
+		DefaultMessageHandlerMethodFactory factory = new DefaultMessageHandlerMethodFactory();
+		factory.afterPropertiesSet();
+
+		TestDelegate delegate = new TestDelegate();
+		Method method = TestDelegate.class.getMethod("handleBytes", byte[].class);
+
+		InvocableHandlerMethod invocableMethod = factory.createInvocableHandlerMethod(delegate, method);
+		HandlerMethodMessageListenerAdapter adapter = new HandlerMethodMessageListenerAdapter(invocableMethod, null);
+
+		byte[] payload = { 1, 2, 3 };
+
+		adapter.onMessage(new DefaultMessage("channel".getBytes(), payload), null);
+
+		assertThat(delegate.capturedBytes).isEqualTo(payload);
+	}
+
+	static class TestDelegate {
+		String capturedPayload;
+		byte[] capturedBytes;
+
+		public void handleString(String payload) {
+			this.capturedPayload = payload;
+		}
+
+		public void handleBytes(byte[] payload) {
+			this.capturedBytes = payload;
+		}
+	}
+
+}

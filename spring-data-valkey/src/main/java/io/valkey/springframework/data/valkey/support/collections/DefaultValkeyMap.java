@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.core.BoundHashFieldExpirationOperations;
 import io.valkey.springframework.data.valkey.core.BoundHashOperations;
@@ -29,7 +31,7 @@ import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.core.SessionCallback;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 
 /**
  * Default implementation for {@link ValkeyMap}. Note that the current implementation doesn't provide the same locking
@@ -117,8 +119,7 @@ public class DefaultValkeyMap<K, V> implements ValkeyMap<K, V> {
 	}
 
 	@Override
-	@Nullable
-	public V get(Object key) {
+	public @Nullable V get(Object key) {
 		return hashOps.get(key);
 	}
 
@@ -146,8 +147,7 @@ public class DefaultValkeyMap<K, V> implements ValkeyMap<K, V> {
 	}
 
 	@Override
-	@Nullable
-	public V remove(Object key) {
+	public @Nullable V remove(Object key) {
 
 		V v = get(key);
 		hashOps.delete(key);
@@ -193,8 +193,7 @@ public class DefaultValkeyMap<K, V> implements ValkeyMap<K, V> {
 	}
 
 	@Override
-	@Nullable
-	public V putIfAbsent(K key, V value) {
+	public @Nullable V putIfAbsent(K key, V value) {
 		return (hashOps.putIfAbsent(key, value) ? null : get(key));
 	}
 
@@ -255,8 +254,7 @@ public class DefaultValkeyMap<K, V> implements ValkeyMap<K, V> {
 	}
 
 	@Override
-	@Nullable
-	public V replace(K key, V value) {
+	public @Nullable V replace(K key, V value) {
 
 		if (value == null) {
 			throw new NullPointerException();
@@ -284,6 +282,12 @@ public class DefaultValkeyMap<K, V> implements ValkeyMap<K, V> {
 	}
 
 	@Override
+	public Boolean expire(@NonNull Expiration expiration) {
+		return hashOps.expire(expiration);
+	}
+
+	@Override
+	@Deprecated
 	public Boolean expire(long timeout, TimeUnit unit) {
 		return hashOps.expire(timeout, unit);
 	}

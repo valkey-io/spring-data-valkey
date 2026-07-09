@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.core.type.StandardAnnotationMetadata;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.keyvalue.repository.KeyValueRepository;
@@ -46,12 +47,12 @@ import org.springframework.data.repository.config.RepositoryConfigurationSource;
  */
 class ValkeyRepositoryConfigurationExtensionUnitTests {
 
-	private StandardAnnotationMetadata metadata = new StandardAnnotationMetadata(Config.class, true);
+	private AnnotationMetadata metadata = AnnotationMetadata.introspect(Config.class);
 	private ResourceLoader loader = new PathMatchingResourcePatternResolver();
 	private Environment environment = new StandardEnvironment();
 	private BeanDefinitionRegistry registry = new DefaultListableBeanFactory();
 	private RepositoryConfigurationSource configurationSource = new AnnotationRepositoryConfigurationSource(metadata,
-			EnableValkeyRepositories.class, loader, environment, registry);
+			EnableValkeyRepositories.class, loader, environment, registry, null);
 
 	private ValkeyRepositoryConfigurationExtension extension = new ValkeyRepositoryConfigurationExtension();
 
@@ -75,46 +76,46 @@ class ValkeyRepositoryConfigurationExtensionUnitTests {
 	@Test // DATAREDIS-491
 	void picksUpEnableKeyspaceEventsOnStartupCorrectly() {
 
-		metadata = new StandardAnnotationMetadata(Config.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+		metadata = AnnotationMetadata.introspect(Config.class);
+		BeanDefinitionRegistry bdr = getBeanDefinitionRegistry();
 
-		assertThat(getEnableKeyspaceEvents(beanDefintionRegistry)).isEqualTo((Object) EnableKeyspaceEvents.ON_STARTUP);
+		assertThat(getEnableKeyspaceEvents(bdr)).isEqualTo((Object) EnableKeyspaceEvents.ON_STARTUP);
 	}
 
 	@Test // DATAREDIS-491
 	void picksUpEnableKeyspaceEventsDefaultCorrectly() {
 
-		metadata = new StandardAnnotationMetadata(ConfigWithKeyspaceEventsDisabled.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+		metadata = AnnotationMetadata.introspect(ConfigWithKeyspaceEventsDisabled.class);
+		BeanDefinitionRegistry bdr = getBeanDefinitionRegistry();
 
-		assertThat(getEnableKeyspaceEvents(beanDefintionRegistry)).isEqualTo((Object) EnableKeyspaceEvents.OFF);
+		assertThat(getEnableKeyspaceEvents(bdr)).isEqualTo((Object) EnableKeyspaceEvents.OFF);
 	}
 
 	@Test // DATAREDIS-505
 	void picksUpDefaultKeyspaceNotificationsConfigParameterCorrectly() {
 
 		metadata = new StandardAnnotationMetadata(Config.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+		BeanDefinitionRegistry bdr = getBeanDefinitionRegistry();
 
-		assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry)).isEqualTo((Object) "Ex");
+		assertThat(getKeyspaceNotificationsConfigParameter(bdr)).isEqualTo((Object) "Ex");
 	}
 
 	@Test // DATAREDIS-505
 	void picksUpCustomKeyspaceNotificationsConfigParameterCorrectly() {
 
 		metadata = new StandardAnnotationMetadata(ConfigWithKeyspaceEventsEnabledAndCustomEventConfig.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+		BeanDefinitionRegistry bdr = getBeanDefinitionRegistry();
 
-		assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry)).isEqualTo((Object) "KEA");
+		assertThat(getKeyspaceNotificationsConfigParameter(bdr)).isEqualTo((Object) "KEA");
 	}
 
 	@Test // DATAREDIS-1049
 	void explicitlyEmptyKeyspaceNotificationsConfigParameterShouldBeCapturedCorrectly() {
 
 		metadata = new StandardAnnotationMetadata(ConfigWithEmptyConfigParameter.class, true);
-		BeanDefinitionRegistry beanDefintionRegistry = getBeanDefinitionRegistry();
+		BeanDefinitionRegistry bdr = getBeanDefinitionRegistry();
 
-		assertThat(getKeyspaceNotificationsConfigParameter(beanDefintionRegistry)).isEqualTo("");
+		assertThat(getKeyspaceNotificationsConfigParameter(bdr)).isEqualTo("");
 	}
 
 	private static void assertDoesNotHaveRepo(Class<?> repositoryInterface,
@@ -147,7 +148,7 @@ class ValkeyRepositoryConfigurationExtensionUnitTests {
 		BeanDefinitionRegistry registry = new SimpleBeanDefinitionRegistry();
 
 		RepositoryConfigurationSource configurationSource = new AnnotationRepositoryConfigurationSource(metadata,
-				EnableValkeyRepositories.class, loader, environment, registry);
+				EnableValkeyRepositories.class, loader, environment, registry, null);
 
 		ValkeyRepositoryConfigurationExtension extension = new ValkeyRepositoryConfigurationExtension();
 
@@ -156,13 +157,13 @@ class ValkeyRepositoryConfigurationExtensionUnitTests {
 		return registry;
 	}
 
-	private Object getEnableKeyspaceEvents(BeanDefinitionRegistry beanDefintionRegistry) {
-		return beanDefintionRegistry.getBeanDefinition("valkeyKeyValueAdapter").getPropertyValues()
-				.getPropertyValue("enableKeyspaceEvents").getValue();
+	private Object getEnableKeyspaceEvents(BeanDefinitionRegistry bdr) {
+		return bdr.getBeanDefinition("valkeyKeyValueAdapter").getPropertyValues().getPropertyValue("enableKeyspaceEvents")
+				.getValue();
 	}
 
-	private Object getKeyspaceNotificationsConfigParameter(BeanDefinitionRegistry beanDefintionRegistry) {
-		return beanDefintionRegistry.getBeanDefinition("valkeyKeyValueAdapter").getPropertyValues()
+	private Object getKeyspaceNotificationsConfigParameter(BeanDefinitionRegistry bdr) {
+		return bdr.getBeanDefinition("valkeyKeyValueAdapter").getPropertyValues()
 				.getPropertyValue("keyspaceNotificationsConfigParameter").getValue();
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,8 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 
 /**
@@ -62,7 +63,22 @@ public interface JedisClientConfiguration {
 	 * @return the optional {@link JedisClientConfigBuilderCustomizer}.
 	 * @since 3.4
 	 */
-	Optional<JedisClientConfigBuilderCustomizer> getCustomizer();
+	@Deprecated(since = "4.1")
+	default Optional<JedisClientConfigBuilderCustomizer> getCustomizer() {
+		return getClientConfigCustomizer();
+	}
+
+	/**
+	 * @return the optional {@link JedisClientConfigBuilderCustomizer}.
+	 * @since 4.1
+	 */
+	Optional<JedisClientConfigBuilderCustomizer> getClientConfigCustomizer();
+
+	/**
+	 * @return the optional {@link JedisClientConfigBuilderCustomizer}.
+	 * @since 4.1
+	 */
+	Optional<JedisClientBuilderCustomizer> getClientCustomizer();
 
 	/**
 	 * @return {@literal true} to use SSL, {@literal false} to use unencrypted connections.
@@ -93,7 +109,7 @@ public interface JedisClientConfiguration {
 	/**
 	 * @return the optional {@link GenericObjectPoolConfig}.
 	 */
-	Optional<GenericObjectPoolConfig> getPoolConfig();
+	Optional<GenericObjectPoolConfig<?>> getPoolConfig();
 
 	/**
 	 * @return the optional client name to be set with {@code CLIENT SETNAME}.
@@ -156,8 +172,30 @@ public interface JedisClientConfiguration {
 		 *
 		 * @return {@link JedisClientConfigurationBuilder}.
 		 * @since 3.4
+		 * @since 4.1, use the renamed {@link #customizeClientConfig(JedisClientConfigBuilderCustomizer)} instead.
 		 */
-		JedisClientConfigurationBuilder customize(JedisClientConfigBuilderCustomizer customizer);
+		@Deprecated(since = "4.1")
+		default JedisClientConfigurationBuilder customize(JedisClientConfigBuilderCustomizer customizer) {
+			return customizeClientConfig(customizer);
+		}
+
+		/**
+		 * Configure a {@link JedisClientConfigBuilderCustomizer} to configure
+		 * {@link redis.clients.jedis.JedisClientConfig}.
+		 *
+		 * @return {@link JedisClientConfigurationBuilder}.
+		 * @since 4.1
+		 */
+		JedisClientConfigurationBuilder customizeClientConfig(JedisClientConfigBuilderCustomizer customizer);
+
+		/**
+		 * Configure a {@link JedisClientBuilderCustomizer} to configure
+		 * {@link redis.clients.jedis.builders.AbstractClientBuilder}.
+		 *
+		 * @return {@link JedisClientConfigurationBuilder}.
+		 * @since 4.1
+		 */
+		JedisClientConfigurationBuilder customizeClient(JedisClientBuilderCustomizer customizer);
 
 		/**
 		 * Enable SSL connections.
@@ -169,7 +207,7 @@ public interface JedisClientConfiguration {
 		/**
 		 * Enable connection-pooling.
 		 * <p>
-		 * Applies only to single node Valkey. Sentinel and Cluster modes use always connection-pooling regardless of the
+		 * Applies only to single-node Valkey. Sentinel and Cluster modes use always connection-pooling regardless of the
 		 * pooling setting.
 		 *
 		 * @return {@link JedisPoolingClientConfigurationBuilder}.
@@ -221,7 +259,7 @@ public interface JedisClientConfiguration {
 		 * @return {@literal this} builder.
 		 * @throws IllegalArgumentException if poolConfig is {@literal null}.
 		 */
-		JedisPoolingClientConfigurationBuilder poolConfig(GenericObjectPoolConfig poolConfig);
+		JedisPoolingClientConfigurationBuilder poolConfig(GenericObjectPoolConfig<?> poolConfig);
 
 		/**
 		 * Return to {@link JedisClientConfigurationBuilder}.
@@ -286,25 +324,32 @@ public interface JedisClientConfiguration {
 	class DefaultJedisClientConfigurationBuilder implements JedisClientConfigurationBuilder,
 			JedisPoolingClientConfigurationBuilder, JedisSslClientConfigurationBuilder {
 
-		private @Nullable JedisClientConfigBuilderCustomizer customizer;
+		private @Nullable JedisClientConfigBuilderCustomizer clientConfigCustomizer;
+		private @Nullable JedisClientBuilderCustomizer clientCustomizer;
 		private boolean useSsl;
 		private @Nullable SSLSocketFactory sslSocketFactory;
 		private @Nullable SSLParameters sslParameters;
 		private @Nullable HostnameVerifier hostnameVerifier;
 		private boolean usePooling;
-		private GenericObjectPoolConfig poolConfig = new JedisPoolConfig();
+		private GenericObjectPoolConfig<?> poolConfig = new JedisPoolConfig();
 		private @Nullable String clientName;
 		private Duration readTimeout = Duration.ofMillis(Protocol.DEFAULT_TIMEOUT);
 		private Duration connectTimeout = Duration.ofMillis(Protocol.DEFAULT_TIMEOUT);
 
-		private DefaultJedisClientConfigurationBuilder() {}
-
 		@Override
-		public JedisClientConfigurationBuilder customize(JedisClientConfigBuilderCustomizer customizer) {
-
+		public JedisClientConfigurationBuilder customizeClientConfig(JedisClientConfigBuilderCustomizer customizer) {
 			Assert.notNull(customizer, "JedisClientConfigBuilderCustomizer must not be null");
 
-			this.customizer = customizer;
+			this.clientConfigCustomizer = customizer;
+			return this;
+		}
+
+		@Override
+		public JedisClientConfigurationBuilder customizeClient(JedisClientBuilderCustomizer customizer) {
+
+			Assert.notNull(customizer, "JedisClientBuilderCustomizer must not be null");
+
+			this.clientCustomizer = customizer;
 			return this;
 		}
 
@@ -350,7 +395,7 @@ public interface JedisClientConfiguration {
 		}
 
 		@Override
-		public JedisPoolingClientConfigurationBuilder poolConfig(GenericObjectPoolConfig poolConfig) {
+		public JedisPoolingClientConfigurationBuilder poolConfig(GenericObjectPoolConfig<?> poolConfig) {
 
 			Assert.notNull(poolConfig, "GenericObjectPoolConfig must not be null");
 
@@ -393,7 +438,8 @@ public interface JedisClientConfiguration {
 		@Override
 		public JedisClientConfiguration build() {
 
-			return new DefaultJedisClientConfiguration(customizer, useSsl, sslSocketFactory, sslParameters, hostnameVerifier,
+			return new DefaultJedisClientConfiguration(clientConfigCustomizer, clientCustomizer, useSsl, sslSocketFactory,
+					sslParameters, hostnameVerifier,
 					usePooling, poolConfig, clientName, readTimeout, connectTimeout);
 		}
 	}

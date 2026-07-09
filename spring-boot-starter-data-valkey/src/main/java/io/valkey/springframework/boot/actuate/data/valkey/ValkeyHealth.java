@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2022 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,7 @@ package io.valkey.springframework.boot.actuate.data.valkey;
 
 import java.util.Properties;
 
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.Health.Builder;
-
+import org.springframework.boot.health.contributor.Health;
 import io.valkey.springframework.data.valkey.connection.ClusterInfo;
 
 /**
@@ -34,16 +32,24 @@ final class ValkeyHealth {
 	private ValkeyHealth() {
 	}
 
-	static Builder up(Health.Builder builder, Properties info) {
-		builder.withDetail("version", info.getProperty("redis_version"));
+	static Health.Builder up(Health.Builder builder, Properties info) {
+		builder.withDetail("version", info.getProperty("redis_version", "unknown"));
 		return builder.up();
 	}
 
-	static Builder fromClusterInfo(Health.Builder builder, ClusterInfo clusterInfo) {
-		builder.withDetail("cluster_size", clusterInfo.getClusterSize());
-		builder.withDetail("slots_up", clusterInfo.getSlotsOk());
-		builder.withDetail("slots_fail", clusterInfo.getSlotsFail());
-
+	static Health.Builder fromClusterInfo(Health.Builder builder, ClusterInfo clusterInfo) {
+		Long clusterSize = clusterInfo.getClusterSize();
+		if (clusterSize != null) {
+			builder.withDetail("cluster_size", clusterSize);
+		}
+		Long slotsOk = clusterInfo.getSlotsOk();
+		if (slotsOk != null) {
+			builder.withDetail("slots_up", slotsOk);
+		}
+		Long slotsFail = clusterInfo.getSlotsFail();
+		if (slotsFail != null) {
+			builder.withDetail("slots_fail", slotsFail);
+		}
 		if ("fail".equalsIgnoreCase(clusterInfo.getState())) {
 			return builder.down();
 		}

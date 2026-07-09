@@ -27,7 +27,17 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 
 import org.springframework.data.annotation.Id;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -40,8 +50,6 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.Va
 import io.valkey.springframework.data.valkey.core.index.Indexed;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.lang.Nullable;
 
 /**
@@ -51,6 +59,7 @@ import org.springframework.lang.Nullable;
  * @author Mark Paluch
  * @author John Blum
  */
+@ParameterizedClass
 @MethodSource("params")
 public class ValkeyKeyValueTemplateTests {
 
@@ -98,7 +107,7 @@ public class ValkeyKeyValueTemplateTests {
 		adapter.destroy();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-425
+	@Test // DATAREDIS-425
 	void savesObjectCorrectly() {
 
 		final Person rand = new Person();
@@ -113,7 +122,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-425
+	@Test // DATAREDIS-425
 	void findProcessesCallbackReturningSingleIdCorrectly() {
 
 		Person rand = new Person();
@@ -131,7 +140,7 @@ public class ValkeyKeyValueTemplateTests {
 		assertThat(result).contains(mat);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-425
+	@Test // DATAREDIS-425
 	void findProcessesCallbackReturningMultipleIdsCorrectly() {
 
 		final Person rand = new Person();
@@ -150,7 +159,7 @@ public class ValkeyKeyValueTemplateTests {
 		assertThat(result).contains(rand, mat);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-425
+	@Test // DATAREDIS-425
 	void findProcessesCallbackReturningNullCorrectly() {
 
 		Person rand = new Person();
@@ -167,7 +176,7 @@ public class ValkeyKeyValueTemplateTests {
 		assertThat(result.size()).isEqualTo(0);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdate() {
 
 		final Person rand = new Person();
@@ -242,7 +251,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateSimpleType() {
 
 		final VariousTypes source = new VariousTypes();
@@ -265,7 +274,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateComplexType() {
 
 		Item callandor = new Item();
@@ -305,7 +314,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateObjectType() {
 
 		Item callandor = new Item();
@@ -347,7 +356,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateSimpleTypedMap() {
 
 		final VariousTypes source = new VariousTypes();
@@ -378,7 +387,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateComplexTypedMap() {
 
 		final VariousTypes source = new VariousTypes();
@@ -437,7 +446,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateObjectTypedMap() {
 
 		final VariousTypes source = new VariousTypes();
@@ -513,7 +522,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateSimpleTypedList() {
 
 		final VariousTypes source = new VariousTypes();
@@ -547,7 +556,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateComplexTypedList() {
 
 		final VariousTypes source = new VariousTypes();
@@ -599,7 +608,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-471
+	@Test // DATAREDIS-471
 	void partialUpdateObjectTypedList() {
 
 		final VariousTypes source = new VariousTypes();
@@ -664,7 +673,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-530
+	@Test // DATAREDIS-530
 	void partialUpdateShouldLeaveIndexesNotInvolvedInUpdateUntouched() {
 
 		final Person rand = new Person();
@@ -692,7 +701,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-530
+	@Test // DATAREDIS-530
 	void updateShouldAlterIndexesCorrectlyWhenValuesGetRemovedFromHash() {
 
 		final Person rand = new Person();
@@ -721,7 +730,7 @@ public class ValkeyKeyValueTemplateTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-523
+	@Test // DATAREDIS-523
 	void shouldReadBackExplicitTimeToLive() throws InterruptedException {
 
 		WithTtl source = new WithTtl();
@@ -735,7 +744,7 @@ public class ValkeyKeyValueTemplateTests {
 		assertThat(target.get().ttl).isGreaterThan(0L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-523
+	@Test // DATAREDIS-523
 	void shouldReadBackExplicitTimeToLiveToPrimitiveField() throws InterruptedException {
 
 		WithPrimitiveTtl source = new WithPrimitiveTtl();
@@ -749,7 +758,7 @@ public class ValkeyKeyValueTemplateTests {
 		assertThat(target.get().ttl).isGreaterThan(0);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-523
+	@Test // DATAREDIS-523
 	void shouldReadBackExplicitTimeToLiveWhenFetchingList() throws InterruptedException {
 
 		WithTtl source = new WithTtl();
@@ -765,7 +774,7 @@ public class ValkeyKeyValueTemplateTests {
 		assertThat(target.ttl).isGreaterThan(0);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-523
+	@Test // DATAREDIS-523
 	void shouldReadBackExplicitTimeToLiveAndSetItToMinusOnelIfPersisted() throws InterruptedException {
 
 		WithTtl source = new WithTtl();
@@ -782,7 +791,7 @@ public class ValkeyKeyValueTemplateTests {
 		assertThat(target.get().ttl).isEqualTo(-1L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-849
+	@Test // DATAREDIS-849
 	void shouldWriteImmutableType() {
 
 		ImmutableObject source = new ImmutableObject().withValue("foo").withTtl(1234L);
@@ -793,7 +802,7 @@ public class ValkeyKeyValueTemplateTests {
 		assertThat(inserted.id).isNotNull();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-849
+	@Test // DATAREDIS-849
 	void shouldReadImmutableType() {
 
 		ImmutableObject source = new ImmutableObject().withValue("foo").withTtl(1234L);

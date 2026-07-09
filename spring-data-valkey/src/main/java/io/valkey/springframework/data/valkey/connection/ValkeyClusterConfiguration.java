@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,13 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 
-import org.springframework.core.env.MapPropertySource;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.env.PropertySource;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.ClusterConfiguration;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.NumberUtils;
 import org.springframework.util.ObjectUtils;
@@ -55,12 +53,12 @@ public class ValkeyClusterConfiguration implements ValkeyConfiguration, ClusterC
 	private @Nullable String username = null;
 
 	/**
-	 * Creates a new, default {@link ValkeyClusterConfiguration}.
+	 * Creates a new, default {@code ValkeyClusterConfiguration}.
 	 */
 	public ValkeyClusterConfiguration() {}
 
 	/**
-	 * Creates a new {@link ValkeyClusterConfiguration} for given {@link String hostPort} combinations.
+	 * Creates a new {@code ValkeyClusterConfiguration} for given {@link String hostPort} combinations.
 	 *
 	 * <pre class="code">
 	 * clusterHostAndPorts[0] = 127.0.0.1:23679
@@ -70,58 +68,42 @@ public class ValkeyClusterConfiguration implements ValkeyConfiguration, ClusterC
 	 * @param clusterNodes must not be {@literal null}.
 	 */
 	public ValkeyClusterConfiguration(Collection<String> clusterNodes) {
-		initialize(new MapPropertySource("ValkeyClusterConfiguration", asMap(clusterNodes, -1)));
+		for (String hostAndPort : clusterNodes) {
+			addClusterNode(ValkeyNode.fromString(hostAndPort));
+		}
 	}
 
 	/**
-	 * Creates a new {@link ValkeyClusterConfiguration} looking up configuration values from the given
+	 * Creates a new {@code ValkeyClusterConfiguration} looking up configuration values from the given
 	 * {@link PropertySource}.
 	 *
 	 * <pre class="code">
-	 * spring.valkey.cluster.nodes=127.0.0.1:23679,127.0.0.1:23680,127.0.0.1:23681
-	 * spring.valkey.cluster.max-redirects=3
+	 * spring.data.valkey.cluster.nodes=127.0.0.1:23679,127.0.0.1:23680,127.0.0.1:23681
+	 * spring.data.valkey.cluster.max-redirects=3
 	 * </pre>
 	 *
 	 * @param propertySource must not be {@literal null}.
-	 * @deprecated since 3.3, use {@link ValkeySentinelConfiguration#of(PropertySource)} instead. This constructor will be
-	 *             made private in the next major release.
+	 * @return a new {@code ValkeyClusterConfiguration} configured from the given {@link PropertySource}.
+	 * @since 3.3
 	 */
-	@Deprecated(since = "3.3")
-	public ValkeyClusterConfiguration(PropertySource<?> propertySource) {
-		initialize(propertySource);
-	}
-
-	private void initialize(PropertySource<?> propertySource) {
+	public static ValkeyClusterConfiguration of(PropertySource<?> propertySource) {
 
 		Assert.notNull(propertySource, "PropertySource must not be null");
+
+		ValkeyClusterConfiguration configuration = new ValkeyClusterConfiguration();
 
 		if (propertySource.containsProperty(VALKEY_CLUSTER_NODES_CONFIG_PROPERTY)) {
 
 			Object valkeyClusterNodes = propertySource.getProperty(VALKEY_CLUSTER_NODES_CONFIG_PROPERTY);
-			appendClusterNodes(StringUtils.commaDelimitedListToSet(String.valueOf(valkeyClusterNodes)));
+			configuration.appendClusterNodes(StringUtils.commaDelimitedListToSet(String.valueOf(valkeyClusterNodes)));
 		}
 		if (propertySource.containsProperty(VALKEY_CLUSTER_MAX_REDIRECTS_CONFIG_PROPERTY)) {
 
 			Object clusterMaxRedirects = propertySource.getProperty(VALKEY_CLUSTER_MAX_REDIRECTS_CONFIG_PROPERTY);
-			this.maxRedirects = NumberUtils.parseNumber(String.valueOf(clusterMaxRedirects), Integer.class);
+			configuration.setMaxRedirects(NumberUtils.parseNumber(String.valueOf(clusterMaxRedirects), Integer.class));
 		}
-	}
 
-	/**
-	 * Creates a new {@link ValkeyClusterConfiguration} looking up configuration values from the given
-	 * {@link PropertySource}.
-	 *
-	 * <pre class="code">
-	 * spring.valkey.cluster.nodes=127.0.0.1:23679,127.0.0.1:23680,127.0.0.1:23681
-	 * spring.valkey.cluster.max-redirects=3
-	 * </pre>
-	 *
-	 * @param propertySource must not be {@literal null}.
-	 * @return a new {@link ValkeyClusterConfiguration} configured from the given {@link PropertySource}.
-	 * @since 3.3
-	 */
-	public static ValkeyClusterConfiguration of(PropertySource<?> propertySource) {
-		return new ValkeyClusterConfiguration(propertySource);
+		return configuration;
 	}
 
 	private void appendClusterNodes(Set<String> hostAndPorts) {
@@ -194,7 +176,7 @@ public class ValkeyClusterConfiguration implements ValkeyConfiguration, ClusterC
 	}
 
 	@Override
-	public Integer getMaxRedirects() {
+	public @Nullable Integer getMaxRedirects() {
 		return maxRedirects != null && maxRedirects > Integer.MIN_VALUE ? maxRedirects : null;
 	}
 
@@ -203,9 +185,8 @@ public class ValkeyClusterConfiguration implements ValkeyConfiguration, ClusterC
 		this.username = username;
 	}
 
-	@Nullable
 	@Override
-	public String getUsername() {
+	public @Nullable String getUsername() {
 		return this.username;
 	}
 
@@ -248,24 +229,4 @@ public class ValkeyClusterConfiguration implements ValkeyConfiguration, ClusterC
 		return result;
 	}
 
-	/**
-	 * @param clusterHostAndPorts must not be {@literal null} or empty.
-	 * @param redirects the max number of redirects to follow.
-	 * @return cluster config map with properties.
-	 */
-	private static Map<String, Object> asMap(Collection<String> clusterHostAndPorts, int redirects) {
-
-		Assert.notNull(clusterHostAndPorts, "ClusterHostAndPorts must not be null");
-		Assert.noNullElements(clusterHostAndPorts, "ClusterHostAndPorts must not contain null elements");
-
-		Map<String, Object> map = new HashMap<>();
-
-		map.put(VALKEY_CLUSTER_NODES_CONFIG_PROPERTY, StringUtils.collectionToCommaDelimitedString(clusterHostAndPorts));
-
-		if (redirects >= 0) {
-			map.put(VALKEY_CLUSTER_MAX_REDIRECTS_CONFIG_PROPERTY, redirects);
-		}
-
-		return map;
-	}
 }

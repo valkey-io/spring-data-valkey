@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,11 @@ import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.TestCondition;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands.Position;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamDeletionPolicy;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XTrimOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.BitOperation;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
 import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands.ZAddArgs;
@@ -116,6 +120,9 @@ import org.springframework.util.ObjectUtils;
  * @author Shyngys Sapraliyev
  * @author Roman Osadchuk
  * @author Tihomir Mateev
+ * @author Jeonggyu Choi
+ * @author Viktoriya Kutsarova
+ * @author Yordan Tsintsov
  */
 public abstract class AbstractConnectionIntegrationTests {
 
@@ -153,7 +160,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@BeforeEach
-	public void setUp() {
+	void setUp() {
 
 		byteConnection = connectionFactory.getConnection();
 		connection = new DefaultStringValkeyConnection(byteConnection);
@@ -269,7 +276,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test
-	public void testScriptLoadEvalSha() {
+	void testScriptLoadEvalSha() {
 		getResults();
 		String sha1 = connection.scriptLoad("return KEYS[1]");
 		initConnection();
@@ -279,7 +286,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void testEvalShaArrayStrings() {
+	void testEvalShaArrayStrings() {
 		getResults();
 		String sha1 = connection.scriptLoad("return {KEYS[1],ARGV[1]}");
 		initConnection();
@@ -320,20 +327,20 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test
-	public void testEvalReturnString() {
+	void testEvalReturnString() {
 		actual.add(connection.eval("return KEYS[1]", ReturnType.VALUE, 1, "foo"));
 		byte[] result = (byte[]) getResults().get(0);
 		assertThat(new String(result)).isEqualTo("foo");
 	}
 
 	@Test
-	public void testEvalReturnNumber() {
+	void testEvalReturnNumber() {
 		actual.add(connection.eval("return 10", ReturnType.INTEGER, 0));
 		verifyResults(Arrays.asList(new Object[] { 10L }));
 	}
 
 	@Test
-	public void testEvalReturnSingleOK() {
+	void testEvalReturnSingleOK() {
 		actual.add(connection.eval("return redis.call('set','abc','ghk')", ReturnType.STATUS, 0));
 		assertThat(getResults()).isEqualTo(Arrays.asList("OK"));
 	}
@@ -347,20 +354,20 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test
-	public void testEvalReturnFalse() {
+	void testEvalReturnFalse() {
 		actual.add(connection.eval("return false", ReturnType.BOOLEAN, 0));
 		verifyResults(Arrays.asList(new Object[] { false }));
 	}
 
 	@Test
-	public void testEvalReturnTrue() {
+	void testEvalReturnTrue() {
 		actual.add(connection.eval("return true", ReturnType.BOOLEAN, 0));
 		verifyResults(Arrays.asList(new Object[] { true }));
 	}
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void testEvalReturnArrayStrings() {
+	void testEvalReturnArrayStrings() {
 		actual.add(connection.eval("return {KEYS[1],ARGV[1]}", ReturnType.MULTI, 1, "foo", "bar"));
 		List<byte[]> result = (List<byte[]>) getResults().get(0);
 		assertThat(Arrays.asList(new String(result.get(0)), new String(result.get(1))))
@@ -368,7 +375,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test
-	public void testEvalReturnArrayNumbers() {
+	void testEvalReturnArrayNumbers() {
 		actual.add(connection.eval("return {1,2}", ReturnType.MULTI, 1, "foo", "bar"));
 		verifyResults(Arrays.asList(new Object[] { Arrays.asList(1L, 2L) }));
 	}
@@ -384,7 +391,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@SuppressWarnings("unchecked")
 	@Test
-	public void testEvalReturnArrayOKs() {
+	void testEvalReturnArrayOKs() {
 		actual.add(connection.eval("return { redis.call('set','abc','ghk'),  redis.call('set','abc','lfdf')}",
 				ReturnType.MULTI, 0));
 		List<byte[]> result = (List<byte[]>) getResults().get(0);
@@ -393,19 +400,19 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test
-	public void testEvalReturnArrayFalses() {
+	void testEvalReturnArrayFalses() {
 		actual.add(connection.eval("return { false, false}", ReturnType.MULTI, 0));
 		verifyResults(Arrays.asList(new Object[] { Arrays.asList(null, null) }));
 	}
 
 	@Test
-	public void testEvalReturnArrayTrues() {
+	void testEvalReturnArrayTrues() {
 		actual.add(connection.eval("return { true, true}", ReturnType.MULTI, 0));
 		verifyResults(Arrays.asList(new Object[] { Arrays.asList(1L, 1L) }));
 	}
 
 	@Test
-	public void testScriptExists() {
+	void testScriptExists() {
 		getResults();
 		String sha1 = connection.scriptLoad("return 'foo'");
 		initConnection();
@@ -414,7 +421,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test
-	public void testScriptFlush() {
+	void testScriptFlush() {
 		getResults();
 		String sha1 = connection.scriptLoad("return KEYS[1]");
 		connection.scriptFlush();
@@ -570,9 +577,49 @@ public abstract class AbstractConnectionIntegrationTests {
 				.isThrownBy(() -> connection.bitOp(BitOperation.NOT, "key3", "key1", "key2"));
 	}
 
+	@Test // GH-3250
+	@EnabledOnValkeyVersion("8.2")
+	void testBitOpDiff() {
+
+		actual.add(connection.set("key1", "foobar"));
+		actual.add(connection.set("key2", "abcdef"));
+		actual.add(connection.bitOp(BitOperation.DIFF, "key3", "key1", "key2"));
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.TRUE, 6L));
+	}
+
+	@Test // GH-3250
+	@EnabledOnValkeyVersion("8.2")
+	void testBitOpDiff1() {
+
+		actual.add(connection.set("key1", "foobar"));
+		actual.add(connection.set("key2", "abcdef"));
+		actual.add(connection.bitOp(BitOperation.DIFF1, "key3", "key1", "key2"));
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.TRUE, 6L));
+	}
+
+	@Test // GH-3250
+	@EnabledOnValkeyVersion("8.2")
+	void testBitOpAndor() {
+
+		actual.add(connection.set("key1", "foo"));
+		actual.add(connection.set("key2", "bar"));
+		actual.add(connection.bitOp(BitOperation.ANDOR, "key3", "key1", "key2"));
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.TRUE, 3L));
+	}
+
+	@Test // GH-3250
+	@EnabledOnValkeyVersion("8.2")
+	void testBitOpOne() {
+
+		actual.add(connection.set("key1", "foo"));
+		actual.add(connection.set("key2", "bar"));
+		actual.add(connection.bitOp(BitOperation.ONE, "key3", "key1", "key2"));
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.TRUE, 3L));
+	}
+
 	@Test
 	@EnabledOnCommand("COPY")
-	public void testCopy() {
+	void testCopy() {
 
 		actual.add(connection.set("foo", "bar"));
 		actual.add(connection.copy("foo", "baz", false));
@@ -582,6 +629,20 @@ public abstract class AbstractConnectionIntegrationTests {
 		assertThat(connection.exists("foo")).isTrue();
 	}
 
+	@Test // GH-3333
+	@EnabledOnCommand("DIGEST")
+	void digestShouldReturnDigestForExistingKey() {
+
+		String key = "digest-" + UUID.randomUUID();
+		actual.add(connection.set(key, "bar"));
+		actual.add(connection.digest(key));
+
+		List<Object> results = getResults();
+
+		assertThat(results.get(0)).isEqualTo(true);
+		assertThat(results.get(1).toString()).hasSize(16);
+	}
+
 	@Test
 	public void testInfo() {
 
@@ -589,7 +650,7 @@ public abstract class AbstractConnectionIntegrationTests {
 		List<Object> results = getResults();
 		Properties info = (Properties) results.get(0);
 		assertThat(info.size() >= 5).as("at least 5 settings should be present").isTrue();
-		String version = info.getProperty("valkey_version", info.getProperty("redis_version"));
+		String version = info.getProperty("redis_version");
 		assertThat(version).isNotNull();
 	}
 
@@ -599,7 +660,7 @@ public abstract class AbstractConnectionIntegrationTests {
 		List<Object> results = getResults();
 		Properties info = (Properties) results.get(0);
 		assertThat(info.size() >= 5).as("at least 5 settings should be present").isTrue();
-		String version = info.getProperty("valkey_version", info.getProperty("redis_version"));
+		String version = info.getProperty("redis_version");
 		assertThat(version).isNotNull();
 	}
 
@@ -2962,14 +3023,6 @@ public abstract class AbstractConnectionIntegrationTests {
 		assertThat((Set<String>) results.get(13)).contains("c", "b").doesNotContain("a", "d", "e", "f", "g");
 	}
 
-	@Test // DATAREDIS-316, DATAREDIS-692
-	void setWithExpirationAndNullOpionShouldThrowException() {
-
-		String key = "exp-" + UUID.randomUUID();
-		assertThatIllegalArgumentException()
-				.isThrownBy(() -> connection.set(key, "foo", Expiration.milliseconds(500), null));
-	}
-
 	@Test // DATAREDIS-316
 	void setWithExpirationAndUpsertOpionShouldSetTtlWhenKeyDoesNotExist() {
 
@@ -3076,7 +3129,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test // DATAREDIS-316, DATAREDIS-692
-	void setWithNullExpirationAndUpsertOpionShouldThrowException() {
+	void setWithNullExpirationAndUpsertOptionShouldThrowException() {
 
 		String key = "exp-" + UUID.randomUUID();
 		assertThatIllegalArgumentException().isThrownBy(() -> connection.set(key, "foo", null, SetOption.upsert()));
@@ -3186,6 +3239,72 @@ public abstract class AbstractConnectionIntegrationTests {
 		assertThat(result.get(0)).isEqualTo(Boolean.FALSE);
 		assertThat(result.get(1)).isEqualTo(Boolean.FALSE);
 		assertThat(((Long) result.get(2)).doubleValue()).isCloseTo(-2, Offset.offset(0d));
+	}
+
+	@Test
+	void setWithConditionUpsertShouldSetValue() {
+
+		String key = "set-cond-" + UUID.randomUUID();
+		actual.add(connection.set(key, "foo", SetCondition.upsert(), Expiration.persistent()));
+
+		actual.add(connection.exists(key));
+		actual.add(connection.get(key));
+
+		List<Object> result = getResults();
+		assertThat(result.get(0)).isEqualTo(Boolean.TRUE);
+		assertThat(result.get(1)).isEqualTo(Boolean.TRUE);
+		assertThat(result.get(2)).isEqualTo("foo");
+	}
+
+	@Test
+	void setWithConditionIfAbsentShouldSetWhenKeyDoesNotExist() {
+
+		String key = "set-cond-" + UUID.randomUUID();
+		actual.add(connection.set(key, "foo", SetCondition.ifAbsent(), Expiration.persistent()));
+
+		actual.add(connection.exists(key));
+		actual.add(connection.get(key));
+
+		List<Object> result = getResults();
+		assertThat(result.get(0)).isEqualTo(Boolean.TRUE);
+		assertThat(result.get(1)).isEqualTo(Boolean.TRUE);
+		assertThat(result.get(2)).isEqualTo("foo");
+	}
+
+	@Test // GH-3318
+	@EnabledOnCommand("DELEX")
+	void delexShouldDeleteKeyWhenValueEqual() {
+
+		String key = "delex-" + UUID.randomUUID();
+		actual.add(connection.set(key, "bar"));
+
+		actual.add(connection.delex(key, CompareCondition.ifNotEquals("bar".getBytes())));
+		actual.add(connection.delex(key, CompareCondition.ifEquals("bar".getBytes())));
+		actual.add(connection.exists(key));
+
+		List<Object> result = getResults();
+		assertThat(result.get(0)).isEqualTo(Boolean.TRUE);
+		assertThat(result.get(1)).isEqualTo(Boolean.FALSE);
+		assertThat(result.get(2)).isEqualTo(Boolean.TRUE);
+		assertThat(result.get(3)).isEqualTo(Boolean.FALSE);
+	}
+
+	@Test // GH-3318
+	@EnabledOnCommand("DELEX")
+	void delexShouldDeleteKeyWhenDigestEqual() {
+
+		String key = "delex-" + UUID.randomUUID();
+		actual.add(connection.set(key, "bar"));
+
+		actual.add(connection.delex(key, CompareCondition.ifDigestEquals("aabbccddeeff0000")));
+		actual.add(connection.delex(key, CompareCondition.ifDigestEquals("d463c860a032d362")));
+		actual.add(connection.exists(key));
+
+		List<Object> result = getResults();
+		assertThat(result.get(0)).isEqualTo(Boolean.TRUE);
+		assertThat(result.get(1)).isEqualTo(Boolean.FALSE);
+		assertThat(result.get(2)).isEqualTo(Boolean.TRUE);
+		assertThat(result.get(3)).isEqualTo(Boolean.FALSE);
 	}
 
 	@Test // DATAREDIS-438
@@ -3511,7 +3630,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
-	public void hExpireReturnsSuccessAndSetsTTL() {
+	void hExpireReturnsSuccessAndSetsTTL() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hExpire("hash-hexpire", 5L, "key-2"));
@@ -3525,7 +3644,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
-	public void hExpireReturnsMinusTwoWhenFieldDoesNotExist() {
+	void hExpireReturnsMinusTwoWhenFieldDoesNotExist() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hExpire("hash-hexpire", 5L, "missking-field"));
@@ -3536,7 +3655,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
-	public void hExpireReturnsTwoWhenZeroProvided() {
+	void hExpireReturnsTwoWhenZeroProvided() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hExpire("hash-hexpire", 0, "key-2"));
@@ -3546,7 +3665,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HPEXPIRE")
-	public void hpExpireReturnsSuccessAndSetsTTL() {
+	void hpExpireReturnsSuccessAndSetsTTL() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hpExpire("hash-hexpire", 5000L, "key-2"));
@@ -3560,7 +3679,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HPEXPIRE")
-	public void hpExpireReturnsMinusTwoWhenFieldDoesNotExist() {
+	void hpExpireReturnsMinusTwoWhenFieldDoesNotExist() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hpExpire("hash-hexpire", 5L, "missing-field"));
@@ -3571,7 +3690,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HPEXPIRE")
-	public void hpExpireReturnsTwoWhenZeroProvided() {
+	void hpExpireReturnsTwoWhenZeroProvided() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hpExpire("hash-hexpire", 0, "key-2"));
@@ -3581,7 +3700,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HEXPIREAT")
-	public void hExpireAtReturnsSuccessAndSetsTTL() {
+	void hExpireAtReturnsSuccessAndSetsTTL() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		long inFiveSeconds = Instant.now().plusSeconds(5L).getEpochSecond();
@@ -3597,7 +3716,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HEXPIREAT")
-	public void hExpireAtReturnsMinusTwoWhenFieldDoesNotExist() {
+	void hExpireAtReturnsMinusTwoWhenFieldDoesNotExist() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		long inFiveSeconds = Instant.now().plusSeconds(5L).getEpochSecond();
@@ -3610,7 +3729,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HEXPIREAT")
-	public void hExpireAtReturnsTwoWhenZeroProvided() {
+	void hExpireAtReturnsTwoWhenZeroProvided() {
 
 		long fiveSecondsAgo = Instant.now().minusSeconds(5L).getEpochSecond();
 
@@ -3622,23 +3741,23 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HEXPIREAT")
-	public void hpExpireAtReturnsSuccessAndSetsTTL() {
+	void hpExpireAtReturnsSuccessAndSetsTTL() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		long inFiveSeconds = Instant.now().plusSeconds(5L).toEpochMilli();
 
 		actual.add(connection.hpExpireAt("hash-hexpire", inFiveSeconds, "key-2"));
-		actual.add(connection.hTtl("hash-hexpire", "key-2"));
+		actual.add(connection.hpTtl("hash-hexpire", "key-2"));
 
 		List<Object> results = getResults();
 		assertThat(results.get(0)).isEqualTo(Boolean.TRUE);
 		assertThat((List) results.get(1)).contains(1L);
-		assertThat((List) results.get(2)).allSatisfy(value -> assertThat((Long) value).isBetween(0L, 5L));
+		assertThat((List) results.get(2)).allSatisfy(value -> assertThat((Long) value).isBetween(0L, 6000L));
 	}
 
 	@Test // GH-3054
 	@EnabledOnCommand("HEXPIREAT")
-	public void hpExpireAtReturnsMinusTwoWhenFieldDoesNotExist() {
+	void hpExpireAtReturnsMinusTwoWhenFieldDoesNotExist() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		long inFiveSeconds = Instant.now().plusSeconds(5L).toEpochMilli();
@@ -3651,7 +3770,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HPEXPIREAT")
-	public void hpExpireAdReturnsTwoWhenZeroProvided() {
+	void hpExpireAdReturnsTwoWhenZeroProvided() {
 
 		long fiveSecondsAgo = Instant.now().minusSeconds(5L).getEpochSecond();
 
@@ -3663,7 +3782,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HPERSIST")
-	public void hPersistReturnsSuccessAndPersistsField() {
+	void hPersistReturnsSuccessAndPersistsField() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hExpire("hash-hexpire", 5L, "key-2"));
@@ -3675,7 +3794,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HPERSIST")
-	public void hPersistReturnsMinusOneWhenFieldDoesNotHaveExpiration() {
+	void hPersistReturnsMinusOneWhenFieldDoesNotHaveExpiration() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hPersist("hash-hexpire", "key-2"));
@@ -3685,7 +3804,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HPERSIST")
-	public void hPersistReturnsMinusTwoWhenFieldOrKeyMissing() {
+	void hPersistReturnsMinusTwoWhenFieldOrKeyMissing() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hPersist("hash-hexpire", "missing-field"));
@@ -3696,7 +3815,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HTTL")
-	public void hTtlReturnsMinusOneWhenFieldHasNoExpiration() {
+	void hTtlReturnsMinusOneWhenFieldHasNoExpiration() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hTtl("hash-hexpire", "key-2"));
@@ -3706,7 +3825,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HTTL")
-	public void hTtlReturnsMinusIndependendOfTimeUnitOneWhenFieldHasNoExpiration() {
+	void hTtlReturnsMinusIndependendOfTimeUnitOneWhenFieldHasNoExpiration() {
 
 		actual.add(connection.hSet("hash-hexpire", "key-2", "value-2"));
 		actual.add(connection.hTtl("hash-hexpire", TimeUnit.HOURS, "key-2"));
@@ -3716,12 +3835,116 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // GH-3054
 	@EnabledOnCommand("HTTL")
-	public void hTtlReturnsMinusTwoWhenFieldOrKeyMissing() {
+	void hTtlReturnsMinusTwoWhenFieldOrKeyMissing() {
 
 		actual.add(connection.hTtl("hash-hexpire", "missing-field"));
 		actual.add(connection.hTtl("missing-key", "key-2"));
 
 		verifyResults(Arrays.asList(new Object[] { List.of(-2L), List.of(-2L) }));
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETDEL")
+	void hGetDelWorksAsExpected() {
+
+		actual.add(connection.hSet("hash-hgetdel", "field-1", "value-1"));
+		actual.add(connection.hSet("hash-hgetdel", "field-2", "value-2"));
+		actual.add(connection.hSet("hash-hgetdel", "field-3", "value-3"));
+
+		actual.add(connection.hGetDel("hash-hgetdel", "absent"));
+		actual.add(connection.hGetDel("hash-hgetdel", "field-1", "field-2"));
+		actual.add(connection.hExists("hash-hgetdel", "field-1"));
+		actual.add(connection.hExists("hash-hgetdel", "field-2"));
+
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.TRUE, Boolean.TRUE,
+				Collections.singletonList(null), Arrays.asList("value-1", "value-2"), Boolean.FALSE, Boolean.FALSE));
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETEX")
+	void hGetExWorksAsExpected() {
+
+		actual.add(connection.hSet("hash-hgetex", "field-1", "value-1"));
+		actual.add(connection.hSet("hash-hgetex", "field-2", "value-2"));
+		actual.add(connection.hSet("hash-hgetex", "field-3", "value-3"));
+		actual.add(connection.hGetEx("hash-hgetex", Expiration.seconds(30), "field-1", "field-2"));
+		actual.add(connection.hGetEx("hash-hgetex", null, "no-such-field"));
+		actual.add(connection.hGetEx("no-such-key", null, "field-1"));
+
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, List.of("value-1", "value-2"),
+				Collections.singletonList(null), Collections.singletonList(null)));
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void hSetExWorksAsExpected() {
+
+		Map<String, String> fieldMap = Map.of("field-1", "value-1", "field-2", "value-2");
+		actual.add(connection.hSetEx("hash-hsetex", fieldMap, ValkeyHashCommands.HashFieldSetOption.upsert(),
+				Expiration.seconds(30)));
+		actual.add(connection.hGet("hash-hsetex", "field-1"));
+		actual.add(connection.hGet("hash-hsetex", "field-2"));
+
+		verifyResults(Arrays.asList(Boolean.TRUE, "value-1", "value-2"));
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void hSetExIfNoneExistConditionSucceedsWhenNoFieldsExist() {
+
+		Map<String, String> fieldMap = Map.of("field-1", "value-1", "field-2", "value-2");
+		actual.add(connection.hSetEx("hash-hsetex", fieldMap, ValkeyHashCommands.HashFieldSetOption.ifNoneExist(),
+				Expiration.seconds(60)));
+		actual.add(connection.hGet("hash-hsetex", "field-1"));
+		actual.add(connection.hGet("hash-hsetex", "field-2"));
+
+		verifyResults(Arrays.asList(Boolean.TRUE, "value-1", "value-2"));
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void hSetExIfNoneExistConditionFailsWhenSomeFieldsExist() {
+
+		actual.add(connection.hSet("hash-hsetex", "field-1", "existing-value"));
+
+		Map<String, String> fieldMap = Map.of("field-1", "new-value", "field-2", "value-2");
+		actual.add(connection.hSetEx("hash-hsetex", fieldMap, ValkeyHashCommands.HashFieldSetOption.ifNoneExist(),
+				Expiration.seconds(60)));
+		actual.add(connection.hGet("hash-hsetex", "field-1"));
+		actual.add(connection.hExists("hash-hsetex", "field-2"));
+
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.FALSE, "existing-value", Boolean.FALSE));
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void hSetExIfAllExistConditionSucceedsWhenAllFieldsExist() {
+
+		actual.add(connection.hSet("hash-hsetex", "field-1", "old-value-1"));
+		actual.add(connection.hSet("hash-hsetex", "field-2", "old-value-2"));
+
+		Map<String, String> fieldMap = Map.of("field-1", "new-value-1", "field-2", "new-value-2");
+		actual.add(connection.hSetEx("hash-hsetex", fieldMap, ValkeyHashCommands.HashFieldSetOption.ifAllExist(),
+				Expiration.seconds(60)));
+		actual.add(connection.hGet("hash-hsetex", "field-1"));
+		actual.add(connection.hGet("hash-hsetex", "field-2"));
+
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.TRUE, Boolean.TRUE, "new-value-1", "new-value-2"));
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void hSetExIfAllExistConditionFailsWhenSomeFieldsMissing() {
+
+		actual.add(connection.hSet("hash-hsetex", "field-1", "existing-value"));
+
+		Map<String, String> fieldMap = Map.of("field-1", "new-value", "field-2", "value-2");
+		actual.add(connection.hSetEx("hash-hsetex", fieldMap, ValkeyHashCommands.HashFieldSetOption.ifAllExist(),
+				Expiration.seconds(60)));
+		actual.add(connection.hGet("hash-hsetex", "field-1"));
+		actual.add(connection.hExists("hash-hsetex", "field-2"));
+
+		verifyResults(Arrays.asList(Boolean.TRUE, Boolean.FALSE, "existing-value", Boolean.FALSE));
 	}
 
 	@Test // DATAREDIS-694
@@ -3921,7 +4144,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	@EnabledOnCommand("XADD")
 	void xAddShouldTrimStreamExactly() {
 
-		ValkeyStreamCommands.XAddOptions xAddOptions = ValkeyStreamCommands.XAddOptions.maxlen(1);
+		XAddOptions xAddOptions = XAddOptions.trim(TrimOptions.maxLen(1));
 		actual.add(
 				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
 		actual.add(
@@ -3940,7 +4163,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	@EnabledOnCommand("XADD")
 	void xAddShouldTrimStreamApprox() {
 
-		ValkeyStreamCommands.XAddOptions xAddOptions = ValkeyStreamCommands.XAddOptions.maxlen(1).approximateTrimming(true);
+		XAddOptions xAddOptions = XAddOptions.trim(TrimOptions.maxLen(1).approximate());
 		actual.add(
 				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
 		actual.add(
@@ -3955,9 +4178,243 @@ public abstract class AbstractConnectionIntegrationTests {
 		assertThat((Long) results.get(3)).isBetween(1L, 3L);
 	}
 
+	@Test // GH-3232
+	@EnabledOnCommand("XADD")
+	void xAddShouldTrimStreamWithMinId() {
+
+		// Add initial records to get valid IDs
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+
+		List<Object> initialResults = getResults();
+		RecordId id1 = (RecordId) initialResults.get(0);
+		RecordId id2 = (RecordId) initialResults.get(1);
+		RecordId id3 = (RecordId) initialResults.get(2);
+
+		// Start a new pipeline/batch for the trimming test
+		initConnection();
+
+		// Trim using MINID - keep only entries with ID >= id2
+		XAddOptions xAddOptions = XAddOptions.trim(TrimOptions.minId(id2));
+		actual.add(
+				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(2);
+		// Should have trimmed entries older than id2, so we should have 3 entries (id2, id3, and the new one)
+		assertThat((Long) results.get(1)).isEqualTo(3L);
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XADD")
+	void xAddShouldHonorLimitWithApproximateTrimming() {
+
+		// Add multiple records
+		for (int i = 0; i < 100; i++) {
+			actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2 + i)));
+		}
+
+		// Execute the initial adds
+		getResults();
+		initConnection();
+
+		// Use LIMIT to control trimming effort
+		XAddOptions xAddOptions = XAddOptions.trim(TrimOptions.maxLen(50).approximate().limit(10));
+		actual.add(
+				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(2);
+		// With LIMIT, trimming may not be exact, but should be around 50-60 entries
+		assertThat((Long) results.get(1)).isGreaterThanOrEqualTo(50L).isLessThanOrEqualTo(101L);
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XADD")
+	void xAddShouldHonorExactTrimming() {
+
+		XAddOptions xAddOptions = XAddOptions.trim(TrimOptions.maxLen(2));
+		actual.add(
+				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
+		actual.add(
+				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
+		actual.add(
+				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		// With exact trimming, should have exactly 2 entries
+		assertThat((Long) results.get(3)).isEqualTo(2L);
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XADD")
+	@EnabledOnValkeyVersion("8.2") // Deletion policy requires Valkey 8.2+
+	void xAddShouldHonorDeletionPolicy() {
+
+		XAddOptions xAddOptions = XAddOptions.trim(TrimOptions.maxLen(5).approximate()
+				.deletionPolicy(StreamDeletionPolicy.delete()));
+
+		// Add multiple entries with deletion policy
+		actual.add(
+				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
+		actual.add(
+				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
+		actual.add(
+				connection.xAdd(StringRecord.of(Collections.singletonMap(KEY_2, VALUE_2)).withStreamKey(KEY_1), xAddOptions));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		// Verify stream was created and entries were added
+		assertThat((Long) results.get(3)).isGreaterThan(0L);
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XTRIM")
+	void xTrimShouldTrimStreamWithMaxlen() {
+
+		// Add multiple records
+		for (int i = 0; i < 10; i++) {
+			actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2 + i)));
+		}
+
+		getResults();
+		initConnection();
+
+		// Trim to 5 entries using MAXLEN
+		actual.add(connection.xTrim(KEY_1, XTrimOptions.trim(TrimOptions.maxLen(5))));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(2);
+		assertThat((Long) results.get(0)).isEqualTo(5L); // 5 entries removed
+		assertThat((Long) results.get(1)).isEqualTo(5L); // 5 entries remaining
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XTRIM")
+	void xTrimShouldTrimStreamWithMinId() {
+
+		// Add initial records to get valid IDs
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+
+		List<Object> initialResults = getResults();
+		RecordId id3 = (RecordId) initialResults.get(2); // Get the 3rd ID
+
+		initConnection();
+
+		// Trim using MINID - keep only entries with ID >= id3
+		actual.add(connection.xTrim(KEY_1, XTrimOptions.trim(TrimOptions.minId(id3))));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(2);
+		assertThat((Long) results.get(0)).isEqualTo(2L); // 2 entries removed (id1, id2)
+		assertThat((Long) results.get(1)).isEqualTo(3L); // 3 entries remaining (id3, id4, id5)
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XTRIM")
+	void xTrimShouldHonorApproximateTrimming() {
+
+		// Add multiple records
+		for (int i = 0; i < 100; i++) {
+			actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2 + i)));
+		}
+
+		getResults();
+		initConnection();
+
+		// Trim with approximate trimming
+		actual.add(connection.xTrim(KEY_1, XTrimOptions.trim(TrimOptions.maxLen(50).approximate())));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(2);
+		// With approximate trimming, the result may not be exact but should be around 50
+		assertThat((Long) results.get(1)).isGreaterThanOrEqualTo(50L).isLessThanOrEqualTo(100L);
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XTRIM")
+	void xTrimShouldHonorExactTrimming() {
+
+		// Add multiple records
+		for (int i = 0; i < 10; i++) {
+			actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2 + i)));
+		}
+
+		getResults();
+		initConnection();
+
+		// Trim with exact trimming
+		actual.add(connection.xTrim(KEY_1, XTrimOptions.trim(TrimOptions.maxLen(5))));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(2);
+		assertThat((Long) results.get(0)).isEqualTo(5L); // 5 entries removed
+		assertThat((Long) results.get(1)).isEqualTo(5L); // Exactly 5 entries remaining
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XTRIM")
+	void xTrimShouldHonorLimit() {
+
+		// Add multiple records
+		for (int i = 0; i < 100; i++) {
+			actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2 + i)));
+		}
+
+		getResults();
+		initConnection();
+
+		// Trim with LIMIT to control trimming effort
+		actual.add(connection.xTrim(KEY_1, XTrimOptions.trim(TrimOptions.maxLen(50).approximate().limit(10))));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(2);
+		// With LIMIT, trimming may not be exact
+		assertThat((Long) results.get(1)).isGreaterThanOrEqualTo(50L).isLessThanOrEqualTo(100L);
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XTRIM")
+	@EnabledOnValkeyVersion("8.2") // Deletion policy requires Valkey 8.2+
+	void xTrimShouldHonorDeletionPolicy() {
+
+		// Add multiple records
+		for (int i = 0; i < 10; i++) {
+			actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2 + i)));
+		}
+
+		getResults();
+		initConnection();
+
+		// Trim with deletion policy
+		actual.add(connection.xTrim(KEY_1, XTrimOptions.trim(TrimOptions.maxLen(5).approximate()
+				.deletionPolicy(StreamDeletionPolicy.delete()))));
+		actual.add(connection.xLen(KEY_1));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(2);
+		// Verify trimming was applied
+		assertThat((Long) results.get(1)).isGreaterThan(0L).isLessThanOrEqualTo(10L);
+	}
+
 	@Test // DATAREDIS-864
 	@EnabledOnCommand("XADD")
-	public void xReadShouldReadMessage() {
+	void xReadShouldReadMessage() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xReadAsString(StreamOffset.create(KEY_1, ReadOffset.from("0"))));
@@ -3972,7 +4429,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-864
 	@EnabledOnCommand("XADD")
-	public void xReadGroupShouldReadMessage() {
+	void xReadGroupShouldReadMessage() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
@@ -3993,7 +4450,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-864
 	@EnabledOnCommand("XADD")
-	public void xGroupCreateShouldWorkWithAndWithoutExistingStream() {
+	void xGroupCreateShouldWorkWithAndWithoutExistingStream() {
 
 		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group", true));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
@@ -4035,7 +4492,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-864
 	@EnabledOnCommand("XADD")
-	public void xRevRangeShouldReportMessages() {
+	void xRevRangeShouldReportMessages() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_3, VALUE_3)));
@@ -4056,7 +4513,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1207
 	@EnabledOnCommand("XADD")
-	public void xRevRangeShouldWorkWithBoundedRange() {
+	void xRevRangeShouldWorkWithBoundedRange() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_3, VALUE_3)));
@@ -4114,16 +4571,16 @@ public abstract class AbstractConnectionIntegrationTests {
 		assertThat(info.getPendingMessagesPerConsumer()).isEmpty();
 	}
 
-	@Test // DATAREDIS-1084
+	@Test // GH-2046
 	@EnabledOnCommand("XADD")
-	public void xPendingShouldLoadPendingMessages() {
+	void xPendingShouldLoadPendingMessagesForConsumer() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
 		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
 				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
 
-		actual.add(connection.xPending(KEY_1, "my-group", org.springframework.data.domain.Range.unbounded(), 10L));
+		actual.add(connection.xPending(KEY_1, Consumer.from("my-group", "my-consumer"), Range.unbounded(), 10L));
 
 		List<Object> results = getResults();
 		assertThat(results).hasSize(4);
@@ -4136,16 +4593,34 @@ public abstract class AbstractConnectionIntegrationTests {
 		assertThat(pending.get(0).getIdAsString()).isNotNull();
 	}
 
-	@Test // DATAREDIS-1207
+	@Test // GH-2046
 	@EnabledOnCommand("XADD")
-	public void xPendingShouldWorkWithBoundedRange() {
+	void xPendingShouldLoadEmptyPendingMessagesForNotExistingConsumer() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
 		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
 				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
 
-		actual.add(connection.xPending(KEY_1, "my-group", org.springframework.data.domain.Range.closed("0-0", "+"), 10L));
+		actual.add(connection.xPending(KEY_1, Consumer.from("my-group", "my-consumer2"), Range.unbounded(), 10L));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isZero();
+	}
+
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadPendingMessagesForGroupNameAndConsumerName() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		actual.add(connection.xPending(KEY_1, "my-group", "my-consumer", Range.unbounded(), 10L));
 
 		List<Object> results = getResults();
 		assertThat(results).hasSize(4);
@@ -4158,9 +4633,27 @@ public abstract class AbstractConnectionIntegrationTests {
 		assertThat(pending.get(0).getIdAsString()).isNotNull();
 	}
 
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadEmptyPendingMessagesForNonExistingConsumerName() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		actual.add(connection.xPending(KEY_1, "my-group", "my-consumer-2", Range.unbounded(), 10L));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isZero();
+	}
+
 	@Test // DATAREDIS-1084
 	@EnabledOnCommand("XADD")
-	public void xPendingShouldLoadPendingMessagesForConsumer() {
+	void xPendingShouldLoadPendingMessagesForConsumerNameWithRange() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
@@ -4183,7 +4676,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1084
 	@EnabledOnCommand("XADD")
-	public void xPendingShouldLoadPendingMessagesForNonExistingConsumer() {
+	void xPendingShouldLoadEmptyPendingMessagesForNonExistingConsumerNameWithRange() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
@@ -4200,9 +4693,185 @@ public abstract class AbstractConnectionIntegrationTests {
 		assertThat(pending.size()).isZero();
 	}
 
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	public void xPendingShouldLoadPendingMessagesForIdle() throws InterruptedException {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		Thread.sleep(50);
+
+		actual.add(connection.xPending(KEY_1, "my-group", "my-consumer", org.springframework.data.domain.Range.unbounded(),
+				10L, Duration.ofMillis(1)));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isOne();
+		assertThat(pending.get(0).getConsumerName()).isEqualTo("my-consumer");
+		assertThat(pending.get(0).getGroupName()).isEqualTo("my-group");
+		assertThat(pending.get(0).getTotalDeliveryCount()).isOne();
+		assertThat(pending.get(0).getIdAsString()).isNotNull();
+	}
+
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadEmptyPendingMessagesForNonOverIdle() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		Duration nonOverIdle = Duration.ofSeconds(10);
+		actual.add(connection.xPending(KEY_1, "my-group", "my-consumer", org.springframework.data.domain.Range.unbounded(),
+				10L, nonOverIdle));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isZero();
+	}
+
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadPendingMessagesForConsumerWithRange() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		actual.add(connection.xPending(KEY_1, Consumer.from("my-group", "my-consumer"),
+				org.springframework.data.domain.Range.unbounded(), 10L));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isOne();
+		assertThat(pending.get(0).getConsumerName()).isEqualTo("my-consumer");
+		assertThat(pending.get(0).getGroupName()).isEqualTo("my-group");
+		assertThat(pending.get(0).getTotalDeliveryCount()).isOne();
+		assertThat(pending.get(0).getIdAsString()).isNotNull();
+	}
+
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadEmptyPendingMessagesForNonExistingConsumerWithRange() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		actual.add(connection.xPending(KEY_1, Consumer.from("my-group", "my-consumer-2"),
+				org.springframework.data.domain.Range.unbounded(), 10L));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isZero();
+	}
+
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	public void xPendingShouldLoadPendingMessagesForIdleWithConsumer() throws InterruptedException {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		Thread.sleep(50);
+
+		actual.add(connection.xPending(KEY_1, Consumer.from("my-group", "my-consumer"),
+				org.springframework.data.domain.Range.unbounded(), 10L, Duration.ofMillis(1)));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isOne();
+		assertThat(pending.get(0).getConsumerName()).isEqualTo("my-consumer");
+		assertThat(pending.get(0).getGroupName()).isEqualTo("my-group");
+		assertThat(pending.get(0).getTotalDeliveryCount()).isOne();
+		assertThat(pending.get(0).getIdAsString()).isNotNull();
+	}
+
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadEmptyPendingMessagesForNonOverIdleWithConsumer() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		Duration nonOverIdle = Duration.ofSeconds(10);
+		actual.add(connection.xPending(KEY_1, Consumer.from("my-group", "my-consumer"),
+				org.springframework.data.domain.Range.unbounded(), 10L, nonOverIdle));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isZero();
+	}
+
+	@Test // DATAREDIS-1207
+	@EnabledOnCommand("XADD")
+	void xPendingShouldWorkWithBoundedRange() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		actual.add(connection.xPending(KEY_1, "my-group", org.springframework.data.domain.Range.closed("0-0", "+"), 10L));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isOne();
+		assertThat(pending.get(0).getConsumerName()).isEqualTo("my-consumer");
+		assertThat(pending.get(0).getGroupName()).isEqualTo("my-group");
+		assertThat(pending.get(0).getTotalDeliveryCount()).isOne();
+		assertThat(pending.get(0).getIdAsString()).isNotNull();
+	}
+
 	@Test // DATAREDIS-1084
 	@EnabledOnCommand("XADD")
-	void xPendingShouldLoadEmptyPendingMessages() {
+	void xPendingShouldLoadPendingMessagesForGroupNameWithRange() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		actual.add(connection.xPending(KEY_1, "my-group", org.springframework.data.domain.Range.unbounded(), 10L));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isOne();
+		assertThat(pending.get(0).getConsumerName()).isEqualTo("my-consumer");
+		assertThat(pending.get(0).getGroupName()).isEqualTo("my-group");
+		assertThat(pending.get(0).getTotalDeliveryCount()).isOne();
+		assertThat(pending.get(0).getIdAsString()).isNotNull();
+	}
+
+	@Test // DATAREDIS-1084
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadEmptyPendingMessagesForGroupNameWithRange() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
@@ -4212,6 +4881,49 @@ public abstract class AbstractConnectionIntegrationTests {
 		List<Object> results = getResults();
 		assertThat(results).hasSize(3);
 		PendingMessages pending = (PendingMessages) results.get(2);
+
+		assertThat(pending.size()).isZero();
+	}
+
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadPendingMessagesForIdleWithGroupName() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		actual.add(
+				connection.xPending(KEY_1, "my-group", org.springframework.data.domain.Range.unbounded(), 10L, Duration.ZERO));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
+
+		assertThat(pending.size()).isOne();
+		assertThat(pending.get(0).getConsumerName()).isEqualTo("my-consumer");
+		assertThat(pending.get(0).getGroupName()).isEqualTo("my-group");
+		assertThat(pending.get(0).getTotalDeliveryCount()).isOne();
+		assertThat(pending.get(0).getIdAsString()).isNotNull();
+	}
+
+	@Test // GH-2046
+	@EnabledOnCommand("XADD")
+	void xPendingShouldLoadEmptyPendingMessagesForNonOverIdleWithGroupName() {
+
+		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
+		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group"));
+		actual.add(connection.xReadGroupAsString(Consumer.from("my-group", "my-consumer"),
+				StreamOffset.create(KEY_1, ReadOffset.lastConsumed())));
+
+		Duration nonOverIdle = Duration.ofSeconds(10);
+		actual.add(
+				connection.xPending(KEY_1, "my-group", org.springframework.data.domain.Range.unbounded(), 10L, nonOverIdle));
+
+		List<Object> results = getResults();
+		assertThat(results).hasSize(4);
+		PendingMessages pending = (PendingMessages) results.get(3);
 
 		assertThat(pending.size()).isZero();
 	}
@@ -4238,7 +4950,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1119
 	@EnabledOnCommand("XADD")
-	public void xinfo() {
+	void xinfo() {
 
 		actual.add(connection.xGroupCreate(KEY_1, ReadOffset.from("0"), "my-group-without-stream", true));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
@@ -4266,7 +4978,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1119
 	@EnabledOnCommand("XADD")
-	public void xinfoNoGroup() {
+	void xinfoNoGroup() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_3, VALUE_3)));
@@ -4290,7 +5002,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1119
 	@EnabledOnCommand("XADD")
-	public void xinfoGroups() {
+	void xinfoGroups() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_3, VALUE_3)));
@@ -4314,7 +5026,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1119
 	@EnabledOnCommand("XADD")
-	public void xinfoGroupsNoGroup() {
+	void xinfoGroupsNoGroup() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_3, VALUE_3)));
@@ -4330,7 +5042,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1119
 	@EnabledOnCommand("XADD")
-	public void xinfoGroupsNoConsumer() {
+	void xinfoGroupsNoConsumer() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_3, VALUE_3)));
@@ -4352,7 +5064,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1119
 	@EnabledOnCommand("XADD")
-	public void xinfoConsumers() {
+	void xinfoConsumers() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_3, VALUE_3)));
@@ -4375,7 +5087,7 @@ public abstract class AbstractConnectionIntegrationTests {
 
 	@Test // DATAREDIS-1119
 	@EnabledOnCommand("XADD")
-	public void xinfoConsumersNoConsumer() {
+	void xinfoConsumersNoConsumer() {
 
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2)));
 		actual.add(connection.xAdd(KEY_1, Collections.singletonMap(KEY_3, VALUE_3)));
@@ -4390,7 +5102,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test // GH-2345
-	public void zRangeStoreByScoreStoresKeys() {
+	void zRangeStoreByScoreStoresKeys() {
 		String dstKey = KEY_2;
 		String srcKey = KEY_1;
 		actual.add(connection.zAdd(srcKey, 1, VALUE_1));
@@ -4409,7 +5121,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test // GH-2345
-	public void zRangeStoreRevByScoreStoresKeys() {
+	void zRangeStoreRevByScoreStoresKeys() {
 		String dstKey = KEY_2;
 		String srcKey = KEY_1;
 		actual.add(connection.zAdd(srcKey, 1, VALUE_1));
@@ -4428,7 +5140,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test // GH-2345
-	public void zRangeStoreByLexStoresKeys() {
+	void zRangeStoreByLexStoresKeys() {
 		String dstKey = KEY_2;
 		String srcKey = KEY_1;
 		actual.add(connection.zAdd(srcKey, 0, VALUE_3));
@@ -4447,7 +5159,7 @@ public abstract class AbstractConnectionIntegrationTests {
 	}
 
 	@Test // GH-2345
-	public void zRangeStoreRevByLexStoresKeys() {
+	void zRangeStoreRevByLexStoresKeys() {
 		String dstKey = KEY_2;
 		String srcKey = KEY_1;
 		actual.add(connection.zAdd(srcKey, 0, VALUE_3));

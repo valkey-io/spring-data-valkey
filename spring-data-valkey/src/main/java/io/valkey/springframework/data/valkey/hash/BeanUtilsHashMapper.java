@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.beanutils.BeanUtils;
+import org.jspecify.annotations.Nullable;
 
 /**
  * HashMapper based on Apache Commons BeanUtils project. Does NOT supports nested properties.
@@ -42,7 +43,11 @@ public class BeanUtilsHashMapper<T> implements HashMapper<T, String, String> {
 	}
 
 	@Override
-	public T fromHash(Map<String, String> hash) {
+	public @Nullable T fromHash(@Nullable Map<String, String> hash) {
+
+		if (hash == null) {
+			return null;
+		}
 
 		T instance = org.springframework.beans.BeanUtils.instantiateClass(type);
 
@@ -56,7 +61,7 @@ public class BeanUtilsHashMapper<T> implements HashMapper<T, String, String> {
 	}
 
 	@Override
-	public Map<String, String> toHash(T object) {
+	public Map<String, String> toHash(@Nullable T object) {
 
 		try {
 
@@ -74,4 +79,5 @@ public class BeanUtilsHashMapper<T> implements HashMapper<T, String, String> {
 			throw new IllegalArgumentException("Cannot describe object %s".formatted(object), ex);
 		}
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.stream.*;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoConsumers;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoGroups;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoStream;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -41,9 +45,13 @@ import org.springframework.util.StringUtils;
  * @author Tugdual Grall
  * @author Dengliming
  * @author Mark John Moreno
- * @see <a href="https://valkey.io/topics/streams-intro">Valkey Documentation - Streams</a>
+ * @author Jeonggyu Choi
+ * @author Viktoriya Kutsarova
  * @since 2.2
+ * @see ValkeyCommands
+ * @see <a href="https://valkey.io/topics/streams-intro">Valkey Documentation - Streams</a>
  */
+@NullUnmarked
 public interface ValkeyStreamCommands {
 
 	/**
@@ -55,8 +63,7 @@ public interface ValkeyStreamCommands {
 	 * @return length of acknowledged messages. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xack">Valkey Documentation: XACK</a>
 	 */
-	@Nullable
-	default Long xAck(byte[] key, String group, String... recordIds) {
+	default Long xAck(byte [] key, String group, String @NonNull... recordIds) {
 		return xAck(key, group, Arrays.stream(recordIds).map(RecordId::of).toArray(RecordId[]::new));
 	}
 
@@ -69,8 +76,7 @@ public interface ValkeyStreamCommands {
 	 * @return length of acknowledged messages. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xack">Valkey Documentation: XACK</a>
 	 */
-	@Nullable
-	Long xAck(byte[] key, String group, RecordId... recordIds);
+	Long xAck(byte [] key, String group, RecordId @NonNull... recordIds);
 
 	/**
 	 * Append a new record with the given {@link Map field/value pairs} as content to the stream stored at {@code key}.
@@ -80,8 +86,7 @@ public interface ValkeyStreamCommands {
 	 * @return the server generated {@link RecordId id}. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xadd">Valkey Documentation: XADD</a>
 	 */
-	@Nullable
-	default RecordId xAdd(byte[] key, Map<byte[], byte[]> content) {
+	default RecordId xAdd(byte [] key, Map<byte [], byte []> content) {
 		return xAdd(StreamRecords.newRecord().in(key).ofMap(content));
 	}
 
@@ -92,7 +97,6 @@ public interface ValkeyStreamCommands {
 	 * @param record the {@link MapRecord record} to append.
 	 * @return the {@link RecordId id} after save. {@literal null} when used in pipeline / transaction.
 	 */
-	@Nullable
 	default RecordId xAdd(MapRecord<byte[], byte[], byte[]> record) {
 		return xAdd(record, XAddOptions.none());
 	}
@@ -102,13 +106,273 @@ public interface ValkeyStreamCommands {
 	 * assignment over server generated ones make sure to provide an id via {@code Record#withId}.
 	 *
 	 * @param record the {@link MapRecord record} to append.
-	 * @param options additional options (eg. {@literal MAXLEN}). Must not be {@literal null}, use
+	 * @param options additional options (e.g. {@literal MAXLEN}). Must not be {@literal null}, use
 	 *          {@link XAddOptions#none()} instead.
 	 * @return the {@link RecordId id} after save. {@literal null} when used in pipeline / transaction.
 	 * @since 2.3
 	 */
-	@Nullable
 	RecordId xAdd(MapRecord<byte[], byte[], byte[]> record, XAddOptions options);
+
+	/**
+	 * The trimming strategy.
+	 * @since 4.1
+	 */
+	sealed interface TrimStrategy permits MaxLenTrimStrategy, MinIdTrimStrategy {
+	}
+
+	/**
+	 * Trimming strategy that evicts entries as long as the stream's length exceeds the specified threshold.
+	 * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: MAXLEN option for XTRIM</a>
+	 * @since 4.1
+	 */
+	final class MaxLenTrimStrategy implements TrimStrategy {
+		private final long threshold;
+
+		private MaxLenTrimStrategy(long threshold) {
+			this.threshold = threshold;
+		}
+
+		/**
+		 * The maximum number of entries allowed in the stream.
+		 *
+		 * @return non-negative number of entries allowed in the stream
+		 */
+		public long threshold() {
+			return threshold;
+		}
+
+	}
+
+	/**
+	 * Trimming strategy that evicts entries with IDs lower than the specified threshold.
+	 * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: MINID option for XTRIM</a>
+	 * @since 4.1
+	 */
+	final class MinIdTrimStrategy implements TrimStrategy {
+		private final RecordId threshold;
+
+		private MinIdTrimStrategy(RecordId threshold) {
+			this.threshold = threshold;
+		}
+
+		/**
+		 * The lowest stream ID allowed in the stream - all entries whose IDs are less than threshold are trimmed.
+		 *
+		 * @return the lowest stream ID allowed in the stream
+		 */
+		public RecordId threshold() {
+			return threshold;
+		}
+	}
+
+	enum TrimOperator {
+		EXACT,
+		APPROXIMATE
+	}
+
+	@NullMarked
+	class TrimOptions {
+
+		private final TrimStrategy trimStrategy;
+		private final TrimOperator trimOperator;
+		private final @Nullable Long limit;
+		private final @Nullable StreamDeletionPolicy deletionPolicy;
+
+		private TrimOptions(TrimStrategy trimStrategy, TrimOperator trimOperator, @Nullable Long limit, @Nullable StreamDeletionPolicy deletionPolicy) {
+			this.trimStrategy = trimStrategy;
+			this.trimOperator = trimOperator;
+			this.limit = limit;
+			this.deletionPolicy = deletionPolicy;
+		}
+
+
+		/**
+		 * Create trim options using the MAXLEN strategy with the given threshold.
+		 * <p>
+		 * Produces {@link TrimOptions} with the exact ("=") operator by default; call {@link #approximate()} to use
+		 * approximate ("~") trimming.
+		 *
+		 * @param maxLen maximum number of entries to retain in the stream
+		 * @return new {@link TrimOptions} configured with the MAXLEN strategy
+		 * @since 4.0
+		 */
+		public static TrimOptions maxLen(long maxLen) {
+			return new TrimOptions(new MaxLenTrimStrategy(maxLen), TrimOperator.EXACT, null, null);
+		}
+
+
+		/**
+		 * Create trim options using the MINID strategy with the given minimum id.
+		 * <p>
+		 * Produces {@link TrimOptions} with the exact ("=") operator by default; call {@link #approximate()} to use
+		 * approximate ("~") trimming.
+		 *
+		 * @param minId minimum id; entries with an id lower than this value are eligible for trimming
+		 * @return new {@link TrimOptions} configured with the MINID strategy
+		 * @since 4.0
+		 */
+		public static TrimOptions minId(RecordId minId) {
+			return new TrimOptions(new MinIdTrimStrategy(minId), TrimOperator.EXACT, null, null);
+		}
+
+		/**
+		 * Apply specified trim operator.
+		 * <p>
+		 * This is a member method that preserves all other options.
+		 *
+		 * @param trimOperator the operator to use when trimming
+		 * @return new instance of {@link XTrimOptions}.
+		 */
+		public TrimOptions trim(TrimOperator trimOperator) {
+			return new TrimOptions(trimStrategy, trimOperator, limit, deletionPolicy);
+		}
+
+		/**
+		 * Use approximate trimming ("~").
+		 * <p>
+		 * This is a member method that preserves all other options.
+		 *
+		 * @return new instance of {@link TrimOptions} with {@link TrimOperator#APPROXIMATE}.
+		 */
+		public TrimOptions approximate() {
+			return new TrimOptions(trimStrategy, TrimOperator.APPROXIMATE, limit, deletionPolicy);
+		}
+
+		/**
+		 * Use exact trimming ("=").
+		 * <p>
+		 * This is a member method that preserves all other options.
+		 *
+		 * @return new instance of {@link TrimOptions} with {@link TrimOperator#EXACT}.
+		 */
+		public TrimOptions exact() {
+			return new TrimOptions(trimStrategy, TrimOperator.EXACT, limit, deletionPolicy);
+		}
+
+
+		/**
+		 * Limit the maximum number of entries considered when trimming.
+		 * <p>
+		 * This is a member method that preserves all other options.
+		 *
+		 * @param limit the maximum number of entries to examine for trimming.
+		 * @return new instance of {@link XTrimOptions}.
+		 */
+		public TrimOptions limit(long limit) {
+			return new TrimOptions(trimStrategy, trimOperator, limit, deletionPolicy);
+		}
+
+		/**
+		 * Set the deletion policy for trimming.
+		 * <p>
+		 * This is a member method that preserves all other options.
+		 *
+		 * @param deletionPolicy the deletion policy to apply.
+		 * @return new instance of {@link XTrimOptions}.
+		 */
+		public TrimOptions deletionPolicy(StreamDeletionPolicy deletionPolicy) {
+			return new TrimOptions(trimStrategy, trimOperator, limit, deletionPolicy);
+		}
+
+		public TrimStrategy getTrimStrategy() {
+			return trimStrategy;
+		}
+
+		/**
+		 * @return strategy to use when trimming entries
+		 */
+		public TrimOperator getTrimOperator() {
+			return trimOperator;
+		}
+
+		/**
+		 * @return the limit to retain during trimming.
+		 * @since 4.0
+		 */
+		public @Nullable Long getLimit() {
+			return limit;
+		}
+
+		/**
+		 * @return {@literal true} if {@literal LIMIT} is set.
+		 * @since 4.0
+		 */
+		public boolean hasLimit() {
+			return limit != null;
+		}
+
+		/**
+		 * @return the deletion policy.
+		 * @since 4.0
+		 */
+		public @Nullable StreamDeletionPolicy getDeletionPolicy() {
+			return deletionPolicy;
+		}
+
+		/**
+		 * @return {@literal true} if {@literal DELETION_POLICY} is set.
+		 * @since 4.0
+		 */
+		public boolean hasDeletionPolicy() {
+			return deletionPolicy != null;
+		}
+
+		@Override
+		public boolean equals(@Nullable Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (!(o instanceof TrimOptions that)) {
+				return false;
+			}
+			if (this.trimStrategy.equals(that.trimStrategy)) {
+				return false;
+			}
+			if (this.trimOperator.equals(that.trimOperator)) {
+				return false;
+			}
+			return ObjectUtils.nullSafeEquals(deletionPolicy, that.deletionPolicy);
+		}
+
+		@Override
+		public int hashCode() {
+			int result = trimStrategy.hashCode();
+			result = 31 * result + trimOperator.hashCode();
+			result = 31 * result + ObjectUtils.nullSafeHashCode(limit);
+			result = 31 * result + ObjectUtils.nullSafeHashCode(deletionPolicy);
+			return result;
+		}
+	}
+
+	@NullMarked
+	class XTrimOptions {
+
+		private final TrimOptions trimOptions;
+
+		private XTrimOptions(TrimOptions trimOptions) {
+			this.trimOptions = trimOptions;
+		}
+
+		public static XTrimOptions trim(TrimOptions trimOptions) {
+			return new XTrimOptions(trimOptions);
+		}
+
+		/**
+		 * Backward-compatible factory alias for creating {@link XTrimOptions} from {@link TrimOptions}.
+		 *
+		 * @param trimOptions the trim options to apply for XTRIM
+		 * @return new {@link XTrimOptions}
+		 * @since 4.1
+		 */
+		public static XTrimOptions of(TrimOptions trimOptions) {
+			return trim(trimOptions);
+		}
+
+
+		public TrimOptions getTrimOptions() {
+			return trimOptions;
+		}
+	}
 
 	/**
 	 * Additional options applicable for {@literal XADD} command.
@@ -118,28 +382,31 @@ public interface ValkeyStreamCommands {
 	 * @author Liming Deng
 	 * @since 2.3
 	 */
+	@NullMarked
 	class XAddOptions {
 
-		private static final XAddOptions NONE = new XAddOptions(null, false, false, null);
+		public static XAddOptions NONE = new XAddOptions(false, null);
 
-		private final @Nullable Long maxlen;
 		private final boolean nomkstream;
-		private final boolean approximateTrimming;
-		private final @Nullable RecordId minId;
+		private final @Nullable TrimOptions trimOptions;
 
-		private XAddOptions(@Nullable Long maxlen, boolean nomkstream, boolean approximateTrimming,
-				@Nullable RecordId minId) {
-			this.maxlen = maxlen;
+		private XAddOptions(boolean nomkstream, @Nullable TrimOptions trimOptions) {
 			this.nomkstream = nomkstream;
-			this.approximateTrimming = approximateTrimming;
-			this.minId = minId;
+			this.trimOptions = trimOptions;
 		}
 
 		/**
-		 * @return
+		 * Create default add options.
+		 *
+		 * @return new instance of {@link XAddOptions} with default values
+		 * @since 2.6
 		 */
 		public static XAddOptions none() {
 			return NONE;
+		}
+
+		public static XAddOptions trim(@Nullable TrimOptions trimOptions) {
+			return new XAddOptions(false, trimOptions);
 		}
 
 		/**
@@ -149,18 +416,18 @@ public interface ValkeyStreamCommands {
 		 * @since 2.6
 		 */
 		public static XAddOptions makeNoStream() {
-			return new XAddOptions(null, true, false, null);
+			return new XAddOptions(true, null);
 		}
 
 		/**
-		 * Disable creation of stream if it does not already exist.
+		 * Whether to disable creation of stream if it does not already exist.
 		 *
 		 * @param makeNoStream {@code true} to not create a stream if it does not already exist.
 		 * @return new instance of {@link XAddOptions}.
 		 * @since 2.6
 		 */
 		public static XAddOptions makeNoStream(boolean makeNoStream) {
-			return new XAddOptions(null, makeNoStream, false, null);
+			return new XAddOptions(makeNoStream, null);
 		}
 
 		/**
@@ -169,7 +436,7 @@ public interface ValkeyStreamCommands {
 		 * @return new instance of {@link XAddOptions}.
 		 */
 		public static XAddOptions maxlen(long maxlen) {
-			return new XAddOptions(maxlen, false, false, null);
+			return new XAddOptions(false, TrimOptions.maxLen(maxlen));
 		}
 
 		/**
@@ -180,16 +447,26 @@ public interface ValkeyStreamCommands {
 		 * @since 2.7
 		 */
 		public XAddOptions minId(RecordId minId) {
-			return new XAddOptions(maxlen, nomkstream, approximateTrimming, minId);
+			return new XAddOptions(nomkstream, TrimOptions.minId(minId));
 		}
 
 		/**
 		 * Apply efficient trimming for capped streams using the {@code ~} flag.
 		 *
 		 * @return new instance of {@link XAddOptions}.
+		 * @deprecated since 4.0: callers must specify a concrete trim strategy (MAXLEN or MINID)
+		 * via {@link TrimOptions}; do not use this method to only toggle approximate/exact.
+		 * Prefer {@code XAddOptions.trim(TrimOptions.maxLen(n).approximate())} or
+		 * {@code XAddOptions.trim(TrimOptions.minId(id).exact())}.
 		 */
+		@Deprecated(since = "4.0")
 		public XAddOptions approximateTrimming(boolean approximateTrimming) {
-			return new XAddOptions(maxlen, nomkstream, approximateTrimming, minId);
+			TrimOptions trimOptions = this.trimOptions != null ? this.trimOptions : TrimOptions.maxLen(0);
+			if (approximateTrimming) {
+				return new XAddOptions(nomkstream, trimOptions.approximate());
+			} else {
+				return new XAddOptions(nomkstream, trimOptions.exact());
+			}
 		}
 
 		/**
@@ -205,32 +482,32 @@ public interface ValkeyStreamCommands {
 		 *
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Long getMaxlen() {
-			return maxlen;
+		public @Nullable Long getMaxlen() {
+			return trimOptions != null && trimOptions.getTrimStrategy() instanceof MaxLenTrimStrategy maxLenTrimStrategy
+					? maxLenTrimStrategy.threshold() : null;
 		}
 
 		/**
 		 * @return {@literal true} if {@literal MAXLEN} is set.
 		 */
 		public boolean hasMaxlen() {
-			return maxlen != null;
+			return trimOptions != null && trimOptions.getTrimStrategy() instanceof MaxLenTrimStrategy;
 		}
 
 		/**
 		 * @return {@literal true} if {@literal approximateTrimming} is set.
 		 */
 		public boolean isApproximateTrimming() {
-			return approximateTrimming;
+			return trimOptions != null && trimOptions.getTrimOperator() == TrimOperator.APPROXIMATE;
 		}
 
 		/**
-		 * @return the minimum record Id to retain during trimming.
+		 * @return the minimum record id to retain during trimming.
 		 * @since 2.7
 		 */
-		@Nullable
-		public RecordId getMinId() {
-			return minId;
+		public @Nullable RecordId getMinId() {
+			return trimOptions != null && trimOptions.getTrimStrategy() instanceof MinIdTrimStrategy minIdTrimStrategy
+					? minIdTrimStrategy.threshold() : null;
 		}
 
 		/**
@@ -238,7 +515,19 @@ public interface ValkeyStreamCommands {
 		 * @since 2.7
 		 */
 		public boolean hasMinId() {
-			return minId != null;
+			return trimOptions != null && trimOptions.getTrimStrategy() instanceof MinIdTrimStrategy;
+		}
+
+		public XAddOptions nomkstream(boolean nomkstream) {
+			return new XAddOptions(nomkstream, trimOptions);
+		}
+
+		public boolean hasTrimOptions() {
+			return trimOptions != null;
+		}
+
+		public @Nullable TrimOptions getTrimOptions() {
+			return trimOptions;
 		}
 
 		@Override
@@ -249,25 +538,118 @@ public interface ValkeyStreamCommands {
 			if (!(o instanceof XAddOptions that)) {
 				return false;
 			}
-			if (nomkstream != that.nomkstream) {
+			if (!(ObjectUtils.nullSafeEquals(this.trimOptions, that.trimOptions))) {
 				return false;
 			}
-			if (approximateTrimming != that.approximateTrimming) {
-				return false;
-			}
-			if (!ObjectUtils.nullSafeEquals(maxlen, that.maxlen)) {
-				return false;
-			}
-			return ObjectUtils.nullSafeEquals(minId, that.minId);
+			return nomkstream == that.nomkstream;
 		}
 
 		@Override
 		public int hashCode() {
-			int result = ObjectUtils.nullSafeHashCode(maxlen);
+			int result = ObjectUtils.nullSafeHashCode(this.trimOptions);
 			result = 31 * result + (nomkstream ? 1 : 0);
-			result = 31 * result + (approximateTrimming ? 1 : 0);
-			result = 31 * result + ObjectUtils.nullSafeHashCode(minId);
 			return result;
+		}
+	}
+
+	/**
+	 * Deletion policy for stream entries - specifies how to handle consumer group references when deleting stream
+	 * entries.
+	 *
+	 * @author Viktoriya Kutsarova
+	 * @since 4.1
+	 */
+	enum StreamDeletionPolicy {
+
+		/**
+		 * Remove entries according to the specified strategy, but preserve existing references to these entries in all
+		 * consumer groups' PEL (Pending Entries List).
+		 */
+		KEEP_REFERENCES,
+
+		/**
+		 * Remove entries according to the specified strategy and remove all references to these entries from all
+		 * consumer groups' PEL.
+		 */
+		DELETE_REFERENCES,
+
+		/**
+		 * Remove entries that meet the specified strategy and that have been read and acknowledged by all
+		 * consumer groups.
+		 */
+		ACKNOWLEDGED;
+
+		/**
+		 * Factory method for {@link #KEEP_REFERENCES}.
+		 */
+		public static StreamDeletionPolicy keep() { return KEEP_REFERENCES; }
+
+		/**
+		 * Factory method for {@link #DELETE_REFERENCES}.
+		 */
+		public static StreamDeletionPolicy delete() { return DELETE_REFERENCES; }
+
+		/**
+		 * Factory method for {@link #ACKNOWLEDGED}.
+		 */
+		public static StreamDeletionPolicy removeAcknowledged() { return ACKNOWLEDGED; }
+	}
+
+	/**
+	 * Result of a stream entry deletion operation for {@literal XDELEX} and {@literal XACKDEL} commands.
+	 *
+	 * @author Viktoriya Kutsarova
+	 * @since 4.1
+	 */
+	enum StreamEntryDeletionResult {
+
+		UNKNOWN(-2L),
+
+		/**
+		 * The entry ID does not exist in the stream.
+		 */
+		NOT_FOUND(-1L),
+
+		/**
+		 * The entry was successfully deleted from the stream.
+		 */
+		DELETED(1L),
+
+		/**
+		 * The entry was acknowledged but not deleted (when using ACKED deletion policy with dangling references).
+		 */
+		NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED(2L);
+
+		private final long code;
+
+		StreamEntryDeletionResult(long code) {
+			this.code = code;
+		}
+
+		/**
+		 * Get the numeric code for this deletion result.
+		 *
+		 * @return the numeric code: -1 for NOT_FOUND, 1 for DELETED, 2 for NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED
+		 */
+		public long getCode() {
+			return code;
+		}
+
+		/**
+		 * Convert a numeric code to a {@link StreamEntryDeletionResult}.
+		 *
+		 * @param code the numeric code
+		 * @return the corresponding {@link StreamEntryDeletionResult}
+		 * @throws IllegalArgumentException if the code is not valid
+		 */
+		public static StreamEntryDeletionResult fromCode(long code) {
+			return switch ((int) code) {
+				case -2 -> UNKNOWN;
+				case -1 -> NOT_FOUND;
+				case 1 -> DELETED;
+				case 2 -> NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED;
+				default -> throw new IllegalArgumentException("Invalid deletion result code: " + code);
+			};
 		}
 	}
 
@@ -283,8 +665,8 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xclaim">Valkey Documentation: XCLAIM</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	List<RecordId> xClaimJustId(byte[] key, String group, String newOwner, XClaimOptions options);
+	List<RecordId> xClaimJustId(byte [] key, String group, String newOwner,
+			XClaimOptions options);
 
 	/**
 	 * Change the ownership of a pending message to the given new {@literal consumer}.
@@ -298,9 +680,8 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xclaim">Valkey Documentation: XCLAIM</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	default List<ByteRecord> xClaim(byte[] key, String group, String newOwner, Duration minIdleTime,
-			RecordId... recordIds) {
+	default List<ByteRecord> xClaim(byte [] key, String group, String newOwner,
+			Duration minIdleTime, RecordId @NonNull... recordIds) {
 		return xClaim(key, group, newOwner, XClaimOptions.minIdle(minIdleTime).ids(recordIds));
 	}
 
@@ -315,13 +696,14 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xclaim">Valkey Documentation: XCLAIM</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	List<ByteRecord> xClaim(byte[] key, String group, String newOwner, XClaimOptions options);
+	List<ByteRecord> xClaim(byte [] key, String group, String newOwner,
+			XClaimOptions options);
 
 	/**
 	 * @author Christoph Strobl
 	 * @since 2.3
 	 */
+	@NullMarked
 	class XClaimOptions {
 
 		private final List<RecordId> ids;
@@ -438,8 +820,7 @@ public interface ValkeyStreamCommands {
 		 *
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Duration getIdleTime() {
+		public @Nullable Duration getIdleTime() {
 			return idleTime;
 		}
 
@@ -448,8 +829,7 @@ public interface ValkeyStreamCommands {
 		 *
 		 * @return
 		 */
-		@Nullable
-		public Instant getUnixTime() {
+		public @Nullable Instant getUnixTime() {
 			return unixTime;
 		}
 
@@ -458,8 +838,7 @@ public interface ValkeyStreamCommands {
 		 *
 		 * @return
 		 */
-		@Nullable
-		public Long getRetryCount() {
+		public @Nullable Long getRetryCount() {
 			return retryCount;
 		}
 
@@ -472,6 +851,7 @@ public interface ValkeyStreamCommands {
 			return force;
 		}
 
+		@NullMarked
 		public static class XClaimOptionsBuilder {
 
 			private final Duration minIdleTime;
@@ -529,8 +909,7 @@ public interface ValkeyStreamCommands {
 	 * @return number of removed entries. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xdel">Valkey Documentation: XDEL</a>
 	 */
-	@Nullable
-	default Long xDel(byte[] key, String... recordIds) {
+	default Long xDel(byte [] key, String @NonNull... recordIds) {
 		return xDel(key, Arrays.stream(recordIds).map(RecordId::of).toArray(RecordId[]::new));
 	}
 
@@ -543,9 +922,145 @@ public interface ValkeyStreamCommands {
 	 * @return number of removed entries. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xdel">Valkey Documentation: XDEL</a>
 	 */
-	@Nullable
-	Long xDel(byte[] key, RecordId... recordIds);
+	Long xDel(byte [] key, RecordId @NonNull... recordIds);
 
+	/**
+	 * Additional options applicable for {@literal XDELEX} and {@literal XACKDEL} commands.
+	 *
+	 * @author Viktoriya Kutsarova
+	 * @since 4.1
+	 */
+	@NullMarked
+	class XDelOptions {
+
+		private static final XDelOptions DEFAULT = new XDelOptions(StreamDeletionPolicy.keep());
+
+		private final StreamDeletionPolicy deletionPolicy;
+
+		private XDelOptions(StreamDeletionPolicy deletionPolicy) {
+			this.deletionPolicy = deletionPolicy;
+		}
+
+		/**
+		 * Create an {@link XDelOptions} instance with default options.
+		 * <p>
+		 * This returns the default options for the {@literal XDELEX} and {@literal XACKDEL} commands
+		 * with {@link StreamDeletionPolicy#KEEP_REFERENCES} as the deletion policy, which preserves
+		 * existing references in consumer groups' PELs (similar to the behavior of {@literal XDEL}).
+		 *
+		 * @return a default {@link XDelOptions} instance with {@link StreamDeletionPolicy#KEEP_REFERENCES}.
+		 */
+		public static XDelOptions defaults() {
+			return DEFAULT;
+		}
+
+		/**
+		 * Set the deletion policy for the delete operation.
+		 *
+		 * @param deletionPolicy the deletion policy to apply.
+		 * @return new instance of {@link XDelOptions}.
+		 */
+		public static XDelOptions deletionPolicy(StreamDeletionPolicy deletionPolicy) {
+			return new XDelOptions(deletionPolicy);
+		}
+
+		/**
+		 * @return the deletion policy.
+		 */
+		public StreamDeletionPolicy getDeletionPolicy() {
+			return deletionPolicy;
+		}
+
+		@Override
+		public boolean equals(@Nullable Object o) {
+			if (this == o) {
+				return true;
+			}
+			if (!(o instanceof XDelOptions that)) {
+				return false;
+			}
+			return deletionPolicy.equals(that.deletionPolicy);
+		}
+
+		@Override
+		public int hashCode() {
+			return deletionPolicy.hashCode();
+		}
+	}
+
+	/**
+	 * Deletes one or multiple entries from the stream at the specified key.
+	 * <p>
+	 * XDELEX is an extension of the Valkey Streams XDEL command that provides more control over how message entries
+	 * are deleted concerning consumer groups.
+	 *
+	 * @param key the {@literal key} the stream is stored at.
+	 * @param options the {@link XDelOptions} specifying deletion policy. Use {@link XDelOptions#defaults()} ()} for default behavior.
+	 * @param recordIds the id's of the records to remove.
+	 * @return list of {@link StreamEntryDeletionResult} for each ID: {@link StreamEntryDeletionResult#NOT_FOUND} if no such ID exists,
+	 *         {@link StreamEntryDeletionResult#DELETED} if the entry was deleted, {@link StreamEntryDeletionResult#NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED}
+	 *         if the entry was not deleted but there are still dangling references (ACKED deletion policy).
+	 *         Returns {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xdelex">Valkey Documentation: XDELEX</a>
+	 */
+	default List<StreamEntryDeletionResult> xDelEx(byte [] key, XDelOptions options, String @NonNull... recordIds) {
+		return xDelEx(key, options, Arrays.stream(recordIds).map(RecordId::of).toArray(RecordId[]::new));
+	}
+
+	/**
+	 * Deletes one or multiple entries from the stream at the specified key.
+	 * <p>
+	 * XDELEX is an extension of the Valkey Streams XDEL command that provides more control over how message entries
+	 * are deleted concerning consumer groups.
+	 *
+	 * @param key the {@literal key} the stream is stored at.
+	 * @param options the {@link XDelOptions} specifying deletion policy. Use {@link XDelOptions#defaults()} ()} for default behavior.
+	 * @param recordIds the id's of the records to remove.
+	 * @return list of {@link StreamEntryDeletionResult} for each ID: {@link StreamEntryDeletionResult#NOT_FOUND} if no such ID exists,
+	 *         {@link StreamEntryDeletionResult#DELETED} if the entry was deleted, {@link StreamEntryDeletionResult#NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED}
+	 *         if the entry was not deleted but there are still dangling references (ACKED deletion policy).
+	 *         Returns {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xdelex">Valkey Documentation: XDELEX</a>
+	 */
+	List<StreamEntryDeletionResult> xDelEx(byte [] key, XDelOptions options, RecordId @NonNull... recordIds);
+
+	/**
+	 * Acknowledges and conditionally deletes one or multiple entries (messages) for a stream consumer group at the specified key.
+	 * <p>
+	 * XACKDEL combines the functionality of XACK and XDEL in Valkey Streams. It acknowledges the specified entry IDs in the
+	 * given consumer group and simultaneously attempts to delete the corresponding entries from the stream.
+	 *
+	 * @param key the {@literal key} the stream is stored at.
+	 * @param group name of the consumer group.
+	 * @param options the {@link XDelOptions} specifying deletion policy. Use {@link XDelOptions#defaults()} ()} for default behavior.
+	 * @param recordIds the id's of the records to acknowledge and remove.
+	 * @return list of {@link StreamEntryDeletionResult} for each ID: {@link StreamEntryDeletionResult#DELETED} if the entry was acknowledged and deleted,
+	 *         {@link StreamEntryDeletionResult#NOT_FOUND} if no such ID exists, {@link StreamEntryDeletionResult#NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED}
+	 *         if the entry was acknowledged but not deleted (when using ACKED deletion policy).
+	 *         Returns {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xackdel">Valkey Documentation: XACKDEL</a>
+	 */
+	default List<StreamEntryDeletionResult> xAckDel(byte [] key, String group, XDelOptions options, String @NonNull... recordIds) {
+		return xAckDel(key, group, options, Arrays.stream(recordIds).map(RecordId::of).toArray(RecordId[]::new));
+	}
+
+	/**
+	 * Acknowledges and conditionally deletes one or multiple entries (messages) for a stream consumer group at the specified key.
+	 * <p>
+	 * XACKDEL combines the functionality of XACK and XDEL in Valkey Streams. It acknowledges the specified entry IDs in the
+	 * given consumer group and simultaneously attempts to delete the corresponding entries from the stream.
+	 *
+	 * @param key the {@literal key} the stream is stored at.
+	 * @param group name of the consumer group.
+	 * @param options the {@link XDelOptions} specifying deletion policy. Use {@link XDelOptions#defaults()} ()} for default behavior.
+	 * @param recordIds the id's of the records to acknowledge and remove.
+	 * @return list of {@link StreamEntryDeletionResult} for each ID: {@link StreamEntryDeletionResult#DELETED} if the entry was acknowledged and deleted,
+	 *         {@link StreamEntryDeletionResult#NOT_FOUND} if no such ID exists, {@link StreamEntryDeletionResult#NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED}
+	 *         if the entry was acknowledged but not deleted (when using ACKED deletion policy).
+	 *         Returns {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xackdel">Valkey Documentation: XACKDEL</a>
+	 */
+	List<StreamEntryDeletionResult> xAckDel(byte [] key, String group, XDelOptions options, RecordId @NonNull... recordIds);
 	/**
 	 * Create a consumer group.
 	 *
@@ -554,8 +1069,7 @@ public interface ValkeyStreamCommands {
 	 * @param readOffset the offset to start at.
 	 * @return {@literal ok} if successful. {@literal null} when used in pipeline / transaction.
 	 */
-	@Nullable
-	String xGroupCreate(byte[] key, String groupName, ReadOffset readOffset);
+	String xGroupCreate(byte [] key, String groupName, ReadOffset readOffset);
 
 	/**
 	 * Create a consumer group.
@@ -567,8 +1081,8 @@ public interface ValkeyStreamCommands {
 	 * @return {@literal ok} if successful. {@literal null} when used in pipeline / transaction.
 	 * @since 2.3
 	 */
-	@Nullable
-	String xGroupCreate(byte[] key, String groupName, ReadOffset readOffset, boolean mkStream);
+	String xGroupCreate(byte [] key, String groupName, ReadOffset readOffset,
+			boolean mkStream);
 
 	/**
 	 * Delete a consumer from a consumer group.
@@ -578,8 +1092,7 @@ public interface ValkeyStreamCommands {
 	 * @param consumerName the name of the consumer to remove from the group.
 	 * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
 	 */
-	@Nullable
-	default Boolean xGroupDelConsumer(byte[] key, String groupName, String consumerName) {
+	default Boolean xGroupDelConsumer(byte [] key, String groupName, String consumerName) {
 		return xGroupDelConsumer(key, Consumer.from(groupName, consumerName));
 	}
 
@@ -590,8 +1103,7 @@ public interface ValkeyStreamCommands {
 	 * @param consumer consumer identified by group name and consumer name.
 	 * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
 	 */
-	@Nullable
-	Boolean xGroupDelConsumer(byte[] key, Consumer consumer);
+	Boolean xGroupDelConsumer(byte [] key, Consumer consumer);
 
 	/**
 	 * Destroy a consumer group.
@@ -600,8 +1112,7 @@ public interface ValkeyStreamCommands {
 	 * @param groupName name of the consumer group.
 	 * @return {@literal true} if successful. {@literal null} when used in pipeline / transaction.
 	 */
-	@Nullable
-	Boolean xGroupDestroy(byte[] key, String groupName);
+	Boolean xGroupDestroy(byte [] key, String groupName);
 
 	/**
 	 * Obtain general information about the stream stored at the specified {@literal key}.
@@ -610,8 +1121,7 @@ public interface ValkeyStreamCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 2.3
 	 */
-	@Nullable
-	XInfoStream xInfo(byte[] key);
+	XInfoStream xInfo(byte [] key);
 
 	/**
 	 * Obtain information about {@literal consumer groups} associated with the stream stored at the specified
@@ -621,8 +1131,7 @@ public interface ValkeyStreamCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 2.3
 	 */
-	@Nullable
-	XInfoGroups xInfoGroups(byte[] key);
+	XInfoGroups xInfoGroups(byte [] key);
 
 	/**
 	 * Obtain information about every consumer in a specific {@literal consumer group} for the stream stored at the
@@ -633,8 +1142,7 @@ public interface ValkeyStreamCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 2.3
 	 */
-	@Nullable
-	XInfoConsumers xInfoConsumers(byte[] key, String groupName);
+	XInfoConsumers xInfoConsumers(byte [] key, String groupName);
 
 	/**
 	 * Get the length of a stream.
@@ -643,8 +1151,7 @@ public interface ValkeyStreamCommands {
 	 * @return length of the stream. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xlen">Valkey Documentation: XLEN</a>
 	 */
-	@Nullable
-	Long xLen(byte[] key);
+	Long xLen(byte [] key);
 
 	/**
 	 * Obtain the {@link PendingMessagesSummary} for a given {@literal consumer group}.
@@ -657,7 +1164,7 @@ public interface ValkeyStreamCommands {
 	 * @since 2.3
 	 */
 	@Nullable
-	PendingMessagesSummary xPending(byte[] key, String groupName);
+	PendingMessagesSummary xPending(byte [] key, String groupName);
 
 	/**
 	 * Obtained detailed information about all pending messages for a given {@link Consumer}.
@@ -668,8 +1175,7 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	default PendingMessages xPending(byte[] key, Consumer consumer) {
+	default PendingMessages xPending(byte [] key, Consumer consumer) {
 		return xPending(key, consumer.getGroup(), consumer.getName());
 	}
 
@@ -683,8 +1189,7 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	default PendingMessages xPending(byte[] key, String groupName, String consumerName) {
+	default PendingMessages xPending(byte [] key, String groupName, String consumerName) {
 		return xPending(key, groupName, XPendingOptions.unbounded().consumer(consumerName));
 	}
 
@@ -701,9 +1206,27 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	default PendingMessages xPending(byte[] key, String groupName, Range<?> range, Long count) {
+	default PendingMessages xPending(byte [] key, String groupName, Range<?> range,
+			Long count) {
 		return xPending(key, groupName, XPendingOptions.range(range, count));
+	}
+
+	/**
+	 * Obtain detailed information about pending {@link PendingMessage messages} for a given {@link Range} within a
+	 * {@literal consumer group} and over a given {@link Duration} of idle time.
+	 *
+	 * @param key the {@literal key} the stream is stored at. Must not be {@literal null}.
+	 * @param groupName the name of the {@literal consumer group}. Must not be {@literal null}.
+	 * @param range the range of messages ids to search within. Must not be {@literal null}.
+	 * @param count limit the number of results. Must not be {@literal null}.
+	 * @param idle the minimum idle time to filter pending messages. Must not be {@literal null}.
+	 * @return pending messages for the given {@literal consumer group} or {@literal null} when used in pipeline /
+	 *         transaction.
+	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
+	 * @since 4.0
+	 */
+	default PendingMessages xPending(byte[] key, String groupName, Range<?> range, Long count, Duration idle) {
+		return xPending(key, groupName, XPendingOptions.range(range, count).minIdleTime(idle));
 	}
 
 	/**
@@ -718,9 +1241,26 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	default PendingMessages xPending(byte[] key, Consumer consumer, Range<?> range, Long count) {
+	default PendingMessages xPending(byte [] key, Consumer consumer, Range<?> range,
+			Long count) {
 		return xPending(key, consumer.getGroup(), consumer.getName(), range, count);
+	}
+
+	/**
+	 * Obtain detailed information about pending {@link PendingMessage messages} for a given {@link Range} and
+	 * {@link Consumer} within a {@literal consumer group} and over a given {@link Duration} of idle time.
+	 *
+	 * @param key the {@literal key} the stream is stored at. Must not be {@literal null}.
+	 * @param consumer the name of the {@link Consumer}. Must not be {@literal null}.
+	 * @param range the range of messages ids to search within. Must not be {@literal null}.
+	 * @param count limit the number of results. Must not be {@literal null}.
+	 * @param minIdleTime the minimum idle time to filter pending messages. Must not be {@literal null}.
+	 * @return pending messages for the given {@link Consumer} or {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
+	 * @since 4.0
+	 */
+	default PendingMessages xPending(byte[] key, Consumer consumer, Range<?> range, Long count, Duration minIdleTime) {
+		return xPending(key, consumer.getGroup(), consumer.getName(), range, count, minIdleTime);
 	}
 
 	/**
@@ -737,9 +1277,29 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	default PendingMessages xPending(byte[] key, String groupName, String consumerName, Range<?> range, Long count) {
+	default PendingMessages xPending(byte [] key, String groupName, String consumerName,
+			Range<?> range, Long count) {
 		return xPending(key, groupName, XPendingOptions.range(range, count).consumer(consumerName));
+	}
+
+	/**
+	 * Obtain detailed information about pending {@link PendingMessage messages} for a given {@link Range} and
+	 * {@literal consumer} within a {@literal consumer group} and over a given {@link Duration} of idle time.
+	 *
+	 * @param key the {@literal key} the stream is stored at. Must not be {@literal null}.
+	 * @param groupName the name of the {@literal consumer group}. Must not be {@literal null}.
+	 * @param consumerName the name of the {@literal consumer}. Must not be {@literal null}.
+	 * @param range the range of messages ids to search within. Must not be {@literal null}.
+	 * @param count limit the number of results. Must not be {@literal null}.
+	 * @param idle the minimum idle time to filter pending messages. Must not be {@literal null}.
+	 * @return pending messages for the given {@literal consumer} in given {@literal consumer group} or {@literal null}
+	 *         when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
+	 * @since 4.0
+	 */
+	default PendingMessages xPending(byte[] key, String groupName, String consumerName, Range<?> range, Long count,
+			Duration idle) {
+		return xPending(key, groupName, XPendingOptions.range(range, count).consumer(consumerName).minIdleTime(idle));
 	}
 
 	/**
@@ -754,26 +1314,30 @@ public interface ValkeyStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
 	 * @since 2.3
 	 */
-	@Nullable
-	PendingMessages xPending(byte[] key, String groupName, XPendingOptions options);
+	PendingMessages xPending(byte [] key, String groupName, XPendingOptions options);
 
 	/**
 	 * Value Object holding parameters for obtaining pending messages.
 	 *
 	 * @author Christoph Strobl
+	 * @author Jeonggyu Choi
 	 * @since 2.3
 	 */
+	@NullMarked
 	class XPendingOptions {
 
 		private final @Nullable String consumerName;
 		private final Range<?> range;
 		private final @Nullable Long count;
+		private final @Nullable Duration minIdleTime;
 
-		private XPendingOptions(@Nullable String consumerName, Range<?> range, @Nullable Long count) {
+		private XPendingOptions(@Nullable String consumerName, Range<?> range, @Nullable Long count,
+				@Nullable Duration minIdleTime) {
 
 			this.range = range;
 			this.count = count;
 			this.consumerName = consumerName;
+			this.minIdleTime = minIdleTime;
 		}
 
 		/**
@@ -782,7 +1346,7 @@ public interface ValkeyStreamCommands {
 		 * @return new instance of {@link XPendingOptions}.
 		 */
 		public static XPendingOptions unbounded() {
-			return new XPendingOptions(null, Range.unbounded(), null);
+			return new XPendingOptions(null, Range.unbounded(), null, null);
 		}
 
 		/**
@@ -795,7 +1359,7 @@ public interface ValkeyStreamCommands {
 
 			Assert.isTrue(count > -1, "Count must not be negative");
 
-			return new XPendingOptions(null, Range.unbounded(), count);
+			return new XPendingOptions(null, Range.unbounded(), count, null);
 		}
 
 		/**
@@ -810,7 +1374,7 @@ public interface ValkeyStreamCommands {
 			Assert.notNull(range, "Range must not be null");
 			Assert.isTrue(count > -1, "Count must not be negative");
 
-			return new XPendingOptions(null, range, count);
+			return new XPendingOptions(null, range, count, null);
 		}
 
 		/**
@@ -820,7 +1384,28 @@ public interface ValkeyStreamCommands {
 		 * @return new instance of {@link XPendingOptions}.
 		 */
 		public XPendingOptions consumer(String consumerName) {
-			return new XPendingOptions(consumerName, range, count);
+
+			Assert.notNull(consumerName, "Consumer name must not be null");
+
+			return new XPendingOptions(consumerName, range, count, minIdleTime);
+		}
+
+		/**
+		 * Append given minimum idle time.
+		 *
+		 * @param minIdleTime can be {@literal null} for none.
+		 * @return new instance of {@link XPendingOptions}.
+		 * @since 4.0
+		 */
+		public XPendingOptions minIdleTime(@Nullable Duration minIdleTime) {
+
+			Assert.notNull(minIdleTime, "Idle must not be null");
+
+			return new XPendingOptions(consumerName, range, count, minIdleTime);
+		}
+
+		XPendingOptions withRange(Range<?> range, Long count) {
+			return new XPendingOptions(consumerName, range, count, minIdleTime);
 		}
 
 		/**
@@ -833,17 +1418,23 @@ public interface ValkeyStreamCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Long getCount() {
+		public @Nullable Long getCount() {
 			return count;
 		}
 
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public String getConsumerName() {
+		public @Nullable String getConsumerName() {
 			return consumerName;
+		}
+
+		/**
+		 * @return can be {@literal null}.
+		 * @since 4.0
+		 */
+		public @Nullable Duration getMinIdleTime() {
+			return minIdleTime;
 		}
 
 		/**
@@ -859,6 +1450,13 @@ public interface ValkeyStreamCommands {
 		public boolean isLimited() {
 			return count != null;
 		}
+
+		/**
+		 * @return {@literal true} if idle time is set.
+		 */
+		public boolean hasMinIdleTime() {
+			return minIdleTime != null;
+		}
 	}
 
 	/**
@@ -871,8 +1469,7 @@ public interface ValkeyStreamCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xrange">Valkey Documentation: XRANGE</a>
 	 */
-	@Nullable
-	default List<ByteRecord> xRange(byte[] key, Range<String> range) {
+	default List<ByteRecord> xRange(byte [] key, Range<String> range) {
 		return xRange(key, range, Limit.unlimited());
 	}
 
@@ -888,8 +1485,7 @@ public interface ValkeyStreamCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xrange">Valkey Documentation: XRANGE</a>
 	 */
-	@Nullable
-	List<ByteRecord> xRange(byte[] key, Range<String> range, Limit limit);
+	List<ByteRecord> xRange(byte [] key, Range<String> range, Limit limit);
 
 	/**
 	 * Read records from one or more {@link StreamOffset}s.
@@ -898,8 +1494,7 @@ public interface ValkeyStreamCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xread">Valkey Documentation: XREAD</a>
 	 */
-	@Nullable
-	default List<ByteRecord> xRead(StreamOffset<byte[]>... streams) {
+	default List<ByteRecord> xRead(StreamOffset<byte []> @NonNull... streams) {
 		return xRead(StreamReadOptions.empty(), streams);
 	}
 
@@ -911,8 +1506,8 @@ public interface ValkeyStreamCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xread">Valkey Documentation: XREAD</a>
 	 */
-	@Nullable
-	List<ByteRecord> xRead(StreamReadOptions readOptions, StreamOffset<byte[]>... streams);
+	List<ByteRecord> xRead(StreamReadOptions readOptions,
+			StreamOffset<byte[]> @NonNull... streams);
 
 	/**
 	 * Read records from one or more {@link StreamOffset}s using a consumer group.
@@ -922,8 +1517,8 @@ public interface ValkeyStreamCommands {
 	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xreadgroup">Valkey Documentation: XREADGROUP</a>
 	 */
-	@Nullable
-	default List<ByteRecord> xReadGroup(Consumer consumer, StreamOffset<byte[]>... streams) {
+	default List<ByteRecord> xReadGroup(Consumer consumer,
+			StreamOffset<byte[]> @NonNull... streams) {
 		return xReadGroup(consumer, StreamReadOptions.empty(), streams);
 	}
 
@@ -936,8 +1531,8 @@ public interface ValkeyStreamCommands {
 	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xreadgroup">Valkey Documentation: XREADGROUP</a>
 	 */
-	@Nullable
-	List<ByteRecord> xReadGroup(Consumer consumer, StreamReadOptions readOptions, StreamOffset<byte[]>... streams);
+	List<ByteRecord> xReadGroup(Consumer consumer, StreamReadOptions readOptions,
+			StreamOffset<byte[]> @NonNull... streams);
 
 	/**
 	 * Read records from a stream within a specific {@link Range} in reverse order.
@@ -947,8 +1542,7 @@ public interface ValkeyStreamCommands {
 	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xrevrange">Valkey Documentation: XREVRANGE</a>
 	 */
-	@Nullable
-	default List<ByteRecord> xRevRange(byte[] key, Range<String> range) {
+	default List<ByteRecord> xRevRange(byte [] key, Range<String> range) {
 		return xRevRange(key, range, Limit.unlimited());
 	}
 
@@ -961,8 +1555,8 @@ public interface ValkeyStreamCommands {
 	 * @return list with members of the resulting stream. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xrevrange">Valkey Documentation: XREVRANGE</a>
 	 */
-	@Nullable
-	List<ByteRecord> xRevRange(byte[] key, Range<String> range, Limit limit);
+	List<ByteRecord> xRevRange(byte [] key, Range<String> range,
+			Limit limit);
 
 	/**
 	 * Trims the stream to {@code count} elements.
@@ -972,8 +1566,7 @@ public interface ValkeyStreamCommands {
 	 * @return number of removed entries. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: XTRIM</a>
 	 */
-	@Nullable
-	Long xTrim(byte[] key, long count);
+	Long xTrim(byte [] key, long count);
 
 	/**
 	 * Trims the stream to {@code count} elements.
@@ -985,6 +1578,15 @@ public interface ValkeyStreamCommands {
 	 * @since 2.4
 	 * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: XTRIM</a>
 	 */
-	@Nullable
-	Long xTrim(byte[] key, long count, boolean approximateTrimming);
+	Long xTrim(byte [] key, long count, boolean approximateTrimming);
+
+	/**
+	 * Trims the stream to {@code count} elements.
+	 *
+	 * @param key the stream key.
+	 * @param options the trimming options.
+	 * @return number of removed entries. {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: XTRIM</a>
+	 */
+	Long xTrim(byte [] key, XTrimOptions options);
 }

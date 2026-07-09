@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.springframework.data.domain.Range;
 import org.springframework.data.domain.Sort.Direction;
@@ -42,7 +43,6 @@ import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.connection.zset.Weights;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -264,6 +264,7 @@ public interface ReactiveZSetCommands {
 	 * @return
 	 * @see <a href="https://valkey.io/commands/zadd">Valkey Documentation: ZADD</a>
 	 */
+	@SuppressWarnings("NullAway")
 	default Mono<Long> zAdd(ByteBuffer key, Double score, ByteBuffer value) {
 
 		Assert.notNull(key, "Key must not be null");
@@ -282,6 +283,7 @@ public interface ReactiveZSetCommands {
 	 * @return
 	 * @see <a href="https://valkey.io/commands/zadd">Valkey Documentation: ZADD</a>
 	 */
+	@SuppressWarnings("NullAway")
 	default Mono<Long> zAdd(ByteBuffer key, Collection<? extends Tuple> tuples) {
 
 		Assert.notNull(key, "Key must not be null");
@@ -473,8 +475,7 @@ public interface ReactiveZSetCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Number getIncrement() {
+		public @Nullable Number getIncrement() {
 			return increment;
 		}
 	}
@@ -942,7 +943,7 @@ public interface ReactiveZSetCommands {
 	 */
 	class ZRangeStoreCommand extends KeyCommand {
 
-		private final ByteBuffer destKey;
+		private final @Nullable ByteBuffer destKey;
 		private final RangeMode rangeMode;
 		private final Range<?> range;
 		private final Direction direction;
@@ -1054,7 +1055,7 @@ public interface ReactiveZSetCommands {
 			return new ZRangeStoreCommand(getKey(), getDestKey(), rangeMode, range, direction, limit);
 		}
 
-		public ByteBuffer getDestKey() {
+		public @Nullable ByteBuffer getDestKey() {
 			return destKey;
 		}
 
@@ -1439,7 +1440,7 @@ public interface ReactiveZSetCommands {
 
 		return zRangeByScore(
 				Mono.just(ZRangeByScoreCommand.reverseScoresWithin(range).withScores().from(key).limitTo(limit)))
-						.flatMap(CommandResponse::getOutput);
+				.flatMap(CommandResponse::getOutput);
 	}
 
 	/**
@@ -1832,13 +1833,11 @@ public interface ReactiveZSetCommands {
 			return direction;
 		}
 
-		@Nullable
-		public Long getTimeout() {
+		public @Nullable Long getTimeout() {
 			return timeout;
 		}
 
-		@Nullable
-		public TimeUnit getTimeUnit() {
+		public @Nullable TimeUnit getTimeUnit() {
 			return timeUnit;
 		}
 
@@ -2161,7 +2160,7 @@ public interface ReactiveZSetCommands {
 
 		private final Range<Long> range;
 
-		private ZRemRangeByRankCommand(ByteBuffer key, Range<Long> range) {
+		private ZRemRangeByRankCommand(@Nullable ByteBuffer key, Range<Long> range) {
 			super(key);
 			this.range = range;
 		}
@@ -2404,8 +2403,7 @@ public interface ReactiveZSetCommands {
 		}
 
 		@Override
-		@Nullable
-		public ByteBuffer getKey() {
+		public @Nullable ByteBuffer getKey() {
 			return null;
 		}
 
@@ -2610,9 +2608,8 @@ public interface ReactiveZSetCommands {
 			return new ZAggregateCommand(sourceKeys, weights, aggregateFunction);
 		}
 
-		@Nullable
 		@Override
-		public ByteBuffer getKey() {
+		public @Nullable ByteBuffer getKey() {
 			return null;
 		}
 
@@ -2824,7 +2821,7 @@ public interface ReactiveZSetCommands {
 
 		return zInterWithScores(
 				Mono.just(ZAggregateCommand.sets(sets).aggregateUsing(aggregateFunction).applyWeights(weights)))
-						.flatMap(CommandResponse::getOutput);
+				.flatMap(CommandResponse::getOutput);
 	}
 
 	/**
@@ -2843,7 +2840,7 @@ public interface ReactiveZSetCommands {
 
 		return zInterWithScores(
 				Mono.just(ZAggregateCommand.sets(sets).aggregateUsing(aggregateFunction).applyWeights(weights)))
-						.flatMap(CommandResponse::getOutput);
+				.flatMap(CommandResponse::getOutput);
 	}
 
 	/**
@@ -2865,7 +2862,7 @@ public interface ReactiveZSetCommands {
 	 */
 	class ZInterStoreCommand extends ZAggregateStoreCommand {
 
-		private ZInterStoreCommand(ByteBuffer key, List<ByteBuffer> sourceKeys, List<Double> weights,
+		private ZInterStoreCommand(@Nullable ByteBuffer key, List<ByteBuffer> sourceKeys, List<Double> weights,
 				@Nullable Aggregate aggregate) {
 			super(key, sourceKeys, weights, aggregate);
 		}
@@ -2993,7 +2990,7 @@ public interface ReactiveZSetCommands {
 
 		return zInterStore(Mono.just(
 				ZInterStoreCommand.sets(sets).aggregateUsing(aggregateFunction).applyWeights(weights).storeAs(destinationKey)))
-						.next().map(NumericResponse::getOutput);
+				.next().map(NumericResponse::getOutput);
 	}
 
 	/**
@@ -3016,7 +3013,7 @@ public interface ReactiveZSetCommands {
 
 		return zInterStore(Mono.just(
 				ZInterStoreCommand.sets(sets).aggregateUsing(aggregateFunction).applyWeights(weights).storeAs(destinationKey)))
-						.next().map(NumericResponse::getOutput);
+				.next().map(NumericResponse::getOutput);
 	}
 
 	/**
@@ -3099,7 +3096,7 @@ public interface ReactiveZSetCommands {
 
 		return zUnionWithScores(
 				Mono.just(ZAggregateCommand.sets(sets).aggregateUsing(aggregateFunction).applyWeights(weights)))
-						.flatMap(CommandResponse::getOutput);
+				.flatMap(CommandResponse::getOutput);
 	}
 
 	/**
@@ -3118,7 +3115,7 @@ public interface ReactiveZSetCommands {
 
 		return zUnionWithScores(
 				Mono.just(ZAggregateCommand.sets(sets).aggregateUsing(aggregateFunction).applyWeights(weights)))
-						.flatMap(CommandResponse::getOutput);
+				.flatMap(CommandResponse::getOutput);
 	}
 
 	/**
@@ -3300,7 +3297,7 @@ public interface ReactiveZSetCommands {
 
 		return zUnionStore(Mono.just(
 				ZUnionStoreCommand.sets(sets).aggregateUsing(aggregateFunction).applyWeights(weights).storeAs(destinationKey)))
-						.next().map(NumericResponse::getOutput);
+				.next().map(NumericResponse::getOutput);
 	}
 
 	/**

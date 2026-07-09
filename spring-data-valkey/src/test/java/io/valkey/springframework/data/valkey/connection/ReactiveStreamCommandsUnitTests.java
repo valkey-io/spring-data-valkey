@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 the original author or authors.
+ * Copyright 2024-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import io.valkey.springframework.data.valkey.connection.ReactiveStreamCommands.P
  * Unit tests for {@link ReactiveStreamCommands}.
  *
  * @author jinkshower
+ * @author Jeonggyu Choi
  */
 class ReactiveStreamCommandsUnitTests {
 
@@ -52,5 +53,15 @@ class ReactiveStreamCommandsUnitTests {
 		Range<?> range = Range.closed("0", "10");
 
 		assertThatIllegalArgumentException().isThrownBy(() -> command.range(range, -1L));
+	}
+
+	@Test // GH-2046
+	void pendingRecordsCommandIdleShouldThrowExceptionWhenIdleIsNull() {
+		ByteBuffer key = ByteBuffer.wrap("my-stream".getBytes());
+		String groupName = "my-group";
+
+		PendingRecordsCommand command = PendingRecordsCommand.pending(key, groupName);
+
+		assertThatIllegalArgumentException().isThrownBy(() -> command.minIdleTime(null));
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,35 @@
 package io.valkey.springframework.data.valkey.connection.jedis;
 
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisCluster;
 
 import java.util.List;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor;
 import io.valkey.springframework.data.valkey.connection.ValkeyScriptingCommands;
-import io.valkey.springframework.data.valkey.connection.ReturnType;
 import org.springframework.util.Assert;
 
 /**
+ * Cluster {@link ValkeyScriptingCommands} implementation for Jedis.
+ * <p>
+ * This class can be used to override only methods that require cluster-specific handling.
+ * <p>
+ * Pipeline and transaction modes are not supported in cluster mode.
+ *
  * @author Mark Paluch
  * @author Pavel Khokhlov
+ * @author Tihomir Mateev
  * @since 2.0
  */
-class JedisClusterScriptingCommands implements ValkeyScriptingCommands {
+@NullUnmarked
+class JedisClusterScriptingCommands extends JedisScriptingCommands {
 
 	private final JedisClusterConnection connection;
 
-	JedisClusterScriptingCommands(JedisClusterConnection connection) {
+	JedisClusterScriptingCommands(@NonNull JedisClusterConnection connection) {
+		super(connection);
 		this.connection = connection;
 	}
 
@@ -46,7 +55,7 @@ class JedisClusterScriptingCommands implements ValkeyScriptingCommands {
 			connection.getClusterCommandExecutor()
 					.executeCommandOnAllNodes((JedisClusterConnection.JedisClusterCommandCallback<String>) Jedis::scriptFlush);
 		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
+			throw connection.convertJedisAccessException(ex);
 		}
 	}
 
@@ -57,12 +66,12 @@ class JedisClusterScriptingCommands implements ValkeyScriptingCommands {
 			connection.getClusterCommandExecutor()
 					.executeCommandOnAllNodes((JedisClusterConnection.JedisClusterCommandCallback<String>) Jedis::scriptKill);
 		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
+			throw connection.convertJedisAccessException(ex);
 		}
 	}
 
 	@Override
-	public String scriptLoad(byte[] script) {
+	public String scriptLoad(byte @NonNull [] script) {
 
 		Assert.notNull(script, "Script must not be null");
 
@@ -73,52 +82,15 @@ class JedisClusterScriptingCommands implements ValkeyScriptingCommands {
 
 			return JedisConverters.toString(multiNodeResult.getFirstNonNullNotEmptyOrDefault(new byte[0]));
 		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
+			throw connection.convertJedisAccessException(ex);
 		}
 	}
 
 	@Override
-	public List<Boolean> scriptExists(String... scriptShas) {
+	public List<Boolean> scriptExists(@NonNull String @NonNull... scriptShas) {
 		throw new InvalidDataAccessApiUsageException("ScriptExists is not supported in cluster environment");
 	}
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> T eval(byte[] script, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
-
-		Assert.notNull(script, "Script must not be null");
-
-		try {
-			return (T) new JedisScriptReturnConverter(returnType).convert(getCluster().eval(script, numKeys, keysAndArgs));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public <T> T evalSha(String scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
-		return evalSha(JedisConverters.toBytes(scriptSha), returnType, numKeys, keysAndArgs);
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public <T> T evalSha(byte[] scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs) {
-
-		Assert.notNull(scriptSha, "Script digest must not be null");
-
-		try {
-			return (T) new JedisScriptReturnConverter(returnType)
-					.convert(getCluster().evalsha(scriptSha, numKeys, keysAndArgs));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	protected RuntimeException convertJedisAccessException(Exception ex) {
-		return connection.convertJedisAccessException(ex);
-	}
-
-	private JedisCluster getCluster() {
-		return connection.getCluster();
-	}
+	// eval() and evalSha() are inherited from JedisScriptingCommands
+	// UnifiedJedis handles cluster routing automatically for these commands
 }

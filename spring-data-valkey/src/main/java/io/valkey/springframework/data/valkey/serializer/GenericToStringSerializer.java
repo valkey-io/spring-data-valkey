@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ package io.valkey.springframework.data.valkey.serializer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.TypeConverter;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.DefaultConversionService;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -81,10 +81,11 @@ public class GenericToStringSerializer<T> implements ValkeySerializer<T>, BeanFa
 	}
 
 	@Override
-	public byte[] serialize(@Nullable T value) {
+	@SuppressWarnings("NullAway")
+	public byte @Nullable [] serialize(@Nullable T value) {
 
 		if (value == null) {
-			return null;
+			return SerializationUtils.EMPTY_ARRAY;
 		}
 
 		String string = converter.convert(value, String.class);
@@ -92,8 +93,7 @@ public class GenericToStringSerializer<T> implements ValkeySerializer<T>, BeanFa
 	}
 
 	@Override
-	@Nullable
-	public T deserialize(@Nullable byte[] bytes) {
+	public @Nullable T deserialize(byte @Nullable [] bytes) {
 
 		if (bytes == null) {
 			return null;
@@ -123,11 +123,13 @@ public class GenericToStringSerializer<T> implements ValkeySerializer<T>, BeanFa
 			this.typeConverter = typeConverter;
 		}
 
-		@Nullable
-		<E> E convert(Object value, Class<E> targetType) {
+		@SuppressWarnings("NullAway")
+		<E> @Nullable E convert(Object value, Class<E> targetType) {
 
 			return conversionService != null ? conversionService.convert(value, targetType)
 					: typeConverter.convertIfNecessary(value, targetType);
 		}
+
 	}
+
 }

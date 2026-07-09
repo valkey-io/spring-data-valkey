@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,11 +31,13 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
+
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import io.valkey.springframework.data.valkey.connection.*;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -43,6 +45,7 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @since 2.0
  */
+@NullUnmarked
 class LettuceReactiveValkeyConnection implements ReactiveValkeyConnection {
 
 	static final RedisCodec<ByteBuffer, ByteBuffer> CODEC = ByteBufferCodec.INSTANCE;
@@ -210,17 +213,17 @@ class LettuceReactiveValkeyConnection implements ReactiveValkeyConnection {
 	protected Mono<? extends RedisClusterReactiveCommands<ByteBuffer, ByteBuffer>> getCommands() {
 
 		if (sharedConnection != null) {
-			return sharedConnection.map(LettuceReactiveValkeyConnection::getValkeyClusterReactiveCommands);
+			return sharedConnection.map(LettuceReactiveValkeyConnection::getRedisClusterReactiveCommands);
 		}
 
 		return getDedicatedCommands();
 	}
 
 	protected Mono<? extends RedisClusterReactiveCommands<ByteBuffer, ByteBuffer>> getDedicatedCommands() {
-		return dedicatedConnection.getConnection().map(LettuceReactiveValkeyConnection::getValkeyClusterReactiveCommands);
+		return dedicatedConnection.getConnection().map(LettuceReactiveValkeyConnection::getRedisClusterReactiveCommands);
 	}
 
-	private static RedisClusterReactiveCommands<ByteBuffer, ByteBuffer> getValkeyClusterReactiveCommands(
+	private static RedisClusterReactiveCommands<ByteBuffer, ByteBuffer> getRedisClusterReactiveCommands(
 			StatefulConnection<ByteBuffer, ByteBuffer> connection) {
 
 		if (connection instanceof StatefulRedisConnection) {

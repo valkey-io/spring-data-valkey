@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core.index;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.geo.Point;
-import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 
 /**
  * @author Christoph Strobl
@@ -55,7 +55,8 @@ public class GeoIndexDefinition extends ValkeyIndexDefinition implements PathBas
 	static class PointValueTransformer implements IndexValueTransformer {
 
 		@Override
-		public Point convert(@Nullable Object source) {
+		@SuppressWarnings("NullAway")
+		public @Nullable Point convert(@Nullable Object source) {
 
 			if (source == null || source instanceof Point) {
 				return (Point) source;
@@ -69,5 +70,7 @@ public class GeoIndexDefinition extends ValkeyIndexDefinition implements PathBas
 					("Cannot convert %s to %s; GeoIndexed property needs to be of type Point" + " or GeoLocation")
 							.formatted(source.getClass(), Point.class));
 		}
+
 	}
+
 }

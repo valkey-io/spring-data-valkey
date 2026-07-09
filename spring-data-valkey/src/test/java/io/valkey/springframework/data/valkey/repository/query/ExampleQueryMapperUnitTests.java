@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.repository.query;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -288,12 +287,9 @@ public class ExampleQueryMapperUnitTests {
 				return false;
 			}
 
-			return Objects.equals(this.getId(), that.getId())
-				&& Objects.equals(this.getFirstname(), that.getFirstname())
-				&& Objects.equals(this.getLastname(), that.getLastname())
-				&& Objects.equals(this.getAge(), that.getAge())
-				&& Objects.equals(this.getGender(), that.getGender())
-				&& Objects.equals(this.getSpecies(), that.getSpecies());
+			return Objects.equals(this.getId(), that.getId()) && Objects.equals(this.getFirstname(), that.getFirstname())
+					&& Objects.equals(this.getLastname(), that.getLastname()) && Objects.equals(this.getAge(), that.getAge())
+					&& Objects.equals(this.getGender(), that.getGender()) && Objects.equals(this.getSpecies(), that.getSpecies());
 		}
 
 		@Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import io.lettuce.core.cluster.ClusterTopologyRefreshOptions.Builder;
 import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.resource.DefaultClientResources;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -38,9 +39,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnThreading;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.Lettuce.Cluster.Refresh;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.Pool;
-import org.springframework.boot.autoconfigure.thread.Threading;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslOptions;
+import org.springframework.boot.thread.Threading;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -48,10 +49,12 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfigurati
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientConfiguration.LettuceClientConfigurationBuilder;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
@@ -72,9 +75,10 @@ class LettuceConnectionConfiguration extends ValkeyConnectionConfiguration {
 			ObjectProvider<ValkeyStandaloneConfiguration> standaloneConfigurationProvider,
 			ObjectProvider<ValkeySentinelConfiguration> sentinelConfigurationProvider,
 			ObjectProvider<ValkeyClusterConfiguration> clusterConfigurationProvider,
+			ObjectProvider<ValkeyStaticMasterReplicaConfiguration> masterReplicaConfiguration,
 			ValkeyConnectionDetails connectionDetails) {
 		super(properties, connectionDetails, standaloneConfigurationProvider, sentinelConfigurationProvider,
-				clusterConfigurationProvider);
+				clusterConfigurationProvider, masterReplicaConfiguration);
 	}
 
 	@Bean(destroyMethod = "shutdown")
@@ -120,8 +124,21 @@ class LettuceConnectionConfiguration extends ValkeyConnectionConfiguration {
 				getProperties().getLettuce().getPool());
 		return switch (this.mode) {
 			case STANDALONE -> new LettuceConnectionFactory(getStandaloneConfig(), clientConfiguration);
-			case CLUSTER -> new LettuceConnectionFactory(getClusterConfiguration(), clientConfiguration);
-			case SENTINEL -> new LettuceConnectionFactory(getSentinelConfig(), clientConfiguration);
+			case CLUSTER -> {
+				ValkeyClusterConfiguration clusterConfiguration = getClusterConfiguration();
+				Assert.state(clusterConfiguration != null, "'clusterConfiguration' must not be null");
+				yield new LettuceConnectionFactory(clusterConfiguration, clientConfiguration);
+			}
+			case SENTINEL -> {
+				ValkeySentinelConfiguration sentinelConfig = getSentinelConfig();
+				Assert.state(sentinelConfig != null, "'sentinelConfig' must not be null");
+				yield new LettuceConnectionFactory(sentinelConfig, clientConfiguration);
+			}
+			case MASTER_REPLICA -> {
+				ValkeyStaticMasterReplicaConfiguration masterReplicaConfiguration = getMasterReplicaConfiguration();
+				Assert.state(masterReplicaConfiguration != null, "'masterReplicaConfig' must not be null");
+				yield new LettuceConnectionFactory(masterReplicaConfiguration, clientConfiguration);
+			}
 		};
 	}
 
@@ -132,8 +149,9 @@ class LettuceConnectionConfiguration extends ValkeyConnectionConfiguration {
 		LettuceClientConfigurationBuilder builder = createBuilder(pool);
 		SslBundle sslBundle = getSslBundle();
 		applyProperties(builder, sslBundle);
-		if (StringUtils.hasText(getProperties().getUrl())) {
-			customizeConfigurationFromUrl(builder);
+		String url = getProperties().getUrl();
+		if (StringUtils.hasText(url)) {
+			customizeConfigurationFromUrl(builder, url);
 		}
 		builder.clientOptions(createClientOptions(clientOptionsBuilderCustomizers, sslBundle));
 		builder.clientResources(clientResources);
@@ -148,22 +166,20 @@ class LettuceConnectionConfiguration extends ValkeyConnectionConfiguration {
 		return LettuceClientConfiguration.builder();
 	}
 
-	private void applyProperties(LettuceClientConfigurationBuilder builder, SslBundle sslBundle) {
+	private void applyProperties(LettuceClientConfigurationBuilder builder, @Nullable SslBundle sslBundle) {
 		if (sslBundle != null) {
 			builder.useSsl();
 		}
 		if (getProperties().getTimeout() != null) {
 			builder.commandTimeout(getProperties().getTimeout());
 		}
-		if (getProperties().getLettuce() != null) {
-			ValkeyProperties.Lettuce lettuce = getProperties().getLettuce();
-			if (lettuce.getShutdownTimeout() != null && !lettuce.getShutdownTimeout().isZero()) {
-				builder.shutdownTimeout(getProperties().getLettuce().getShutdownTimeout());
-			}
-			String readFrom = lettuce.getReadFrom();
-			if (readFrom != null) {
-				builder.readFrom(getReadFrom(readFrom));
-			}
+		ValkeyProperties.Lettuce lettuce = getProperties().getLettuce();
+		if (lettuce.getShutdownTimeout() != null && !lettuce.getShutdownTimeout().isZero()) {
+			builder.shutdownTimeout(getProperties().getLettuce().getShutdownTimeout());
+		}
+		String readFrom = lettuce.getReadFrom();
+		if (readFrom != null) {
+			builder.readFrom(getReadFrom(readFrom));
 		}
 		if (StringUtils.hasText(getProperties().getClientName())) {
 			builder.clientName(getProperties().getClientName());
@@ -191,7 +207,7 @@ class LettuceConnectionConfiguration extends ValkeyConnectionConfiguration {
 
 	private ClientOptions createClientOptions(
 			ObjectProvider<LettuceClientOptionsBuilderCustomizer> clientConfigurationBuilderCustomizers,
-			SslBundle sslBundle) {
+			@Nullable SslBundle sslBundle) {
 		ClientOptions.Builder builder = initializeClientOptionsBuilder();
 		Duration connectTimeout = getProperties().getConnectTimeout();
 		if (connectTimeout != null) {
@@ -232,8 +248,9 @@ class LettuceConnectionConfiguration extends ValkeyConnectionConfiguration {
 		return ClientOptions.builder();
 	}
 
-	private void customizeConfigurationFromUrl(LettuceClientConfiguration.LettuceClientConfigurationBuilder builder) {
-		if (urlUsesSsl()) {
+	private void customizeConfigurationFromUrl(LettuceClientConfiguration.LettuceClientConfigurationBuilder builder,
+			String url) {
+		if (urlUsesSsl(url)) {
 			builder.useSsl();
 		}
 	}

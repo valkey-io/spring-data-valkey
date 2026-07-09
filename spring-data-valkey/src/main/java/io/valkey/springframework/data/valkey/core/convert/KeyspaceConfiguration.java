@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.core.ValkeyHash;
 import io.valkey.springframework.data.valkey.core.TimeToLive;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -35,7 +35,7 @@ import org.springframework.util.ClassUtils;
  */
 public class KeyspaceConfiguration {
 
-	private Map<Class<?>, KeyspaceSettings> settingsMap;
+	private final Map<Class<?>, KeyspaceSettings> settingsMap;
 
 	public KeyspaceConfiguration() {
 
@@ -83,7 +83,7 @@ public class KeyspaceConfiguration {
 	 * @param type must not be {@literal null}
 	 * @return {@literal null} if no settings configured.
 	 */
-	public KeyspaceSettings getKeyspaceSettings(Class<?> type) {
+	public @Nullable KeyspaceSettings getKeyspaceSettings(Class<?> type) {
 
 		if (!hasSettingsFor(type)) {
 			return null;
@@ -157,8 +157,7 @@ public class KeyspaceConfiguration {
 			this.timeToLive = timeToLive;
 		}
 
-		@Nullable
-		public Long getTimeToLive() {
+		public @Nullable Long getTimeToLive() {
 			return timeToLive;
 		}
 
@@ -166,10 +165,10 @@ public class KeyspaceConfiguration {
 			timeToLivePropertyName = propertyName;
 		}
 
-		@Nullable
-		public String getTimeToLivePropertyName() {
+		public @Nullable String getTimeToLivePropertyName() {
 			return timeToLivePropertyName;
 		}
+
 	}
 
 	/**
@@ -183,5 +182,7 @@ public class KeyspaceConfiguration {
 		public DefaultKeyspaceSetting(Class<?> type) {
 			super(type, "#default#", false);
 		}
+
 	}
+
 }

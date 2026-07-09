@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import org.jspecify.annotations.NullUnmarked;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,8 +28,9 @@ import org.springframework.data.geo.GeoResults;
 import org.springframework.data.geo.Metric;
 import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoRadiusCommandArgs;
+import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoSearchCommandArgs;
+import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference.GeoMemberReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
@@ -40,6 +43,7 @@ import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
  * @author Mark Paluch
  * @since 1.8
  */
+@NullUnmarked
 class DefaultGeoOperations<K, M> extends AbstractOperations<K, M> implements GeoOperations<K, M> {
 
 	/**
@@ -191,8 +195,8 @@ class DefaultGeoOperations<K, M> extends AbstractOperations<K, M> implements Geo
 	}
 
 	@Override
-	public GeoResults<GeoLocation<M>> search(K key, GeoReference<M> reference,
-			GeoShape geoPredicate, ValkeyGeoCommands.GeoSearchCommandArgs args) {
+	public GeoResults<GeoLocation<M>> search(K key, GeoReference<M> reference, GeoShape geoPredicate,
+			ValkeyGeoCommands.GeoSearchCommandArgs args) {
 
 		byte[] rawKey = rawKey(key);
 		GeoReference<byte[]> rawMember = getGeoReference(reference);
@@ -204,8 +208,8 @@ class DefaultGeoOperations<K, M> extends AbstractOperations<K, M> implements Geo
 	}
 
 	@Override
-	public Long searchAndStore(K key, K destKey, GeoReference<M> reference,
-			GeoShape geoPredicate, ValkeyGeoCommands.GeoSearchStoreCommandArgs args) {
+	public Long searchAndStore(K key, K destKey, GeoReference<M> reference, GeoShape geoPredicate,
+			ValkeyGeoCommands.GeoSearchStoreCommandArgs args) {
 
 		byte[] rawKey = rawKey(key);
 		byte[] rawDestKey = rawKey(destKey);
@@ -217,8 +221,7 @@ class DefaultGeoOperations<K, M> extends AbstractOperations<K, M> implements Geo
 	@SuppressWarnings("unchecked")
 	private GeoReference<byte[]> getGeoReference(GeoReference<M> reference) {
 		return reference instanceof GeoReference.GeoMemberReference
-				? GeoReference
-						.fromMember(rawValue(((GeoMemberReference<M>) reference).getMember()))
+				? GeoReference.fromMember(rawValue(((GeoMemberReference<M>) reference).getMember()))
 				: (GeoReference<byte[]>) reference;
 	}
 }

@@ -15,6 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.support.collections;
 
+import org.junit.jupiter.api.Test;
+
 import static org.assertj.core.api.Assertions.*;
 
 import java.io.InputStream;
@@ -44,7 +46,6 @@ import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerial
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * @author Costin Leau
@@ -79,12 +80,12 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 		return new ValkeyProperties(store.getKey(), store.getOperations());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	public void testGetOperations() {
 		assertThat(map.getOperations() instanceof StringValkeyTemplate).isTrue();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPropertiesLoad() throws Exception {
 		InputStream stream = getClass()
 				.getResourceAsStream("/io/valkey/springframework/data/valkey/support/collections/props.properties");
@@ -105,7 +106,7 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 		assertThat(props.size()).isEqualTo(size + 3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPropertiesSave() throws Exception {
 		props.setProperty("x", "y");
 		props.setProperty("a", "b");
@@ -114,7 +115,7 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 		props.store(writer, "no-comment");
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetProperty() throws Exception {
 		String property = props.getProperty("a");
 		assertThat(property).isNull();
@@ -122,19 +123,19 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 		assertThat(props.getProperty("a")).isEqualTo("x");
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetPropertyDefault() throws Exception {
 		assertThat(props.getProperty("a", "x")).isEqualTo("x");
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSetProperty() throws Exception {
 		assertThat(props.getProperty("a")).isNull();
 		defaults.setProperty("a", "x");
 		assertThat(props.getProperty("a")).isEqualTo("x");
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPropertiesList() throws Exception {
 		defaults.setProperty("a", "b");
 		props.setProperty("x", "y");
@@ -142,7 +143,7 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 		props.list(new PrintWriter(wr));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPropertyNames() throws Exception {
 		String key1 = "foo";
 		String key2 = "x";
@@ -163,13 +164,13 @@ public class ValkeyPropertiesIntegrationTests extends ValkeyMapIntegrationTests 
 		assertThat(names.hasMoreElements()).isFalse();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testDefaultInit() throws Exception {
 		ValkeyProperties valkeyProperties = new ValkeyProperties("foo", template);
 		valkeyProperties.propertyNames();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testStringPropertyNames() throws Exception {
 		String key1 = "foo";
 		String key2 = "x";

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce.extension;
 
-import java.io.Closeable;
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.time.Duration;
 import java.util.HashMap;
@@ -26,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
+
 import io.valkey.springframework.data.valkey.ConnectionFactoryTracker;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
@@ -37,6 +36,7 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientCon
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration.LettucePoolingClientConfigurationBuilder;
+import io.valkey.springframework.data.valkey.test.ValkeyTestExtensionSupport;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeySentinel;
@@ -46,7 +46,7 @@ import org.springframework.data.util.Lazy;
 
 /**
  * JUnit {@link ParameterResolver} providing pre-cached {@link LettuceConnectionFactory} instances. Connection factories
- * can be qualified with {@code @ValkeyStandalone} (default), {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a
+ * can be qualified with {@code @RedisStanalone} (default), {@code @ValkeySentinel} or {@code @ValkeyCluster} to obtain a
  * specific factory instance. Instances are managed by this extension and will be shut down on JVM shutdown.
  *
  * @author Mark Paluch
@@ -54,7 +54,7 @@ import org.springframework.data.util.Lazy;
  * @see ValkeySentinel
  * @see ValkeyCluster
  */
-public class LettuceConnectionFactoryExtension implements ParameterResolver {
+public class LettuceConnectionFactoryExtension extends ValkeyTestExtensionSupport implements ParameterResolver {
 
 	private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace
 			.create(LettuceConnectionFactoryExtension.class);
@@ -169,7 +169,7 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 	 * Obtain a {@link LettuceConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
 	 * and will be shut down on JVM shutdown.
 	 *
-	 * @param qualifier an be any of {@link ValkeyStandalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
+	 * @param qualifier can be any of {@link ValkeyStandalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
 	 * @return the managed {@link LettuceConnectionFactory}.
 	 */
 	public static LettuceConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier) {
@@ -180,7 +180,7 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 	 * Obtain a {@link LettuceConnectionFactory} described by {@code qualifier}. Instances are managed by this extension
 	 * and will be shut down on JVM shutdown.
 	 *
-	 * @param qualifier an be any of {@link ValkeyStandalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
+	 * @param qualifier can be any of {@link ValkeyStandalone}, {@link ValkeySentinel}, {@link ValkeyCluster}.
 	 * @return the managed {@link LettuceConnectionFactory}.
 	 */
 	public static LettuceConnectionFactory getConnectionFactory(Class<? extends Annotation> qualifier, boolean pooled) {
@@ -198,7 +198,7 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
 			throws ParameterResolutionException {
 
-		ExtensionContext.Store store = extensionContext.getStore(NAMESPACE);
+		ExtensionContext.Store store = getSessionStore(extensionContext, NAMESPACE);
 
 		Class<? extends Annotation> qualifier = getQualifier(parameterContext);
 
@@ -219,7 +219,7 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 	}
 
 	static class ManagedLettuceConnectionFactory extends LettuceConnectionFactory
-			implements ConnectionFactoryTracker.Managed, Closeable {
+			implements ConnectionFactoryTracker.Managed, ShutdownQueue.ShutdownCloseable {
 
 		private volatile boolean mayClose;
 
@@ -270,7 +270,7 @@ public class LettuceConnectionFactoryExtension implements ParameterResolver {
 		}
 
 		@Override
-		public void close() throws IOException {
+		public void close() {
 
 			mayClose = true;
 			destroy();

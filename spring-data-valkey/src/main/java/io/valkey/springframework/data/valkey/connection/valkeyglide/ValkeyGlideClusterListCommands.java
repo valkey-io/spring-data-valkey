@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,10 +51,10 @@ class ValkeyGlideClusterListCommands extends ValkeyGlideListCommands {
 	/**
 	 * Executes a blocking pop command across multiple cluster nodes in parallel.
 	 * Returns the first available result from any node. The timeout is enforced
-	 * by the Redis server, not by this method.
+	 * by the Valkey server, not by this method.
 	 * 
 	 * @param command the command name ("BLPOP" or "BRPOP")
-	 * @param timeout the Redis server timeout in seconds
+	 * @param timeout the Valkey server timeout in seconds
 	 * @param keys the keys to pop from
 	 * @return the first available [key, value] pair, or empty list if all nodes timeout
 	 */

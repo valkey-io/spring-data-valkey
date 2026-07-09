@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,11 +30,13 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.pool2.impl.GenericObjectPool;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+
 import org.springframework.beans.factory.DisposableBean;
 import io.valkey.springframework.data.valkey.connection.PoolException;
 import org.springframework.util.Assert;
@@ -56,6 +58,7 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author Asmir Mustafic
+ * @author UHyeon Jeong
  * @since 2.0
  * @see #getConnection(Class)
  */
@@ -63,6 +66,7 @@ class LettucePoolingConnectionProvider implements LettuceConnectionProvider, Val
 
 	private static final Log log = LogFactory.getLog(LettucePoolingConnectionProvider.class);
 
+	private final AtomicBoolean disposed = new AtomicBoolean();
 	private final LettuceConnectionProvider connectionProvider;
 	private final GenericObjectPoolConfig<StatefulConnection<?, ?>> poolConfig;
 	private final Map<StatefulConnection<?, ?>, GenericObjectPool<StatefulConnection<?, ?>>> poolRef = new ConcurrentHashMap<>(
@@ -207,6 +211,10 @@ class LettucePoolingConnectionProvider implements LettuceConnectionProvider, Val
 	@Override
 	public void destroy() throws Exception {
 
+		if (!disposed.compareAndSet(false, true)) {
+			return;
+		}
+
 		List<CompletableFuture<?>> futures = new ArrayList<>();
 		if (!poolRef.isEmpty() || !asyncPoolRef.isEmpty()) {
 			log.warn("LettucePoolingConnectionProvider contains unreleased connections");
@@ -250,4 +258,5 @@ class LettucePoolingConnectionProvider implements LettuceConnectionProvider, Val
 
 		pools.clear();
 	}
+
 }

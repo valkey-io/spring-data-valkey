@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,11 @@ import java.util.concurrent.TimeUnit;
  * @author Jennifer Hickey
  * @author Mark Paluch
  * @author Christoph Strobl
+ * @author Chris Bono
  */
 public abstract class TimeoutUtils {
+
+	private static final Duration ONE_SECOND = Duration.ofSeconds(1);
 
 	/**
 	 * Check if a given Duration can be represented in {@code sec} or requires {@code msec} representation.
@@ -100,6 +103,17 @@ public abstract class TimeoutUtils {
 		return roundUpIfNecessary(timeout, unit.toMillis(timeout));
 	}
 
+	/**
+	 * Check if a given duration is either {@literal 0} or greater than or equal to {@code 1 sec}.
+	 * <p>
+	 * @param duration the duration to inspect. Never {@literal null}.
+	 * @return {@literal true} if the duration is either {@literal 0} or greater than or equal to {@code 1 sec}.
+	 * @since 3.5.9
+	 */
+	static boolean isZeroOrGreaterThanOneSecond(Duration duration) {
+		return duration.isZero() || duration.compareTo(ONE_SECOND) >= 0;
+	}
+
 	private static long roundUpIfNecessary(long timeout, long convertedTimeout) {
 
 		// A 0 timeout blocks some Valkey ops indefinitely, round up if that's
@@ -110,4 +124,5 @@ public abstract class TimeoutUtils {
 
 		return convertedTimeout;
 	}
+
 }

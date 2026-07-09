@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,10 @@ package io.valkey.springframework.data.valkey.connection.stream;
 
 import java.nio.ByteBuffer;
 
+import org.jspecify.annotations.Nullable;
+
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
-import org.springframework.lang.Nullable;
 
 /**
  * Utility methods for stream serialization.
@@ -37,8 +38,8 @@ class StreamSerialization {
 	 * @param value the value to serialize.
 	 * @return the serialized (binary) representation of {@code value}.
 	 */
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	static byte[] serialize(@Nullable ValkeySerializer<?> serializer, Object value) {
+	@SuppressWarnings({ "unchecked", "rawtypes", "NullAway" })
+	static byte @Nullable [] serialize(@Nullable ValkeySerializer<?> serializer, Object value) {
 		return canSerialize(serializer, value) ? ((ValkeySerializer) serializer).serialize(value) : (byte[]) value;
 	}
 
@@ -46,7 +47,7 @@ class StreamSerialization {
 	 * Deserialize the {@code value using the optional {@link ValkeySerializer}. If no conversion is possible, return
 	 * {@code value}. @param serializer @param value @param <T> @return
 	 */
-	static <T> T deserialize(@Nullable ValkeySerializer<? extends T> serializer, ByteBuffer value) {
+	static <T> @Nullable T deserialize(@Nullable ValkeySerializer<? extends T> serializer, ByteBuffer value) {
 		return deserialize(serializer, ByteUtils.getBytes(value));
 	}
 
@@ -54,7 +55,7 @@ class StreamSerialization {
 	 * Deserialize the {@code value using the optional {@link ValkeySerializer}. If no conversion is possible, return
 	 * {@code value}. @param serializer @param value @param <T> @return
 	 */
-	static <T> T deserialize(@Nullable ValkeySerializer<? extends T> serializer, byte[] value) {
+	static <T> @Nullable T deserialize(@Nullable ValkeySerializer<? extends T> serializer, byte[] value) {
 		return serializer != null ? serializer.deserialize(value) : (T) value;
 	}
 

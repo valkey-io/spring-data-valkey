@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -84,7 +85,7 @@ public class ExpireChanges<K> {
 	 * @return the status change for the given {@literal key}, or {@literal null} if {@link ExpiryChangeState} does not
 	 *         contain an entry for it.
 	 */
-	public ExpiryChangeState stateOf(K key) {
+	public @Nullable ExpiryChangeState stateOf(K key) {
 		return changes.get(key);
 	}
 
@@ -199,5 +200,7 @@ public class ExpireChanges<K> {
 		public int hashCode() {
 			return Objects.hash(value);
 		}
+
 	}
+
 }

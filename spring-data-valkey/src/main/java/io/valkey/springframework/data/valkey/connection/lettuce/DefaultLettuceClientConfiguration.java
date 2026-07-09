@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import io.lettuce.core.resource.ClientResources;
 import java.time.Duration;
 import java.util.Optional;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Default implementation of {@literal LettuceClientConfiguration}.
@@ -107,7 +107,7 @@ class DefaultLettuceClientConfiguration implements LettuceClientConfiguration {
 	}
 
 	@Override
-	public Optional<ValkeyCredentialsProviderFactory> getValkeyCredentialsProviderFactory() {
+	public Optional<ValkeyCredentialsProviderFactory> getRedisCredentialsProviderFactory() {
 		return valkeyCredentialsProviderFactory;
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 
 /**
  * Connection-specific commands supported by Valkey.
@@ -24,6 +25,7 @@ import org.springframework.lang.Nullable;
  * @author Christoph Strobl
  * @author Mark Paluch
  */
+@NullUnmarked
 public interface ValkeyConnectionCommands {
 
 	/**
@@ -41,8 +43,7 @@ public interface ValkeyConnectionCommands {
 	 * @return the message or {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/echo">Valkey Documentation: ECHO</a>
 	 */
-	@Nullable
-	byte[] echo(byte[] message);
+	byte[] echo(byte @NonNull [] message);
 
 	/**
 	 * Test connection.
@@ -50,6 +51,5 @@ public interface ValkeyConnectionCommands {
 	 * @return Server response message - usually {@literal PONG}. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/ping">Valkey Documentation: PING</a>
 	 */
-	@Nullable
 	String ping();
 }

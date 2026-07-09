@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResult;
@@ -44,7 +44,6 @@ import io.valkey.springframework.data.valkey.connection.ValkeyNode.NodeType;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
@@ -125,7 +124,7 @@ public abstract class Converters {
 		return target;
 	}
 
-	public static Boolean toBoolean(@Nullable Long source) {
+	public static boolean toBoolean(@Nullable Long source) {
 		return source != null && source == 1L;
 	}
 
@@ -203,7 +202,7 @@ public abstract class Converters {
 	 * @param microseconds elapsed microseconds in current second
 	 * @return
 	 */
-	public static Long toTimeMillis(String seconds, String microseconds) {
+	public static long toTimeMillis(String seconds, String microseconds) {
 		return NumberUtils.parseNumber(seconds, Long.class) * 1000L
 				+ NumberUtils.parseNumber(microseconds, Long.class) / 1000L;
 	}
@@ -217,7 +216,7 @@ public abstract class Converters {
 	 * @return
 	 * @since 2.5
 	 */
-	public static Long toTimeMillis(String seconds, String microseconds, TimeUnit unit) {
+	public static long toTimeMillis(String seconds, String microseconds, TimeUnit unit) {
 
 		long secondValue = TimeUnit.SECONDS.toMicros(NumberUtils.parseNumber(seconds, Long.class));
 		long microValue = NumberUtils.parseNumber(microseconds, Long.class);
@@ -352,8 +351,7 @@ public abstract class Converters {
 	 * @return given {@literal seconds} as {@link Duration} or {@literal null}.
 	 * @since 2.1
 	 */
-	@Nullable
-	public static Duration secondsToDuration(@Nullable Long seconds) {
+	public static @Nullable Duration secondsToDuration(@Nullable Long seconds) {
 		return seconds != null ? Duration.ofSeconds(seconds) : null;
 	}
 
@@ -422,10 +420,10 @@ public abstract class Converters {
 				return source.toString();
 			}
 			if (source instanceof byte[] bytes) {
-				return new String(bytes);
+				return ByteUtils.toString(bytes);
 			}
 			if (source instanceof ByteBuffer byteBuffer) {
-				return new String(ByteUtils.getBytes(byteBuffer));
+				return ByteUtils.toString(byteBuffer);
 			}
 		}
 
@@ -495,8 +493,9 @@ public abstract class Converters {
 			 * @param metric can be {@literal null}. Defaults to {@link DistanceUnit#METERS}.
 			 * @return never {@literal null}.
 			 */
-			DistanceConverter(Metric metric) {
-				this.metric = ObjectUtils.nullSafeEquals(Metrics.NEUTRAL, metric) ? DistanceUnit.METERS : metric;
+			DistanceConverter(@Nullable Metric metric) {
+				this.metric = (metric == null || ObjectUtils.nullSafeEquals(Metrics.NEUTRAL, metric)) ? DistanceUnit.METERS
+						: metric;
 			}
 
 			@Override
@@ -521,6 +520,7 @@ public abstract class Converters {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public GeoResults<GeoLocation<V>> convert(GeoResults<GeoLocation<byte[]>> source) {
 
 			List<GeoResult<GeoLocation<V>>> values = new ArrayList<>(source.getContent().size());
@@ -544,14 +544,11 @@ public abstract class Converters {
 		 * <ul>
 		 * <li>{@code %s:%i} (Valkey 3)</li>
 		 * <li>{@code %s:%i@%i} (Valkey 4, with bus port)</li>
-		 * <li>{@code %s:%i@%i,%s} (Valkey 7, with announced hostname)</li>
-		 *
-		 * The output of the {@code CLUSTER NODES } command is just a space-separated CSV string, where each
-		 * line represents a node in the cluster. The following is an example of output on Valkey 7.2.0.
-		 * You can check the latest <a href="https://valkey.io/docs/latest/commands/cluster-nodes/">here</a>.
-		 *
+		 * <li>{@code %s:%i@%i,%s} (Valkey 7, with announced hostname)</li> The output of the {@code CLUSTER NODES } command
+		 * is just a space-separated CSV string, where each line represents a node in the cluster. The following is an
+		 * example of output on Valkey 7.2.0. You can check the latest
+		 * <a href="https://valkey.io/docs/latest/commands/cluster-nodes/">here</a>.
 		 * {@code <id> <ip:port@cport[,hostname]> <flags> <master> <ping-sent> <pong-recv> <config-epoch> <link-state> <slot> <slot> ... <slot>}
-		 *
 		 * </ul>
 		 */
 		private static final Map<String, Flag> flagLookupMap;

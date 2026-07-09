@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package io.valkey.springframework.boot.actuate.data.valkey;
 
-import org.springframework.boot.actuate.health.AbstractHealthIndicator;
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.HealthIndicator;
-import org.springframework.util.Assert;
-
+import org.springframework.boot.health.contributor.AbstractHealthIndicator;
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.HealthIndicator;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyConnectionUtils;
+import org.springframework.util.Assert;
 
 /**
  * Simple implementation of a {@link HealthIndicator} returning status information for

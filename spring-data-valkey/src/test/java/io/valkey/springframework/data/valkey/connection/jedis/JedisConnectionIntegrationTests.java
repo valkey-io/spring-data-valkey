@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,10 +75,14 @@ public class JedisConnectionIntegrationTests extends AbstractConnectionIntegrati
 
 		try {
 			connection.close();
-		} catch (Exception ignore) {
-		}
+		} catch (Exception ignore) {}
 
 		connection = null;
+	}
+
+	@Test
+	void testNativeConnectionIsJedis() {
+		assertThat(byteConnection.getNativeConnection()).isInstanceOf(redis.clients.jedis.Jedis.class);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -108,7 +112,12 @@ public class JedisConnectionIntegrationTests extends AbstractConnectionIntegrati
 	@Test // DATAREDIS-714
 	void testCreateConnectionWithDbFailure() {
 
-		JedisConnectionFactory factory2 = new JedisConnectionFactory();
+		JedisConnectionFactory factory2 = new JedisConnectionFactory() {
+			@Override
+			public boolean isUseUnifiedJedis() {
+				return false; // Force legacy mode to match this test class
+			}
+		};
 		factory2.setDatabase(77);
 		factory2.afterPropertiesSet();
 		factory2.start();
@@ -338,8 +347,7 @@ public class JedisConnectionIntegrationTests extends AbstractConnectionIntegrati
 
 		try (ValkeyConnection conn = factory2.getConnection()) {
 			conn.get(null);
-		} catch (Exception ignore) {
-		} finally {
+		} catch (Exception ignore) {} finally {
 			// Make sure we don't end up with broken connection
 			factory2.getConnection().dbSize();
 			factory2.destroy();
@@ -374,12 +382,12 @@ public class JedisConnectionIntegrationTests extends AbstractConnectionIntegrati
 	void testExecuteShouldConvertArrayReplyCorrectly() {
 		connection.set("spring", "awesome");
 		connection.set("data", "cool");
-		connection.set("valkey", "supercalifragilisticexpialidocious");
+		connection.set("redis", "supercalifragilisticexpialidocious");
 
 		assertThat(
-				(Iterable<byte[]>) connection.execute("MGET", "spring".getBytes(), "data".getBytes(), "valkey".getBytes()))
-						.isInstanceOf(List.class)
-						.contains("awesome".getBytes(), "cool".getBytes(), "supercalifragilisticexpialidocious".getBytes());
+				(Iterable<byte[]>) connection.execute("MGET", "spring".getBytes(), "data".getBytes(), "redis".getBytes()))
+				.isInstanceOf(List.class)
+				.contains("awesome".getBytes(), "cool".getBytes(), "supercalifragilisticexpialidocious".getBytes());
 	}
 
 	@Test // DATAREDIS-286, DATAREDIS-564
@@ -404,8 +412,8 @@ public class JedisConnectionIntegrationTests extends AbstractConnectionIntegrati
 		long ttl = connection.pTtl("pexpireKey");
 
 		assertThat(millis - ttl < 20L)
-				.describedAs("difference between millis=%s and ttl=%s should not be greater than 20ms but is %s",
-						millis, ttl, millis - ttl)
+				.describedAs("difference between millis=%s and ttl=%s should not be greater than 20ms but is %s", millis, ttl,
+						millis - ttl)
 				.isTrue();
 	}
 

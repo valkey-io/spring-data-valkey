@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,7 +66,7 @@ public class BoundKeyParams {
 		StringValkeyTemplate templateVG = new StringValkeyTemplate(vgConnFactory);
 		DefaultValkeyMap mapVG = new DefaultValkeyMap("bound:key:mapVG", templateLT);
 		DefaultValkeySet setVG = new DefaultValkeySet("bound:key:setVG", templateLT);
-		ValkeyList listVG = ValkeyList.create("bound:key:listVG", templateLT);		
+		ValkeyList listVG = ValkeyList.create("bound:key:listVG", templateLT);
 
 		StringObjectFactory sof = new StringObjectFactory();
 

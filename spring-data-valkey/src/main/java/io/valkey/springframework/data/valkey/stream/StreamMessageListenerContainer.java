@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,12 @@
 package io.valkey.springframework.data.valkey.stream;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.concurrent.Executor;
 import java.util.function.Predicate;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.SmartLifecycle;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -34,7 +36,6 @@ import io.valkey.springframework.data.valkey.hash.ObjectHashMapper;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.stream.DefaultStreamMessageListenerContainer.LoggingErrorHandler;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ErrorHandler;
 
@@ -107,6 +108,7 @@ import org.springframework.util.ErrorHandler;
  * @author Christoph Strobl
  * @author Christian Rest
  * @author DongCheol Kim
+ * @author Su Ko
  * @param <K> Stream key and Stream field type.
  * @param <V> Stream value type.
  * @since 2.2
@@ -289,14 +291,14 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 			return streamOffset;
 		}
 
-		@Nullable
-		public ErrorHandler getErrorHandler() {
+		public @Nullable ErrorHandler getErrorHandler() {
 			return errorHandler;
 		}
 
 		public Predicate<Throwable> getCancelSubscriptionOnError() {
 			return cancelSubscriptionOnError;
 		}
+
 	}
 
 	/**
@@ -328,6 +330,7 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		public boolean isAutoAcknowledge() {
 			return autoAck;
 		}
+
 	}
 
 	/**
@@ -410,7 +413,7 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 	 */
 	class ConsumerStreamReadRequestBuilder<K> extends StreamReadRequestBuilder<K> {
 
-		private Consumer consumer;
+		private @Nullable Consumer consumer;
 		private boolean autoAck = true;
 
 		ConsumerStreamReadRequestBuilder(StreamReadRequestBuilder<K> other) {
@@ -477,8 +480,11 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		 * @return a new instance of {@link ConsumerStreamReadRequest}.
 		 */
 		public ConsumerStreamReadRequest<K> build() {
+
+			Assert.notNull(consumer, "Consumer must be set");
 			return new ConsumerStreamReadRequest<>(streamOffset, errorHandler, cancelSubscriptionOnError, consumer, autoAck);
 		}
+
 	}
 
 	/**
@@ -499,12 +505,15 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		private final @Nullable HashMapper<Object, Object, Object> hashMapper;
 		private final ErrorHandler errorHandler;
 		private final Executor executor;
+		private final @Nullable Integer phase;
+		private final @Nullable Boolean autoStartup;
 
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		private StreamMessageListenerContainerOptions(Duration pollTimeout, @Nullable Integer batchSize,
 				ValkeySerializer<K> keySerializer, ValkeySerializer<Object> hashKeySerializer,
 				ValkeySerializer<Object> hashValueSerializer, @Nullable Class<?> targetType,
-				@Nullable HashMapper<V, ?, ?> hashMapper, ErrorHandler errorHandler, Executor executor) {
+				@Nullable HashMapper<V, ?, ?> hashMapper, ErrorHandler errorHandler, Executor executor, @Nullable Integer phase,
+				@Nullable Boolean autoStartup) {
 			this.pollTimeout = pollTimeout;
 			this.batchSize = batchSize;
 			this.keySerializer = keySerializer;
@@ -514,6 +523,8 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 			this.hashMapper = (HashMapper) hashMapper;
 			this.errorHandler = errorHandler;
 			this.executor = executor;
+			this.phase = phase;
+			this.autoStartup = autoStartup;
 		}
 
 		/**
@@ -553,11 +564,11 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 			return hashValueSerializer;
 		}
 
-		@Nullable
-		public HashMapper<Object, Object, Object> getHashMapper() {
+		public @Nullable HashMapper<Object, Object, Object> getHashMapper() {
 			return hashMapper;
 		}
 
+		@SuppressWarnings("NullAway")
 		public HashMapper<Object, Object, Object> getRequiredHashMapper() {
 
 			if (!hasHashMapper()) {
@@ -594,6 +605,23 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 			return executor;
 		}
 
+		/**
+		 * @return the configured phase to use for the container lifecycle or {@code empty} if the phase was not specified
+		 *         on the options.
+		 * @since 4.0
+		 */
+		public OptionalInt getPhase() {
+			return phase != null ? OptionalInt.of(phase) : OptionalInt.empty();
+		}
+
+		/**
+		 * @return the configured autoStartup to use for the container lifecycle or {@code empty} if the autoStartup was not
+		 *         specified on the options.
+		 * @since 4.0
+		 */
+		public Optional<Boolean> isAutoStartup() {
+			return autoStartup != null ? Optional.of(autoStartup) : Optional.empty();
+		}
 	}
 
 	/**
@@ -607,14 +635,17 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 
 		private Duration pollTimeout = Duration.ofSeconds(2);
 		private @Nullable Integer batchSize;
-		private ValkeySerializer<K> keySerializer;
-		private ValkeySerializer<Object> hashKeySerializer;
-		private ValkeySerializer<Object> hashValueSerializer;
+		private @Nullable ValkeySerializer<K> keySerializer;
+		private @Nullable ValkeySerializer<Object> hashKeySerializer;
+		private @Nullable ValkeySerializer<Object> hashValueSerializer;
 		private @Nullable HashMapper<V, ?, ?> hashMapper;
 		private @Nullable Class<?> targetType;
 		private ErrorHandler errorHandler = LoggingErrorHandler.INSTANCE;
 		private Executor executor = new SimpleAsyncTaskExecutor();
+		private @Nullable Integer phase;
+		private @Nullable Boolean autoStartup;
 
+		@SuppressWarnings("NullAway")
 		private StreamMessageListenerContainerOptionsBuilder() {}
 
 		/**
@@ -675,11 +706,34 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		}
 
 		/**
+		 * Configure the phase to use for the container {@link SmartLifecycle}
+		 *
+		 * @return {@code this} {@link StreamMessageListenerContainerOptionsBuilder}.
+		 * @since 4.0
+		 */
+		public StreamMessageListenerContainerOptionsBuilder<K, V> phase(int phase) {
+			this.phase = phase;
+			return this;
+		}
+
+		/**
+		 * Configure the autoStartup to use for the container {@link SmartLifecycle}
+		 *
+		 * @return {@code this} {@link StreamMessageListenerContainerOptionsBuilder}.
+		 * @since 4.0
+		 */
+		public StreamMessageListenerContainerOptionsBuilder<K, V> autoStartup(boolean autoStartup) {
+			this.autoStartup = autoStartup;
+			return this;
+		}
+
+		/**
 		 * Configure a key, hash key and hash value serializer.
 		 *
 		 * @param serializer must not be {@literal null}.
 		 * @return {@code this} {@link StreamMessageListenerContainerOptionsBuilder}.
 		 */
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public <T> StreamMessageListenerContainerOptionsBuilder<T, MapRecord<T, T, T>> serializer(
 				ValkeySerializer<T> serializer) {
 
@@ -697,6 +751,7 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		 * @param serializer must not be {@literal null}.
 		 * @return {@code this} {@link StreamMessageListenerContainerOptionsBuilder}.
 		 */
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public <NK, NV extends Record<NK, ?>> StreamMessageListenerContainerOptionsBuilder<NK, NV> keySerializer(
 				ValkeySerializer<NK> serializer) {
 
@@ -712,6 +767,7 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		 * @param serializer must not be {@literal null}.
 		 * @return {@code this} {@link StreamMessageListenerContainerOptionsBuilder}.
 		 */
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public <HK, HV> StreamMessageListenerContainerOptionsBuilder<K, MapRecord<K, HK, HV>> hashKeySerializer(
 				ValkeySerializer<HK> serializer) {
 
@@ -727,6 +783,7 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		 * @param serializer must not be {@literal null}.
 		 * @return {@code this} {@link StreamMessageListenerContainerOptionsBuilder}.
 		 */
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public <HK, HV> StreamMessageListenerContainerOptionsBuilder<K, MapRecord<K, HK, HV>> hashValueSerializer(
 				ValkeySerializer<HV> serializer) {
 
@@ -742,7 +799,7 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		 * @param targetType must not be {@literal null}.
 		 * @return {@code this} {@link StreamMessageListenerContainerOptionsBuilder}.
 		 */
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public <NV> StreamMessageListenerContainerOptionsBuilder<K, ObjectRecord<K, NV>> targetType(Class<NV> targetType) {
 
 			Assert.notNull(targetType, "Target type must not be null");
@@ -765,7 +822,7 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		 * @param hashMapper must not be {@literal null}.
 		 * @return {@code this} {@link StreamMessageListenerContainerOptionsBuilder}.
 		 */
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "rawtypes" })
 		public <NV> StreamMessageListenerContainerOptionsBuilder<K, ObjectRecord<K, NV>> objectMapper(
 				HashMapper<NV, ?, ?> hashMapper) {
 
@@ -781,8 +838,15 @@ public interface StreamMessageListenerContainer<K, V extends Record<K, ?>> exten
 		 * @return new {@link StreamMessageListenerContainerOptions}.
 		 */
 		public StreamMessageListenerContainerOptions<K, V> build() {
+
+			Assert.notNull(keySerializer, "Key Serializer must not be null");
+			Assert.notNull(hashKeySerializer, "Hash Key Serializer must not be null");
+			Assert.notNull(hashValueSerializer, "Hash Value Serializer must not be null");
+
 			return new StreamMessageListenerContainerOptions<>(pollTimeout, batchSize, keySerializer, hashKeySerializer,
-					hashValueSerializer, targetType, hashMapper, errorHandler, executor);
+					hashValueSerializer, targetType, hashMapper, errorHandler, executor, phase, autoStartup);
 		}
+
 	}
+
 }

@@ -1,5 +1,12 @@
 {
+  "groups": [],
   "properties": [
+    {
+      "name": "management.health.valkey.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Whether to enable Valkey health check.",
+      "defaultValue": true
+    },
     {
       "name": "spring.data.valkey.repositories.enabled",
       "type": "java.lang.Boolean",
@@ -11,7 +18,293 @@
       "type": "java.lang.Boolean",
       "deprecation": {
         "replacement": "spring.data.valkey.ssl.enabled",
-        "level": "error"
+        "level": "error",
+        "since": "3.1.0"
+      }
+    },
+    {
+      "name": "spring.valkey.client-name",
+      "type": "java.lang.String",
+      "deprecation": {
+        "replacement": "spring.data.valkey.client-name",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.client-type",
+      "type": "io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties$ClientType",
+      "deprecation": {
+        "replacement": "spring.data.valkey.client-type",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.cluster.max-redirects",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "replacement": "spring.data.valkey.cluster.max-redirects",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.cluster.nodes",
+      "type": "java.util.List<java.lang.String>",
+      "deprecation": {
+        "replacement": "spring.data.valkey.cluster.nodes",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.connect-timeout",
+      "type": "java.time.Duration",
+      "deprecation": {
+        "replacement": "spring.data.valkey.connect-timeout",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.database",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "replacement": "spring.data.valkey.database",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.host",
+      "type": "java.lang.String",
+      "deprecation": {
+        "replacement": "spring.data.valkey.host",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.jedis.pool.enabled",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.jedis.pool.max-active",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.jedis.pool.max-idle",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.jedis.pool.max-wait",
+      "type": "java.time.Duration",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.jedis.pool.min-idle",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.jedis.pool.time-between-eviction-runs",
+      "type": "java.time.Duration",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.cluster.refresh.adaptive",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "replacement": "spring.data.valkey.lettuce.cluster.refresh.adaptive",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.cluster.refresh.dynamic-refresh-sources",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "replacement": "spring.data.valkey.lettuce.cluster.refresh.dynamic-refresh-sources",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.cluster.refresh.period",
+      "type": "java.time.Duration",
+      "deprecation": {
+        "replacement": "spring.data.valkey.lettuce.cluster.refresh.period",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.pool.enabled",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.pool.max-active",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.pool.max-idle",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.pool.max-wait",
+      "type": "java.time.Duration",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.pool.min-idle",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.pool.time-between-eviction-runs",
+      "type": "java.time.Duration",
+      "deprecation": {
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.lettuce.shutdown-timeout",
+      "type": "java.time.Duration",
+      "deprecation": {
+        "replacement": "spring.data.valkey.lettuce.shutdown-timeout",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.password",
+      "type": "java.lang.String",
+      "deprecation": {
+        "replacement": "spring.data.valkey.password",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.port",
+      "type": "java.lang.Integer",
+      "deprecation": {
+        "replacement": "spring.data.valkey.port",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.sentinel.master",
+      "type": "java.lang.String",
+      "deprecation": {
+        "replacement": "spring.data.valkey.sentinel.master",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.sentinel.nodes",
+      "type": "java.util.List<java.lang.String>",
+      "deprecation": {
+        "replacement": "spring.data.valkey.sentinel.nodes",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.sentinel.password",
+      "type": "java.lang.String",
+      "deprecation": {
+        "replacement": "spring.data.valkey.sentinel.password",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.sentinel.username",
+      "type": "java.lang.String",
+      "deprecation": {
+        "replacement": "spring.data.valkey.sentinel.username",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.ssl",
+      "type": "java.lang.Boolean",
+      "deprecation": {
+        "replacement": "spring.data.valkey.ssl",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.timeout",
+      "type": "java.time.Duration",
+      "deprecation": {
+        "replacement": "spring.data.valkey.timeout",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.url",
+      "type": "java.lang.String",
+      "deprecation": {
+        "replacement": "spring.data.valkey.url",
+        "level": "error",
+        "since": "3.0.0"
+      }
+    },
+    {
+      "name": "spring.valkey.username",
+      "type": "java.lang.String",
+      "deprecation": {
+        "replacement": "spring.data.valkey.username",
+        "level": "error",
+        "since": "3.0.0"
       }
     }
   ],
@@ -33,7 +326,7 @@
         },
         {
           "value": "regex:",
-          "description": "Read from any node that has ValkeyURI matching with the given pattern."
+          "description": "Read from any node that has RedisURI matching with the given pattern."
         },
         {
           "value": "replica",
@@ -71,7 +364,11 @@
         },
         {
           "value": "PREFER_REPLICA",
-          "description": "Prefer reading from replica nodes, fall back to primary if unavailable."
+          "description": "Read preferred from replica and fall back to primary if no replica is available."
+        },
+        {
+          "value": "AZ_AFFINITY",
+          "description": "Prioritize replicas in the same availability zone, falling back to others if needed."
         }
       ],
       "providers": [

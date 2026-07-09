@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,12 @@
 package io.valkey.springframework.data.valkey.core.convert;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Optional;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.CollectionFactory;
@@ -37,6 +30,7 @@ import org.springframework.core.convert.ConverterNotFoundException;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.data.convert.CustomConversions;
+import org.springframework.data.core.TypeInformation;
 import org.springframework.data.mapping.AssociationHandler;
 import org.springframework.data.mapping.InstanceCreatorMetadata;
 import org.springframework.data.mapping.MappingException;
@@ -56,14 +50,11 @@ import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentProperty;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.data.util.ProxyUtils;
-import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
-import org.springframework.util.comparator.NullSafeComparator;
 
 /**
  * {@link ValkeyConverter} implementation creating flat binary map structure out of a given domain type. Considers
@@ -109,6 +100,7 @@ import org.springframework.util.comparator.NullSafeComparator;
  * @author Greg Turnquist
  * @author Mark Paluch
  * @author Golam Mazid Sajib
+ * @author Leehyoungwoo
  * @since 1.7
  */
 public class MappingValkeyConverter implements ValkeyConverter, InitializingBean {
@@ -119,8 +111,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	private final GenericConversionService conversionService;
 	private final EntityInstantiators entityInstantiators;
 	private final ValkeyTypeMapper typeMapper;
-	private final Comparator<String> listKeyComparator = new NullSafeComparator<>(NaturalOrderingKeyComparator.INSTANCE,
-			true);
+	private final Comparator<String> listKeyComparator = Comparator.nullsFirst(NaturalOrderingKeyComparator.INSTANCE);
 
 	private IndexResolver indexResolver;
 	private @Nullable ReferenceResolver referenceResolver;
@@ -173,23 +164,22 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	}
 
 	@Override
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "NullAway" })
 	public <R> R read(Class<R> type, ValkeyData source) {
 
 		TypeInformation<?> readType = typeMapper.readType(source.getBucket().getPath(), TypeInformation.of(type));
 
 		return readType.isCollectionLike()
-				? (R) readCollectionOrArray("", ArrayList.class, Object.class, source.getBucket())
+				? (R) readCollectionOrArray("", readType.getType(), Object.class, source.getBucket())
 				: doReadInternal("", type, source);
 
 	}
 
-	@Nullable
-	private <R> R readInternal(String path, Class<R> type, ValkeyData source) {
+	private <R> @Nullable R readInternal(String path, Class<R> type, ValkeyData source) {
 		return source.getBucket().isEmpty() ? null : doReadInternal(path, type, source);
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "NullAway" })
 	private <R> R doReadInternal(String path, Class<R> type, ValkeyData source) {
 
 		TypeInformation<?> readType = typeMapper.readType(source.getBucket().getPath(), TypeInformation.of(type));
@@ -254,8 +244,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		return (R) accessor.getBean();
 	}
 
-	@Nullable
-	protected Object readProperty(String path, ValkeyData source, ValkeyPersistentProperty persistentProperty) {
+	protected @Nullable Object readProperty(String path, ValkeyData source, ValkeyPersistentProperty persistentProperty) {
 
 		String currentPath = !path.isEmpty() ? path + "." + persistentProperty.getName() : persistentProperty.getName();
 		TypeInformation<?> typeInformation = typeMapper.readType(source.getBucket().getPropertyPath(currentPath),
@@ -333,6 +322,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		return fromBytes(sourceBytes, typeToUse);
 	}
 
+	@SuppressWarnings("NullAway")
 	private void readAssociation(String path, ValkeyData source, ValkeyPersistentEntity<?> entity,
 			PersistentPropertyAccessor<?> accessor) {
 
@@ -357,7 +347,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 					}
 
 					KeyspaceIdentifier identifier = KeyspaceIdentifier.of(referenceKey);
-					Map<byte[], byte[]> rawHash = referenceResolver.resolveReference(identifier.getId(),
+					Map<byte[], byte[]> rawHash = getRequiredReferenceResolver().resolveReference(identifier.getId(),
 							identifier.getKeyspace());
 
 					if (!CollectionUtils.isEmpty(rawHash)) {
@@ -379,7 +369,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 					KeyspaceIdentifier identifier = KeyspaceIdentifier.of(referenceKey);
 
-					Map<byte[], byte[]> rawHash = referenceResolver.resolveReference(identifier.getId(),
+					Map<byte[], byte[]> rawHash = getRequiredReferenceResolver().resolveReference(identifier.getId(),
 							identifier.getKeyspace());
 
 					if (!CollectionUtils.isEmpty(rawHash)) {
@@ -393,7 +383,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 	@Override
 	@SuppressWarnings({ "rawtypes" })
-	public void write(Object source, ValkeyData sink) {
+	public void write(@Nullable Object source, ValkeyData sink) {
 
 		if (source == null) {
 			return;
@@ -401,6 +391,24 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 		if (source instanceof PartialUpdate) {
 			writePartialUpdate((PartialUpdate) source, sink);
+			return;
+		}
+
+		if (source instanceof Collection collection) {
+
+			Class<?> collectionTargetType = Collection.class;
+			if (collection instanceof List) {
+				collectionTargetType = List.class;
+			} else if (collection instanceof Set) {
+				if (collection instanceof EnumSet<?>) {
+					collectionTargetType = EnumSet.class;
+				} else {
+					collectionTargetType = Set.class;
+				}
+			}
+
+			typeMapper.writeType(collectionTargetType, sink.getBucket().getPath());
+			writeCollection(sink.getKeyspace(), "", collection, TypeInformation.OBJECT, sink);
 			return;
 		}
 
@@ -417,13 +425,14 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 			return;
 		}
 
-		sink.setKeyspace(entity.getKeySpace());
+		String keySpace = entity.getRequiredKeySpace();
+
+		sink.setKeyspace(keySpace);
 
 		if (entity.getTypeInformation().isCollectionLike()) {
-			writeCollection(entity.getKeySpace(), "", (List) source, entity.getTypeInformation().getRequiredComponentType(),
-					sink);
+			writeCollection(keySpace, "", (List) source, entity.getTypeInformation().getRequiredComponentType(), sink);
 		} else {
-			writeInternal(entity.getKeySpace(), "", source, entity.getTypeInformation(), sink);
+			writeInternal(keySpace, "", source, entity.getTypeInformation(), sink);
 		}
 
 		Object identifier = entity.getIdentifierAccessor(source).getIdentifier();
@@ -480,11 +489,13 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	 * @param entity
 	 * @param path
 	 */
+	@SuppressWarnings("NullAway")
 	private void writePartialPropertyUpdate(PartialUpdate<?> update, PropertyUpdate pUpdate, ValkeyData sink,
 			ValkeyPersistentEntity<?> entity, String path) {
 
 		ValkeyPersistentProperty targetProperty = getTargetPropertyOrNullForPath(path, update.getTarget());
 
+		String keySpace = entity.getRequiredKeySpace();
 		if (targetProperty == null) {
 
 			targetProperty = getTargetPropertyOrNullForPath(path.replaceAll("\\.\\[.*\\]", ""), update.getTarget());
@@ -494,7 +505,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 							? targetProperty.getTypeInformation().getRequiredMapValueType()
 							: TypeInformation.OBJECT) : targetProperty.getTypeInformation().getActualType());
 
-			writeInternal(entity.getKeySpace(), pUpdate.getPropertyPath(), pUpdate.getValue(), ti, sink);
+			writeInternal(keySpace, pUpdate.getPropertyPath(), pUpdate.getValue(), ti, sink);
 			return;
 		}
 
@@ -510,7 +521,8 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 					Object refId = ref.getPropertyAccessor(o).getProperty(ref.getRequiredIdProperty());
 					if (refId != null) {
-						sink.getBucket().put(pUpdate.getPropertyPath() + ".[" + i + "]", toBytes(ref.getKeySpace() + ":" + refId));
+						sink.getBucket().put(pUpdate.getPropertyPath() + ".[" + i + "]",
+								toBytes(ref.getRequiredKeySpace() + ":" + refId));
 						i++;
 					}
 				}
@@ -521,14 +533,14 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 				Object refId = ref.getPropertyAccessor(pUpdate.getValue()).getProperty(ref.getRequiredIdProperty());
 				if (refId != null) {
-					sink.getBucket().put(pUpdate.getPropertyPath(), toBytes(ref.getKeySpace() + ":" + refId));
+					sink.getBucket().put(pUpdate.getPropertyPath(), toBytes(ref.getRequiredKeySpace() + ":" + refId));
 				}
 			}
 		} else if (targetProperty.isCollectionLike() && !isByteArray(targetProperty)) {
 
 			Collection<?> collection = pUpdate.getValue() instanceof Collection ? (Collection<?>) pUpdate.getValue()
 					: Collections.singleton(pUpdate.getValue());
-			writeCollection(entity.getKeySpace(), pUpdate.getPropertyPath(), collection,
+			writeCollection(keySpace, pUpdate.getPropertyPath(), collection,
 					targetProperty.getTypeInformation().getRequiredActualType(), sink);
 		} else if (targetProperty.isMap()) {
 
@@ -544,18 +556,17 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 								.formatted(pUpdate.getPropertyPath(), pUpdate.getValue()));
 			}
 
-			writeMap(entity.getKeySpace(), pUpdate.getPropertyPath(), targetProperty.getMapValueType(), map, sink);
+			writeMap(keySpace, pUpdate.getPropertyPath(), targetProperty.getMapValueType(), map, sink);
 		} else {
 
-			writeInternal(entity.getKeySpace(), pUpdate.getPropertyPath(), pUpdate.getValue(),
-					targetProperty.getTypeInformation(), sink);
+			writeInternal(keySpace, pUpdate.getPropertyPath(), pUpdate.getValue(), targetProperty.getTypeInformation(), sink);
 
-			Set<IndexedData> data = indexResolver.resolveIndexesFor(entity.getKeySpace(), pUpdate.getPropertyPath(),
+			Set<IndexedData> data = indexResolver.resolveIndexesFor(keySpace, pUpdate.getPropertyPath(),
 					targetProperty.getTypeInformation(), pUpdate.getValue());
 
 			if (data.isEmpty()) {
 
-				data = indexResolver.resolveIndexesFor(entity.getKeySpace(), pUpdate.getPropertyPath(),
+				data = indexResolver.resolveIndexesFor(entity.getRequiredKeySpace(), pUpdate.getPropertyPath(),
 						targetProperty.getOwner().getTypeInformation(), pUpdate.getValue());
 
 			}
@@ -571,8 +582,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 			PersistentPropertyPath<ValkeyPersistentProperty> persistentPropertyPath = mappingContext
 					.getPersistentPropertyPath(path, type);
 			return persistentPropertyPath.getLeafProperty();
-		} catch (Exception ignore) {
-		}
+		} catch (Exception ignore) {}
 
 		return null;
 	}
@@ -584,6 +594,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	 * @param typeHint
 	 * @param sink
 	 */
+	@SuppressWarnings("NullAway")
 	private void writeInternal(@Nullable String keyspace, String path, @Nullable Object value,
 			TypeInformation<?> typeHint, ValkeyData sink) {
 
@@ -674,6 +685,12 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		writeAssociation(path, entity, value, sink);
 	}
 
+	private ReferenceResolver getRequiredReferenceResolver() {
+
+		Assert.notNull(referenceResolver, "ReferenceResolver must not be null");
+		return referenceResolver;
+	}
+
 	private void writeAssociation(String path, ValkeyPersistentEntity<?> entity, @Nullable Object value, ValkeyData sink) {
 
 		if (value == null) {
@@ -694,7 +711,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 				ValkeyPersistentEntity<?> ref = mappingContext.getRequiredPersistentEntity(
 						association.getInverse().getTypeInformation().getRequiredComponentType().getRequiredActualType());
 
-				String keyspace = ref.getKeySpace();
+				String keyspace = ref.getRequiredKeySpace();
 				String propertyStringPath = (!path.isEmpty() ? path + "." : "") + association.getInverse().getName();
 
 				int i = 0;
@@ -711,7 +728,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 				ValkeyPersistentEntity<?> ref = mappingContext
 						.getRequiredPersistentEntity(association.getInverse().getTypeInformation());
-				String keyspace = ref.getKeySpace();
+				String keyspace = ref.getRequiredKeySpace();
 
 				if (keyspace != null) {
 					Object refId = ref.getPropertyAccessor(refObject).getProperty(ref.getRequiredIdProperty());
@@ -762,6 +779,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		}
 	}
 
+	@SuppressWarnings("NullAway")
 	private void writeToBucket(String path, @Nullable Object value, ValkeyData sink, Class<?> propertyType) {
 
 		if (value == null || (value instanceof Optional && !((Optional<?>) value).isPresent())) {
@@ -798,15 +816,22 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		}
 	}
 
-	@Nullable
-	private Object readCollectionOrArray(String path, Class<?> collectionType, Class<?> valueType, Bucket bucket) {
+	@SuppressWarnings("NullAway")
+	private @Nullable Object readCollectionOrArray(String path, Class<?> collectionType, Class<?> valueType,
+			Bucket bucket) {
 
 		List<String> keys = new ArrayList<>(bucket.extractAllKeysFor(path));
 		keys.sort(listKeyComparator);
 
 		boolean isArray = collectionType.isArray();
 		Class<?> collectionTypeToUse = isArray ? ArrayList.class : collectionType;
-		Collection<Object> target = CollectionFactory.createCollection(collectionTypeToUse, valueType, keys.size());
+		Class<?> valueTypeToUse = valueType;
+
+		if (collectionTypeToUse == EnumSet.class) {
+			valueTypeToUse = findFirstElementType(bucket, keys, valueType);
+		}
+
+		Collection<Object> target = CollectionFactory.createCollection(collectionTypeToUse, valueTypeToUse, keys.size());
 
 		for (String key : keys) {
 
@@ -865,7 +890,8 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		}
 	}
 
-	private String mapMapKey(Object key) {
+	@SuppressWarnings("NullAway")
+	private @Nullable String mapMapKey(Object key) {
 
 		if (conversionService.canConvert(key.getClass(), byte[].class)) {
 			return new String(conversionService.convert(key, byte[].class));
@@ -882,8 +908,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	 * @param source
 	 * @return
 	 */
-	@Nullable
-	private Map<?, ?> readMapOfSimpleTypes(String path, Class<?> mapType, Class<?> keyType, Class<?> valueType,
+	private @Nullable Map<?, ?> readMapOfSimpleTypes(String path, Class<?> mapType, Class<?> keyType, Class<?> valueType,
 			ValkeyData source) {
 
 		Bucket partial = source.getBucket().extract(path + ".[");
@@ -912,8 +937,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	 * @param source
 	 * @return
 	 */
-	@Nullable
-	private Map<?, ?> readMapOfComplexTypes(String path, Class<?> mapType, Class<?> keyType, Class<?> valueType,
+	private @Nullable Map<?, ?> readMapOfComplexTypes(String path, Class<?> mapType, Class<?> keyType, Class<?> valueType,
 			ValkeyData source) {
 
 		Set<String> keys = source.getBucket().extractAllKeysFor(path);
@@ -936,8 +960,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		return target.isEmpty() ? null : target;
 	}
 
-	@Nullable
-	private Object extractMapKeyForPath(String path, String key, Class<?> targetType) {
+	private @Nullable Object extractMapKeyForPath(String path, String key, Class<?> targetType) {
 
 		String regex = "^(" + Pattern.quote(path) + "\\.\\[)(.*?)(\\])";
 		Pattern pattern = Pattern.compile(regex);
@@ -956,6 +979,17 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		return conversionService.convert(toBytes(mapKey), targetType);
 	}
 
+	private Class<?> findFirstElementType(Bucket bucket, List<String> keys, Class<?> fallbackType) {
+
+		Optional<String> firstElement = keys.stream().filter(typeMapper::isTypeKey)
+				.map(it -> it.substring(0, it.indexOf(']') + 1)).findFirst();
+		if (firstElement.isEmpty()) {
+			return fallbackType;
+		}
+
+		return getTypeHint(firstElement.get(), bucket, fallbackType);
+	}
+
 	private Class<?> getTypeHint(String path, Bucket bucket, Class<?> fallback) {
 
 		TypeInformation<?> typeInformation = typeMapper.readType(bucket.getPropertyPath(path),
@@ -970,7 +1004,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	 * @return
 	 * @throws ConverterNotFoundException
 	 */
-	public byte[] toBytes(Object source) {
+	public byte @Nullable [] toBytes(Object source) {
 
 		if (source instanceof byte[] bytes) {
 			return bytes;
@@ -987,7 +1021,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	 * @return
 	 * @throws ConverterNotFoundException
 	 */
-	public <T> T fromBytes(byte[] source, Class<T> type) {
+	public <T> @Nullable T fromBytes(byte[] source, Class<T> type) {
 
 		if (type.isInstance(source)) {
 			return type.cast(source);
@@ -1004,8 +1038,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 	 * @param valueType to be used for conversion before setting the actual value.
 	 * @return
 	 */
-	@Nullable
-	private Object toArray(Collection<Object> source, Class<?> arrayType, Class<?> valueType) {
+	private @Nullable Object toArray(Collection<Object> source, Class<?> arrayType, Class<?> valueType) {
 
 		if (source.isEmpty()) {
 			return null;
@@ -1099,7 +1132,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 		@Override
 		@SuppressWarnings("unchecked")
-		public <T> T getPropertyValue(ValkeyPersistentProperty property) {
+		public <T> @Nullable T getPropertyValue(ValkeyPersistentProperty property) {
 
 			Object value = readProperty(path, source, property);
 
@@ -1109,6 +1142,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 			return (T) conversionService.convert(value, property.getType());
 		}
+
 	}
 
 	private enum NaturalOrderingKeyComparator implements Comparator<String> {
@@ -1178,6 +1212,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 			}
 
 			@Override
+			@SuppressWarnings("NullAway")
 			public int compareTo(Part that) {
 
 				if (this.isNumeric() && that.isNumeric()) {
@@ -1186,7 +1221,9 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 
 				return this.rawValue.compareTo(that.rawValue);
 			}
+
 		}
+
 	}
 
 	/**
@@ -1267,6 +1304,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		public boolean isPhantomKey() {
 			return this.phantomKey;
 		}
+
 	}
 
 	/**
@@ -1302,7 +1340,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		 */
 		public static BinaryKeyspaceIdentifier of(byte[] key) {
 
-			Assert.isTrue(isValid(key), () -> "Invalid key %s".formatted(new String(key)));
+			Assert.isTrue(isValid(key), () -> "Invalid key %s".formatted(ByteUtils.toString(key)));
 
 			boolean phantomKey = ByteUtils.startsWith(key, PHANTOM_SUFFIX, key.length - PHANTOM_SUFFIX.length);
 
@@ -1367,5 +1405,7 @@ public class MappingValkeyConverter implements ValkeyConverter, InitializingBean
 		public boolean isPhantomKey() {
 			return this.phantomKey;
 		}
+
 	}
+
 }

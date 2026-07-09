@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import org.springframework.lang.Nullable;
 
 /**
  * Callback interface for Valkey 'low level' code. To be used with {@link ValkeyTemplate} execution methods, often as
@@ -27,7 +27,7 @@ import org.springframework.lang.Nullable;
  * @author Costin Leau
  * @author John Blum
  */
-public interface ValkeyCallback<T> {
+public interface ValkeyCallback<T extends @Nullable Object> {
 
 	/**
 	 * Method called by {@link ValkeyTemplate} with an active {@link ValkeyConnection}.
@@ -40,7 +40,6 @@ public interface ValkeyCallback<T> {
 	 * @throws DataAccessException if the operation performed by the callback fails to execute in the context of Valkey
 	 *           using the given {@link ValkeyConnection}.
 	 */
-	@Nullable
 	T doInValkey(ValkeyConnection connection) throws DataAccessException;
 
 }

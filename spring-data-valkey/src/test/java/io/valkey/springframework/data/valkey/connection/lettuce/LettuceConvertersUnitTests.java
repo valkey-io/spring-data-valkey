@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,34 +20,61 @@ import static io.valkey.springframework.data.valkey.connection.ClusterTestVariab
 import static io.valkey.springframework.data.valkey.connection.lettuce.LettuceCommandArgsComparator.*;
 import static org.springframework.test.util.ReflectionTestUtils.*;
 
+import io.lettuce.core.CompareCondition;
+import io.lettuce.core.CompositeArgument;
 import io.lettuce.core.GetExArgs;
 import io.lettuce.core.Limit;
+import io.lettuce.core.RedisCredentials;
 import io.lettuce.core.RedisURI;
-import io.lettuce.core.SetArgs;
+import io.lettuce.core.XAddArgs;
+import io.lettuce.core.XTrimArgs;
 import io.lettuce.core.cluster.models.partitions.Partitions;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode.NodeFlag;
+import io.lettuce.core.codec.RedisCodec;
+import io.lettuce.core.codec.StringCodec;
+import io.lettuce.core.protocol.CommandArgs;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.Flag;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.LinkState;
+import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamDeletionPolicy;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XDelOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XTrimOptions;
+import io.valkey.springframework.data.valkey.connection.SetCondition;
+import io.valkey.springframework.data.valkey.connection.stream.RecordId;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * Unit tests for {@link LettuceConverters}.
  *
  * @author Christoph Strobl
  * @author Vikas Garg
+ * @author Yordan Tsintsov
+ * @author Mark Paluch
  */
 class LettuceConvertersUnitTests {
 
@@ -56,19 +83,19 @@ class LettuceConvertersUnitTests {
 	private static final String MASTER_NAME = "mymaster";
 
 	@Test // DATAREDIS-268
-	void convertingEmptyStringToListOfValkeyClientInfoShouldReturnEmptyList() {
+	void convertingEmptyStringToListOfRedisClientInfoShouldReturnEmptyList() {
 		assertThat(LettuceConverters.toListOfValkeyClientInformation(""))
 				.isEqualTo(Collections.<ValkeyClientInfo> emptyList());
 	}
 
 	@Test // DATAREDIS-268
-	void convertingNullToListOfValkeyClientInfoShouldReturnEmptyList() {
+	void convertingNullToListOfRedisClientInfoShouldReturnEmptyList() {
 		assertThat(LettuceConverters.toListOfValkeyClientInformation(null))
 				.isEqualTo(Collections.<ValkeyClientInfo> emptyList());
 	}
 
 	@Test // DATAREDIS-268
-	void convertingMultipleLiesToListOfValkeyClientInfoReturnsListCorrectly() {
+	void convertingMultipleLiesToListOfRedisClientInfoReturnsListCorrectly() {
 
 		StringBuilder sb = new StringBuilder();
 		sb.append(CLIENT_ALL_SINGLE_LINE_RESPONSE);
@@ -107,97 +134,6 @@ class LettuceConvertersUnitTests {
 		assertThat(node.getId()).isEqualTo(CLUSTER_NODE_1.getId());
 		assertThat(node.getLinkState()).isEqualTo(LinkState.CONNECTED);
 		assertThat(node.getSlotRange().getSlots()).contains(1, 2, 3, 4, 5);
-	}
-
-	@Test // DATAREDIS-316
-	void toSetArgsShouldReturnEmptyArgsForNullValues() {
-
-		SetArgs args = LettuceConverters.toSetArgs(null, null);
-
-		assertThat(getField(args, "ex")).isNull();
-		assertThat(getField(args, "px")).isNull();
-		assertThat((Boolean) getField(args, "nx")).isEqualTo(Boolean.FALSE);
-		assertThat((Boolean) getField(args, "xx")).isEqualTo(Boolean.FALSE);
-	}
-
-	@Test // DATAREDIS-316
-	void toSetArgsShouldNotSetExOrPxForPersistent() {
-
-		SetArgs args = LettuceConverters.toSetArgs(Expiration.persistent(), null);
-
-		assertThat(getField(args, "ex")).isNull();
-		assertThat(getField(args, "px")).isNull();
-		assertThat((Boolean) getField(args, "nx")).isEqualTo(Boolean.FALSE);
-		assertThat((Boolean) getField(args, "xx")).isEqualTo(Boolean.FALSE);
-	}
-
-	@Test // DATAREDIS-316
-	void toSetArgsShouldSetExForSeconds() {
-
-		SetArgs args = LettuceConverters.toSetArgs(Expiration.seconds(10), null);
-
-		assertThat((Long) getField(args, "ex")).isEqualTo(10L);
-		assertThat(getField(args, "px")).isNull();
-		assertThat((Boolean) getField(args, "nx")).isEqualTo(Boolean.FALSE);
-		assertThat((Boolean) getField(args, "xx")).isEqualTo(Boolean.FALSE);
-	}
-
-	@Test // GH-2050
-	void convertsExpirationToSetPXAT() {
-
-		assertThatCommandArgument(LettuceConverters.toSetArgs(Expiration.unixTimestamp(10, TimeUnit.MILLISECONDS), null))
-				.isEqualTo(SetArgs.Builder.pxAt(10));
-	}
-
-	@Test // GH-2050
-	void convertsExpirationToSetEXAT() {
-
-		assertThatCommandArgument(LettuceConverters.toSetArgs(Expiration.unixTimestamp(1, TimeUnit.MINUTES), null))
-				.isEqualTo(SetArgs.Builder.exAt(60));
-	}
-
-	@Test // DATAREDIS-316
-	void toSetArgsShouldSetPxForMilliseconds() {
-
-		SetArgs args = LettuceConverters.toSetArgs(Expiration.milliseconds(100), null);
-
-		assertThat(getField(args, "ex")).isNull();
-		assertThat((Long) getField(args, "px")).isEqualTo(100L);
-		assertThat((Boolean) getField(args, "nx")).isEqualTo(Boolean.FALSE);
-		assertThat((Boolean) getField(args, "xx")).isEqualTo(Boolean.FALSE);
-	}
-
-	@Test // DATAREDIS-316
-	void toSetArgsShouldSetNxForAbsent() {
-
-		SetArgs args = LettuceConverters.toSetArgs(null, SetOption.ifAbsent());
-
-		assertThat(getField(args, "ex")).isNull();
-		assertThat(getField(args, "px")).isNull();
-		assertThat((Boolean) getField(args, "nx")).isEqualTo(Boolean.TRUE);
-		assertThat((Boolean) getField(args, "xx")).isEqualTo(Boolean.FALSE);
-	}
-
-	@Test // DATAREDIS-316
-	void toSetArgsShouldSetXxForPresent() {
-
-		SetArgs args = LettuceConverters.toSetArgs(null, SetOption.ifPresent());
-
-		assertThat(getField(args, "ex")).isNull();
-		assertThat(getField(args, "px")).isNull();
-		assertThat((Boolean) getField(args, "nx")).isEqualTo(Boolean.FALSE);
-		assertThat((Boolean) getField(args, "xx")).isEqualTo(Boolean.TRUE);
-	}
-
-	@Test // DATAREDIS-316
-	void toSetArgsShouldNotSetNxOrXxForUpsert() {
-
-		SetArgs args = LettuceConverters.toSetArgs(null, SetOption.upsert());
-
-		assertThat(getField(args, "ex")).isNull();
-		assertThat(getField(args, "px")).isNull();
-		assertThat((Boolean) getField(args, "nx")).isEqualTo(Boolean.FALSE);
-		assertThat((Boolean) getField(args, "xx")).isEqualTo(Boolean.FALSE);
 	}
 
 	@Test // DATAREDIS-981
@@ -257,76 +193,513 @@ class LettuceConvertersUnitTests {
 				.isEqualTo(new GetExArgs().pxAt(10));
 	}
 
-	@Test // GH-2218
-	void sentinelConfigurationWithAuth() {
+	@Nested // GH-2218
+	class SentinelConfigurationToRedisUriShould {
 
-		ValkeyPassword dataPassword = ValkeyPassword.of("data-secret");
-		ValkeyPassword sentinelPassword = ValkeyPassword.of("sentinel-secret");
+		@Test
+		void shouldSetAuthAsExpected() {
 
-		ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration()
-				.master(MASTER_NAME)
-				.sentinel("127.0.0.1", 26379)
-				.sentinel("127.0.0.1", 26380);
-		sentinelConfiguration.setUsername("app");
-		sentinelConfiguration.setPassword(dataPassword);
+			ValkeyPassword dataPassword = ValkeyPassword.of("data-secret");
+			ValkeyPassword sentinelPassword = ValkeyPassword.of("sentinel-secret");
 
-		sentinelConfiguration.setSentinelUsername("admin");
-		sentinelConfiguration.setSentinelPassword(sentinelPassword);
+			ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration().master(MASTER_NAME)
+					.sentinel("127.0.0.1", 26379).sentinel("127.0.0.1", 26380);
+			sentinelConfiguration.setUsername("app");
+			sentinelConfiguration.setPassword(dataPassword);
+			sentinelConfiguration.setSentinelUsername("admin");
+			sentinelConfiguration.setSentinelPassword(sentinelPassword);
 
-		RedisURI redisURI = LettuceConverters.sentinelConfigurationToValkeyURI(sentinelConfiguration);
+			assertCredentialsSetAsExpected(LettuceConverters.sentinelConfigurationToRedisURI(sentinelConfiguration), "app",
+					dataPassword.get(), "admin", sentinelPassword.get());
+		}
 
-		assertThat(redisURI.getUsername()).isEqualTo("app");
-		assertThat(redisURI.getPassword()).isEqualTo(dataPassword.get());
+		@Test
+		void setSentinelPasswordIfUsernameNotPresent() {
 
-		redisURI.getSentinels().forEach(sentinel -> {
-			assertThat(sentinel.getUsername()).isEqualTo("admin");
-			assertThat(sentinel.getPassword()).isEqualTo(sentinelPassword.get());
-		});
+			ValkeyPassword password = ValkeyPassword.of("88888888-8x8-getting-creative-now");
+
+			ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration().master(MASTER_NAME)
+					.sentinel("127.0.0.1", 26379).sentinel("127.0.0.1", 26380);
+			sentinelConfiguration.setUsername("app");
+			sentinelConfiguration.setPassword(password);
+			sentinelConfiguration.setSentinelPassword(password);
+
+			assertCredentialsSetAsExpected(LettuceConverters.sentinelConfigurationToRedisURI(sentinelConfiguration), "app",
+					password.get(), null, password.get());
+		}
+
+		@Test
+		void notSetSentinelAuthIfUsernameIsPresentWithNoPassword() {
+
+			ValkeyPassword password = ValkeyPassword.of("88888888-8x8-getting-creative-now");
+
+			ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration().master(MASTER_NAME)
+					.sentinel("127.0.0.1", 26379).sentinel("127.0.0.1", 26380);
+			sentinelConfiguration.setUsername("app");
+			sentinelConfiguration.setSentinelUsername("admin");
+			sentinelConfiguration.setPassword(password);
+
+			RedisURI redisURI = LettuceConverters.sentinelConfigurationToRedisURI(sentinelConfiguration);
+			RedisCredentials credentials = redisURI.getCredentialsProvider().resolveCredentials().block();
+			Assertions.assertNotNull(credentials);
+			assertThat(credentials.getUsername()).isEqualTo("app");
+
+			redisURI.getSentinels().forEach(sentinel -> {
+				RedisCredentials sentinelCredentials = sentinel.getCredentialsProvider().resolveCredentials().block();
+				Assertions.assertNotNull(sentinelCredentials);
+				assertThat(sentinelCredentials.getUsername()).isNull();
+				assertThat(sentinelCredentials.getPassword()).isNull();
+			});
+
+			assertCredentialsSetAsExpected(LettuceConverters.sentinelConfigurationToRedisURI(sentinelConfiguration), "app",
+					password.get(), null, null);
+		}
+
+		private void assertCredentialsSetAsExpected(RedisURI redisURI, String expectedRedisUser,
+				char[] expectedRedisPassword, String expectedSentinelUser, char[] expectedSentinelPassword) {
+
+			RedisCredentials redisCredentials = redisURI.getCredentialsProvider().resolveCredentials().block();
+			assertThat(redisCredentials).extracting(RedisCredentials::getUsername, RedisCredentials::getPassword)
+					.containsExactly(expectedRedisUser, expectedRedisPassword);
+
+			redisURI.getSentinels().forEach(sentinel -> {
+				RedisCredentials sentinelCredentials = sentinel.getCredentialsProvider().resolveCredentials().block();
+				assertThat(sentinelCredentials).extracting(RedisCredentials::getUsername, RedisCredentials::getPassword)
+						.containsExactly(expectedSentinelUser, expectedSentinelPassword);
+			});
+		}
 	}
 
-	@Test // GH-2218
-	void sentinelConfigurationSetSentinelPasswordIfUsernameNotPresent() {
+	@Nested // GH-3211
+	class ToHGetExArgsShould {
 
-		ValkeyPassword password = ValkeyPassword.of("88888888-8x8-getting-creative-now");
+		@Test
+		void notSetAnyFieldsForNullExpiration() {
 
-		ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration()
-				.master(MASTER_NAME)
-				.sentinel("127.0.0.1", 26379)
-				.sentinel("127.0.0.1", 26380);
-		sentinelConfiguration.setUsername("app");
-		sentinelConfiguration.setPassword(password);
-		sentinelConfiguration.setSentinelPassword(password);
+			assertThat(LettuceConverters.toHGetExArgs(null)).extracting("ex", "exAt", "px", "pxAt", "persist")
+					.containsExactly(null, null, null, null, Boolean.FALSE);
+		}
 
-		RedisURI redisURI = LettuceConverters.sentinelConfigurationToValkeyURI(sentinelConfiguration);
+		@Test
+		void setPersistForNonExpiringExpiration() {
 
-		assertThat(redisURI.getUsername()).isEqualTo("app");
+			assertThat(LettuceConverters.toHGetExArgs(Expiration.persistent())).extracting("persist").isEqualTo(Boolean.TRUE);
+		}
 
-		redisURI.getSentinels().forEach(sentinel -> {
- 			assertThat(sentinel.getUsername()).isNull();
-			assertThat(sentinel.getPassword()).isNotNull();
-		});
+		@Test
+		void setPxForExpirationWithMillisTimeUnit() {
+
+			assertThat(LettuceConverters.toHGetExArgs(Expiration.from(30_000, TimeUnit.MILLISECONDS))).extracting("px")
+					.isEqualTo(30_000L);
+		}
+
+		@Test
+		void setPxAtForExpirationWithMillisUnixTimestamp() {
+
+			long fourHoursFromNowMillis = Instant.now().plus(4L, ChronoUnit.HOURS).toEpochMilli();
+			assertThat(
+					LettuceConverters.toHGetExArgs(Expiration.unixTimestamp(fourHoursFromNowMillis, TimeUnit.MILLISECONDS)))
+					.extracting("pxAt").isEqualTo(fourHoursFromNowMillis);
+		}
+
+		@Test
+		void setExForExpirationWithNonMillisTimeUnit() {
+
+			assertThat(LettuceConverters.toHGetExArgs(Expiration.from(30, TimeUnit.SECONDS))).extracting("ex").isEqualTo(30L);
+		}
+
+		@Test
+		void setExAtForExpirationWithNonMillisUnixTimestamp() {
+
+			long fourHoursFromNowSecs = Instant.now().plus(4L, ChronoUnit.HOURS).getEpochSecond();
+			assertThat(LettuceConverters.toHGetExArgs(Expiration.unixTimestamp(fourHoursFromNowSecs, TimeUnit.SECONDS)))
+					.extracting("exAt").isEqualTo(fourHoursFromNowSecs);
+		}
 	}
 
-	@Test // GH-2218
-	void sentinelConfigurationShouldNotSetSentinelAuthIfUsernameIsPresentWithNoPassword() {
+	@Nested
+	class ToHSetExArgsShould {
 
-		ValkeyPassword password = ValkeyPassword.of("88888888-8x8-getting-creative-now");
+		@Test
+		void setFnxForNoneExistCondition() {
 
-		ValkeySentinelConfiguration sentinelConfiguration = new ValkeySentinelConfiguration()
-				.master(MASTER_NAME)
-				.sentinel("127.0.0.1", 26379)
-				.sentinel("127.0.0.1", 26380);
-		sentinelConfiguration.setUsername("app");
-		sentinelConfiguration.setPassword(password);
-		sentinelConfiguration.setSentinelUsername("admin");
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.IF_NONE_EXIST, null))
+					.extracting("fnx").isEqualTo(Boolean.TRUE);
+		}
 
-		RedisURI redisURI = LettuceConverters.sentinelConfigurationToValkeyURI(sentinelConfiguration);
+		@Test
+		void setFxxForAllExistCondition() {
 
-		assertThat(redisURI.getUsername()).isEqualTo("app");
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.IF_ALL_EXIST, null))
+					.extracting("fxx").isEqualTo(Boolean.TRUE);
+		}
 
-		redisURI.getSentinels().forEach(sentinel -> {
-			assertThat(sentinel.getUsername()).isNull();
-			assertThat(sentinel.getPassword()).isNull();
-		});
+		@Test
+		void notSetFnxNorFxxForUpsertCondition() {
+
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.UPSERT, null))
+					.extracting("fnx", "fxx").containsExactly(Boolean.FALSE, Boolean.FALSE);
+		}
+
+		@Test
+		void notSetAnyTimeFieldsForNullExpiration() {
+
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.UPSERT, null))
+					.extracting("ex", "exAt", "px", "pxAt").containsExactly(null, null, null, null);
+		}
+
+		@Test
+		void notSetAnyTimeFieldsForNonExpiringExpiration() {
+
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.UPSERT, Expiration.persistent()))
+					.extracting("ex", "exAt", "px", "pxAt").containsExactly(null, null, null, null);
+		}
+
+		@Test
+		void setKeepTtlForKeepTtlExpiration() {
+
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.UPSERT, Expiration.keepTtl()))
+					.extracting("keepttl").isEqualTo(Boolean.TRUE);
+		}
+
+		@Test
+		void setPxForExpirationWithMillisTimeUnit() {
+
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.UPSERT,
+					Expiration.from(30_000, TimeUnit.MILLISECONDS))).extracting("px").isEqualTo(30_000L);
+		}
+
+		@Test
+		void setPxAtForExpirationWithMillisUnixTimestamp() {
+
+			long fourHoursFromNowMillis = Instant.now().plus(4L, ChronoUnit.HOURS).toEpochMilli();
+			Expiration expiration = Expiration.unixTimestamp(fourHoursFromNowMillis, TimeUnit.MILLISECONDS);
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.UPSERT, expiration))
+					.extracting("pxAt").isEqualTo(fourHoursFromNowMillis);
+		}
+
+		@Test
+		void setExForExpirationWithNonMillisTimeUnit() {
+
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.UPSERT,
+					Expiration.from(30, TimeUnit.SECONDS))).extracting("ex").isEqualTo(30L);
+		}
+
+		@Test
+		void setExAtForExpirationWithNonMillisUnixTimestamp() {
+
+			long fourHoursFromNowSecs = Instant.now().plus(4L, ChronoUnit.HOURS).getEpochSecond();
+			Expiration expiration = Expiration.unixTimestamp(fourHoursFromNowSecs, TimeUnit.SECONDS);
+			assertThat(LettuceConverters.toHSetExArgs(ValkeyHashCommands.HashFieldSetOption.UPSERT, expiration))
+					.extracting("exAt").isEqualTo(fourHoursFromNowSecs);
+		}
 	}
+
+	@Nested // GH-3232
+	class ToXAddArgsShould {
+
+		@Test
+		void convertXAddOptionsWithMaxlen() {
+
+			RecordId recordId = RecordId.autoGenerate();
+			XAddOptions options = XAddOptions.maxlen(100);
+
+			XAddArgs args = StreamConverters.toXAddArgs(recordId, options);
+
+			assertThat(args).extracting("maxlen").isEqualTo(100L);
+		}
+
+		@Test
+		void convertXAddOptionsWithMinId() {
+
+			RecordId recordId = RecordId.autoGenerate();
+			XAddOptions options = XAddOptions.trim(TrimOptions.minId(RecordId.of("1234567890-0")));
+
+			XAddArgs args = StreamConverters.toXAddArgs(recordId, options);
+
+			assertThat(getField(args, "minid")).isEqualTo("1234567890-0");
+		}
+
+		@Test
+		void convertXAddOptionsWithApproximateTrimming() {
+
+			RecordId recordId = RecordId.autoGenerate();
+			XAddOptions options = XAddOptions.maxlen(100).approximateTrimming(true);
+
+			XAddArgs args = StreamConverters.toXAddArgs(recordId, options);
+
+			assertThat(args).extracting("approximateTrimming").isEqualTo(true);
+		}
+
+		@Test
+		void convertXAddOptionsWithExactTrimming() {
+
+			RecordId recordId = RecordId.autoGenerate();
+			XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(100).exact());
+
+			XAddArgs args = StreamConverters.toXAddArgs(recordId, options);
+
+			assertThat(args).extracting("exactTrimming").isEqualTo(true);
+		}
+
+		@Test
+		void convertXAddOptionsWithLimit() {
+
+			RecordId recordId = RecordId.autoGenerate();
+			XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(100).approximate().limit(50));
+
+			XAddArgs args = StreamConverters.toXAddArgs(recordId, options);
+
+			assertThat(args).extracting("limit").isEqualTo(50L);
+		}
+
+		@Test
+		void convertXAddOptionsWithDeletionPolicy() {
+
+			RecordId recordId = RecordId.autoGenerate();
+			XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(100).deletionPolicy(StreamDeletionPolicy.keep()));
+
+			XAddArgs args = StreamConverters.toXAddArgs(recordId, options);
+
+			assertThat(args).extracting("trimmingMode").isEqualTo(io.lettuce.core.StreamDeletionPolicy.KEEP_REFERENCES);
+		}
+
+		@Test
+		void convertXAddOptionsWithRecordId() {
+
+			RecordId recordId = RecordId.of("1234567890-0");
+			XAddOptions options = XAddOptions.none();
+
+			XAddArgs args = StreamConverters.toXAddArgs(recordId, options);
+
+			assertThat(getField(args, "id")).isEqualTo("1234567890-0");
+		}
+	}
+
+	@Nested // GH-3232
+	class ToXTrimArgsShould {
+
+		@Test
+		void convertXTrimOptionsWithMaxlen() {
+
+			XTrimOptions options = XTrimOptions.trim(TrimOptions.maxLen(100));
+
+			XTrimArgs args = StreamConverters.toXTrimArgs(options);
+
+			assertThat(args).extracting("maxlen").isEqualTo(100L);
+		}
+
+		@Test
+		void convertXTrimOptionsWithMinId() {
+
+			XTrimOptions options = XTrimOptions.trim(TrimOptions.minId(RecordId.of("1234567890-0")));
+
+			XTrimArgs args = StreamConverters.toXTrimArgs(options);
+
+			assertThat(getField(args, "minId")).isEqualTo("1234567890-0");
+		}
+
+		@Test
+		void convertXTrimOptionsWithApproximateTrimming() {
+
+			XTrimOptions options = XTrimOptions.trim(TrimOptions.maxLen(100).approximate());
+
+			XTrimArgs args = StreamConverters.toXTrimArgs(options);
+
+			assertThat(args).extracting("approximateTrimming").isEqualTo(true);
+		}
+
+		@Test
+		void convertXTrimOptionsWithExactTrimming() {
+
+			XTrimOptions options = XTrimOptions.trim(TrimOptions.maxLen(100).exact());
+
+			XTrimArgs args = StreamConverters.toXTrimArgs(options);
+
+			assertThat(args).extracting("exactTrimming").isEqualTo(true);
+		}
+
+		@Test
+		void convertXTrimOptionsWithLimit() {
+
+			XTrimOptions options = XTrimOptions.trim(TrimOptions.maxLen(100).approximate().limit(50));
+
+			XTrimArgs args = StreamConverters.toXTrimArgs(options);
+
+			assertThat(args).extracting("limit").isEqualTo(50L);
+		}
+
+		@Test
+		void convertXTrimOptionsWithDeletionPolicy() {
+
+			XTrimOptions options = XTrimOptions.trim(TrimOptions.maxLen(100).deletionPolicy(StreamDeletionPolicy.keep()));
+
+			XTrimArgs args = StreamConverters.toXTrimArgs(options);
+
+			assertThat(args).extracting("trimmingMode").isEqualTo(io.lettuce.core.StreamDeletionPolicy.KEEP_REFERENCES);
+		}
+	}
+
+	@Nested // GH-3232
+	class ToXDelArgsShould {
+
+		@Test
+		void convertDefaultOptions() {
+
+			XDelOptions options = XDelOptions.defaults();
+
+			io.lettuce.core.StreamDeletionPolicy policy = StreamConverters.toXDelArgs(options);
+
+			assertThat(policy).isEqualTo(io.lettuce.core.StreamDeletionPolicy.KEEP_REFERENCES);
+		}
+
+		@Test
+		void convertKeepReferencesPolicy() {
+
+			XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.keep());
+
+			io.lettuce.core.StreamDeletionPolicy policy = StreamConverters.toXDelArgs(options);
+
+			assertThat(policy).isEqualTo(io.lettuce.core.StreamDeletionPolicy.KEEP_REFERENCES);
+		}
+
+		@Test
+		void convertDeleteReferencesPolicy() {
+
+			XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.delete());
+
+			io.lettuce.core.StreamDeletionPolicy policy = StreamConverters.toXDelArgs(options);
+
+			assertThat(policy).isEqualTo(io.lettuce.core.StreamDeletionPolicy.DELETE_REFERENCES);
+		}
+
+		@Test
+		void convertAcknowledgedPolicy() {
+
+			XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.removeAcknowledged());
+
+			io.lettuce.core.StreamDeletionPolicy policy = StreamConverters.toXDelArgs(options);
+
+			assertThat(policy).isEqualTo(io.lettuce.core.StreamDeletionPolicy.ACKNOWLEDGED);
+		}
+	}
+
+	@Test // GH-3318
+	void convertCompareConditionIfValue() {
+
+		byte[] value = "foo".getBytes();
+		CompareCondition<byte[]> condition = LettuceConverters
+				.toCompareCondition(io.valkey.springframework.data.valkey.connection.CompareCondition.ifEquals(value));
+
+		assertThat(condition.getCondition()).isEqualTo(CompareCondition.Condition.VALUE_EQUAL);
+		assertThat(condition.getValue()).isSameAs(value);
+
+		condition = LettuceConverters
+				.toCompareCondition(io.valkey.springframework.data.valkey.connection.CompareCondition.ifNotEquals(value));
+
+		assertThat(condition.getCondition()).isEqualTo(CompareCondition.Condition.VALUE_NOT_EQUAL);
+		assertThat(condition.getValue()).isSameAs(value);
+	}
+
+	@Test // GH-3318
+	void convertCompareConditionIfDigest() {
+
+		CompareCondition<byte[]> condition = LettuceConverters
+				.toCompareCondition(io.valkey.springframework.data.valkey.connection.CompareCondition.ifDigestEquals("aabbcc"));
+
+		assertThat(condition.getCondition()).isEqualTo(CompareCondition.Condition.DIGEST_EQUAL);
+		assertThat(condition.getDigest()).isEqualTo("aabbcc");
+
+		condition = LettuceConverters
+				.toCompareCondition(io.valkey.springframework.data.valkey.connection.CompareCondition.ifDigestNotEquals("aabbcc"));
+
+		assertThat(condition.getCondition()).isEqualTo(CompareCondition.Condition.DIGEST_NOT_EQUAL);
+		assertThat(condition.getDigest()).isEqualTo("aabbcc");
+	}
+
+	@Test // GH-3304
+	void convertToEmptySetParams() {
+		verifyArguments(LettuceConverters.toSetArgs(Expiration.persistent(), SetCondition.upsert()),
+				(arguments, commandString) -> {
+					assertThat(arguments).isEmpty();
+				});
+	}
+
+	@Test // GH-3304
+	void considersSetCondition() {
+
+		verifyArguments(LettuceConverters.toSetArgs(Expiration.persistent(), SetCondition.ifAbsent()), (arguments) -> {
+			assertThat(arguments).containsOnly("NX");
+		});
+
+		verifyArguments(LettuceConverters.toSetArgs(Expiration.persistent(), SetCondition.ifPresent()), (arguments) -> {
+			assertThat(arguments).containsOnly("XX");
+		});
+
+		verifyArguments(LettuceConverters.toSetArgs(Expiration.persistent(),
+				SetCondition.ifEquals("foo".getBytes(StandardCharsets.UTF_8))), (arguments) -> {
+					assertThat(arguments).containsExactly("IFEQ", "value<foo>");
+				});
+		verifyArguments(LettuceConverters.toSetArgs(Expiration.persistent(),
+				SetCondition.ifNotEquals("foo".getBytes(StandardCharsets.UTF_8))), (arguments) -> {
+					assertThat(arguments).containsExactly("IFNE", "value<foo>");
+				});
+		verifyArguments(LettuceConverters.toSetArgs(Expiration.persistent(), SetCondition.ifDigestEquals("foo")),
+				(arguments) -> {
+					assertThat(arguments).containsExactly("IFDEQ", "foo");
+				});
+		verifyArguments(LettuceConverters.toSetArgs(Expiration.persistent(), SetCondition.ifDigestNotEquals("foo")),
+				(arguments) -> {
+					assertThat(arguments).containsExactly("IFDNE", "foo");
+				});
+	}
+
+	static void verifyArguments(CompositeArgument argument, Consumer<List<String>> assertion) {
+		verifyArguments(argument, (arguments, commandString) -> assertion.accept(arguments));
+	}
+
+	static void verifyArguments(CompositeArgument argument, BiConsumer<List<String>, String> assertion) {
+
+		RedisCodec<Object, Object> codec = new RedisCodec<>() {
+			@Override
+			public Object decodeKey(ByteBuffer bytes) {
+				return null;
+			}
+
+			@Override
+			public Object decodeValue(ByteBuffer bytes) {
+				return null;
+			}
+
+			@Override
+			public ByteBuffer encodeKey(Object key) {
+
+				if (key instanceof byte[] bs) {
+					key = new String(bs);
+				}
+
+				return StringCodec.UTF8.encodeKey(key.toString());
+			}
+
+			@Override
+			public ByteBuffer encodeValue(Object value) {
+				return encodeKey(value);
+			}
+		};
+
+		CommandArgs<Object, Object> args = new CommandArgs<>(codec);
+		argument.build(args);
+
+		List<Object> arguments = (List) ReflectionTestUtils.getField(args, "singularArguments");
+
+		List<String> argumentsList = new ArrayList<>();
+		for (Object o : arguments) {
+			argumentsList.add(o.toString());
+		}
+
+		String commandString = args.toCommandString();
+
+		assertion.accept(argumentsList, commandString);
+	}
+
 }

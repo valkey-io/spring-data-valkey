@@ -1,6 +1,5 @@
 /**
  * Abstractions for Valkey secondary indexes.
  */
-@org.springframework.lang.NonNullApi
-@org.springframework.lang.NonNullFields
+@org.jspecify.annotations.NullMarked
 package io.valkey.springframework.data.valkey.core.index;

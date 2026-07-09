@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,15 @@
  */
 package io.valkey.springframework.data.valkey.core.mapping;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.data.annotation.Id;
+import org.springframework.data.core.TypeInformation;
 import org.springframework.data.keyvalue.core.mapping.BasicKeyValuePersistentEntity;
 import org.springframework.data.keyvalue.core.mapping.KeySpaceResolver;
 import org.springframework.data.mapping.MappingException;
 import io.valkey.springframework.data.valkey.core.TimeToLive;
 import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
-import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -58,14 +59,13 @@ public class BasicValkeyPersistentEntity<T> extends BasicKeyValuePersistentEntit
 	}
 
 	@Override
-	@Nullable
-	public ValkeyPersistentProperty getExplicitTimeToLiveProperty() {
+	public @Nullable ValkeyPersistentProperty getExplicitTimeToLiveProperty() {
 		return this.getPersistentProperty(TimeToLive.class);
 	}
 
 	@Override
-	@Nullable
-	protected ValkeyPersistentProperty returnPropertyIfBetterIdPropertyCandidateOrNull(ValkeyPersistentProperty property) {
+	protected @Nullable ValkeyPersistentProperty returnPropertyIfBetterIdPropertyCandidateOrNull(
+			ValkeyPersistentProperty property) {
 
 		Assert.notNull(property, "Property must not be null");
 
@@ -74,9 +74,8 @@ public class BasicValkeyPersistentEntity<T> extends BasicKeyValuePersistentEntit
 		}
 
 		ValkeyPersistentProperty currentIdProperty = getIdProperty();
-		boolean currentIdPropertyIsSet = currentIdProperty != null;
 
-		if (!currentIdPropertyIsSet) {
+		if (currentIdProperty == null) {
 			return property;
 		}
 
@@ -100,4 +99,5 @@ public class BasicValkeyPersistentEntity<T> extends BasicKeyValuePersistentEntit
 
 		return null;
 	}
+
 }

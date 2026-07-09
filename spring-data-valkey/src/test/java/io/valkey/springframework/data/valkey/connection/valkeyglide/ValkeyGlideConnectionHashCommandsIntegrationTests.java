@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
@@ -57,7 +59,9 @@ public class ValkeyGlideConnectionHashCommandsIntegrationTests extends AbstractV
             "test:hash:exists", "test:hash:structure", "test:hash:random", "test:hash:randomwithvals",
             "test:hash:scan", "test:hash:strlen", "test:hash:expire", "test:hash:expireat",
             "test:hash:persist", "test:hash:ttl", "test:hash:error:string", "test:hash:empty",
-            "test:hash:binary", "non:existent:key"
+            "test:hash:binary", "non:existent:key",
+            "test:hash:hgetdel", "test:hash:hgetex", "test:hash:hsetex",
+            "test:hash:hsetex:nx", "test:hash:hsetex:nxfail"
         };
     }
 
@@ -1754,6 +1758,172 @@ public class ValkeyGlideConnectionHashCommandsIntegrationTests extends AbstractV
                 .hasMessageContaining("transaction");
             connection.discard();
             
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    // ==================== HGETDEL / HGETEX / HSETEX Tests ====================
+
+    @Test
+    @EnabledOnCommand("HGETDEL")
+    void testHGetDel() {
+        String key = "test:hash:hgetdel";
+        byte[] keyBytes = key.getBytes();
+        byte[] field1 = "field1".getBytes();
+        byte[] field2 = "field2".getBytes();
+        byte[] field3 = "field3".getBytes();
+        byte[] value1 = "value1".getBytes();
+        byte[] value2 = "value2".getBytes();
+        byte[] value3 = "value3".getBytes();
+
+        try {
+            // Set up test data
+            connection.hashCommands().hSet(keyBytes, field1, value1);
+            connection.hashCommands().hSet(keyBytes, field2, value2);
+            connection.hashCommands().hSet(keyBytes, field3, value3);
+
+            // Test hGetDel on non-existent field - should return list with null
+            List<byte[]> absentResult = connection.hashCommands().hGetDel(keyBytes, "absent".getBytes());
+            assertThat(absentResult).hasSize(1);
+            assertThat(absentResult.get(0)).isNull();
+
+            // Test hGetDel on existing fields - should return values and delete fields
+            List<byte[]> result = connection.hashCommands().hGetDel(keyBytes, field1, field2);
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0)).isEqualTo(value1);
+            assertThat(result.get(1)).isEqualTo(value2);
+
+            // Verify fields were deleted
+            assertThat(connection.hashCommands().hExists(keyBytes, field1)).isFalse();
+            assertThat(connection.hashCommands().hExists(keyBytes, field2)).isFalse();
+            // field3 should still exist
+            assertThat(connection.hashCommands().hExists(keyBytes, field3)).isTrue();
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("HGETEX")
+    void testHGetEx() {
+        String key = "test:hash:hgetex";
+        byte[] keyBytes = key.getBytes();
+        byte[] field1 = "field1".getBytes();
+        byte[] field2 = "field2".getBytes();
+        byte[] field3 = "field3".getBytes();
+        byte[] value1 = "value1".getBytes();
+        byte[] value2 = "value2".getBytes();
+        byte[] value3 = "value3".getBytes();
+
+        try {
+            // Set up test data
+            connection.hashCommands().hSet(keyBytes, field1, value1);
+            connection.hashCommands().hSet(keyBytes, field2, value2);
+            connection.hashCommands().hSet(keyBytes, field3, value3);
+
+            // Test hGetEx with expiration - should return values and set TTL
+            List<byte[]> result = connection.hashCommands().hGetEx(keyBytes, Expiration.seconds(30), field1, field2);
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0)).isEqualTo(value1);
+            assertThat(result.get(1)).isEqualTo(value2);
+
+            // Test hGetEx on non-existent field - should return list with null
+            List<byte[]> noFieldResult = connection.hashCommands().hGetEx(keyBytes, null, "no-such-field".getBytes());
+            assertThat(noFieldResult).hasSize(1);
+            assertThat(noFieldResult.get(0)).isNull();
+
+            // Test hGetEx on non-existent key - should return list with null
+            List<byte[]> noKeyResult = connection.hashCommands().hGetEx("no-such-key".getBytes(), null, field1);
+            assertThat(noKeyResult).hasSize(1);
+            assertThat(noKeyResult.get(0)).isNull();
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("HSETEX")
+    void testHSetEx() {
+        String key = "test:hash:hsetex";
+        byte[] keyBytes = key.getBytes();
+        byte[] field1 = "field1".getBytes();
+        byte[] field2 = "field2".getBytes();
+        byte[] value1 = "value1".getBytes();
+        byte[] value2 = "value2".getBytes();
+
+        try {
+            // Test hSetEx with upsert and expiration
+            Map<byte[], byte[]> fieldMap = new HashMap<>();
+            fieldMap.put(field1, value1);
+            fieldMap.put(field2, value2);
+
+            Boolean result = connection.hashCommands().hSetEx(keyBytes, fieldMap,
+                    ValkeyHashCommands.HashFieldSetOption.upsert(), Expiration.seconds(30));
+            assertThat(result).isTrue();
+
+            // Verify values were set
+            assertThat(connection.hashCommands().hGet(keyBytes, field1)).isEqualTo(value1);
+            assertThat(connection.hashCommands().hGet(keyBytes, field2)).isEqualTo(value2);
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("HSETEX")
+    void testHSetExIfNoneExistSucceeds() {
+        String key = "test:hash:hsetex:nx";
+        byte[] keyBytes = key.getBytes();
+        byte[] field1 = "field1".getBytes();
+        byte[] field2 = "field2".getBytes();
+        byte[] value1 = "value1".getBytes();
+        byte[] value2 = "value2".getBytes();
+
+        try {
+            // Test hSetEx with ifNoneExist when no fields exist - should succeed
+            Map<byte[], byte[]> fieldMap = new HashMap<>();
+            fieldMap.put(field1, value1);
+            fieldMap.put(field2, value2);
+
+            Boolean result = connection.hashCommands().hSetEx(keyBytes, fieldMap,
+                    ValkeyHashCommands.HashFieldSetOption.ifNoneExist(), Expiration.seconds(60));
+            assertThat(result).isTrue();
+
+            // Verify values were set
+            assertThat(connection.hashCommands().hGet(keyBytes, field1)).isEqualTo(value1);
+            assertThat(connection.hashCommands().hGet(keyBytes, field2)).isEqualTo(value2);
+        } finally {
+            cleanupKey(key);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("HSETEX")
+    void testHSetExIfNoneExistFailsWhenFieldsExist() {
+        String key = "test:hash:hsetex:nxfail";
+        byte[] keyBytes = key.getBytes();
+        byte[] field1 = "field1".getBytes();
+        byte[] field2 = "field2".getBytes();
+        byte[] existingValue = "existing-value".getBytes();
+        byte[] newValue = "new-value".getBytes();
+        byte[] value2 = "value2".getBytes();
+
+        try {
+            // Pre-set field1
+            connection.hashCommands().hSet(keyBytes, field1, existingValue);
+
+            // Try hSetEx with ifNoneExist when field1 already exists
+            Map<byte[], byte[]> fieldMap = new HashMap<>();
+            fieldMap.put(field1, newValue);
+            fieldMap.put(field2, value2);
+
+            Boolean result = connection.hashCommands().hSetEx(keyBytes, fieldMap,
+                    ValkeyHashCommands.HashFieldSetOption.ifNoneExist(), Expiration.seconds(60));
+            // The operation should not overwrite existing field1
+            assertThat(connection.hashCommands().hGet(keyBytes, field1)).isEqualTo(existingValue);
+            // field2 should not exist either (all-or-nothing with FNX depends on server behavior)
+            // Server may or may not set field2 - just verify field1 was not overwritten
         } finally {
             cleanupKey(key);
         }

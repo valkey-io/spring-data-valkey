@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
@@ -39,18 +42,17 @@ import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * @author Mark Paluch
  * @author Christoph Strobl
  */
+@ParameterizedClass
 @MethodSource("params")
 public class ScanTests {
 
 	private ValkeyConnectionFactory factory;
-	private ValkeyTemplate<String, String> valkeyOperations;
+	private ValkeyTemplate<String, String> redisOperations;
 
 	private ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 10, 1, TimeUnit.MINUTES,
 			new LinkedBlockingDeque<>());
@@ -77,14 +79,14 @@ public class ScanTests {
 	@BeforeEach
 	void setUp() {
 
-		valkeyOperations = new StringValkeyTemplate(factory);
-		valkeyOperations.afterPropertiesSet();
+		redisOperations = new StringValkeyTemplate(factory);
+		redisOperations.afterPropertiesSet();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void contextLoads() throws InterruptedException {
 
-		BoundHashOperations<String, String, String> hash = valkeyOperations.boundHashOps("hash");
+		BoundHashOperations<String, String, String> hash = redisOperations.boundHashOps("hash");
 		final AtomicReference<Exception> exception = new AtomicReference<>();
 
 		// Create some keys so that SCAN requires a while to return all data.
@@ -98,7 +100,7 @@ public class ScanTests {
 			executor.submit(() -> {
 				try {
 
-					Cursor<Entry<Object, Object>> cursorMap = valkeyOperations.boundHashOps("hash")
+					Cursor<Entry<Object, Object>> cursorMap = redisOperations.boundHashOps("hash")
 							.scan(ScanOptions.scanOptions().match("*").count(100).build());
 
 					// This line invokes the lazy SCAN invocation

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,16 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.WithDatabaseIndex;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.WithHostAndPort;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.WithPassword;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
- * Configuration class used to set up a {@link ValkeyConnection} with {@link ValkeyConnectionFactory} for connecting
- * to a single node <a href="https://valkey.io/">Valkey</a> instance.
+ * Configuration class used to set up a {@link ValkeyConnection} with {@link ValkeyConnectionFactory} for connecting to a
+ * single node <a href="https://valkey.io/">Valkey</a> instance.
  *
  * @author Mark Paluch
  * @author Christoph Strobl
@@ -47,12 +47,12 @@ public class ValkeyStandaloneConfiguration
 	private @Nullable String username = null;
 
 	/**
-	 * Create a new default {@link ValkeyStandaloneConfiguration}.
+	 * Create a new default {@code ValkeyStandaloneConfiguration}.
 	 */
 	public ValkeyStandaloneConfiguration() {}
 
 	/**
-	 * Create a new {@link ValkeyStandaloneConfiguration} given {@code hostName}.
+	 * Create a new {@code ValkeyStandaloneConfiguration} given {@code hostName}.
 	 *
 	 * @param hostName must not be {@literal null} or empty.
 	 */
@@ -61,7 +61,7 @@ public class ValkeyStandaloneConfiguration
 	}
 
 	/**
-	 * Create a new {@link ValkeyStandaloneConfiguration} given {@code hostName} and {@code port}.
+	 * Create a new {@code ValkeyStandaloneConfiguration} given {@code hostName} and {@code port}.
 	 *
 	 * @param hostName must not be {@literal null} or empty.
 	 * @param port a valid TCP port (1-65535).
@@ -113,9 +113,8 @@ public class ValkeyStandaloneConfiguration
 		this.username = username;
 	}
 
-	@Nullable
 	@Override
-	public String getUsername() {
+	public @Nullable String getUsername() {
 		return this.username;
 	}
 

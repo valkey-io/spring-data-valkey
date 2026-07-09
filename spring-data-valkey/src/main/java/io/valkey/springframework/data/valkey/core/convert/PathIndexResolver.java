@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.data.core.TypeInformation;
 import org.springframework.data.geo.Point;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.PersistentPropertyAccessor;
 import org.springframework.data.mapping.PropertyHandler;
-import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
+import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.core.index.ConfigurableIndexDefinitionProvider;
 import io.valkey.springframework.data.valkey.core.index.GeoIndexDefinition;
 import io.valkey.springframework.data.valkey.core.index.GeoIndexed;
@@ -39,8 +42,6 @@ import io.valkey.springframework.data.valkey.core.index.SimpleIndexDefinition;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyMappingContext;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentProperty;
-import org.springframework.data.util.TypeInformation;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.CollectionUtils;
@@ -82,19 +83,21 @@ public class PathIndexResolver implements IndexResolver {
 		this.indexedDataFactoryProvider = new IndexedDataFactoryProvider();
 	}
 
+	@SuppressWarnings("NullAway")
 	public Set<IndexedData> resolveIndexesFor(TypeInformation<?> typeInformation, @Nullable Object value) {
-		return doResolveIndexesFor(mappingContext.getRequiredPersistentEntity(typeInformation).getKeySpace(), "",
+		return doResolveIndexesFor(mappingContext.getRequiredPersistentEntity(typeInformation).getRequiredKeySpace(), "",
 				typeInformation, null, value);
 	}
 
 	@Override
 	public Set<IndexedData> resolveIndexesFor(String keyspace, String path, TypeInformation<?> typeInformation,
-			Object value) {
+			@Nullable Object value) {
 		return doResolveIndexesFor(keyspace, path, typeInformation, null, value);
 	}
 
-	private Set<IndexedData> doResolveIndexesFor(final String keyspace, final String path,
-			TypeInformation<?> typeInformation, @Nullable PersistentProperty<?> fallback, @Nullable Object value) {
+	@SuppressWarnings("NullAway")
+	private Set<IndexedData> doResolveIndexesFor(String keyspace, String path, TypeInformation<?> typeInformation,
+			@Nullable PersistentProperty<?> fallback, @Nullable Object value) {
 
 		ValkeyPersistentEntity<?> entity = mappingContext.getPersistentEntity(typeInformation);
 
@@ -109,8 +112,8 @@ public class PathIndexResolver implements IndexResolver {
 			return resolveIndex(keyspace, path, entity.getPersistentProperty(propertyName), value);
 		}
 
-		final PersistentPropertyAccessor accessor = entity.getPropertyAccessor(value);
-		final Set<IndexedData> indexes = new LinkedHashSet<>();
+		PersistentPropertyAccessor<?> accessor = entity.getPropertyAccessor(value);
+		Set<IndexedData> indexes = new LinkedHashSet<>();
 
 		entity.doWithProperties(new PropertyHandler<ValkeyPersistentProperty>() {
 
@@ -191,6 +194,7 @@ public class PathIndexResolver implements IndexResolver {
 		return indexes;
 	}
 
+	@SuppressWarnings("NullAway")
 	protected Set<IndexedData> resolveIndex(String keyspace, String propertyPath,
 			@Nullable PersistentProperty<?> property, @Nullable Object value) {
 
@@ -228,7 +232,7 @@ public class PathIndexResolver implements IndexResolver {
 			indexConfiguration.addIndexDefinition(indexDefinition);
 
 			data.add(indexedDataFactoryProvider.getIndexedDataFactory(indexDefinition).createIndexedDataFor(value));
-		} else if (property != null &&  value != null && property.isAnnotationPresent(GeoIndexed.class)) {
+		} else if (property != null && value != null && property.isAnnotationPresent(GeoIndexed.class)) {
 
 			GeoIndexDefinition indexDefinition = new GeoIndexDefinition(keyspace, path);
 			indexConfiguration.addIndexDefinition(indexDefinition);
@@ -268,4 +272,5 @@ public class PathIndexResolver implements IndexResolver {
 
 		return path;
 	}
+
 }

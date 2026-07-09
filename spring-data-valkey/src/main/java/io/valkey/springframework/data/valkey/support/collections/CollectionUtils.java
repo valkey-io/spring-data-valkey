@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.SessionCallback;
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 
 /**
  * Utility class used mainly for type conversion by the default collection implementations. Meant for internal use.
@@ -62,9 +62,9 @@ public abstract class CollectionUtils {
 
 	static <K> void rename(final K key, final K newKey, ValkeyOperations<K, ?> operations) {
 
-		operations.execute(new SessionCallback<Object>() {
+		operations.execute(new SessionCallback<>() {
 
-			@SuppressWarnings("unchecked")
+			@SuppressWarnings({ "unchecked", "rawtypes" })
 			public Object execute(ValkeyOperations operations) throws DataAccessException {
 
 				do {

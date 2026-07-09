@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,10 @@ package io.valkey.springframework.data.valkey.core.script;
 
 import java.util.List;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 
 /**
@@ -25,6 +29,7 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
  * @author Jennifer Hickey
  * @param <K> The type of keys that may be passed during script execution
  */
+@NullUnmarked
 public interface ScriptExecutor<K> {
 
 	/**
@@ -36,7 +41,8 @@ public interface ScriptExecutor<K> {
 	 * @return The return value of the script or {@literal null} if {@link ValkeyScript#getResultType()} is
 	 *         {@literal null}, likely indicating a throw-away status reply (i.e. "OK")
 	 */
-	<T> T execute(ValkeyScript<T> script, List<K> keys, Object... args);
+	<T extends @Nullable Object> T execute(@NonNull ValkeyScript<T> script, @NonNull List<@NonNull K> keys,
+			@NonNull Object @NonNull... args);
 
 	/**
 	 * Executes the given {@link ValkeyScript}, using the provided {@link ValkeySerializer}s to serialize the script
@@ -50,7 +56,7 @@ public interface ScriptExecutor<K> {
 	 * @return The return value of the script or {@literal null} if {@link ValkeyScript#getResultType()} is
 	 *         {@literal null}, likely indicating a throw-away status reply (i.e. "OK")
 	 */
-	<T> T execute(ValkeyScript<T> script, ValkeySerializer<?> argsSerializer, ValkeySerializer<T> resultSerializer,
-			List<K> keys, Object... args);
+	<T extends @Nullable Object> T execute(@NonNull ValkeyScript<T> script, @NonNull ValkeySerializer<?> argsSerializer,
+			@NonNull ValkeySerializer<T> resultSerializer, @NonNull List<@NonNull K> keys, @NonNull Object... args);
 
 }

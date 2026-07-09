@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,14 @@ package io.valkey.springframework.data.valkey.cache;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
+import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -41,7 +45,21 @@ import org.springframework.util.Assert;
 public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 
 	/**
-	 * Create new {@link ValkeyCacheWriter} without locking behavior.
+	 * Create new {@link ValkeyCacheWriter} configure it through {@link ValkeyCacheWriterConfigurer}. The cache writer
+	 * defaults does not lock the cache by default using {@link BatchStrategies#keys()}.
+	 *
+	 * @param connectionFactory the connection factory to use.
+	 * @param configurerConsumer a configuration function that configures {@link ValkeyCacheWriterConfigurer}.
+	 * @return new instance of {@link DefaultValkeyCacheWriter}.
+	 * @since 4.0
+	 */
+	static ValkeyCacheWriter create(ValkeyConnectionFactory connectionFactory,
+			Consumer<ValkeyCacheWriterConfigurer> configurerConsumer) {
+		return DefaultValkeyCacheWriter.create(connectionFactory, configurerConsumer);
+	}
+
+	/**
+	 * Create new {@link ValkeyCacheWriter} without locking behavior using {@link BatchStrategies#keys()}.
 	 *
 	 * @param connectionFactory must not be {@literal null}.
 	 * @return new instance of {@link DefaultValkeyCacheWriter}.
@@ -60,15 +78,11 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 	 */
 	static ValkeyCacheWriter nonLockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory,
 			BatchStrategy batchStrategy) {
-
-		Assert.notNull(connectionFactory, "ConnectionFactory must not be null");
-		Assert.notNull(batchStrategy, "BatchStrategy must not be null");
-
-		return new DefaultValkeyCacheWriter(connectionFactory, batchStrategy);
+		return create(connectionFactory, config -> config.batchStrategy(batchStrategy));
 	}
 
 	/**
-	 * Create new {@link ValkeyCacheWriter} with locking behavior.
+	 * Create new {@link ValkeyCacheWriter} with locking behavior using {@link BatchStrategies#keys()}.
 	 *
 	 * @param connectionFactory must not be {@literal null}.
 	 * @return new instance of {@link DefaultValkeyCacheWriter}.
@@ -88,7 +102,8 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 	static ValkeyCacheWriter lockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory,
 			BatchStrategy batchStrategy) {
 
-		return lockingValkeyCacheWriter(connectionFactory, Duration.ofMillis(50), TtlFunction.persistent(), batchStrategy);
+		return create(connectionFactory,
+				it -> it.batchStrategy(batchStrategy).cacheLocking(CacheLockingConfigurer::enable));
 	}
 
 	/**
@@ -105,10 +120,8 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 	static ValkeyCacheWriter lockingValkeyCacheWriter(ValkeyConnectionFactory connectionFactory, Duration sleepTime,
 			TtlFunction lockTtlFunction, BatchStrategy batchStrategy) {
 
-		Assert.notNull(connectionFactory, "ConnectionFactory must not be null");
-
-		return new DefaultValkeyCacheWriter(connectionFactory, sleepTime, lockTtlFunction, CacheStatisticsCollector.none(),
-				batchStrategy);
+		return create(connectionFactory, it -> it.batchStrategy(batchStrategy)
+				.enableLocking(locking -> locking.sleepTime(sleepTime).lockTimeout(lockTtlFunction)));
 	}
 
 	/**
@@ -119,8 +132,7 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 	 * @return {@literal null} if key does not exist.
 	 * @see #get(String, byte[], Duration)
 	 */
-	@Nullable
-	byte[] get(String name, byte[] key);
+	byte @Nullable [] get(String name, byte[] key);
 
 	/**
 	 * Get the binary value representation from Valkey stored for the given key and set the given {@link Duration TTL
@@ -131,8 +143,7 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 	 * @param ttl {@link Duration} specifying the {@literal expiration timeout} for the cache entry.
 	 * @return {@literal null} if key does not exist or has {@literal expired}.
 	 */
-	@Nullable
-	default byte[] get(String name, byte[] key, @Nullable Duration ttl) {
+	default byte @Nullable [] get(String name, byte[] key, @Nullable Duration ttl) {
 		return get(name, key);
 	}
 
@@ -242,24 +253,90 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 	 * @param ttl optional expiration time. Can be {@literal null}.
 	 * @return {@literal null} if the value has been written, the value stored for the key if it already exists.
 	 */
-	@Nullable
-	byte[] putIfAbsent(String name, byte[] key, byte[] value, @Nullable Duration ttl);
+	byte @Nullable [] putIfAbsent(String name, byte[] key, byte[] value, @Nullable Duration ttl);
 
 	/**
 	 * Remove the given key from Valkey.
+	 * <p>
+	 * Actual eviction may be performed in an asynchronous or deferred fashion, with subsequent lookups possibly still
+	 * seeing the entry.
 	 *
 	 * @param name cache name must not be {@literal null}.
 	 * @param key key for the cache entry. Must not be {@literal null}.
+	 * @deprecated since 4.0 in favor of {@link #evict(String, byte[])}
 	 */
-	void remove(String name, byte[] key);
+	@Deprecated(since = "4.0", forRemoval = true)
+	default void remove(String name, byte[] key) {
+		evict(name, key);
+	}
+
+	/**
+	 * Remove the given key from Valkey.
+	 * <p>
+	 * Actual eviction may be performed in an asynchronous or deferred fashion, with subsequent lookups possibly still
+	 * seeing the entry.
+	 *
+	 * @param name cache name must not be {@literal null}.
+	 * @param key key for the cache entry. Must not be {@literal null}.
+	 * @since 4.0
+	 */
+	void evict(String name, byte[] key);
+
+	/**
+	 * Remove the given key from Valkey if it is present, expecting the key to be immediately invisible for subsequent
+	 * lookups.
+	 *
+	 * @param name cache name must not be {@literal null}.
+	 * @param key key for the cache entry. Must not be {@literal null}.
+	 * @return {@code true} if the cache was known to have a mapping for this key before, {@code false} if it did not (or
+	 *         if prior presence could not be determined).
+	 * @since 4.0
+	 */
+	default boolean evictIfPresent(String name, byte[] key) {
+		evict(name, key);
+		return false;
+	}
 
 	/**
 	 * Remove all keys following the given pattern.
+	 * <p>
+	 * Actual clearing may be performed in an asynchronous or deferred fashion, with subsequent lookups possibly still
+	 * seeing the entries.
 	 *
 	 * @param name cache name must not be {@literal null}.
 	 * @param pattern pattern for the keys to remove. Must not be {@literal null}.
+	 * @deprecated since 4.0 in favor of {@link #clear(String, byte[])}
 	 */
-	void clean(String name, byte[] pattern);
+	@Deprecated(since = "4.0", forRemoval = true)
+	default void clean(String name, byte[] pattern) {
+		clear(name, pattern);
+	}
+
+	/**
+	 * Remove all keys following the given pattern.
+	 * <p>
+	 * Actual clearing may be performed in an asynchronous or deferred fashion, with subsequent lookups possibly still
+	 * seeing the entries.
+	 *
+	 * @param name cache name must not be {@literal null}.
+	 * @param pattern pattern for the keys to remove. Must not be {@literal null}.
+	 * @since 4.0
+	 */
+	void clear(String name, byte[] pattern);
+
+	/**
+	 * Remove all keys following the given pattern expecting all entries to be immediately invisible for subsequent
+	 * lookups.
+	 *
+	 * @param name cache name must not be {@literal null}.
+	 * @param pattern pattern for the keys to remove. Must not be {@literal null}.
+	 * @return {@code true} if the cache was known to have mappings before, {@code false} if it did not (or if prior
+	 *         presence of entries could not be determined).
+	 */
+	default boolean invalidate(String name, byte[] pattern) {
+		clear(name, pattern);
+		return false;
+	}
 
 	/**
 	 * Reset all statistics counters and gauges for this cache.
@@ -269,12 +346,176 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 	void clearStatistics(String name);
 
 	/**
+	 * Executes the given {@link Function} with a {@link ValkeyConnection}.
+	 *
+	 * @param callback the callback action to invoke with a connection.
+	 * @return return value of the callback.
+	 * @param <T>
+	 * @throws UnsupportedOperationException if the cache writer does not support direct access to
+	 *           {@link ValkeyConnection}.
+	 * @since 4.1
+	 */
+	default <T extends @Nullable Object> T execute(Function<ValkeyConnection, T> callback) {
+		throw new UnsupportedOperationException("execute(...) is not supported by this ValkeyCacheWriter");
+	}
+
+	/**
 	 * Obtain a {@link ValkeyCacheWriter} using the given {@link CacheStatisticsCollector} to collect metrics.
 	 *
 	 * @param cacheStatisticsCollector must not be {@literal null}.
 	 * @return new instance of {@link ValkeyCacheWriter}.
 	 */
 	ValkeyCacheWriter withStatisticsCollector(CacheStatisticsCollector cacheStatisticsCollector);
+
+	/**
+	 * Interface that allows for configuring a {@link ValkeyCacheWriter}.
+	 *
+	 * @author Mark Paluch
+	 * @since 4.0
+	 */
+	interface ValkeyCacheWriterConfigurer {
+
+		/**
+		 * Configure the {@link CacheStatisticsCollector} to use. This is useful for plugging in and/or customizing
+		 * statistics collection.
+		 */
+		default ValkeyCacheWriterConfigurer collectStatistics() {
+			return collectStatistics(CacheStatisticsCollector.create());
+		}
+
+		/**
+		 * Configure the {@link CacheStatisticsCollector} to use. This is useful for plugging in and/or customizing
+		 * statistics collection.
+		 * <p>
+		 * If no statistics collector is specified, no statistics will be recorded. Statistics collection can be
+		 * reconfigured on the built ValkeyCacheWriter by invoking
+		 * {@code ValkeyCacheWriter#withStatisticsCollector(CacheStatisticsCollector)}.
+		 *
+		 * @param cacheStatisticsCollector the statistics collector to use.
+		 */
+		ValkeyCacheWriterConfigurer collectStatistics(CacheStatisticsCollector cacheStatisticsCollector);
+
+		/**
+		 * Configure the {@link BatchStrategy} when clearing the cache (i.e. bulk removal of cache keys).
+		 * <p>
+		 * If no batch strategy is specified, the ValkeyCacheWriter uses {@link BatchStrategies#keys()};
+		 *
+		 * @param batchStrategy the batch strategy to use.
+		 */
+		ValkeyCacheWriterConfigurer batchStrategy(BatchStrategy batchStrategy);
+
+		/**
+		 * Enable cache locking to synchronize cache access across multiple cache instances.
+		 */
+		default ValkeyCacheWriterConfigurer enableLocking() {
+			return cacheLocking(it -> it.enable(config -> {}));
+		}
+
+		/**
+		 * Enable cache locking to synchronize cache access across multiple cache instances.
+		 *
+		 * @param configurerConsumer a configuration function that configures {@link CacheLockingConfiguration}.
+		 */
+		default ValkeyCacheWriterConfigurer enableLocking(Consumer<CacheLockingConfiguration> configurerConsumer) {
+			return cacheLocking(it -> it.enable(configurerConsumer));
+		}
+
+		/**
+		 * Configure cache locking to synchronize cache access across multiple cache instances.
+		 *
+		 * @param configurerConsumer a configuration function that configures {@link CacheLockingConfigurer}.
+		 */
+		ValkeyCacheWriterConfigurer cacheLocking(Consumer<CacheLockingConfigurer> configurerConsumer);
+
+		/**
+		 * Use immediate writes (i.e. write operations such as
+		 * {@link ValkeyCacheWriter#put(String, byte[], byte[], Duration)} or {@link #clear(String, byte[])}) shall apply
+		 * immediately.
+		 * <p>
+		 * Several {@link org.springframework.cache.Cache} operations can be performed asynchronously or deferred and this
+		 * is the default behavior for {@link ValkeyCacheWriter}. Enable immediate writes in case a particular cache requires
+		 * stronger consistency (i.e. Cache writes must be visible immediately).
+		 * <p>
+		 * When using a {@link io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory reactive Valkey
+		 * driver}, immediate writes lead to blocking.
+		 */
+		default ValkeyCacheWriterConfigurer immediateWrites() {
+			return immediateWrites(true);
+		}
+
+		/**
+		 * Configure whether to use immediate writes (i.e. write operations such as
+		 * {@link ValkeyCacheWriter#put(String, byte[], byte[], Duration)} or {@link #clear(String, byte[])}) shall apply
+		 * immediately.
+		 * <p>
+		 * Several {@link org.springframework.cache.Cache} operations can be performed asynchronously or deferred and this
+		 * is the default behavior for {@link ValkeyCacheWriter}. Enable immediate writes in case a particular cache requires
+		 * stronger consistency (i.e. Cache writes must be visible immediately).
+		 * <p>
+		 * When using a {@link io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory reactive Valkey
+		 * driver}, immediate writes lead to blocking.
+		 *
+		 * @param enableImmediateWrites whether write operations must be visible immediately.
+		 */
+		ValkeyCacheWriterConfigurer immediateWrites(boolean enableImmediateWrites);
+
+	}
+
+	/**
+	 * Interface that allows for configuring cache locking.
+	 *
+	 * @author Mark Paluch
+	 * @since 4.0
+	 */
+	interface CacheLockingConfigurer {
+
+		/**
+		 * Disable cache locking (default).
+		 */
+		void disable();
+
+		/**
+		 * Enable cache locking with a default sleep time of {@code 50 milliseconds} and persistent lock keys.
+		 */
+		default void enable() {
+			enable(it -> {});
+		}
+
+		/**
+		 * Enable cache locking.
+		 */
+		void enable(Consumer<CacheLockingConfiguration> configurationConsumer);
+
+	}
+
+	/**
+	 * Interface that allows for configuring cache locking options.
+	 *
+	 * @author Mark Paluch
+	 * @since 4.0
+	 */
+	interface CacheLockingConfiguration {
+
+		/**
+		 * Configure the sleep time between cache lock checks. Sleep time is applied to reattempt lock checks if a cache key
+		 * is locked.
+		 *
+		 * @param sleepTime the sleep time, must not be {@literal null} and must be greater {@link Duration#ZERO}.
+		 */
+		CacheLockingConfiguration sleepTime(Duration sleepTime);
+
+		/**
+		 * Configure a {@link TtlFunction} to compute the lock timeout.
+		 * <p>
+		 * If no TTL function is specified, the ValkeyCacheWriter persistent lock keys. Persistent lock keys need to be
+		 * removed in case of failures (e.g. Valkey crashes before a lock key is removed). Expiring lock keys can become
+		 * subject to GC timing if lock keys expire while a garbage collection halts the JVM.
+		 *
+		 * @param ttlFunction the lock timeout function.
+		 */
+		CacheLockingConfiguration lockTimeout(TtlFunction ttlFunction);
+
+	}
 
 	/**
 	 * Function to compute the time to live from the cache {@code key} and {@code value}.
@@ -302,9 +543,9 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 		}
 
 		/**
-		 * Returns a {@link TtlFunction} to create persistent entires that do not expire.
+		 * Returns a {@link TtlFunction} to create persistent entries that do not expire.
 		 *
-		 * @return a {@link TtlFunction} to create persistent entires that do not expire.
+		 * @return a {@link TtlFunction} to create persistent entries that do not expire.
 		 */
 		static TtlFunction persistent() {
 			return just(NO_EXPIRATION);
@@ -326,4 +567,5 @@ public interface ValkeyCacheWriter extends CacheStatisticsProvider {
 		Duration getTimeToLive(Object key, @Nullable Object value);
 
 	}
+
 }

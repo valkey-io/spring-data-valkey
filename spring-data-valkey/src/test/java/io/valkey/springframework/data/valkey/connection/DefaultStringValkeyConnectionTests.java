@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,9 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,7 +63,11 @@ import io.valkey.springframework.data.valkey.connection.zset.Aggregate;
 import io.valkey.springframework.data.valkey.connection.zset.DefaultTuple;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.connection.zset.Weights;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
+import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.SerializationException;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
+import org.springframework.util.ConcurrentLruCache;
 
 /**
  * Unit test of {@link DefaultStringValkeyConnection}
@@ -72,6 +78,7 @@ import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
  * @author Mark Paluch
  * @author dengliming
  * @author ihaohong
+ * @author Viktoriya Kutsarova
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -83,7 +90,7 @@ public class DefaultStringValkeyConnectionTests {
 
 	protected DefaultStringValkeyConnection connection;
 
-	protected StringValkeySerializer serializer = StringValkeySerializer.UTF_8;
+	protected ValkeySerializer<String> serializer = new CachingSerializer(StringValkeySerializer.UTF_8);
 
 	protected String foo = "foo";
 
@@ -539,6 +546,63 @@ public class DefaultStringValkeyConnectionTests {
 		doReturn(bytesList).when(nativeConnection).hVals(fooBytes);
 		actual.add(connection.hVals(foo));
 		verifyResults(Collections.singletonList(stringList));
+	}
+
+	@Test // GH-3211
+	void hGetDelBytes() {
+		doReturn(Collections.singletonList(barBytes)).when(nativeConnection).hGetDel(fooBytes, barBytes);
+		actual.add(connection.hGetDel(fooBytes, barBytes));
+		verifyResults(Collections.singletonList(Collections.singletonList(barBytes)));
+	}
+
+	@Test // GH-3211
+	void hGetDel() {
+		doReturn(Collections.singletonList(barBytes)).when(nativeConnection).hGetDel(fooBytes, barBytes);
+		actual.add(connection.hGetDel(foo, bar));
+		verifyResults(Collections.singletonList(Collections.singletonList(bar)));
+	}
+
+	@Test // GH-3211
+	void hGetExBytes() {
+		Expiration expiration = Expiration.persistent();
+		doReturn(bytesList).when(nativeConnection).hGetEx(fooBytes, expiration, barBytes);
+		actual.add(connection.hGetEx(fooBytes, expiration, barBytes));
+		verifyResults(Collections.singletonList(Collections.singletonList(barBytes)));
+	}
+
+	@Test // GH-3211
+	void hGetEx() {
+		Expiration expiration = Expiration.persistent();
+		doReturn(bytesList).when(nativeConnection).hGetEx(fooBytes, expiration, barBytes);
+		actual.add(connection.hGetEx(foo, expiration, bar));
+		verifyResults(Collections.singletonList(Collections.singletonList(bar)));
+	}
+
+	@Test // GH-3211
+	void hSetExBytes() {
+		Expiration expiration = Expiration.persistent();
+		ValkeyHashCommands.HashFieldSetOption setOption = ValkeyHashCommands.HashFieldSetOption.upsert();
+		Map<byte[], byte[]> fieldMap = Map.of(barBytes, bar2Bytes);
+		doReturn(Boolean.TRUE).when(nativeConnection).hSetEx(fooBytes, fieldMap, setOption, expiration);
+		actual.add(connection.hSetEx(fooBytes, fieldMap, setOption, expiration));
+		verifyResults(Collections.singletonList(true));
+	}
+
+	@Test // GH-3211
+	void hSetEx() {
+		Expiration expiration = Expiration.persistent();
+		ValkeyHashCommands.HashFieldSetOption setOption = ValkeyHashCommands.HashFieldSetOption.upsert();
+		Map<String, String> stringMap = Map.of(bar, bar2);
+		doReturn(Boolean.TRUE).when(nativeConnection).hSetEx(eq(fooBytes),
+				argThat(fieldMap -> isFieldMap(fieldMap, stringMap)), eq(setOption), eq(expiration));
+		actual.add(connection.hSetEx(foo, stringMap, setOption, expiration));
+		verifyResults(Collections.singletonList(true));
+	}
+
+	private boolean isFieldMap(Map<byte[], byte[]> fieldMap, Map<String, String> stringMap) {
+		Map<String, String> fieldMapAsStringMap = fieldMap.entrySet().stream()
+				.collect(Collectors.toMap(entry -> new String(entry.getKey()), entry -> new String(entry.getValue())));
+		return fieldMapAsStringMap.equals(stringMap);
 	}
 
 	@Test
@@ -1204,6 +1268,104 @@ public class DefaultStringValkeyConnectionTests {
 	}
 
 	@Test
+	public void testBitOpOrBytes() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.OR, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.OR, fooBytes, barBytes));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test
+	public void testBitOpOr() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.OR, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.OR, foo, bar));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test
+	public void testBitOpXorBytes() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.XOR, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.XOR, fooBytes, barBytes));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test
+	public void testBitOpXor() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.XOR, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.XOR, foo, bar));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test
+	public void testBitOpNotBytes() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.NOT, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.NOT, fooBytes, barBytes));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test
+	public void testBitOpNot() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.NOT, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.NOT, foo, bar));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test // GH-3250
+	public void testBitOpDiffBytes() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.DIFF, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.DIFF, fooBytes, barBytes));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test // GH-3250
+	public void testBitOpDiff() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.DIFF, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.DIFF, foo, bar));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test // GH-3250
+	public void testBitOpDiff1Bytes() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.DIFF1, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.DIFF1, fooBytes, barBytes));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test // GH-3250
+	public void testBitOpDiff1() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.DIFF1, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.DIFF1, foo, bar));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test // GH-3250
+	public void testBitOpAndorBytes() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.ANDOR, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.ANDOR, fooBytes, barBytes));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test // GH-3250
+	public void testBitOpAndor() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.ANDOR, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.ANDOR, foo, bar));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test // GH-3250
+	public void testBitOpOneBytes() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.ONE, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.ONE, fooBytes, barBytes));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test // GH-3250
+	public void testBitOpOne() {
+		doReturn(5L).when(nativeConnection).bitOp(BitOperation.ONE, fooBytes, barBytes);
+		actual.add(connection.bitOp(BitOperation.ONE, foo, bar));
+		verifyResults(Collections.singletonList(5L));
+	}
+
+	@Test
 	public void testSUnionBytes() {
 		doReturn(bytesSet).when(nativeConnection).sUnion(fooBytes, barBytes);
 		actual.add(connection.sUnion(fooBytes, barBytes));
@@ -1805,9 +1967,9 @@ public class DefaultStringValkeyConnectionTests {
 	@Test // DATAREDIS-308
 	void pfAddShouldDelegateToNativeConnectionCorrectly() {
 
-		connection.pfAdd("hll", "spring", "data", "valkey");
+		connection.pfAdd("hll", "spring", "data", "redis");
 		verify(nativeConnection, times(1)).pfAdd("hll".getBytes(), "spring".getBytes(), "data".getBytes(),
-				"valkey".getBytes());
+				"redis".getBytes());
 	}
 
 	@Test // DATAREDIS-308
@@ -1820,9 +1982,9 @@ public class DefaultStringValkeyConnectionTests {
 	@Test // DATAREDIS-308
 	void pfMergeShouldDelegateToNativeConnectionCorrectly() {
 
-		connection.pfMerge("merged", "spring", "data", "valkey");
+		connection.pfMerge("merged", "spring", "data", "redis");
 		verify(nativeConnection, times(1)).pfMerge("merged".getBytes(), "spring".getBytes(), "data".getBytes(),
-				"valkey".getBytes());
+				"redis".getBytes());
 	}
 
 	@Test // DATAREDIS-270
@@ -2233,5 +2395,37 @@ public class DefaultStringValkeyConnectionTests {
 
 	protected void verifyResults(List<?> expected) {
 		assertThat(getResults()).isEqualTo(expected);
+	}
+
+	private class CachingSerializer implements ValkeySerializer<String> {
+
+		private final ConcurrentLruCache<String, byte[]> cache;
+
+		private final ValkeySerializer<String> delegate;
+
+		public CachingSerializer(ValkeySerializer<String> serializer) {
+			cache = new ConcurrentLruCache<>(256, serializer::serialize);
+			delegate = serializer;
+		}
+
+		@Override
+		public byte[] serialize(@Nullable String value) throws SerializationException {
+			return cache.get(value);
+		}
+
+		@Override
+		public @Nullable String deserialize(byte @Nullable [] bytes) throws SerializationException {
+			return delegate.deserialize(bytes);
+		}
+
+		@Override
+		public boolean canSerialize(Class<?> type) {
+			return delegate.canSerialize(type);
+		}
+
+		@Override
+		public Class<?> getTargetType() {
+			return delegate.getTargetType();
+		}
 	}
 }

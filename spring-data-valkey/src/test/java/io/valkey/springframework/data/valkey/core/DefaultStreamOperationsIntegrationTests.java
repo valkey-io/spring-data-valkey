@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,10 @@ import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.data.domain.Range;
 import org.springframework.data.domain.Range.Bound;
@@ -32,7 +36,13 @@ import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.Person;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamEntryDeletionResult;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XDelOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XTrimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamDeletionPolicy;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
@@ -53,8 +63,6 @@ import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersi
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration test of {@link DefaultStreamOperations}
@@ -64,6 +72,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Marcin Zielinski
  * @author jinkshower
  */
+@ParameterizedClass
 @MethodSource("testParams")
 @EnabledOnCommand("XADD")
 public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
@@ -126,7 +135,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void addShouldAddMessage() {
 
 		K key = keyFactory.instance();
@@ -149,7 +158,8 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		}
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test
+	// DATAREDIS-864
 	void addShouldAddReadSimpleMessage() {
 
 		K key = keyFactory.instance();
@@ -169,7 +179,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(message.getValue()).isEqualTo(value);
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMaxLenShouldLimitMessagesSize() {
 
 		K key = keyFactory.instance();
@@ -198,7 +208,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		}
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMaxLenShouldLimitSimpleMessagesSize() {
 
 		K key = keyFactory.instance();
@@ -224,7 +234,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(message.getValue()).isEqualTo(newValue);
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMinIdShouldEvictLowerIdMessages() {
 
 		K key = keyFactory.instance();
@@ -258,7 +268,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		}
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMinIdShouldEvictLowerIdSimpleMessages() {
 
 		K key = keyFactory.instance();
@@ -288,7 +298,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(message2.getValue()).isEqualTo(value);
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMakeNoStreamShouldNotCreateStreamWhenNoStreamExists() {
 
 		K key = keyFactory.instance();
@@ -302,7 +312,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(streamOps.range(key, Range.unbounded())).isEmpty();
 	}
 
-	@ParameterizedValkeyTest // GH-2915
+	@Test // GH-2915
 	void addMakeNoStreamShouldCreateStreamWhenStreamExists() {
 
 		K key = keyFactory.instance();
@@ -318,7 +328,182 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(streamOps.range(key, Range.unbounded())).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // GH-3232
+	void addWithLimitShouldHonorApproximateTrimming() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(100).approximate().limit(50));
+
+		// Add multiple messages with limit
+		for (int i = 0; i < 5; i++) {
+			streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key), options);
+		}
+
+		assertThat(streamOps.size(key)).isGreaterThan(0L);
+	}
+
+	@Test // GH-3232
+	void addWithExactTrimmingShouldTrimExactly() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(2).exact());
+
+		// Add 3 messages with exact trimming to maxlen=2
+		streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key), options);
+		streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key), options);
+		streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key), options);
+
+		// Should have exactly 2 entries
+		assertThat(streamOps.size(key)).isEqualTo(2);
+	}
+
+	@Test // GH-3232
+	@EnabledOnValkeyVersion("8.2")
+	void addWithDeletionPolicyShouldApplyPolicy() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		XAddOptions options = XAddOptions.trim(TrimOptions.maxLen(5).approximate()
+				.deletionPolicy(StreamDeletionPolicy.delete()));
+
+		// Add multiple messages with deletion policy
+		for (int i = 0; i < 3; i++) {
+			streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key), options);
+		}
+
+		assertThat(streamOps.size(key)).isGreaterThan(0L);
+	}
+
+	@Test // GH-3232
+	void trimShouldTrimStreamWithMaxlen() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		// Add 10 messages
+		for (int i = 0; i < 10; i++) {
+			streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		}
+
+		assertThat(streamOps.size(key)).isEqualTo(10L);
+
+		// Trim to 5 entries
+		Long trimmed = streamOps.trim(key, XTrimOptions.trim(TrimOptions.maxLen(5)));
+
+		assertThat(trimmed).isEqualTo(5L); // 5 entries removed
+		assertThat(streamOps.size(key)).isEqualTo(5L); // 5 entries remaining
+	}
+
+	@Test // GH-3232
+	void trimShouldTrimStreamWithMinId() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		// Add 5 messages and capture their IDs
+		RecordId id1 = streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		RecordId id2 = streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		RecordId id3 = streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		RecordId id4 = streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		RecordId id5 = streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+
+		assertThat(streamOps.size(key)).isEqualTo(5L);
+
+		// Trim using MINID - keep only entries with ID >= id3
+		Long trimmed = streamOps.trim(key, XTrimOptions.trim(TrimOptions.minId(id3)));
+
+		assertThat(trimmed).isEqualTo(2L); // 2 entries removed (id1, id2)
+		assertThat(streamOps.size(key)).isEqualTo(3L); // 3 entries remaining (id3, id4, id5)
+	}
+
+	@Test // GH-3232
+	void trimShouldHonorApproximateTrimming() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		// Add 100 messages
+		for (int i = 0; i < 100; i++) {
+			streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		}
+
+		assertThat(streamOps.size(key)).isEqualTo(100L);
+
+		// Trim with approximate trimming
+		streamOps.trim(key, XTrimOptions.trim(TrimOptions.maxLen(50).approximate()));
+
+		// With approximate trimming, the result may not be exact but should be around 50
+		assertThat(streamOps.size(key)).isGreaterThanOrEqualTo(50L).isLessThanOrEqualTo(100L);
+	}
+
+	@Test // GH-3232
+	void trimShouldHonorExactTrimming() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		// Add 10 messages
+		for (int i = 0; i < 10; i++) {
+			streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		}
+
+		assertThat(streamOps.size(key)).isEqualTo(10L);
+
+		// Trim with exact trimming
+		Long trimmed = streamOps.trim(key, XTrimOptions.trim(TrimOptions.maxLen(5).exact()));
+
+		assertThat(trimmed).isEqualTo(5L); // 5 entries removed
+		assertThat(streamOps.size(key)).isEqualTo(5L); // Exactly 5 entries remaining
+	}
+
+	@Test // GH-3232
+	void trimShouldHonorLimit() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		// Add 100 messages
+		for (int i = 0; i < 100; i++) {
+			streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		}
+
+		assertThat(streamOps.size(key)).isEqualTo(100L);
+
+		// Trim with LIMIT to control trimming effort
+		streamOps.trim(key, XTrimOptions.trim(TrimOptions.maxLen(50).approximate().limit(10)));
+
+		// With LIMIT, trimming may not be exact
+		assertThat(streamOps.size(key)).isGreaterThanOrEqualTo(50L).isLessThanOrEqualTo(100L);
+	}
+
+	@Test // GH-3232
+	@EnabledOnValkeyVersion("8.2") // Deletion policy requires Valkey 8.2+
+	void trimShouldHonorDeletionPolicy() {
+
+		K key = keyFactory.instance();
+		HV value = hashValueFactory.instance();
+
+		// Add 10 messages
+		for (int i = 0; i < 10; i++) {
+			streamOps.add(StreamRecords.objectBacked(value).withStreamKey(key));
+		}
+
+		assertThat(streamOps.size(key)).isEqualTo(10L);
+
+		// Trim with deletion policy
+		streamOps.trim(key, XTrimOptions.trim(TrimOptions.maxLen(5).approximate()
+				.deletionPolicy(StreamDeletionPolicy.delete())));
+
+		// Verify trimming was applied
+		assertThat(streamOps.size(key)).isGreaterThan(0L).isLessThanOrEqualTo(10L);
+	}
+
+	@Test // DATAREDIS-864
 	void simpleMessageReadWriteSymmetry() {
 
 		K key = keyFactory.instance();
@@ -340,7 +525,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(message.getValue().values()).containsExactly(value);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void rangeShouldReportMessages() {
 
 		K key = keyFactory.instance();
@@ -361,7 +546,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(message.getId()).isEqualTo(messageId1);
 	}
 
-	@ParameterizedValkeyTest // GH-2044
+	@Test // GH-2044
 	@EnabledOnValkeyVersion("6.2")
 	void exclusiveRangeShouldReportMessages() {
 
@@ -383,7 +568,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(messages).hasSize(1).extracting(MapRecord::getId).contains(messageId1);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void reverseRangeShouldReportMessages() {
 
 		K key = keyFactory.instance();
@@ -398,7 +583,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(messages).hasSize(2).extracting("id").containsSequence(messageId2, messageId1);
 	}
 
-	@ParameterizedValkeyTest // GH-2044
+	@Test // GH-2044
 	@EnabledOnValkeyVersion("6.2")
 	void exclusiveReverseRangeShouldReportMessages() {
 
@@ -421,7 +606,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(messages).hasSize(2).extracting(MapRecord::getId).containsSequence(messageId2, messageId1);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void reverseRangeShouldConvertSimpleMessages() {
 
 		K key = keyFactory.instance();
@@ -442,7 +627,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(message.getValue()).isEqualTo(value);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void readShouldReadMessage() {
 
 		K key = keyFactory.instance();
@@ -465,7 +650,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		}
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void readShouldReadSimpleMessage() {
 
 		K key = keyFactory.instance();
@@ -487,7 +672,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(message.getValue()).isEqualTo(value);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void readShouldReadMessages() {
 
 		K key = keyFactory.instance();
@@ -503,7 +688,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(messages).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void readShouldReadMessageWithConsumerGroup() {
 
 		K key = keyFactory.instance();
@@ -528,7 +713,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		}
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void sizeShouldReportStreamSize() {
 
 		K key = keyFactory.instance();
@@ -542,7 +727,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(streamOps.size(key)).isEqualTo(2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void pendingShouldReadMessageSummary() {
 		// XPENDING summary not supported by Jedis
 		assumeThat(valkeyTemplate.getRequiredConnectionFactory()).isInstanceOf(LettuceConnectionFactory.class);
@@ -562,7 +747,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(pending.getGroupName()).isEqualTo("my-group");
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void pendingShouldReadMessageDetails() {
 
 		K key = keyFactory.instance();
@@ -582,7 +767,7 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 		assertThat(pending.get(0).getTotalDeliveryCount()).isOne();
 	}
 
-	@ParameterizedValkeyTest // GH-2465
+	@Test // GH-2465
 	void claimShouldReadMessageDetails() {
 
 		K key = keyFactory.instance();
@@ -604,6 +789,152 @@ public class DefaultStreamOperationsIntegrationTests<K, HK, HV> {
 
 		if (!(key instanceof byte[] || value instanceof byte[])) {
 			assertThat(message.getValue()).containsEntry(hashKey, value);
+		}
+	}
+
+	@Nested // GH-3232
+	@EnabledOnCommand("XDELEX")
+	class DeleteWithOptions {
+
+		@Test
+		void shouldDeleteEntries() {
+
+			K key = keyFactory.instance();
+			HK hashKey = hashKeyFactory.instance();
+			HV value = hashValueFactory.instance();
+
+			RecordId messageId1 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+			RecordId messageId2 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+			RecordId messageId3 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+
+			assertThat(streamOps.size(key)).isEqualTo(3L);
+
+			XDelOptions options = XDelOptions.defaults();
+
+			List<StreamEntryDeletionResult> results = streamOps.deleteWithOptions(key, options, messageId1, messageId2);
+
+			assertThat(results).hasSize(2);
+			assertThat(results.get(0)).isEqualTo(StreamEntryDeletionResult.DELETED);
+			assertThat(results.get(1)).isEqualTo(StreamEntryDeletionResult.DELETED);
+
+			assertThat(streamOps.size(key)).isEqualTo(1L);
+		}
+
+		@Test
+		void usingStringIdsShouldDeleteEntries() {
+
+			K key = keyFactory.instance();
+			HK hashKey = hashKeyFactory.instance();
+			HV value = hashValueFactory.instance();
+
+			RecordId messageId1 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+			RecordId messageId2 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+
+			assertThat(streamOps.size(key)).isEqualTo(2L);
+
+			XDelOptions options = XDelOptions.defaults();
+
+			List<StreamEntryDeletionResult> results = streamOps.deleteWithOptions(key, options, messageId1, messageId2);
+
+			assertThat(results).hasSize(2);
+			assertThat(streamOps.size(key)).isEqualTo(0L);
+		}
+
+		@Test
+		void usingRecordShouldDeleteEntry() {
+
+			K key = keyFactory.instance();
+			HK hashKey = hashKeyFactory.instance();
+			HV value = hashValueFactory.instance();
+
+			RecordId messageId = streamOps.add(key, Collections.singletonMap(hashKey, value));
+
+			assertThat(streamOps.size(key)).isEqualTo(1L);
+
+			MapRecord<K, HK, HV> record = StreamRecords.newRecord().in(key).withId(messageId)
+					.ofMap(Collections.singletonMap(hashKey, value));
+			XDelOptions options = XDelOptions.defaults();
+
+			List<StreamEntryDeletionResult> results = streamOps.deleteWithOptions(record, options);
+
+			assertThat(results).hasSize(1);
+			assertThat(results.get(0)).isEqualTo(StreamEntryDeletionResult.DELETED);
+
+			assertThat(streamOps.size(key)).isEqualTo(0L);
+		}
+	}
+
+	@Nested // GH-3232
+	@EnabledOnCommand("XACKDEL")
+	class AcknowledgeAndDelete {
+
+		@Test
+		void shouldAcknowledgeAndDeleteEntries() {
+
+			K key = keyFactory.instance();
+			HK hashKey = hashKeyFactory.instance();
+			HV value = hashValueFactory.instance();
+
+			RecordId messageId1 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+			RecordId messageId2 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+
+			streamOps.createGroup(key, ReadOffset.from("0-0"), "my-group");
+
+			streamOps.read(Consumer.from("my-group", "my-consumer"), StreamOffset.create(key, ReadOffset.lastConsumed()));
+
+			XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.removeAcknowledged());
+
+			List<StreamEntryDeletionResult> results = streamOps.acknowledgeAndDelete(key, "my-group", options, messageId1,
+					messageId2);
+
+			assertThat(results).hasSize(2);
+			assertThat(results.get(0)).isEqualTo(StreamEntryDeletionResult.DELETED);
+			assertThat(results.get(1)).isEqualTo(StreamEntryDeletionResult.DELETED);
+		}
+
+		@Test
+		void usingStringIdsShouldWork() {
+
+			K key = keyFactory.instance();
+			HK hashKey = hashKeyFactory.instance();
+			HV value = hashValueFactory.instance();
+
+			RecordId messageId1 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+			RecordId messageId2 = streamOps.add(key, Collections.singletonMap(hashKey, value));
+
+			streamOps.createGroup(key, ReadOffset.from("0-0"), "my-group");
+
+			streamOps.read(Consumer.from("my-group", "my-consumer"), StreamOffset.create(key, ReadOffset.lastConsumed()));
+
+			XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.removeAcknowledged());
+
+			List<StreamEntryDeletionResult> results = streamOps.acknowledgeAndDelete(key, "my-group", options, messageId1,
+					messageId2);
+
+			assertThat(results).hasSize(2);
+		}
+
+		@Test
+		void usingRecordShouldWork() {
+
+			K key = keyFactory.instance();
+			HK hashKey = hashKeyFactory.instance();
+			HV value = hashValueFactory.instance();
+
+			RecordId messageId = streamOps.add(key, Collections.singletonMap(hashKey, value));
+
+			streamOps.createGroup(key, ReadOffset.from("0-0"), "my-group");
+
+			streamOps.read(Consumer.from("my-group", "my-consumer"), StreamOffset.create(key, ReadOffset.lastConsumed()));
+
+			MapRecord<K, HK, HV> record = StreamRecords.newRecord().in(key).withId(messageId)
+					.ofMap(Collections.singletonMap(hashKey, value));
+			XDelOptions options = XDelOptions.deletionPolicy(ValkeyStreamCommands.StreamDeletionPolicy.removeAcknowledged());
+
+			List<StreamEntryDeletionResult> results = streamOps.acknowledgeAndDelete("my-group", record, options);
+
+			assertThat(results).hasSize(1);
+			assertThat(results.get(0)).isEqualTo(StreamEntryDeletionResult.DELETED);
 		}
 	}
 }

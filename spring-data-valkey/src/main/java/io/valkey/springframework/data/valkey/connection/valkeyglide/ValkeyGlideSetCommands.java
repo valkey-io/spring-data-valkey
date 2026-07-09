@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ValkeySetCommands;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 import glide.api.models.GlideString;
@@ -501,4 +501,22 @@ public class ValkeyGlideSetCommands implements ValkeySetCommands {
             return CursorId.of(cursor);
         }
     }
+
+	@Override
+	public Long sInterCard(byte[]... keys) {
+		Assert.notNull(keys, "Keys must not be null");
+		Assert.noNullElements(keys, "Keys must not contain null elements");
+		try {
+			List<Object> args = new ArrayList<>();
+			args.add(String.valueOf(keys.length));
+			for (byte[] key : keys) {
+				args.add(key);
+			}
+			return connection.execute("SINTERCARD",
+				(Long glideResult) -> glideResult,
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
 }

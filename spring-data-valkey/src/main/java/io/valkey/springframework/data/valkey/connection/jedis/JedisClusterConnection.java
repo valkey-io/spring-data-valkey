@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,8 @@ import redis.clients.jedis.HostAndPort;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisCluster;
 import redis.clients.jedis.JedisClusterInfoCache;
-import redis.clients.jedis.Protocol;
+import redis.clients.jedis.RedisClusterClient;
+import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.providers.ClusterConnectionProvider;
 
 import java.time.Duration;
@@ -37,15 +38,18 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.DirectFieldAccessor;
 import org.springframework.beans.PropertyAccessor;
-import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.ClusterStateFailureException;
 import io.valkey.springframework.data.valkey.ExceptionTranslationStrategy;
 import io.valkey.springframework.data.valkey.FallbackExceptionTranslationStrategy;
-import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.connection.*;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor.ClusterCommandCallback;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor.MultiKeyClusterCommandCallback;
@@ -55,15 +59,16 @@ import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import org.springframework.data.util.DirectFieldAccessFallbackBeanWrapper;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * {@link ValkeyClusterConnection} implementation on top of {@link JedisCluster}.<br/>
- * Uses the native {@link JedisCluster} api where possible and falls back to direct node communication using
+ * {@link ValkeyClusterConnection} implementation on top of {@link RedisClusterClient}.
+ * <p>
+ * Uses the native {@link RedisClusterClient} api where possible and falls back to direct node communication using
  * {@link Jedis} where needed.
  * <p>
- * This class is not Thread-safe and instances should not be shared across threads.
+ * Pipelines and transactions are not supported in cluster mode. This class is not Thread-safe and instances should not
+ * be shared across threads.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -73,16 +78,32 @@ import org.springframework.util.Assert;
  * @author Pavel Khokhlov
  * @author Liming Deng
  * @author John Blum
+ * @author Tihomir Mateev
  * @since 1.7
  */
-public class JedisClusterConnection implements ValkeyClusterConnection {
+@NullUnmarked
+public class JedisClusterConnection extends JedisConnection implements ValkeyClusterConnection {
 
 	private static final ExceptionTranslationStrategy EXCEPTION_TRANSLATION = new FallbackExceptionTranslationStrategy(
 			JedisExceptionConverter.INSTANCE);
 
 	private final Log log = LogFactory.getLog(getClass());
 
-	private final JedisCluster cluster;
+	private final UnifiedJedis cluster;
+
+	/**
+	 * Cluster-safe invoker that only supports direct execution.
+	 * Pipelines and transactions are not supported in cluster mode.
+	 */
+	private final JedisInvoker clusterInvoker = new JedisInvoker((directFunction, pipelineFunction, converter, nullDefault) -> {
+		try {
+			Object result = directFunction.apply(getCluster());
+			return result != null ? converter.convert(result) : nullDefault.get();
+		} catch (Exception ex) {
+			throw convertJedisAccessException(ex);
+		}
+	});
+
 	private final JedisClusterGeoCommands geoCommands = new JedisClusterGeoCommands(this);
 	private final JedisClusterHashCommands hashCommands = new JedisClusterHashCommands(this);
 	private final JedisClusterHyperLogLogCommands hllCommands = new JedisClusterHyperLogLogCommands(this);
@@ -100,21 +121,39 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	private final ClusterCommandExecutor clusterCommandExecutor;
 	private final boolean disposeClusterCommandExecutorOnClose;
 
-	private volatile @Nullable JedisSubscription subscription;
-
 	/**
-	 * Create new {@link JedisClusterConnection} utilizing native connections via {@link JedisCluster}.
+	 * Create new {@link JedisClusterConnection} utilizing native connections via {@link UnifiedJedis} based
+	 * {@link RedisClusterClient}.
 	 *
 	 * @param cluster must not be {@literal null}.
+	 * @deprecated since 4.1, use {@link #JedisClusterConnection(RedisClusterClient)} instead.
 	 */
-	public JedisClusterConnection(JedisCluster cluster) {
+	@Deprecated(since = "4.1")
+	public JedisClusterConnection(@NonNull JedisCluster cluster) {
+		this((UnifiedJedis) cluster);
+	}
 
-		Assert.notNull(cluster, "JedisCluster must not be null");
+	/**
+	 * Create new {@link JedisClusterConnection} utilizing native connections via {@link RedisClusterClient} based
+	 * {@link RedisClusterClient}.
+	 *
+	 * @param cluster must not be {@literal null}.
+	 * @since 4.1
+	 */
+	public JedisClusterConnection(@NonNull RedisClusterClient cluster) {
+		this((UnifiedJedis) cluster);
+	}
+
+	private JedisClusterConnection(UnifiedJedis cluster) {
+
+		super(cluster);
+
+		Assert.notNull(cluster, "UnifiedJedis must not be null");
 
 		this.cluster = cluster;
 
 		closed = false;
-		topologyProvider = new JedisClusterTopologyProvider(cluster);
+		topologyProvider = new JedisClusterTopologyProvider(cluster, Duration.ofMillis(100));
 		clusterCommandExecutor = new ClusterCommandExecutor(topologyProvider,
 				new JedisClusterNodeResourceProvider(cluster, topologyProvider), EXCEPTION_TRANSLATION);
 		disposeClusterCommandExecutorOnClose = true;
@@ -131,13 +170,43 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	/**
+	 * Create new {@link JedisClusterConnection} utilizing native connections via {@link RedisClusterClient} running
+	 * commands across the cluster via given {@link ClusterCommandExecutor}. Uses {@link JedisClusterTopologyProvider} by
+	 * default.
+	 *
+	 * @param cluster must not be {@literal null}.
+	 * @param executor must not be {@literal null}.
+	 * @since 4.1
+	 */
+	public JedisClusterConnection(@NonNull RedisClusterClient cluster, @NonNull ClusterCommandExecutor executor) {
+		this(cluster, executor, new JedisClusterTopologyProvider(cluster));
+	}
+
+	/**
+	 * Create new {@link JedisClusterConnection} utilizing native connections via {@link RedisClusterClient} running
+	 * commands across the cluster via given {@link ClusterCommandExecutor} and using the given
+	 * {@link ClusterTopologyProvider}.
+	 *
+	 * @param cluster must not be {@literal null}.
+	 * @param executor must not be {@literal null}.
+	 * @param topologyProvider must not be {@literal null}.
+	 * @since 4.1
+	 */
+	public JedisClusterConnection(@NonNull RedisClusterClient cluster, @NonNull ClusterCommandExecutor executor,
+			@NonNull ClusterTopologyProvider topologyProvider) {
+		this((UnifiedJedis) cluster, executor, topologyProvider);
+	}
+
+	/**
 	 * Create new {@link JedisClusterConnection} utilizing native connections via {@link JedisCluster} running commands
 	 * across the cluster via given {@link ClusterCommandExecutor}. Uses {@link JedisClusterTopologyProvider} by default.
 	 *
 	 * @param cluster must not be {@literal null}.
 	 * @param executor must not be {@literal null}.
+	 * @deprecated since 4.1, use {@link JedisClusterConnection(RedisClusterClient, ClusterCommandExecutor)} instead.
 	 */
-	public JedisClusterConnection(JedisCluster cluster, ClusterCommandExecutor executor) {
+	@Deprecated(since = "4.1")
+	public JedisClusterConnection(@NonNull JedisCluster cluster, @NonNull ClusterCommandExecutor executor) {
 		this(cluster, executor, new JedisClusterTopologyProvider(cluster));
 	}
 
@@ -149,11 +218,21 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	 * @param executor must not be {@literal null}.
 	 * @param topologyProvider must not be {@literal null}.
 	 * @since 2.2
+	 * @deprecated since 4.1, use {@link JedisClusterConnection(RedisClusterClient, ClusterCommandExecutor,
+	 *             ClusterTopologyProvider)} instead.
 	 */
-	public JedisClusterConnection(JedisCluster cluster, ClusterCommandExecutor executor,
-			ClusterTopologyProvider topologyProvider) {
+	@Deprecated(since = "4.1")
+	public JedisClusterConnection(@NonNull JedisCluster cluster, @NonNull ClusterCommandExecutor executor,
+			@NonNull ClusterTopologyProvider topologyProvider) {
+		this((UnifiedJedis) cluster, executor, topologyProvider);
+	}
 
-		Assert.notNull(cluster, "JedisCluster must not be null");
+	JedisClusterConnection(@NonNull UnifiedJedis cluster, @NonNull ClusterCommandExecutor executor,
+			@NonNull ClusterTopologyProvider topologyProvider) {
+
+		super(cluster);
+
+		Assert.notNull(cluster, "UnifiedJedis must not be null");
 		Assert.notNull(executor, "ClusterCommandExecutor must not be null");
 		Assert.notNull(topologyProvider, "ClusterTopologyProvider must not be null");
 
@@ -164,23 +243,21 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 		this.disposeClusterCommandExecutorOnClose = false;
 	}
 
-	@Nullable
 	@Override
-	public Object execute(String command, byte[]... args) {
+	public Object execute(@NonNull String command, byte @NonNull [] @NonNull... args) {
 
 		Assert.notNull(command, "Command must not be null");
 		Assert.notNull(args, "Args must not be null");
 
-		JedisClusterCommandCallback<Object> commandCallback = jedis ->
-				jedis.sendCommand(JedisClientUtils.getCommand(command), args);
+		JedisClusterCommandCallback<Object> commandCallback = jedis -> jedis
+				.sendCommand(JedisClientUtils.getCommand(command), args);
 
 		return this.clusterCommandExecutor.executeCommandOnArbitraryNode(commandCallback).getValue();
 	}
 
-	@Nullable
 	@Override
 	@SuppressWarnings("unchecked")
-	public <T> T execute(String command, byte[] key, Collection<byte[]> args) {
+	public <T> T execute(@NonNull String command, byte @NonNull [] key, @NonNull Collection<byte @NonNull []> args) {
 
 		Assert.notNull(command, "Command must not be null");
 		Assert.notNull(key, "Key must not be null");
@@ -190,8 +267,8 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 
 		ValkeyClusterNode keyMaster = this.topologyProvider.getTopology().getKeyServingMasterNode(key);
 
-		JedisClusterCommandCallback<T> commandCallback = jedis ->
-			(T) jedis.sendCommand(JedisClientUtils.getCommand(command), commandArgs);
+		JedisClusterCommandCallback<T> commandCallback = jedis -> (T) jedis
+				.sendCommand(JedisClientUtils.getCommand(command), commandArgs);
 
 		return this.clusterCommandExecutor.executeCommandOnSingleNode(commandCallback, keyMaster).getValue();
 	}
@@ -232,19 +309,18 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	 * @return command result as delivered by the underlying Valkey driver. Can be {@literal null}.
 	 * @since 2.1
 	 */
-	@Nullable
 	@SuppressWarnings("unchecked")
-	public <T> List<T> execute(String command, Collection<byte[]> keys, Collection<byte[]> args) {
+	public <T> List<T> execute(@NonNull String command, @NonNull Collection<byte @NonNull []> keys,
+			@NonNull Collection<byte @NonNull []> args) {
 
 		Assert.notNull(command, "Command must not be null");
 		Assert.notNull(keys, "Key must not be null");
 		Assert.notNull(args, "Args must not be null");
 
-		JedisMultiKeyClusterCommandCallback<T> commandCallback = (jedis, key) ->
-			(T) jedis.sendCommand(JedisClientUtils.getCommand(command), getCommandArguments(key, args));
+		JedisMultiKeyClusterCommandCallback<T> commandCallback = (jedis,
+				key) -> (T) jedis.sendCommand(JedisClientUtils.getCommand(command), getCommandArguments(key, args));
 
 		return this.clusterCommandExecutor.executeMultiKeyCommand(commandCallback, keys).resultsAsList();
-
 	}
 
 	@Override
@@ -353,59 +429,6 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public boolean isSubscribed() {
-		return (this.subscription != null && this.subscription.isAlive());
-	}
-
-	@Override
-	public Subscription getSubscription() {
-		return this.subscription;
-	}
-
-	@Override
-	public Long publish(byte[] channel, byte[] message) {
-
-		try {
-			return this.cluster.publish(channel, message);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public void subscribe(MessageListener listener, byte[]... channels) {
-
-		if (isSubscribed()) {
-			String message = "Connection already subscribed; use the connection Subscription to cancel or add new channels";
-			throw new ValkeySubscribedConnectionException(message);
-		}
-		try {
-			JedisMessageListener jedisPubSub = new JedisMessageListener(listener);
-			subscription = new JedisSubscription(listener, jedisPubSub, channels, null);
-			cluster.subscribe(jedisPubSub, channels);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public void pSubscribe(MessageListener listener, byte[]... patterns) {
-
-		if (isSubscribed()) {
-			String message = "Connection already subscribed; use the connection Subscription to cancel or add new channels";
-			throw new ValkeySubscribedConnectionException(message);
-		}
-
-		try {
-			JedisMessageListener jedisPubSub = new JedisMessageListener(listener);
-			subscription = new JedisSubscription(listener, jedisPubSub, null, patterns);
-			cluster.psubscribe(jedisPubSub, patterns);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
 	public void select(int dbIndex) {
 
 		if (dbIndex != 0) {
@@ -414,11 +437,11 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public byte[] echo(byte[] message) {
+	public byte[] echo(byte @NonNull [] message) {
 		throw new InvalidDataAccessApiUsageException("Echo not supported in cluster mode");
 	}
 
-	@Override @Nullable
+	@Override
 	public String ping() {
 
 		JedisClusterCommandCallback<String> command = Jedis::ping;
@@ -427,7 +450,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public String ping(ValkeyClusterNode node) {
+	public String ping(@NonNull ValkeyClusterNode node) {
 
 		JedisClusterCommandCallback<String> command = Jedis::ping;
 
@@ -439,7 +462,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	 */
 
 	@Override
-	public void clusterSetSlot(ValkeyClusterNode node, int slot, AddSlots mode) {
+	public void clusterSetSlot(@NonNull ValkeyClusterNode node, int slot, @NonNull AddSlots mode) {
 
 		Assert.notNull(node, "Node must not be null");
 		Assert.notNull(mode, "AddSlots mode must not be null");
@@ -458,12 +481,12 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public List<byte[]> clusterGetKeysInSlot(int slot, Integer count) {
+	public List<byte[]> clusterGetKeysInSlot(int slot, @NonNull Integer count) {
 
 		ValkeyClusterNode node = clusterGetNodeForSlot(slot);
 
-		JedisClusterCommandCallback<List<byte[]>> command = jedis ->
-				JedisConverters.stringListToByteList().convert(jedis.clusterGetKeysInSlot(slot, nullSafeIntValue(count)));
+		JedisClusterCommandCallback<List<byte[]>> command = jedis -> JedisConverters.stringListToByteList()
+				.convert(jedis.clusterGetKeysInSlot(slot, nullSafeIntValue(count)));
 
 		NodeResult<List<byte[]>> result = this.clusterCommandExecutor.executeCommandOnSingleNode(command, node);
 
@@ -475,7 +498,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public void clusterAddSlots(ValkeyClusterNode node, int... slots) {
+	public void clusterAddSlots(@NonNull ValkeyClusterNode node, int @NonNull... slots) {
 
 		JedisClusterCommandCallback<String> command = jedis -> jedis.clusterAddSlots(slots);
 
@@ -483,7 +506,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public void clusterAddSlots(ValkeyClusterNode node, SlotRange range) {
+	public void clusterAddSlots(@NonNull ValkeyClusterNode node, @NonNull SlotRange range) {
 
 		Assert.notNull(range, "Range must not be null");
 
@@ -501,7 +524,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public void clusterDeleteSlots(ValkeyClusterNode node, int... slots) {
+	public void clusterDeleteSlots(@NonNull ValkeyClusterNode node, int @NonNull... slots) {
 
 		JedisClusterCommandCallback<String> command = jedis -> jedis.clusterDelSlots(slots);
 
@@ -509,7 +532,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public void clusterDeleteSlotsInRange(ValkeyClusterNode node, SlotRange range) {
+	public void clusterDeleteSlotsInRange(@NonNull ValkeyClusterNode node, @NonNull SlotRange range) {
 
 		Assert.notNull(range, "Range must not be null");
 
@@ -517,7 +540,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public void clusterForget(ValkeyClusterNode node) {
+	public void clusterForget(@NonNull ValkeyClusterNode node) {
 
 		Set<ValkeyClusterNode> nodes = new LinkedHashSet<>(this.topologyProvider.getTopology().getActiveMasterNodes());
 		ValkeyClusterNode nodeToRemove = this.topologyProvider.getTopology().lookup(node);
@@ -531,19 +554,20 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 
 	@Override
 	@SuppressWarnings("all")
-	public void clusterMeet(ValkeyClusterNode node) {
+	public void clusterMeet(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "Cluster node must not be null for CLUSTER MEET command");
 		Assert.hasText(node.getHost(), "Node to meet cluster must have a host");
 		Assert.isTrue(node.getPort() > 0, "Node to meet cluster must have a port greater 0");
 
-		JedisClusterCommandCallback<String> command = jedis -> jedis.clusterMeet(node.getHost(), node.getPort());
+		JedisClusterCommandCallback<String> command = jedis -> jedis.clusterMeet(node.getRequiredHost(),
+				node.getRequiredPort());
 
 		this.clusterCommandExecutor.executeCommandOnAllNodes(command);
 	}
 
 	@Override
-	public void clusterReplicate(ValkeyClusterNode master, ValkeyClusterNode replica) {
+	public void clusterReplicate(@NonNull ValkeyClusterNode master, @NonNull ValkeyClusterNode replica) {
 
 		ValkeyClusterNode masterNode = this.topologyProvider.getTopology().lookup(master);
 
@@ -553,20 +577,20 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public Integer clusterGetSlotForKey(byte[] key) {
+	public Integer clusterGetSlotForKey(byte @NonNull [] key) {
 
-		JedisClusterCommandCallback<Integer> command = jedis ->
-				Long.valueOf(jedis.clusterKeySlot(JedisConverters.toString(key))).intValue();
+		JedisClusterCommandCallback<Integer> command = jedis -> Long
+				.valueOf(jedis.clusterKeySlot(JedisConverters.toString(key))).intValue();
 
 		return this.clusterCommandExecutor.executeCommandOnArbitraryNode(command).getValue();
 	}
 
 	@Override
-	public ValkeyClusterNode clusterGetNodeForKey(byte[] key) {
+	public ValkeyClusterNode clusterGetNodeForKey(byte @NonNull [] key) {
 		return this.topologyProvider.getTopology().getKeyServingMasterNode(key);
 	}
 
-	@Override @Nullable
+	@Override
 	public ValkeyClusterNode clusterGetNodeForSlot(int slot) {
 
 		for (ValkeyClusterNode node : topologyProvider.getTopology().getSlotServingNodes(slot)) {
@@ -584,7 +608,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public Set<ValkeyClusterNode> clusterGetReplicas(ValkeyClusterNode master) {
+	public Set<ValkeyClusterNode> clusterGetReplicas(@NonNull ValkeyClusterNode master) {
 
 		Assert.notNull(master, "Master cannot be null");
 
@@ -600,14 +624,13 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	@Override
 	public Map<ValkeyClusterNode, Collection<ValkeyClusterNode>> clusterGetMasterReplicaMap() {
 
-		JedisClusterCommandCallback<Collection<ValkeyClusterNode>> command = jedis ->
-				JedisConverters.toSetOfValkeyClusterNodes(jedis.clusterSlaves(jedis.clusterMyId()));
+		JedisClusterCommandCallback<Collection<ValkeyClusterNode>> command = jedis -> JedisConverters
+				.toSetOfValkeyClusterNodes(jedis.clusterSlaves(jedis.clusterMyId()));
 
 		Set<ValkeyClusterNode> activeMasterNodes = this.topologyProvider.getTopology().getActiveMasterNodes();
 
-		List<NodeResult<Collection<ValkeyClusterNode>>> nodeResults =
-				this.clusterCommandExecutor.executeCommandAsyncOnNodes(command,activeMasterNodes)
-						.getResults();
+		List<NodeResult<Collection<ValkeyClusterNode>>> nodeResults = this.clusterCommandExecutor
+				.executeCommandAsyncOnNodes(command, activeMasterNodes).getResults();
 
 		Map<ValkeyClusterNode, Collection<ValkeyClusterNode>> result = new LinkedHashMap<>();
 
@@ -628,19 +651,8 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 		return new ClusterInfo(JedisConverters.toProperties(source));
 	}
 
-	/*
-	 * Little helpers to make it work
-	 */
-
-	protected DataAccessException convertJedisAccessException(Exception cause) {
-
-		DataAccessException translated = EXCEPTION_TRANSLATION.translate(cause);
-
-		return translated != null ? translated : new ValkeySystemException(cause.getMessage(), cause);
-	}
-
 	@Override
-	public void close() throws DataAccessException {
+	protected void doClose() {
 
 		if (!closed && disposeClusterCommandExecutorOnClose) {
 			try {
@@ -659,7 +671,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	}
 
 	@Override
-	public JedisCluster getNativeConnection() {
+	public UnifiedJedis getNativeConnection() {
 		return cluster;
 	}
 
@@ -718,32 +730,29 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	 * @author Mark Paluch
 	 * @since 1.7
 	 */
+	@NullMarked
 	static class JedisClusterNodeResourceProvider implements ClusterNodeResourceProvider {
 
-		private final JedisCluster cluster;
+		private final UnifiedJedis cluster;
 		private final ClusterTopologyProvider topologyProvider;
-		private final ClusterConnectionProvider connectionHandler;
+		private final @Nullable ClusterConnectionProvider connectionHandler;
 
 		/**
 		 * Creates new {@link JedisClusterNodeResourceProvider}.
 		 *
-		 * @param cluster must not be {@literal null}.
+		 * @param cluster should not be {@literal null}.
 		 * @param topologyProvider must not be {@literal null}.
 		 */
-		JedisClusterNodeResourceProvider(JedisCluster cluster, ClusterTopologyProvider topologyProvider) {
+		JedisClusterNodeResourceProvider(UnifiedJedis cluster, ClusterTopologyProvider topologyProvider) {
 
 			this.cluster = cluster;
 			this.topologyProvider = topologyProvider;
 
-			if (cluster != null) {
+			PropertyAccessor accessor = new DirectFieldAccessFallbackBeanWrapper(cluster);
+			this.connectionHandler = accessor.isReadableProperty("connectionHandler")
+					? (ClusterConnectionProvider) accessor.getPropertyValue("connectionHandler")
+					: null;
 
-				PropertyAccessor accessor = new DirectFieldAccessFallbackBeanWrapper(cluster);
-				this.connectionHandler = accessor.isReadableProperty("connectionHandler")
-						? (ClusterConnectionProvider) accessor.getPropertyValue("connectionHandler")
-						: null;
-			} else {
-				this.connectionHandler = null;
-			}
 		}
 
 		@Override
@@ -766,12 +775,10 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 			throw new DataAccessResourceFailureException("Node %s is unknown to cluster".formatted(node));
 		}
 
-		@Nullable
-		private ConnectionPool getResourcePoolForSpecificNode(ValkeyClusterNode node) {
+		private @Nullable ConnectionPool getResourcePoolForSpecificNode(ValkeyClusterNode node) {
 
-			Map<String, ConnectionPool> clusterNodes = cluster.getClusterNodes();
-			HostAndPort hap = new HostAndPort(node.getHost(),
-					node.getPort() == null ? Protocol.DEFAULT_PORT : node.getPort());
+			Map<String, ConnectionPool> clusterNodes = getClusterNodesMap(cluster);
+			HostAndPort hap = JedisConverters.toHostAndPort(node);
 			String key = JedisClusterInfoCache.getNodeKey(hap);
 
 			if (clusterNodes.containsKey(key)) {
@@ -781,24 +788,24 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 			return null;
 		}
 
-		private Connection getConnectionForSpecificNode(ValkeyClusterNode node) {
+		private @Nullable Connection getConnectionForSpecificNode(ValkeyClusterNode node) {
 
 			ValkeyClusterNode member = topologyProvider.getTopology().lookup(node);
 
 			if (!member.hasValidHost()) {
 				throw new DataAccessResourceFailureException(
-						"Cannot obtain connection to node %ss; " + "it is not associated with a hostname".formatted(node.getId()));
+						"Cannot obtain connection to node %s; it is not associated with a hostname".formatted(node.getId()));
 			}
 
-			if (member != null && connectionHandler != null) {
-				return connectionHandler.getConnection(new HostAndPort(member.getHost(), member.getPort()));
+			if (connectionHandler != null) {
+				return connectionHandler.getConnection(JedisConverters.toHostAndPort(member));
 			}
 
 			return null;
 		}
 
 		@Override
-		public void returnResourceForSpecificNode(ValkeyClusterNode node, Object client) {
+		public void returnResourceForSpecificNode(@NonNull ValkeyClusterNode node, @NonNull Object client) {
 			((Jedis) client).close();
 		}
 	}
@@ -810,9 +817,10 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	 * @author Mark Paluch
 	 * @since 1.7
 	 */
+	@NullMarked
 	public static class JedisClusterTopologyProvider implements ClusterTopologyProvider {
 
-		private final JedisCluster cluster;
+		private final UnifiedJedis cluster;
 
 		private final long cacheTimeMs;
 
@@ -822,8 +830,24 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 		 * Create new {@link JedisClusterTopologyProvider}. Uses a default cache timeout of 100 milliseconds.
 		 *
 		 * @param cluster must not be {@literal null}.
+		 * @deprecated since 4.1 in favor of {@link #JedisClusterTopologyProvider(UnifiedJedis, Duration)}.
 		 */
+		@Deprecated(since = "4.1")
 		public JedisClusterTopologyProvider(JedisCluster cluster) {
+			this((UnifiedJedis) cluster);
+		}
+
+		/**
+		 * Create new {@link JedisClusterTopologyProvider}. Uses a default cache timeout of 100 milliseconds.
+		 *
+		 * @param cluster must not be {@literal null}.
+		 * @since 4.1
+		 */
+		public JedisClusterTopologyProvider(RedisClusterClient cluster) {
+			this((UnifiedJedis) cluster);
+		}
+
+		JedisClusterTopologyProvider(UnifiedJedis cluster) {
 			this(cluster, Duration.ofMillis(100));
 		}
 
@@ -833,10 +857,27 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 		 * @param cluster must not be {@literal null}.
 		 * @param cacheTimeout must not be {@literal null}.
 		 * @since 2.2
+		 * @deprecated since 4.1 in favor of {@link #JedisClusterTopologyProvider(RedisClusterClient, Duration)}.
 		 */
+		@Deprecated(since = "4.1")
 		public JedisClusterTopologyProvider(JedisCluster cluster, Duration cacheTimeout) {
+			this((UnifiedJedis) cluster, cacheTimeout);
+		}
 
-			Assert.notNull(cluster, "JedisCluster must not be null");
+		/**
+		 * Create new {@link JedisClusterTopologyProvider}.
+		 *
+		 * @param cluster must not be {@literal null}.
+		 * @param cacheTimeout must not be {@literal null}.
+		 * @since 4.1
+		 */
+		public JedisClusterTopologyProvider(RedisClusterClient cluster, Duration cacheTimeout) {
+			this((UnifiedJedis) cluster, cacheTimeout);
+		}
+
+		private JedisClusterTopologyProvider(UnifiedJedis cluster, Duration cacheTimeout) {
+
+			Assert.notNull(cluster, "Valkey Cluster Client must not be null");
 			Assert.notNull(cacheTimeout, "Cache timeout must not be null");
 			Assert.isTrue(!cacheTimeout.isNegative(), "Cache timeout must not be negative");
 
@@ -845,6 +886,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public ClusterTopology getTopology() {
 
 			JedisClusterTopology topology = cached;
@@ -853,7 +895,7 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 			}
 
 			Map<String, Exception> errors = new LinkedHashMap<>();
-			List<Entry<String, ConnectionPool>> list = new ArrayList<>(cluster.getClusterNodes().entrySet());
+			List<Entry<String, ConnectionPool>> list = new ArrayList<>(getClusterNodesMap(cluster).entrySet());
 
 			Collections.shuffle(list);
 
@@ -881,27 +923,12 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 		}
 
 		/**
-		 * Returns whether {@link #getTopology()} should return the cached {@link ClusterTopology}. Uses a time-based
-		 * caching.
-		 *
-		 * @return {@literal true} to use the cached {@link ClusterTopology}; {@literal false} to fetch a new cluster
-		 *         topology.
-		 * @see #JedisClusterTopologyProvider(JedisCluster, Duration)
-		 * @since 2.2
-		 * @deprecated since 3.3.4, use {@link #shouldUseCachedValue(JedisClusterTopology)} instead.
-		 */
-		@Deprecated(since = "3.3.4", forRemoval = true)
-		protected boolean shouldUseCachedValue() {
-			return shouldUseCachedValue(cached);
-		}
-
-		/**
 		 * Returns whether {@link #getTopology()} should return the cached {@link JedisClusterTopology}. Uses a time-based
 		 * caching.
 		 *
 		 * @return {@literal true} to use the cached {@link ClusterTopology}; {@literal false} to fetch a new cluster
 		 *         topology.
-		 * @see #JedisClusterTopologyProvider(JedisCluster, Duration)
+		 * @see #JedisClusterTopologyProvider(UnifiedJedis, Duration)
 		 * @since 3.3.4
 		 */
 		protected boolean shouldUseCachedValue(@Nullable JedisClusterTopology topology) {
@@ -939,8 +966,23 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 		}
 	}
 
-	protected JedisCluster getCluster() {
+	protected UnifiedJedis getCluster() {
 		return cluster;
+	}
+
+	@Override
+	public UnifiedJedis getJedis() {
+		return cluster;
+	}
+
+	@Override
+	JedisInvoker invoke() {
+		return this.clusterInvoker;
+	}
+
+	@Override
+	JedisInvoker invokeStatus() {
+		return this.clusterInvoker;
 	}
 
 	protected ClusterCommandExecutor getClusterCommandExecutor() {
@@ -950,4 +992,19 @@ public class JedisClusterConnection implements ValkeyClusterConnection {
 	protected ClusterTopologyProvider getTopologyProvider() {
 		return topologyProvider;
 	}
+
+	private static Map<String, ConnectionPool> getClusterNodesMap(UnifiedJedis cluster) {
+
+		if (cluster instanceof JedisCluster jedisCluster) {
+			return jedisCluster.getClusterNodes();
+		}
+
+		if (cluster instanceof RedisClusterClient redisClusterClient) {
+			return redisClusterClient.getClusterNodes();
+		}
+
+		throw new IllegalArgumentException(
+				"Unsupported UnifiedJedis type: " + cluster.getClass().getName() + ". Expected JedisCluster or RedisClusterClient.");
+	}
+
 }

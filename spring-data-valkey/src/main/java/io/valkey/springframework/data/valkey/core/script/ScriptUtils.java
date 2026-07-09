@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.NonTransientDataAccessException;
 import io.valkey.springframework.data.valkey.serializer.ValkeyElementReader;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import org.springframework.lang.Nullable;
 
 /**
  * Utilities for Lua script execution and result deserialization.
@@ -44,7 +44,7 @@ class ScriptUtils {
 	 * @return the deserialized result.
 	 */
 	@SuppressWarnings({ "unchecked" })
-	static <T> T deserializeResult(ValkeySerializer<T> resultSerializer, Object result) {
+	static <T> @Nullable T deserializeResult(ValkeySerializer<T> resultSerializer, Object result) {
 
 		if (result instanceof byte[] resultBytes) {
 			return resultSerializer.deserialize(resultBytes);
@@ -72,9 +72,8 @@ class ScriptUtils {
 	 * @param result must not be {@literal null}.
 	 * @return the deserialized result.
 	 */
-	@Nullable
 	@SuppressWarnings({ "unchecked" })
-	static <T> T deserializeResult(ValkeyElementReader<T> reader, Object result) {
+	static <T> @Nullable T deserializeResult(ValkeyElementReader<T> reader, Object result) {
 
 		if (result instanceof ByteBuffer byteBuffer) {
 			return reader.read(byteBuffer);

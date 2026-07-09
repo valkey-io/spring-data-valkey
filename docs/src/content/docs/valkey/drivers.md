@@ -45,7 +45,7 @@ The following overview explains features that are supported by the individual Va
 | Supported Feature | Valkey GLIDE | Lettuce | Jedis |
 |-------------------|--------------|---------|-------|
 | Standalone Connections | X | X | X |
-| [Master/Replica Connections](/valkey/connection-modes#write-to-master-read-from-replica) | X | X | X |
+| [Master/Replica Connections](/valkey/connection-modes#write-to-master-read-from-replica) | X (via ReadFrom) | X | X |
 | [Valkey Sentinel](/valkey/connection-modes#valkey-sentinel) | | Master Lookup, Sentinel Authentication, Replica Reads | Master Lookup |
 | [Valkey Cluster](/valkey/cluster) | Cluster Connections, Cluster Node Connections, Replica Reads, AZ-aware Reads | Cluster Connections, Cluster Node Connections, Replica Reads | Cluster Connections, Cluster Node Connections |
 | Transport Channels | TCP | TCP, OS-native TCP (epoll, kqueue), Unix Domain Sockets | TCP |

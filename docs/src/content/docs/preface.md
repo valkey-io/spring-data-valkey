@@ -35,9 +35,9 @@ In general, this should be the starting point for developers wanting to try Spri
 ## Learning NoSQL and Key Value Stores
 
 NoSQL stores have taken the storage world by storm.
-It is a vast domain with a plethora of solutions, terms, and patterns (to make things worse, even the term itself has multiple [meanings](https://www.google.com/search?q=nosoql+acronym)).
+It is a vast domain with a plethora of solutions, terms, and patterns (to make things worse, even the term itself has multiple [meanings](https://www.google.com/search?q=nosql+acronym)).
 While some of the principles are common, it is crucial that you be familiar to some degree with the stores supported by SDR. The best way to get acquainted with these solutions is to read their documentation and follow their examples.
-It usually does not take more then five to ten minutes to go through them and, if you come from an RDMBS-only background, many times these exercises can be eye-openers.
+It usually does not take more than five to ten minutes to go through them and, if you come from an RDBMS-only background, many times these exercises can be eye-openers.
 
 ### Trying out the Samples
 
@@ -61,9 +61,6 @@ However, if you encounter issues or you need advice, feel free to use one of the
 Spring Data on [Stack Overflow](https://stackoverflow.com/questions/tagged/spring-data) is a tag for all Spring Data (not just Document) users to share information and help each other.
 Note that registration is needed only for posting.
 
-### Professional Support
-
-Professional, from-the-source support, with guaranteed response time, is available from [Pivotal Software, Inc.](https://pivotal.io/), the company behind Spring Data and Spring.
 
 ## Following Development
 

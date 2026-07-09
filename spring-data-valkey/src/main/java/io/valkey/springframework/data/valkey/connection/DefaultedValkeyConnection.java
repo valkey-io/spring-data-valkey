@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,9 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;
@@ -49,7 +52,6 @@ import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
-import org.springframework.lang.Nullable;
 
 /**
  * {@link DefaultedValkeyConnection} provides method delegates to {@code Valkey*Command} interfaces accessible via
@@ -66,9 +68,12 @@ import org.springframework.lang.Nullable;
  * @author Dennis Neufeld
  * @author Shyngys Sapraliyev
  * @author Tihomir Mateev
+ * @author Mingi Lee
+ * @author Yordan Tsintsov
  * @since 2.0
  */
 @Deprecated
+@NullUnmarked
 public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommandsProvider {
 
 	// KEY COMMANDS
@@ -78,6 +83,13 @@ public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommand
 	@Deprecated
 	default Boolean copy(byte[] sourceKey, byte[] targetKey, boolean replace) {
 		return keyCommands().copy(sourceKey, targetKey, replace);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#keyCommands()}. */
+	@Override
+	@Deprecated
+	default String digest(byte[] key) {
+		return keyCommands().digest(key);
 	}
 
 	/** @deprecated in favor of {@link ValkeyConnection#keyCommands()}. */
@@ -99,6 +111,13 @@ public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommand
 	@Deprecated
 	default Long del(byte[]... keys) {
 		return keyCommands().del(keys);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#keyCommands()}. */
+	@Override
+	@Deprecated
+	default Boolean delex(byte[] key, CompareCondition condition) {
+		return keyCommands().delex(key, condition);
 	}
 
 	/** @deprecated in favor of {@link ValkeyConnection#keyCommands()}. */
@@ -351,15 +370,15 @@ public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommand
 	/** @deprecated in favor of {@link ValkeyConnection#stringCommands()}}. */
 	@Override
 	@Deprecated
-	default Boolean set(byte[] key, byte[] value, Expiration expiration, SetOption option) {
-		return stringCommands().set(key, value, expiration, option);
+	default Boolean set(byte[] key, byte[] value, SetCondition condition, Expiration expiration) {
+		return stringCommands().set(key, value, condition, expiration);
 	}
 
 	/** @deprecated in favor of {@link ValkeyConnection#stringCommands()}}. */
 	@Override
 	@Deprecated
-	default byte[] setGet(byte[] key, byte[] value, Expiration expiration, SetOption option) {
-		return stringCommands().setGet(key, value, expiration, option);
+	default byte[] setGet(byte[] key, byte[] value, SetCondition condition, Expiration expiration) {
+		return stringCommands().setGet(key, value, condition, expiration);
 	}
 
 	/** @deprecated in favor of {@link ValkeyConnection#stringCommands()}}. */
@@ -549,6 +568,20 @@ public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommand
 	/** @deprecated in favor of {@link ValkeyConnection#streamCommands()}}. */
 	@Override
 	@Deprecated
+	default List<StreamEntryDeletionResult> xDelEx(byte[] key, XDelOptions options, RecordId... recordIds) {
+		return streamCommands().xDelEx(key, options, recordIds);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#streamCommands()}}. */
+	@Override
+	@Deprecated
+	default List<StreamEntryDeletionResult> xAckDel(byte[] key, String group, XDelOptions options, RecordId... recordIds) {
+		return streamCommands().xAckDel(key, group, options, recordIds);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#streamCommands()}}. */
+	@Override
+	@Deprecated
 	default String xGroupCreate(byte[] key, String groupName, ReadOffset readOffset) {
 		return streamCommands().xGroupCreate(key, groupName, readOffset);
 	}
@@ -682,10 +715,18 @@ public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommand
 		return xTrim(key, count, false);
 	}
 
+	/** @deprecated in favor of {@link ValkeyConnection#streamCommands()}}. */
 	@Override
 	@Deprecated
 	default Long xTrim(byte[] key, long count, boolean approximateTrimming) {
 		return streamCommands().xTrim(key, count, approximateTrimming);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#streamCommands()}}. */
+	@Override
+	@Deprecated
+	default Long xTrim(byte[] key, XTrimOptions options) {
+		return streamCommands().xTrim(key, options);
 	}
 
 	// LIST COMMANDS
@@ -886,6 +927,13 @@ public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommand
 	@Deprecated
 	default Long sInterStore(byte[] destKey, byte[]... keys) {
 		return setCommands().sInterStore(destKey, keys);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#setCommands()}}. */
+	@Override
+	@Deprecated
+	default Long sInterCard(byte[]... keys) {
+		return setCommands().sInterCard(keys);
 	}
 
 	/** @deprecated in favor of {@link ValkeyConnection#setCommands()}}. */
@@ -1544,8 +1592,7 @@ public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommand
 	/** @deprecated in favor of {@link ValkeyConnection#hashCommands()}}. */
 	@Override
 	@Deprecated
-	default List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition,
-			byte[]... fields) {
+	default List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields) {
 		return hashCommands().hExpireAt(key, unixTime, condition, fields);
 	}
 
@@ -1595,9 +1642,30 @@ public interface DefaultedValkeyConnection extends ValkeyCommands, ValkeyCommand
 	/** @deprecated in favor of {@link ValkeyConnection#hashCommands()}}. */
 	@Override
 	@Deprecated
+	default List<byte[]> hGetDel(byte[] key, byte[]... fields) {
+		return hashCommands().hGetDel(key, fields);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#hashCommands()}}. */
+	@Override
+	@Deprecated
+	default List<byte[]> hGetEx(byte[] key, @Nullable Expiration expiration, byte[]... fields) {
+		return hashCommands().hGetEx(key, expiration, fields);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#hashCommands()}}. */
+	@Override
+	@Deprecated
+	default Boolean hSetEx(byte[] key, Map<byte[], byte[]> hashes, @NonNull HashFieldSetOption condition,
+			@Nullable Expiration expiration) {
+		return hashCommands().hSetEx(key, hashes, condition, expiration);
+	}
+
+	/** @deprecated in favor of {@link ValkeyConnection#hashCommands()}}. */
+	@Override
+	@Deprecated
 	default @Nullable List<Long> applyHashFieldExpiration(byte[] key,
-			io.valkey.springframework.data.valkey.core.types.Expiration expiration, ExpirationOptions options,
-			byte[]... fields) {
+			io.valkey.springframework.data.valkey.core.types.Expiration expiration, ExpirationOptions options, byte[]... fields) {
 		return hashCommands().applyHashFieldExpiration(key, expiration, options, fields);
 	}
 

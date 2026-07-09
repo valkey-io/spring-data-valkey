@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -38,8 +41,6 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.listener.adapter.MessageListenerAdapter;
 import io.valkey.springframework.data.valkey.test.condition.EnabledIfLongRunningTest;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Base test class for PubSub integration tests
@@ -49,6 +50,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author Vedran Pavic
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public class PubSubTests<T> {
 
@@ -108,7 +110,7 @@ public class PubSubTests<T> {
 		return factory.instance();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testContainerSubscribe() {
 		T payload1 = getT();
 		T payload2 = getT();
@@ -119,7 +121,7 @@ public class PubSubTests<T> {
 		await().atMost(Duration.ofSeconds(2)).until(() -> bag.contains(payload1) && bag.contains(payload2));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testMessageBatch() throws Exception {
 
 		int COUNT = 10;
@@ -132,7 +134,7 @@ public class PubSubTests<T> {
 		}
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@EnabledIfLongRunningTest
 	void testContainerUnsubscribe() throws Exception {
 		T payload1 = getT();
@@ -145,15 +147,15 @@ public class PubSubTests<T> {
 		assertThat(bag.poll(200, TimeUnit.MILLISECONDS)).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testStartNoListeners() {
 		container.removeMessageListener(adapter, new ChannelTopic(CHANNEL));
 		container.stop();
-		// DATVALKEY-207 This test previously took 5 seconds on start due to monitor wait
+		// DATREDIS-207 This test previously took 5 seconds on start due to monitor wait
 		container.start();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-251, GH-964
+	@Test // DATAREDIS-251, GH-964
 	void testStartListenersToNoSpecificChannelTest() {
 
 		assumeThat(isClusterAware(template.getConnectionFactory())).isFalse();
@@ -170,6 +172,7 @@ public class PubSubTests<T> {
 	}
 
 	private static boolean isClusterAware(ValkeyConnectionFactory connectionFactory) {
+
 		if (connectionFactory instanceof LettuceConnectionFactory lettuce) {
 			return lettuce.isClusterAware();
 		} else if (connectionFactory instanceof JedisConnectionFactory jedis) {

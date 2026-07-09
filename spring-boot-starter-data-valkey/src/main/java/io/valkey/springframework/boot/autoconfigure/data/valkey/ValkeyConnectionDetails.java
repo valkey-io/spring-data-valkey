@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.boot.autoconfigure.service.connection.ConnectionDetails;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.util.Assert;
@@ -32,45 +34,62 @@ import org.springframework.util.Assert;
 public interface ValkeyConnectionDetails extends ConnectionDetails {
 
 	/**
-	 * Login username of the valkey server.
-	 * @return the login username of the valkey server
+	 * Login username of the Valkey server.
+	 * @return the login username of the Valkey server
 	 */
-	default String getUsername() {
+	default @Nullable String getUsername() {
 		return null;
 	}
 
 	/**
-	 * Login password of the valkey server.
-	 * @return the login password of the valkey server
+	 * Login password of the Valkey server.
+	 * @return the login password of the Valkey server
 	 */
-	default String getPassword() {
+	default @Nullable String getPassword() {
 		return null;
 	}
 
 	/**
-	 * Valkey standalone configuration. Mutually exclusive with {@link #getSentinel()} and
-	 * {@link #getCluster()}.
+	 * SSL bundle to use.
+	 * @return the SSL bundle to use
+	 */
+	default @Nullable SslBundle getSslBundle() {
+		return null;
+	}
+
+	/**
+	 * Valkey standalone configuration. Mutually exclusive with {@link #getSentinel()},
+	 * {@link #getCluster()} and {@link #getMasterReplica()}.
 	 * @return the Valkey standalone configuration
 	 */
-	default Standalone getStandalone() {
+	default @Nullable Standalone getStandalone() {
 		return null;
 	}
 
 	/**
-	 * Valkey sentinel configuration. Mutually exclusive with {@link #getStandalone()} and
-	 * {@link #getCluster()}.
+	 * Valkey sentinel configuration. Mutually exclusive with {@link #getStandalone()},
+	 * {@link #getCluster()} and {@link #getMasterReplica()}.
 	 * @return the Valkey sentinel configuration
 	 */
-	default Sentinel getSentinel() {
+	default @Nullable Sentinel getSentinel() {
 		return null;
 	}
 
 	/**
-	 * Valkey cluster configuration. Mutually exclusive with {@link #getStandalone()} and
-	 * {@link #getSentinel()}.
+	 * Valkey cluster configuration. Mutually exclusive with {@link #getStandalone()},
+	 * {@link #getSentinel()} and {@link #getMasterReplica()}.
 	 * @return the Valkey cluster configuration
 	 */
-	default Cluster getCluster() {
+	default @Nullable Cluster getCluster() {
+		return null;
+	}
+
+	/**
+	 * Valkey master replica configuration. Mutually exclusive with
+	 * {@link #getStandalone()}, {@link #getSentinel()} and {@link #getCluster()}.
+	 * @return the Valkey master replica configuration
+	 */
+	default @Nullable MasterReplica getMasterReplica() {
 		return null;
 	}
 
@@ -81,13 +100,13 @@ public interface ValkeyConnectionDetails extends ConnectionDetails {
 
 		/**
 		 * Valkey server host.
-		 * @return the valkey server host
+		 * @return the Valkey server host
 		 */
 		String getHost();
 
 		/**
 		 * Valkey server port.
-		 * @return the valkey server port
+		 * @return the Valkey server port
 		 */
 		int getPort();
 
@@ -100,34 +119,13 @@ public interface ValkeyConnectionDetails extends ConnectionDetails {
 		}
 
 		/**
-		 * SSL bundle to use.
-		 * @return the SSL bundle to use
-		 * @since 3.5.0
-		 */
-		default SslBundle getSslBundle() {
-			return null;
-		}
-
-		/**
 		 * Creates a new instance with the given host and port.
 		 * @param host the host
 		 * @param port the port
 		 * @return the new instance
 		 */
 		static Standalone of(String host, int port) {
-			return of(host, port, 0, null);
-		}
-
-		/**
-		 * Creates a new instance with the given host, port and SSL bundle.
-		 * @param host the host
-		 * @param port the port
-		 * @param sslBundle the SSL bundle
-		 * @return the new instance
-		 * @since 3.5.0
-		 */
-		static Standalone of(String host, int port, SslBundle sslBundle) {
-			return of(host, port, 0, sslBundle);
+			return of(host, port, 0);
 		}
 
 		/**
@@ -138,19 +136,6 @@ public interface ValkeyConnectionDetails extends ConnectionDetails {
 		 * @return the new instance
 		 */
 		static Standalone of(String host, int port, int database) {
-			return of(host, port, database, null);
-		}
-
-		/**
-		 * Creates a new instance with the given host, port, database and SSL bundle.
-		 * @param host the host
-		 * @param port the port
-		 * @param database the database
-		 * @param sslBundle the SSL bundle
-		 * @return the new instance
-		 * @since 3.5.0
-		 */
-		static Standalone of(String host, int port, int database, SslBundle sslBundle) {
 			Assert.hasLength(host, "'host' must not be empty");
 			return new Standalone() {
 
@@ -169,10 +154,6 @@ public interface ValkeyConnectionDetails extends ConnectionDetails {
 					return database;
 				}
 
-				@Override
-				public SslBundle getSslBundle() {
-					return sslBundle;
-				}
 			};
 		}
 
@@ -205,22 +186,13 @@ public interface ValkeyConnectionDetails extends ConnectionDetails {
 		 * Login username for authenticating with sentinel(s).
 		 * @return the login username for authenticating with sentinel(s) or {@code null}
 		 */
-		String getUsername();
+		@Nullable String getUsername();
 
 		/**
 		 * Password for authenticating with sentinel(s).
 		 * @return the password for authenticating with sentinel(s) or {@code null}
 		 */
-		String getPassword();
-
-		/**
-		 * SSL bundle to use.
-		 * @return the SSL bundle to use
-		 * @since 3.5.0
-		 */
-		default SslBundle getSslBundle() {
-			return null;
-		}
+		@Nullable String getPassword();
 
 	}
 
@@ -236,14 +208,19 @@ public interface ValkeyConnectionDetails extends ConnectionDetails {
 		 */
 		List<Node> getNodes();
 
+	}
+
+	/**
+	 * Valkey master replica configuration.
+	 */
+	interface MasterReplica {
+
 		/**
-		 * SSL bundle to use.
-		 * @return the SSL bundle to use
-		 * @since 3.5.0
+		 * Static nodes to use. This represents the full list of cluster nodes and is
+		 * required to have at least one entry.
+		 * @return the nodes to use
 		 */
-		default SslBundle getSslBundle() {
-			return null;
-		}
+		List<Node> getNodes();
 
 	}
 

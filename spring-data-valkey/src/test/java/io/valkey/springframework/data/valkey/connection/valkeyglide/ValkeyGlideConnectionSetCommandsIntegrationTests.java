@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 
 /**
  * Comprehensive low-level integration tests for {@link ValkeyGlideConnection} 
@@ -1522,6 +1523,39 @@ public class ValkeyGlideConnectionSetCommandsIntegrationTests extends AbstractVa
             cleanupKey(destKey);
         } finally {
             cleanupKey(key);
+        }
+    }
+
+    // ==================== SINTERCARD Tests ====================
+
+    @Test
+    @EnabledOnCommand("SINTERCARD")
+    void testSInterCard() {
+        String key1 = "test:set:sintercard:key1";
+        String key2 = "test:set:sintercard:key2";
+        String key3 = "test:set:sintercard:key3";
+
+        try {
+            // Set up test data
+            connection.setCommands().sAdd(key1.getBytes(), "a".getBytes(), "b".getBytes(), "c".getBytes());
+            connection.setCommands().sAdd(key2.getBytes(), "b".getBytes(), "c".getBytes(), "d".getBytes());
+            connection.setCommands().sAdd(key3.getBytes(), "c".getBytes(), "d".getBytes(), "e".getBytes());
+
+            // Test intersection cardinality of two keys
+            Long card2 = connection.setCommands().sInterCard(key1.getBytes(), key2.getBytes());
+            assertThat(card2).isEqualTo(2L); // b, c
+
+            // Test intersection cardinality of three keys
+            Long card3 = connection.setCommands().sInterCard(key1.getBytes(), key2.getBytes(), key3.getBytes());
+            assertThat(card3).isEqualTo(1L); // c
+
+            // Test intersection with non-existent key
+            Long cardEmpty = connection.setCommands().sInterCard(key1.getBytes(), "non:existent".getBytes());
+            assertThat(cardEmpty).isEqualTo(0L);
+        } finally {
+            cleanupKey(key1);
+            cleanupKey(key2);
+            cleanupKey(key3);
         }
     }
 

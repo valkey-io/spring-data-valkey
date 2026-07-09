@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,18 +24,21 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
+
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveNumberCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveStringCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
+import io.valkey.springframework.data.valkey.connection.SetCondition;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.util.Assert;
 
 /**
@@ -45,6 +48,7 @@ import org.springframework.util.Assert;
  * @author Christoph Strobl
  * @author Jiahe Cai
  * @author John Blum
+ * @author Yordan Tsintsov
  * @since 2.0
  */
 class DefaultReactiveValueOperations<K, V> implements ReactiveValueOperations<K, V> {
@@ -68,63 +72,85 @@ class DefaultReactiveValueOperations<K, V> implements ReactiveValueOperations<K,
 	}
 
 	@Override
-	public Mono<Boolean> set(K key, V value, Duration timeout) {
-
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Duration must not be null");
-
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.UPSERT));
-	}
-
-	@Override
-	public Mono<V> setGet(K key, V value, Duration timeout) {
+	public Mono<Boolean> set(K key, V value, Consumer<SetSpec<K, V>> spec) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
-		Assert.notNull(timeout, "Duration must not be null");
+		Assert.notNull(spec, "Consumer must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.setGet(rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.UPSERT))
+		DefaultSetSpec<K, V> builder = new DefaultSetSpec<>();
+		spec.accept(builder);
+		SetCondition condition = builder.toSetCondition(it -> ByteUtils.getBytes(rawValue(it)));
+
+		return createMono(stringCommands -> stringCommands.set(rawKey(key), rawValue(value), condition, builder.getExpiration()));
+	}
+
+	@Override
+	public Mono<Boolean> set(K key, V value, Expiration expiration) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(expiration, "Expiration must not be null");
+
+		return createMono(
+				stringCommands -> stringCommands.set(rawKey(key), rawValue(value), SetCondition.upsert(), expiration));
+	}
+
+	@Override
+	public Mono<V> setGet(K key, V value, Expiration expiration) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(expiration, "Expiration must not be null");
+
+		return createMono(
+				stringCommands -> stringCommands.setGet(rawKey(key), rawValue(value), SetCondition.upsert(), expiration))
 				.map(this::readRequiredValue);
 	}
 
 	@Override
-	public Mono<Boolean> setIfAbsent(K key, V value) {
+	public Mono<V> setGet(K key, V value, Consumer<SetSpec<K, V>> spec) {
 
 		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(value, "Value must not be null");
+		Assert.notNull(spec, "Consumer must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.persistent(), SetOption.SET_IF_ABSENT));
+		DefaultSetSpec<K, V> builder = new DefaultSetSpec<>();
+		spec.accept(builder);
+		SetCondition condition = builder.toSetCondition(it -> ByteUtils.getBytes(rawValue(it)));
+
+		return createMono(
+				stringCommands -> stringCommands.setGet(rawKey(key), rawValue(value), condition, builder.getExpiration()))
+				.mapNotNull(this::readValue);
 	}
 
 	@Override
-	public Mono<Boolean> setIfAbsent(K key, V value, Duration timeout) {
+	public Mono<Boolean> setIfAbsent(K key, V value, Expiration expiration) {
 
 		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Duration must not be null");
+		Assert.notNull(expiration, "Expiration must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.SET_IF_ABSENT));
+		return createMono(
+				stringCommands -> stringCommands.set(rawKey(key), rawValue(value), SetCondition.ifAbsent(), expiration));
 	}
 
 	@Override
-	public Mono<Boolean> setIfPresent(K key, V value) {
+	public Mono<Boolean> setIfPresent(K key, V value, Expiration expiration) {
 
 		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(expiration, "Expiration must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.persistent(), SetOption.SET_IF_PRESENT));
+		return createMono(
+				stringCommands -> stringCommands.set(rawKey(key), rawValue(value), SetCondition.ifPresent(), expiration));
 	}
 
 	@Override
-	public Mono<Boolean> setIfPresent(K key, V value, Duration timeout) {
+	public Mono<Boolean> compareAndSet(K key, V expectedValue, V newValue) {
 
 		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(timeout, "Duration must not be null");
+		Assert.notNull(expectedValue, "Expected value must not be null");
+		Assert.notNull(newValue, "New value must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.set(rawKey(key), rawValue(value), Expiration.from(timeout), SetOption.SET_IF_PRESENT));
+		return createMono(stringCommands -> stringCommands.set(rawKey(key), rawValue(newValue),
+				SetCondition.ifEquals(ByteUtils.getBytes(rawValue(expectedValue))), Expiration.persistent()));
 	}
 
 	@Override
@@ -198,8 +224,7 @@ class DefaultReactiveValueOperations<K, V> implements ReactiveValueOperations<K,
 
 		Assert.notNull(key, "Key must not be null");
 
-		return createMono(stringCommands -> stringCommands.getSet(rawKey(key), rawValue(value))
-				.mapNotNull(value()::read));
+		return createMono(stringCommands -> stringCommands.getSet(rawKey(key), rawValue(value)).mapNotNull(value()::read));
 	}
 
 	@Override
@@ -207,9 +232,8 @@ class DefaultReactiveValueOperations<K, V> implements ReactiveValueOperations<K,
 
 		Assert.notNull(keys, "Keys must not be null");
 
-		return createMono(stringCommands ->
-				Flux.fromIterable(keys).map(key()::write).collectList().flatMap(stringCommands::mGet)
-						.map(this::deserializeValues));
+		return createMono(stringCommands -> Flux.fromIterable(keys).map(key()::write).collectList()
+				.flatMap(stringCommands::mGet).map(this::deserializeValues));
 	}
 
 	@Override
@@ -258,8 +282,8 @@ class DefaultReactiveValueOperations<K, V> implements ReactiveValueOperations<K,
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return createMono(stringCommands ->
-				stringCommands.append(rawKey(key), serializationContext.getStringSerializationPair().write(value)));
+		return createMono(stringCommands -> stringCommands.append(rawKey(key),
+				serializationContext.getStringSerializationPair().write(value)));
 	}
 
 	@Override
@@ -342,8 +366,7 @@ class DefaultReactiveValueOperations<K, V> implements ReactiveValueOperations<K,
 		return serializationContext.getValueSerializationPair().write(value);
 	}
 
-	@Nullable
-	private V readValue(ByteBuffer buffer) {
+	private @Nullable V readValue(ByteBuffer buffer) {
 		return serializationContext.getValueSerializationPair().read(buffer);
 	}
 

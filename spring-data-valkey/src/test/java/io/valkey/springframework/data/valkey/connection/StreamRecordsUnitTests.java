@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,15 @@ package io.valkey.springframework.data.valkey.connection;
 import static org.assertj.core.api.Assertions.*;
 
 import java.io.Serializable;
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.connection.stream.ByteRecord;
 import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
@@ -38,6 +43,7 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
  *
  * @author Christoph Strobl
  * @author Romain Beghi
+ * @author Seo Bo Gyeong
  */
 class StreamRecordsUnitTests {
 
@@ -47,13 +53,13 @@ class StreamRecordsUnitTests {
 	private static final String STRING_VAL = "string-val";
 	private static final DummyObject OBJECT_VAL = new DummyObject();
 
-	private static final Jackson2JsonValkeySerializer<DummyObject> JSON_VALKEY_SERIALIZER = new Jackson2JsonValkeySerializer<>(
+	private static final Jackson2JsonValkeySerializer<DummyObject> JSON_REDIS_SERIALIZER = new Jackson2JsonValkeySerializer<>(
 			DummyObject.class);
 
 	private static final byte[] SERIALIZED_STRING_VAL = ValkeySerializer.string().serialize(STRING_VAL);
 	private static final byte[] SERIALIZED_STRING_MAP_KEY = ValkeySerializer.string().serialize(STRING_MAP_KEY);
 	private static final byte[] SERIALIZED_STRING_STREAM_KEY = ValkeySerializer.string().serialize(STRING_STREAM_KEY);
-	private static final byte[] SERIALIZED_JSON_OBJECT_VAL = JSON_VALKEY_SERIALIZER.serialize(OBJECT_VAL);
+	private static final byte[] SERIALIZED_JSON_OBJECT_VAL = JSON_REDIS_SERIALIZER.serialize(OBJECT_VAL);
 
 	private static class DummyObject implements Serializable {
 		private final Integer dummyId = 1;
@@ -98,9 +104,7 @@ class StreamRecordsUnitTests {
 		ByteRecord target = source.serialize(ValkeySerializer.string());
 
 		assertThat(target.getId()).isEqualTo(RECORD_ID);
-		assertThat(target.getStream()).isEqualTo(SERIALIZED_STRING_STREAM_KEY);
-		assertThat(target.getValue().keySet().iterator().next()).isEqualTo(SERIALIZED_STRING_MAP_KEY);
-		assertThat(target.getValue().values().iterator().next()).isEqualTo(SERIALIZED_STRING_VAL);
+		assertByteRecord(target);
 	}
 
 	@Test // DATAREDIS-993
@@ -109,7 +113,7 @@ class StreamRecordsUnitTests {
 		MapRecord<String, String, DummyObject> source = Record.of(Collections.singletonMap(STRING_MAP_KEY, OBJECT_VAL))
 				.withId(RECORD_ID).withStreamKey(STRING_STREAM_KEY);
 
-		ByteRecord target = source.serialize(ValkeySerializer.string(), ValkeySerializer.string(), JSON_VALKEY_SERIALIZER);
+		ByteRecord target = source.serialize(ValkeySerializer.string(), ValkeySerializer.string(), JSON_REDIS_SERIALIZER);
 
 		assertThat(target.getId()).isEqualTo(RECORD_ID);
 		assertThat(target.getStream()).isEqualTo(SERIALIZED_STRING_STREAM_KEY);
@@ -136,14 +140,6 @@ class StreamRecordsUnitTests {
 		final Map<K, V> to;
 		final T from;
 
-		public StubValueReturningHashMapper(Map<K, V> to) {
-			this(to, (T) new Object());
-		}
-
-		public StubValueReturningHashMapper(T from) {
-			this(Collections.emptyMap(), from);
-		}
-
 		StubValueReturningHashMapper(Map<K, V> to, T from) {
 			this.to = to;
 			this.from = from;
@@ -162,6 +158,52 @@ class StreamRecordsUnitTests {
 		static HashMapper<Object, String, String> simpleString(String value) {
 			return new StubValueReturningHashMapper<>(Collections.singletonMap(STRING_MAP_KEY, value), value);
 		}
+	}
+
+	@Test // GH-3204
+	void ofBytesWithNullStreamKey() {
+
+		ByteRecord record = StreamRecords.newRecord().withId(RECORD_ID)
+				.ofBytes(Collections.singletonMap(SERIALIZED_STRING_MAP_KEY, SERIALIZED_STRING_VAL));
+
+		assertThat(record.getId()).isEqualTo(RECORD_ID);
+		assertThat(record.getStream()).isNull();
+	}
+
+	@Test // GH-3204
+	void ofBytesWithUnsupportedStreamKeyType() {
+
+		assertThatIllegalArgumentException().isThrownBy(() -> StreamRecords.newRecord().in(123L) // Unsupported type
+				.withId(RECORD_ID).ofBytes(Collections.singletonMap(SERIALIZED_STRING_MAP_KEY, SERIALIZED_STRING_VAL)))
+				.withMessageContaining("Stream key '123' cannot be converted to byte array");
+	}
+
+	@ParameterizedTest // GH-3204
+	@MethodSource("ofBytesInStreamArgs")
+	void ofBytes(Object streamKey) {
+
+		ByteRecord record = StreamRecords.newRecord().in(streamKey).withId(RECORD_ID)
+				.ofBytes(Collections.singletonMap(SERIALIZED_STRING_MAP_KEY, SERIALIZED_STRING_VAL));
+
+		assertThat(record.getId()).isEqualTo(RECORD_ID);
+		assertByteRecord(record);
+	}
+
+	static Stream<Arguments> ofBytesInStreamArgs() {
+		return Stream.of(Arguments.argumentSet("ByteBuffer", ByteBuffer.wrap(SERIALIZED_STRING_STREAM_KEY)), //
+				Arguments.argumentSet("byte[]", new Object[] { SERIALIZED_STRING_STREAM_KEY }), //
+				Arguments.argumentSet("String", STRING_STREAM_KEY));
+	}
+
+	private void assertByteRecord(ByteRecord target) {
+
+		assertThat(target.getStream()).isEqualTo(SERIALIZED_STRING_STREAM_KEY);
+		assertThat(target.getValue()).hasSize(1);
+
+		target.getValue().forEach((k, v) -> {
+			assertThat(k).isEqualTo(SERIALIZED_STRING_MAP_KEY);
+			assertThat(v).isEqualTo(SERIALIZED_STRING_VAL);
+		});
 	}
 
 }

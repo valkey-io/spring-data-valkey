@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package io.valkey.springframework.data.valkey.core;
 
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
@@ -26,7 +27,6 @@ import io.valkey.springframework.data.valkey.core.convert.ValkeyConverter;
 import io.valkey.springframework.data.valkey.core.convert.RemoveIndexedData;
 import io.valkey.springframework.data.valkey.core.convert.SimpleIndexedPropertyValue;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -278,6 +278,7 @@ class IndexWriter {
 		return ByteUtils.concatAll(arrays);
 	}
 
+	@SuppressWarnings("NullAway")
 	private byte[] toBytes(@Nullable Object source) {
 
 		if (source == null) {
@@ -305,4 +306,5 @@ class IndexWriter {
 
 		CREATE, UPDATE, PARTIAL_UPDATE
 	}
+
 }

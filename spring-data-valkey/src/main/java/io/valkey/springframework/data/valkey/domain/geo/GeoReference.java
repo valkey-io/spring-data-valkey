@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 the original author or authors.
+ * Copyright 2021-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package io.valkey.springframework.data.valkey.domain.geo;
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -48,13 +48,13 @@ public interface GeoReference<T> {
 	}
 
 	/**
-	 * Creates a {@link GeoReference} from a {@link ValkeyGeoCommands.GeoLocation geoset member}.
+	 * Creates a {@link GeoReference} from a {@link GeoLocation geoset member}.
 	 *
 	 * @param member must not be {@literal null}.
 	 * @param <T>
 	 * @return
 	 */
-	static <T> GeoReference<T> fromMember(ValkeyGeoCommands.GeoLocation<T> member) {
+	static <T> GeoReference<T> fromMember(GeoLocation<T> member) {
 
 		Assert.notNull(member, "GeoLocation must not be null");
 
@@ -94,7 +94,7 @@ public interface GeoReference<T> {
 	 * @param <T>
 	 * @return
 	 */
-	static <T> GeoReference<T> fromCoordinate(ValkeyGeoCommands.GeoLocation<?> location) {
+	static <T> GeoReference<T> fromCoordinate(GeoLocation<?> location) {
 
 		Assert.notNull(location, "GeoLocation must not be null");
 		Assert.notNull(location.getPoint(), "GeoLocation point must not be null");

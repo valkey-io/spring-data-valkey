@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,10 @@ import java.util.Queue;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
+
 import io.valkey.springframework.data.valkey.core.BoundListOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
-import io.valkey.springframework.data.valkey.core.TimeoutUtils;
-import org.springframework.lang.Nullable;
-import org.springframework.util.Assert;
 
 /**
  * Valkey extension for the {@link List} contract. Supports {@link List}, {@link Queue} and {@link Deque} contracts as
@@ -110,15 +109,14 @@ public interface ValkeyList<E> extends ValkeyCollection<E>, List<E>, BlockingDeq
 	 *
 	 * @param destination must not be {@literal null}.
 	 * @param destinationPosition must not be {@literal null}.
-	 * @param timeout
-	 * @param unit must not be {@literal null}.
+	 * @param timeout must not be {@literal null} or negative.
 	 * @return
 	 * @since 2.6
 	 * @see Direction#first()
 	 * @see Direction#last()
 	 */
 	@Nullable
-	E moveFirstTo(ValkeyList<E> destination, Direction destinationPosition, long timeout, TimeUnit unit);
+	E moveFirstTo(ValkeyList<E> destination, Direction destinationPosition, Duration timeout);
 
 	/**
 	 * Atomically returns and removes the first element of the list stored at the bound key, and pushes the element at the
@@ -129,21 +127,17 @@ public interface ValkeyList<E> extends ValkeyCollection<E>, List<E>, BlockingDeq
 	 *
 	 * @param destination must not be {@literal null}.
 	 * @param destinationPosition must not be {@literal null}.
-	 * @param timeout must not be {@literal null} or negative.
+	 * @param timeout
+	 * @param unit must not be {@literal null}.
 	 * @return
 	 * @since 2.6
 	 * @see Direction#first()
 	 * @see Direction#last()
+	 * @deprecated since 4.1 in favor of {@link #moveFirstTo(ValkeyList, Direction, Duration)}.
 	 */
 	@Nullable
-	default E moveFirstTo(ValkeyList<E> destination, Direction destinationPosition, Duration timeout) {
-
-		Assert.notNull(timeout, "Timeout must not be null");
-		Assert.isTrue(!timeout.isNegative(), "Timeout must not be negative");
-
-		return moveFirstTo(destination, destinationPosition,
-				TimeoutUtils.toMillis(timeout.toMillis(), TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-	}
+	@Deprecated(since = "4.1")
+	E moveFirstTo(ValkeyList<E> destination, Direction destinationPosition, long timeout, TimeUnit unit);
 
 	/**
 	 * Atomically returns and removes the last element of the list stored at the bound key, and pushes the element at the
@@ -169,15 +163,14 @@ public interface ValkeyList<E> extends ValkeyCollection<E>, List<E>, BlockingDeq
 	 *
 	 * @param destination must not be {@literal null}.
 	 * @param destinationPosition must not be {@literal null}.
-	 * @param timeout
-	 * @param unit must not be {@literal null}.
+	 * @param timeout must not be {@literal null} or negative.
 	 * @return
 	 * @since 2.6
 	 * @see Direction#first()
 	 * @see Direction#last()
 	 */
 	@Nullable
-	E moveLastTo(ValkeyList<E> destination, Direction destinationPosition, long timeout, TimeUnit unit);
+	E moveLastTo(ValkeyList<E> destination, Direction destinationPosition, Duration timeout);
 
 	/**
 	 * Atomically returns and removes the last element of the list stored at the bound key, and pushes the element at the
@@ -188,21 +181,17 @@ public interface ValkeyList<E> extends ValkeyCollection<E>, List<E>, BlockingDeq
 	 *
 	 * @param destination must not be {@literal null}.
 	 * @param destinationPosition must not be {@literal null}.
-	 * @param timeout must not be {@literal null} or negative.
+	 * @param timeout
+	 * @param unit must not be {@literal null}.
 	 * @return
 	 * @since 2.6
 	 * @see Direction#first()
 	 * @see Direction#last()
+	 * @deprecated since 4.1 in favor of {@link #moveLastTo(ValkeyList, Direction, Duration)}.
 	 */
 	@Nullable
-	default E moveLastTo(ValkeyList<E> destination, Direction destinationPosition, Duration timeout) {
-
-		Assert.notNull(timeout, "Timeout must not be null");
-		Assert.isTrue(!timeout.isNegative(), "Timeout must not be negative");
-
-		return moveLastTo(destination, destinationPosition,
-				TimeoutUtils.toMillis(timeout.toMillis(), TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-	}
+	@Deprecated
+	E moveLastTo(ValkeyList<E> destination, Direction destinationPosition, long timeout, TimeUnit unit);
 
 	/**
 	 * Get elements between {@code start} and {@code end} from list at the bound key.
@@ -263,8 +252,7 @@ public interface ValkeyList<E> extends ValkeyCollection<E>, List<E>, BlockingDeq
 	 *
 	 * @return the head of this {@link Deque}.
 	 */
-	@Nullable
-	default E getFirst() {
+	default @Nullable E getFirst() {
 		return peekFirst();
 	}
 
@@ -275,8 +263,7 @@ public interface ValkeyList<E> extends ValkeyCollection<E>, List<E>, BlockingDeq
 	 *
 	 * @return the tail of this {@link Deque}.
 	 */
-	@Nullable
-	default E getLast() {
+	default @Nullable E getLast() {
 		return peekLast();
 	}
 
@@ -287,8 +274,7 @@ public interface ValkeyList<E> extends ValkeyCollection<E>, List<E>, BlockingDeq
 	 *
 	 * @return the head of this {@link Deque}.
 	 */
-	@Nullable
-	default E removeFirst() {
+	default @Nullable E removeFirst() {
 		return pollFirst();
 	}
 
@@ -299,19 +285,18 @@ public interface ValkeyList<E> extends ValkeyCollection<E>, List<E>, BlockingDeq
 	 *
 	 * @return the tail of this {@link Deque}.
 	 */
-	@Nullable
-	default E removeLast() {
+	default @Nullable E removeLast() {
 		return pollLast();
 	}
 
 	/**
 	 * Returns a reverse-ordered view of this collection.
 	 * <p>
-	 * The encounter order of elements returned by the view is the inverse of the encounter order of the elements
-	 * stored in this collection. The reverse ordering affects all order-sensitive operations, including any operations
-	 * on further views of the returned view. If the collection implementation permits modifications to this view,
-	 * the modifications "write-through" to the underlying collection. Changes to the underlying collection might
-	 * or might not be visible in this reversed view, depending upon the implementation.
+	 * The encounter order of elements returned by the view is the inverse of the encounter order of the elements stored
+	 * in this collection. The reverse ordering affects all order-sensitive operations, including any operations on
+	 * further views of the returned view. If the collection implementation permits modifications to this view, the
+	 * modifications "write-through" to the underlying collection. Changes to the underlying collection might or might not
+	 * be visible in this reversed view, depending upon the implementation.
 	 * <p>
 	 * This method is forward-compatible with Java 21 {@literal SequencedCollections}.
 	 *

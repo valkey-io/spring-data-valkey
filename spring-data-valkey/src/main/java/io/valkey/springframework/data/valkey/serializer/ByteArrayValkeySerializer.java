@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.serializer;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Raw {@link ValkeySerializer} using {@code byte[]}.
@@ -27,15 +27,14 @@ enum ByteArrayValkeySerializer implements ValkeySerializer<byte[]> {
 
 	INSTANCE;
 
-	@Nullable
 	@Override
-	public byte[] serialize(@Nullable byte[] value) throws SerializationException {
-		return value;
+	public byte[] serialize(byte @Nullable [] value) throws SerializationException {
+		return value == null ? SerializationUtils.EMPTY_ARRAY : value;
 	}
 
-	@Nullable
 	@Override
-	public byte[] deserialize(@Nullable byte[] bytes) throws SerializationException {
+	public byte @Nullable [] deserialize(byte @Nullable [] bytes) throws SerializationException {
 		return bytes;
 	}
+
 }

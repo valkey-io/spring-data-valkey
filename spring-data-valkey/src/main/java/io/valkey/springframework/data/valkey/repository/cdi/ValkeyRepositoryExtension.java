@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,9 +43,9 @@ import org.springframework.data.repository.cdi.CdiRepositoryExtensionSupport;
 
 /**
  * CDI extension to export Valkey repositories. This extension enables Valkey
- * {@link org.springframework.data.repository.Repository} support. It requires either a {@link ValkeyKeyValueTemplate} or a
- * {@link ValkeyOperations} bean. If no {@link ValkeyKeyValueTemplate} or {@link ValkeyKeyValueAdapter} are provided by the
- * user, the extension creates own managed beans.
+ * {@link org.springframework.data.repository.Repository} support. It requires either a {@link ValkeyKeyValueTemplate} or
+ * a {@link ValkeyOperations} bean. If no {@link ValkeyKeyValueTemplate} or {@link ValkeyKeyValueAdapter} are provided by
+ * the user, the extension creates own managed beans.
  *
  * @author Mark Paluch
  */
@@ -101,8 +101,7 @@ public class ValkeyRepositoryExtension extends CdiRepositoryExtensionSupport {
 			if (beanType instanceof Class<?> && ValkeyOperations.class.isAssignableFrom((Class<?>) beanType)) {
 				if (log.isDebugEnabled()) {
 					log.debug(
-							"Discovered %s with qualifiers %s.".formatted(ValkeyOperations.class.getName(),
-							bean.getQualifiers()));
+							"Discovered %s with qualifiers %s.".formatted(ValkeyOperations.class.getName(), bean.getQualifiers()));
 				}
 
 				// Store the ValkeyOperations bean using its qualifiers.

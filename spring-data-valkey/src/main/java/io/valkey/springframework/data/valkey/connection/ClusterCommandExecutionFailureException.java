@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import java.util.List;
 import org.springframework.dao.UncategorizedDataAccessException;
 
 /**
- * Exception thrown when at least one call to a clustered valkey environment fails.
+ * Exception thrown when at least one call to a clustered Valkey environment fails.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
@@ -30,7 +30,7 @@ import org.springframework.dao.UncategorizedDataAccessException;
  */
 public class ClusterCommandExecutionFailureException extends UncategorizedDataAccessException {
 
-	@Serial private static final long serialVersionUID = 5727044227040368955L;
+	private static final @Serial long serialVersionUID = 5727044227040368955L;
 
 	/**
 	 * Creates new {@link ClusterCommandExecutionFailureException}.

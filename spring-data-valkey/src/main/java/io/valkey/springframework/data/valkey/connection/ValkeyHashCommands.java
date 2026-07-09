@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -33,7 +37,10 @@ import org.springframework.util.ObjectUtils;
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author Tihomir Mateev
+ * @author Viktoriya Kutsarova
+ * @see ValkeyCommands
  */
+@NullUnmarked
 public interface ValkeyHashCommands {
 
 	/**
@@ -45,8 +52,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hset">Valkey Documentation: HSET</a>
 	 */
-	@Nullable
-	Boolean hSet(byte[] key, byte[] field, byte[] value);
+	Boolean hSet(byte [] key, byte [] field, byte [] value);
 
 	/**
 	 * Set the {@code value} of a hash {@code field} only if {@code field} does not exist.
@@ -57,8 +63,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hsetnx">Valkey Documentation: HSETNX</a>
 	 */
-	@Nullable
-	Boolean hSetNX(byte[] key, byte[] field, byte[] value);
+	Boolean hSetNX(byte [] key, byte [] field, byte [] value);
 
 	/**
 	 * Get value for given {@code field} from hash at {@code key}.
@@ -68,8 +73,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when key or field do not exists or when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hget">Valkey Documentation: HGET</a>
 	 */
-	@Nullable
-	byte[] hGet(byte[] key, byte[] field);
+	byte[] hGet(byte [] key, byte [] field);
 
 	/**
 	 * Get values for given {@code fields} from hash at {@code key}. Values are in the order of the requested keys Absent
@@ -80,8 +84,7 @@ public interface ValkeyHashCommands {
 	 * @return empty {@link List} if key does not exist. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hmget">Valkey Documentation: HMGET</a>
 	 */
-	@Nullable
-	List<byte[]> hMGet(byte[] key, byte[]... fields);
+	List<byte[]> hMGet(byte [] key, byte [] @NonNull... fields);
 
 	/**
 	 * Set multiple hash fields to multiple values using data provided in {@code hashes}
@@ -90,7 +93,7 @@ public interface ValkeyHashCommands {
 	 * @param hashes must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/hmset">Valkey Documentation: HMSET</a>
 	 */
-	void hMSet(byte[] key, Map<byte[], byte[]> hashes);
+	void hMSet(byte [] key, Map<byte[], byte[]> hashes);
 
 	/**
 	 * Increment {@code value} of a hash {@code field} by the given {@code delta}.
@@ -101,8 +104,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hincrby">Valkey Documentation: HINCRBY</a>
 	 */
-	@Nullable
-	Long hIncrBy(byte[] key, byte[] field, long delta);
+	Long hIncrBy(byte [] key, byte [] field, long delta);
 
 	/**
 	 * Increment {@code value} of a hash {@code field} by the given {@code delta}.
@@ -113,8 +115,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hincrbyfloat">Valkey Documentation: HINCRBYFLOAT</a>
 	 */
-	@Nullable
-	Double hIncrBy(byte[] key, byte[] field, double delta);
+	Double hIncrBy(byte [] key, byte [] field, double delta);
 
 	/**
 	 * Determine if given hash {@code field} exists.
@@ -124,8 +125,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hexits">Valkey Documentation: HEXISTS</a>
 	 */
-	@Nullable
-	Boolean hExists(byte[] key, byte[] field);
+	Boolean hExists(byte [] key, byte [] field);
 
 	/**
 	 * Delete given hash {@code fields}.
@@ -135,8 +135,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hdel">Valkey Documentation: HDEL</a>
 	 */
-	@Nullable
-	Long hDel(byte[] key, byte[]... fields);
+	Long hDel(byte [] key, byte [] @NonNull... fields);
 
 	/**
 	 * Get size of hash at {@code key}.
@@ -145,8 +144,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hlen">Valkey Documentation: HLEN</a>
 	 */
-	@Nullable
-	Long hLen(byte[] key);
+	Long hLen(byte [] key);
 
 	/**
 	 * Get key set (fields) of hash at {@code key}.
@@ -155,8 +153,7 @@ public interface ValkeyHashCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hkeys">Valkey Documentation: HKEYS</a>?
 	 */
-	@Nullable
-	Set<byte[]> hKeys(byte[] key);
+	Set<byte []> hKeys(byte [] key);
 
 	/**
 	 * Get entry set (values) of hash at {@code field}.
@@ -165,8 +162,7 @@ public interface ValkeyHashCommands {
 	 * @return empty {@link List} if key does not exist. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hvals">Valkey Documentation: HVALS</a>
 	 */
-	@Nullable
-	List<byte[]> hVals(byte[] key);
+	List<byte []> hVals(byte [] key);
 
 	/**
 	 * Get entire hash stored at {@code key}.
@@ -175,8 +171,7 @@ public interface ValkeyHashCommands {
 	 * @return empty {@link Map} if key does not exist or {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/hgetall">Valkey Documentation: HGETALL</a>
 	 */
-	@Nullable
-	Map<byte[], byte[]> hGetAll(byte[] key);
+	Map<byte [], byte []> hGetAll(byte [] key);
 
 	/**
 	 * Return a random field from the hash stored at {@code key}.
@@ -186,8 +181,7 @@ public interface ValkeyHashCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
 	 */
-	@Nullable
-	byte[] hRandField(byte[] key);
+	byte[] hRandField(byte [] key);
 
 	/**
 	 * Return a random field from the hash along with its value stored at {@code key}.
@@ -197,8 +191,7 @@ public interface ValkeyHashCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
 	 */
-	@Nullable
-	Map.Entry<byte[], byte[]> hRandFieldWithValues(byte[] key);
+	Map.Entry<byte [], byte []> hRandFieldWithValues(byte [] key);
 
 	/**
 	 * Return a random field from the hash stored at {@code key}. If the provided {@code count} argument is positive,
@@ -212,8 +205,7 @@ public interface ValkeyHashCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
 	 */
-	@Nullable
-	List<byte[]> hRandField(byte[] key, long count);
+	List<byte []> hRandField(byte [] key, long count);
 
 	/**
 	 * Return a random field from the hash along with its value stored at {@code key}. If the provided {@code count}
@@ -227,8 +219,7 @@ public interface ValkeyHashCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/hrandfield">Valkey Documentation: HRANDFIELD</a>
 	 */
-	@Nullable
-	List<Map.Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count);
+	List<Map.Entry<byte [], byte []>> hRandFieldWithValues(byte [] key, long count);
 
 	/**
 	 * Use a {@link Cursor} to iterate over entries in hash at {@code key}.
@@ -239,7 +230,7 @@ public interface ValkeyHashCommands {
 	 * @since 1.4
 	 * @see <a href="https://valkey.io/commands/hscan">Valkey Documentation: HSCAN</a>
 	 */
-	Cursor<Map.Entry<byte[], byte[]>> hScan(byte[] key, ScanOptions options);
+	Cursor<Map.Entry<byte [], byte []>> hScan(byte [] key, ScanOptions options);
 
 	/**
 	 * Returns the length of the value associated with {@code field} in the hash stored at {@code key}. If the {@code key}
@@ -251,8 +242,7 @@ public interface ValkeyHashCommands {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/hstrlen">Valkey Documentation: HSTRLEN</a>
 	 */
-	@Nullable
-	Long hStrLen(byte[] key, byte[] field);
+	Long hStrLen(byte [] key, byte [] field);
 
 	/**
 	 * Apply a given {@link io.valkey.springframework.data.valkey.core.types.Expiration} to the given {@literal fields}.
@@ -266,8 +256,8 @@ public interface ValkeyHashCommands {
 	 *         such field;
 	 * @since 3.5
 	 */
-	default @Nullable List<Long> applyHashFieldExpiration(byte[] key,
-			io.valkey.springframework.data.valkey.core.types.Expiration expiration, byte[]... fields) {
+	default List<Long> applyHashFieldExpiration(byte [] key,
+			io.valkey.springframework.data.valkey.core.types.Expiration expiration, byte [] @NonNull... fields) {
 		return applyHashFieldExpiration(key, expiration, ExpirationOptions.none(), fields);
 	}
 
@@ -282,16 +272,16 @@ public interface ValkeyHashCommands {
 	 *         condition is not met); {@code -2} indicating there is no such field;
 	 * @since 3.5
 	 */
-	@Nullable
-	default List<Long> applyHashFieldExpiration(byte[] key,
-			io.valkey.springframework.data.valkey.core.types.Expiration expiration, ExpirationOptions options, byte[]... fields) {
+	default List<Long> applyHashFieldExpiration(byte [] key,
+			io.valkey.springframework.data.valkey.core.types.Expiration expiration, ExpirationOptions options,
+			byte [] @NonNull... fields) {
 
 		if (expiration.isPersistent()) {
 			return hPersist(key, fields);
 		}
 
 		if (ObjectUtils.nullSafeEquals(ExpirationOptions.none(), options)) {
-			if (ObjectUtils.nullSafeEquals(TimeUnit.MILLISECONDS, expiration.getTimeUnit())) {
+			if (expiration.isPrecise()) {
 				if (expiration.isUnixTimestamp()) {
 					return hpExpireAt(key, expiration.getExpirationTimeInMilliseconds(), fields);
 				}
@@ -303,7 +293,7 @@ public interface ValkeyHashCommands {
 			return hExpire(key, expiration.getExpirationTimeInSeconds(), fields);
 		}
 
-		if (ObjectUtils.nullSafeEquals(TimeUnit.MILLISECONDS, expiration.getTimeUnit())) {
+		if (expiration.isPrecise()) {
 			if (expiration.isUnixTimestamp()) {
 				return hpExpireAt(key, expiration.getExpirationTimeInMilliseconds(), options.getCondition(), fields);
 			}
@@ -331,8 +321,7 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default List<Long> hExpire(byte[] key, long seconds, byte[]... fields) {
+	default List<Long> hExpire(byte [] key, long seconds, byte [] @NonNull... fields) {
 		return hExpire(key, seconds, ExpirationOptions.Condition.ALWAYS, fields);
 	}
 
@@ -350,8 +339,8 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default List<Long> hExpire(byte[] key, Duration ttl, byte[]... fields) {
+	default List<Long> hExpire(byte [] key, Duration ttl,
+			byte [] @NonNull... fields) {
 		return hExpire(key, ttl.toSeconds(), fields);
 	}
 
@@ -370,8 +359,8 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	List<Long> hExpire(byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields);
+	List<Long> hExpire(byte [] key, long seconds, ExpirationOptions.Condition condition,
+			byte [] @NonNull... fields);
 
 	/**
 	 * Set time to live for given {@code fields} in milliseconds.
@@ -387,8 +376,7 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation: HPEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default List<Long> hpExpire(byte[] key, long millis, byte[]... fields) {
+	default List<Long> hpExpire(byte [] key, long millis, byte [] @NonNull... fields) {
 		return hpExpire(key, millis, ExpirationOptions.Condition.ALWAYS, fields);
 	}
 
@@ -406,8 +394,8 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation: HPEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default List<Long> hpExpire(byte[] key, Duration ttl, byte[]... fields) {
+	default List<Long> hpExpire(byte [] key, Duration ttl,
+			byte [] @NonNull... fields) {
 		return hpExpire(key, ttl.toMillis(), fields);
 	}
 
@@ -427,8 +415,8 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpire/">Valkey Documentation: HPEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	List<Long> hpExpire(byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields);
+	List<Long> hpExpire(byte [] key, long millis, ExpirationOptions.Condition condition,
+			byte [] @NonNull... fields);
 
 	/**
 	 * Set the expiration for given {@code field} as a {@literal UNIX} timestamp.
@@ -443,8 +431,7 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation: HEXPIREAT</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default List<Long> hExpireAt(byte[] key, long unixTime, byte[]... fields) {
+	default List<Long> hExpireAt(byte [] key, long unixTime, byte [] @NonNull... fields) {
 		return hExpireAt(key, unixTime, ExpirationOptions.Condition.ALWAYS, fields);
 	}
 
@@ -463,8 +450,8 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpireat/">Valkey Documentation: HEXPIREAT</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields);
+	List<Long> hExpireAt(byte [] key, long unixTime, ExpirationOptions.Condition condition,
+			byte [] @NonNull... fields);
 
 	/**
 	 * Set the expiration for given {@code field} as a {@literal UNIX} timestamp in milliseconds.
@@ -479,8 +466,8 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpireat/">Valkey Documentation: HPEXPIREAT</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, byte[]... fields) {
+	default List<Long> hpExpireAt(byte [] key, long unixTimeInMillis,
+			byte [] @NonNull... fields) {
 		return hpExpireAt(key, unixTimeInMillis, ExpirationOptions.Condition.ALWAYS, fields);
 	}
 
@@ -499,9 +486,8 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hpexpireat/">Valkey Documentation: HPEXPIREAT</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition,
-			byte[]... fields);
+	List<Long> hpExpireAt(byte [] key, long unixTimeInMillis,
+			ExpirationOptions.Condition condition, byte [] @NonNull... fields);
 
 	/**
 	 * Remove the expiration from given {@code field}.
@@ -515,8 +501,7 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hpersist/">Valkey Documentation: HPERSIST</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	List<Long> hPersist(byte[] key, byte[]... fields);
+	List<Long> hPersist(byte [] key, byte [] @NonNull... fields);
 
 	/**
 	 * Get the time to live for {@code fields} in seconds.
@@ -530,8 +515,7 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	List<Long> hTtl(byte[] key, byte[]... fields);
+	List<Long> hTtl(byte [] key, byte [] @NonNull... fields);
 
 	/**
 	 * Get the time to live for {@code fields} in and convert it to the given {@link TimeUnit}.
@@ -546,8 +530,7 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	List<Long> hTtl(byte[] key, TimeUnit timeUnit, byte[]... fields);
+	List<Long> hTtl(byte [] key, TimeUnit timeUnit, byte [] @NonNull... fields);
 
 	/**
 	 * Get the time to live for {@code fields} in milliseconds.
@@ -561,6 +544,89 @@ public interface ValkeyHashCommands {
 	 * @see <a href="https://valkey.io/docs/latest/commands/hexpire/">Valkey Documentation: HTTL</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	List<Long> hpTtl(byte[] key, byte[]... fields);
+	List<Long> hpTtl(byte [] key, byte [] @NonNull... fields);
+
+	/**
+	 * Get and delete the value of one or more {@code fields} from hash at {@code key}. Values are returned in the order
+	 * of the requested keys. Absent field values are represented using {@literal null} in the resulting {@link List}.
+	 * When the last field is deleted, the key will also be deleted.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param fields must not be {@literal null}.
+	 * @return list of values for deleted {@code fields} ({@literal null} for fields that does not exist) or an empty
+	 *         {@link List} if key does not exist or {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/hgetdel">Valkey Documentation: HGETDEL</a>
+	 */
+	List<byte[]> hGetDel(byte [] key, byte [] @NonNull... fields);
+
+	/**
+	 * Get the value of one or more {@code fields} from hash at {@code key} and optionally set expiration time or
+	 * time-to-live (TTL) for given {@code fields}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expiration the optional expiration to apply.
+	 * @param fields must not be {@literal null}.
+	 * @return list of values for given {@code fields} or an empty {@link List} if key does not exist or {@literal null}
+	 *         when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/hgetex">Valkey Documentation: HGETEX</a>
+	 */
+	List<byte[]> hGetEx(byte [] key, @Nullable Expiration expiration, byte [] @NonNull... fields);
+
+	/**
+	 * Set field-value pairs in hash at {@literal key} with optional condition and expiration.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param hashes the field-value pairs to set; must not be {@literal null}.
+	 * @param hashFieldSetOption the condition for setting fields; must not be {@literal null}.
+	 * @param expiration the optional expiration to apply.
+	 * @return never {@literal null}.
+	 * @see <a href="https://valkey.io/commands/hsetex">Valkey Documentation: HSETEX</a>
+	 */
+	Boolean hSetEx(byte [] key, Map<byte[], byte[]> hashes,
+			HashFieldSetOption hashFieldSetOption, @Nullable Expiration expiration);
+
+	/**
+	 * {@code HSETEX} command arguments for {@code FNX}, {@code FXX}.
+	 *
+	 * @author Viktoriya Kutsarova
+	 * @since 4.0
+	 */
+	enum HashFieldSetOption {
+
+		/**
+		 * Do not set any additional command argument.
+		 */
+		UPSERT,
+
+		/**
+		 * {@code FNX}
+		 */
+		IF_NONE_EXIST,
+
+		/**
+		 * {@code FXX}
+		 */
+		IF_ALL_EXIST;
+
+		/**
+		 * Do not set any additional command argument.
+		 */
+		public static HashFieldSetOption upsert() {
+			return UPSERT;
+		}
+
+		/**
+		 * {@code FNX}
+		 */
+		public static HashFieldSetOption ifNoneExist() {
+			return IF_NONE_EXIST;
+		}
+
+		/**
+		 * {@code FXX}
+		 */
+		public static HashFieldSetOption ifAllExist() {
+			return IF_ALL_EXIST;
+		}
+	}
 }

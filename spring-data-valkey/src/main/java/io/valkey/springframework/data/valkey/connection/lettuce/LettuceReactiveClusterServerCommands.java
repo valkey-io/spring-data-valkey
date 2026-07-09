@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -214,7 +214,7 @@ class LettuceReactiveClusterServerCommands extends LettuceReactiveServerCommands
 	public Flux<ValkeyClientInfo> getClientList(ValkeyClusterNode node) {
 
 		return connection.execute(node, RedisServerReactiveCommands::clientList)
-				.concatMapIterable(LettuceConverters.stringToValkeyClientListConverter()::convert);
+				.concatMapIterable(LettuceConverters::toListOfValkeyClientInformation);
 	}
 
 	private <T> Collection<Publisher<Tuple2<ValkeyClusterNode, T>>> executeOnAllNodes(

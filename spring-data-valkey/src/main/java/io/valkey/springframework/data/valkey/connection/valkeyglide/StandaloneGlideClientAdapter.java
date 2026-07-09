@@ -32,7 +32,7 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideClientConfiguration.IamAuthenticationForGlide;
 import glide.api.GlideClient;
 import glide.api.models.Batch;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.StringUtils;
 
 /**

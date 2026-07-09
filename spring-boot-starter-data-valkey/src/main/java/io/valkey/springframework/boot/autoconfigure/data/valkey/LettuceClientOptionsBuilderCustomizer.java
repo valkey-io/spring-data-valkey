@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2024 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,9 @@ import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientCon
 
 /**
  * Callback interface that can be implemented by beans wishing to customize the
- * {@link ClientOptions} of the {@link LettuceClientConfiguration} through a
- * {@link Builder} whilst retaining default auto-configuration. To customize the entire
- * configuration, use {@link LettuceClientConfigurationBuilderCustomizer} instead.
+ * {@link Builder} to fine-tune its auto-configuration before it creates the
+ * {@link ClientOptions} of the {@link LettuceClientConfiguration}. To customize the
+ * entire configuration, use {@link LettuceClientConfigurationBuilderCustomizer} instead.
  *
  * @author Soohyun Lim
  * @since 3.4.0

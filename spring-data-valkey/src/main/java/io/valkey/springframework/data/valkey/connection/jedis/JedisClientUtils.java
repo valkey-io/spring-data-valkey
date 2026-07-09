@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,16 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
+import redis.clients.jedis.ConnectionPoolConfig;
 import redis.clients.jedis.Protocol;
 import redis.clients.jedis.commands.ProtocolCommand;
 
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Utility class to dispatch arbitrary Valkey commands using Jedis commands.
@@ -52,4 +56,26 @@ class JedisClientUtils {
 		return KNOWN_COMMANDS.contains(command);
 	}
 
+	public static ConnectionPoolConfig getPoolConfig(@Nullable GenericObjectPoolConfig<?> config) {
+
+		ConnectionPoolConfig poolConfig = new ConnectionPoolConfig();
+
+		if (config != null) {
+			poolConfig.setMaxTotal(config.getMaxTotal());
+			poolConfig.setMaxIdle(config.getMaxIdle());
+			poolConfig.setMinIdle(config.getMinIdle());
+			poolConfig.setBlockWhenExhausted(config.getBlockWhenExhausted());
+			poolConfig.setMaxWait(config.getMaxWaitDuration());
+			poolConfig.setTestOnBorrow(config.getTestOnBorrow());
+			poolConfig.setTestOnReturn(config.getTestOnReturn());
+			poolConfig.setTestWhileIdle(config.getTestWhileIdle());
+			poolConfig.setTimeBetweenEvictionRuns(config.getDurationBetweenEvictionRuns());
+			poolConfig.setNumTestsPerEvictionRun(config.getNumTestsPerEvictionRun());
+			poolConfig.setMinEvictableIdleTime(config.getMinEvictableIdleDuration());
+			poolConfig.setSoftMinEvictableIdleTime(config.getSoftMinEvictableIdleDuration());
+			poolConfig.setEvictorShutdownTimeout(config.getEvictorShutdownTimeoutDuration());
+		}
+
+		return poolConfig;
+	}
 }

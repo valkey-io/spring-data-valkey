@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,10 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -35,7 +34,7 @@ import org.springframework.util.Assert;
  */
 public abstract class AbstractValkeyConnection implements ValkeyConnection {
 
-	private final static Log LOGGER = LogFactory.getLog(AbstractValkeyConnection.class);
+	private final Log LOGGER = LogFactory.getLog(getClass());
 
 	private @Nullable ValkeySentinelConfiguration sentinelConfiguration;
 	private final Map<ValkeyNode, ValkeySentinelConnection> connectionCache = new ConcurrentHashMap<>();
@@ -64,6 +63,7 @@ public abstract class AbstractValkeyConnection implements ValkeyConnection {
 		return this.sentinelConfiguration != null;
 	}
 
+	@SuppressWarnings("NullAway")
 	private ValkeyNode selectActiveSentinel() {
 
 		Assert.state(hasValkeySentinelConfigured(), "Sentinel configuration missing");

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
@@ -34,7 +35,6 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
 import io.valkey.springframework.data.valkey.core.KeyScanOptions;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -43,6 +43,7 @@ import org.springframework.util.Assert;
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author Dahye Anne Lee
+ * @author Yordan Tsintsov
  * @since 2.0
  */
 public interface ReactiveKeyCommands {
@@ -59,7 +60,8 @@ public interface ReactiveKeyCommands {
 		private final boolean replace;
 		private final @Nullable Integer database;
 
-		public CopyCommand(ByteBuffer key, @Nullable ByteBuffer target, boolean replace, @Nullable Integer database) {
+		public CopyCommand(@Nullable ByteBuffer key, @Nullable ByteBuffer target, boolean replace,
+				@Nullable Integer database) {
 			super(key);
 			this.target = target;
 			this.replace = replace;
@@ -117,8 +119,7 @@ public interface ReactiveKeyCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public ByteBuffer getTarget() {
+		public @Nullable ByteBuffer getTarget() {
 			return target;
 		}
 
@@ -129,8 +130,7 @@ public interface ReactiveKeyCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Integer getDatabase() {
+		public @Nullable Integer getDatabase() {
 			return database;
 		}
 
@@ -164,6 +164,33 @@ public interface ReactiveKeyCommands {
 	 * @since 2.6
 	 */
 	Flux<BooleanResponse<CopyCommand>> copy(Publisher<CopyCommand> commands);
+
+	/**
+	 * Get the hash digest for the value stored in the specified key as a hexadecimal string. This command is intended to
+	 * be used with string values only.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @return {@link Mono} emitting the digest string.
+	 * @see <a href="https://valkey.io/commands/digest">Valkey Documentation: DIGEST</a>
+	 * @since 4.1
+	 */
+	default Mono<String> digest(ByteBuffer key) {
+
+		Assert.notNull(key, "Key must not be null");
+
+		return digest(Mono.just(new KeyCommand(key))).next().map(CommandResponse::getOutput);
+	}
+
+	/**
+	 * Get the hash digest for the value stored in the specified key as a hexadecimal string. This command is intended to
+	 * be used with string values only.
+	 *
+	 * @param keys must not be {@literal null}.
+	 * @return {@link Flux} of {@link CommandResponse} holding the {@literal key} along with the digest.
+	 * @see <a href="https://valkey.io/commands/digest">Valkey Documentation: DIGEST</a>
+	 * @since 4.1
+	 */
+	Flux<CommandResponse<KeyCommand, String>> digest(Publisher<KeyCommand> keys);
 
 	/**
 	 * Determine if given {@literal key} exists.
@@ -244,9 +271,10 @@ public interface ReactiveKeyCommands {
 	Flux<NumericResponse<Collection<ByteBuffer>, Long>> touch(Publisher<Collection<ByteBuffer>> keys);
 
 	/**
-	 * Find all keys matching the given {@literal pattern}.<br />
-	 * It is recommended to use {@link #scan(ScanOptions)} to iterate over the keyspace as {@link #keys(ByteBuffer)} is a
-	 * non-interruptible and expensive Valkey operation.
+	 * Retrieve all keys matching the given pattern via {@code KEYS} command.
+	 * <p>
+	 * <strong>IMPORTANT:</strong> This command is non-interruptible and scans the entire keyspace which may cause
+	 * performance issues. Consider {@link #scan(ScanOptions)} for large datasets.
 	 *
 	 * @param pattern must not be {@literal null}.
 	 * @return
@@ -326,7 +354,7 @@ public interface ReactiveKeyCommands {
 
 		private @Nullable ByteBuffer newKey;
 
-		private RenameCommand(ByteBuffer key, @Nullable ByteBuffer newKey) {
+		private RenameCommand(@Nullable ByteBuffer key, @Nullable ByteBuffer newKey) {
 
 			super(key);
 
@@ -363,8 +391,7 @@ public interface ReactiveKeyCommands {
 		 * @return can be {@literal null}.
 		 * @since 2.5.7
 		 */
-		@Nullable
-		public ByteBuffer getNewKey() {
+		public @Nullable ByteBuffer getNewKey() {
 			return newKey;
 		}
 	}
@@ -439,6 +466,81 @@ public interface ReactiveKeyCommands {
 	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
 	 */
 	Flux<NumericResponse<KeyCommand, Long>> del(Publisher<KeyCommand> keys);
+
+	/**
+	 * {@code DELEX} command parameters.
+	 *
+	 * @author Yordan Tsintsov
+	 * @since 4.1
+	 * @see <a href="https://valkey.io/commands/delex">Valkey Documentation: DELEX</a>
+	 */
+	class DelexCommand extends KeyCommand {
+
+		private final CompareCondition condition;
+
+		private DelexCommand(@Nullable ByteBuffer key, CompareCondition condition) {
+
+			super(key);
+
+			Assert.notNull(condition, "Option must not be null");
+			this.condition = condition;
+		}
+
+		/**
+		 * Creates a new {@link DelexCommand} given a {@link CompareCondition}.
+		 *
+		 * @param option must not be {@literal null}.
+		 * @return a new {@link DelexCommand} for a {@link CompareCondition}.
+		 */
+		public static DelexCommand condition(CompareCondition option) {
+			return new DelexCommand(null, option);
+		}
+
+		/**
+		 * Applies the {@literal key}. Constructs a new command instance with all previously configured properties.
+		 *
+		 * @param key must not be {@literal null}.
+		 * @return a new {@link DelexCommand} with {@literal key} applied.
+		 */
+		public DelexCommand key(ByteBuffer key) {
+
+			Assert.notNull(key, "Key must not be null");
+
+			return new DelexCommand(key, condition);
+		}
+
+		public CompareCondition getCondition() {
+			return condition;
+		}
+
+	}
+
+	/**
+	 * Delete a key based on the provided {@link CompareCondition} and {@literal value}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param condition must not be {@literal null}.
+	 * @return {@link Mono#empty()} if key did not exist.
+	 * @since 4.1
+	 * @see <a href="https://valkey.io/commands/delex">Valkey Documentation: DELEX</a>
+	 */
+	default Mono<Boolean> delex(ByteBuffer key, CompareCondition condition) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(condition, "Condition must not be null");
+
+		return delex(Mono.just(DelexCommand.condition(condition).key(key))).next().map(BooleanResponse::getOutput);
+	}
+
+	/**
+	 * Delete a key based on the provided {@link CompareCondition}.
+	 *
+	 * @param commands must not be {@literal null}.
+	 * @return {@link Flux} emitting results when ready.
+	 * @since 4.1
+	 * @see <a href="https://valkey.io/commands/delex">Valkey Documentation: DELEX</a>
+	 */
+	Flux<BooleanResponse<DelexCommand>> delex(Publisher<DelexCommand> commands);
 
 	/**
 	 * Delete multiple {@literal keys} one in one batch.
@@ -600,8 +702,7 @@ public interface ReactiveKeyCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Duration getTimeout() {
+		public @Nullable Duration getTimeout() {
 
 			if (expiration.isUnixTimestamp() || expiration.isPersistent()) {
 				return null;
@@ -714,11 +815,11 @@ public interface ReactiveKeyCommands {
 		private @Nullable Instant expireAt;
 		private final ExpirationOptions options;
 
-		private ExpireAtCommand(ByteBuffer key, Instant expireAt) {
+		private ExpireAtCommand(@Nullable ByteBuffer key, @Nullable Instant expireAt) {
 			this(key, expireAt, ExpirationOptions.none());
 		}
 
-		private ExpireAtCommand(@Nullable ByteBuffer key, Instant expireAt, ExpirationOptions options) {
+		private ExpireAtCommand(@Nullable ByteBuffer key, @Nullable Instant expireAt, ExpirationOptions options) {
 
 			super(key);
 
@@ -764,8 +865,7 @@ public interface ReactiveKeyCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Instant getExpireAt() {
+		public @Nullable Instant getExpireAt() {
 			return expireAt;
 		}
 
@@ -906,7 +1006,7 @@ public interface ReactiveKeyCommands {
 
 		private @Nullable Integer database;
 
-		private MoveCommand(ByteBuffer key, @Nullable Integer database) {
+		private MoveCommand(@Nullable ByteBuffer key, @Nullable Integer database) {
 
 			super(key);
 
@@ -940,8 +1040,7 @@ public interface ReactiveKeyCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public Integer getDatabase() {
+		public @Nullable Integer getDatabase() {
 			return database;
 		}
 	}

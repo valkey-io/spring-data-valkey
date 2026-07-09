@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,17 @@ import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XDelOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XTrimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamDeletionPolicy;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamEntryDeletionResult;
 import io.valkey.springframework.data.valkey.connection.stream.*;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoConsumers;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoGroups;
 import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoStream;
 import io.valkey.springframework.data.valkey.ValkeySystemException;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 
 /**
  * Comprehensive low-level integration tests for {@link ValkeyGlideConnection} 
@@ -1656,6 +1662,200 @@ public class ValkeyGlideConnectionStreamCommandsIntegrationTests extends Abstrac
             
         } finally {
             cleanupKey(emptyStream);
+        }
+    }
+
+    // ==================== XTRIM with XTrimOptions Tests ====================
+
+    @Test
+    @EnabledOnCommand("XTRIM")
+    void testXTrimWithXTrimOptionsMaxlen() {
+        String streamKey = "test:stream:xtrim:maxlen";
+
+        try {
+            // Add 10 records
+            for (int i = 0; i < 10; i++) {
+                Map<byte[], byte[]> fields = Map.of("index".getBytes(), String.valueOf(i).getBytes());
+                MapRecord<byte[], byte[], byte[]> record = StreamRecords.newRecord()
+                    .in(streamKey.getBytes())
+                    .ofMap(fields);
+                connection.streamCommands().xAdd(record);
+            }
+
+            // Verify initial length
+            assertThat(connection.streamCommands().xLen(streamKey.getBytes())).isEqualTo(10L);
+
+            // Trim to 5 entries using XTrimOptions with MAXLEN
+            Long trimmed = connection.streamCommands().xTrim(streamKey.getBytes(),
+                    XTrimOptions.trim(TrimOptions.maxLen(5)));
+            assertThat(trimmed).isEqualTo(5L); // 5 entries removed
+
+            // Verify 5 entries remaining
+            assertThat(connection.streamCommands().xLen(streamKey.getBytes())).isEqualTo(5L);
+        } finally {
+            cleanupKey(streamKey);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("XTRIM")
+    void testXTrimWithXTrimOptionsMinId() {
+        String streamKey = "test:stream:xtrim:minid";
+
+        try {
+            // Add 5 records and capture their IDs
+            List<RecordId> ids = new ArrayList<>();
+            for (int i = 0; i < 5; i++) {
+                Map<byte[], byte[]> fields = Map.of("index".getBytes(), String.valueOf(i).getBytes());
+                MapRecord<byte[], byte[], byte[]> record = StreamRecords.newRecord()
+                    .in(streamKey.getBytes())
+                    .ofMap(fields);
+                ids.add(connection.streamCommands().xAdd(record));
+            }
+
+            RecordId id3 = ids.get(2); // Get the 3rd ID
+
+            // Trim using MINID - keep only entries with ID >= id3
+            Long trimmed = connection.streamCommands().xTrim(streamKey.getBytes(),
+                    XTrimOptions.trim(TrimOptions.minId(id3)));
+            assertThat(trimmed).isEqualTo(2L); // 2 entries removed (id1, id2)
+
+            // 3 entries remaining (id3, id4, id5)
+            assertThat(connection.streamCommands().xLen(streamKey.getBytes())).isEqualTo(3L);
+        } finally {
+            cleanupKey(streamKey);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("XTRIM")
+    void testXTrimWithXTrimOptionsApproximate() {
+        String streamKey = "test:stream:xtrim:approx";
+
+        try {
+            // Add 100 records
+            for (int i = 0; i < 100; i++) {
+                Map<byte[], byte[]> fields = Map.of("index".getBytes(), String.valueOf(i).getBytes());
+                MapRecord<byte[], byte[], byte[]> record = StreamRecords.newRecord()
+                    .in(streamKey.getBytes())
+                    .ofMap(fields);
+                connection.streamCommands().xAdd(record);
+            }
+
+            // Trim with approximate trimming
+            connection.streamCommands().xTrim(streamKey.getBytes(),
+                    XTrimOptions.trim(TrimOptions.maxLen(50).approximate()));
+
+            // With approximate trimming, the result may not be exact but should be around 50
+            Long remaining = connection.streamCommands().xLen(streamKey.getBytes());
+            assertThat(remaining).isGreaterThanOrEqualTo(50L).isLessThanOrEqualTo(100L);
+        } finally {
+            cleanupKey(streamKey);
+        }
+    }
+
+    // ==================== XDELEX Tests ====================
+
+    @Test
+    @EnabledOnCommand("XDELEX")
+    void testXDelExShouldDeleteEntries() {
+        String streamKey = "test:stream:xdelex";
+
+        try {
+            // Add records
+            Map<byte[], byte[]> fields = Map.of("data".getBytes(), "test".getBytes());
+            MapRecord<byte[], byte[], byte[]> record = StreamRecords.newRecord()
+                .in(streamKey.getBytes())
+                .ofMap(fields);
+
+            RecordId id1 = connection.streamCommands().xAdd(record);
+            RecordId id2 = connection.streamCommands().xAdd(record);
+
+            // Verify 2 entries
+            assertThat(connection.streamCommands().xLen(streamKey.getBytes())).isEqualTo(2L);
+
+            // Delete using xDelEx with default options
+            XDelOptions options = XDelOptions.defaults();
+            List<StreamEntryDeletionResult> results = connection.streamCommands().xDelEx(
+                    streamKey.getBytes(), options, id1, id2);
+
+            assertThat(results).hasSize(2);
+            assertThat(results.get(0)).isEqualTo(StreamEntryDeletionResult.DELETED);
+            assertThat(results.get(1)).isEqualTo(StreamEntryDeletionResult.DELETED);
+
+            // Verify entries were deleted
+            assertThat(connection.streamCommands().xLen(streamKey.getBytes())).isEqualTo(0L);
+        } finally {
+            cleanupKey(streamKey);
+        }
+    }
+
+    @Test
+    @EnabledOnCommand("XDELEX")
+    void testXDelExNonExistentEntry() {
+        String streamKey = "test:stream:xdelex:notfound";
+
+        try {
+            // Add one record
+            Map<byte[], byte[]> fields = Map.of("data".getBytes(), "test".getBytes());
+            MapRecord<byte[], byte[], byte[]> record = StreamRecords.newRecord()
+                .in(streamKey.getBytes())
+                .ofMap(fields);
+            connection.streamCommands().xAdd(record);
+
+            // Try to delete a non-existent entry
+            XDelOptions options = XDelOptions.defaults();
+            List<StreamEntryDeletionResult> results = connection.streamCommands().xDelEx(
+                    streamKey.getBytes(), options, RecordId.of("9999999-0"));
+
+            assertThat(results).hasSize(1);
+            assertThat(results.get(0)).isEqualTo(StreamEntryDeletionResult.NOT_FOUND);
+        } finally {
+            cleanupKey(streamKey);
+        }
+    }
+
+    // ==================== XACKDEL Tests ====================
+
+    @Test
+    @EnabledOnCommand("XACKDEL")
+    void testXAckDelShouldAcknowledgeAndDeleteEntries() {
+        String streamKey = "test:stream:xackdel";
+        String groupName = "test-group";
+
+        try {
+            // Add records
+            Map<byte[], byte[]> fields = Map.of("data".getBytes(), "test".getBytes());
+            MapRecord<byte[], byte[], byte[]> record = StreamRecords.newRecord()
+                .in(streamKey.getBytes())
+                .ofMap(fields);
+
+            RecordId id1 = connection.streamCommands().xAdd(record);
+            RecordId id2 = connection.streamCommands().xAdd(record);
+
+            // Create a consumer group
+            connection.streamCommands().xGroupCreate(streamKey.getBytes(), groupName, ReadOffset.from("0"), true);
+
+            // Read messages from the group to make them pending
+            connection.streamCommands().xReadGroup(
+                Consumer.from(groupName, "my-consumer"),
+                StreamReadOptions.empty(),
+                StreamOffset.create(streamKey.getBytes(), ReadOffset.lastConsumed())
+            );
+
+            // Use xAckDel to acknowledge and delete
+            XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.removeAcknowledged());
+            List<StreamEntryDeletionResult> results = connection.streamCommands().xAckDel(
+                    streamKey.getBytes(), groupName, options, id1, id2);
+
+            assertThat(results).hasSize(2);
+            assertThat(results.get(0)).isEqualTo(StreamEntryDeletionResult.DELETED);
+            assertThat(results.get(1)).isEqualTo(StreamEntryDeletionResult.DELETED);
+        } finally {
+            try {
+                connection.streamCommands().xGroupDestroy(streamKey.getBytes(), groupName);
+            } catch (Exception ignored) {}
+            cleanupKey(streamKey);
         }
     }
 }

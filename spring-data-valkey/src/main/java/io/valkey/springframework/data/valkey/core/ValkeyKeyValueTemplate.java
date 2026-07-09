@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ public class ValkeyKeyValueTemplate extends KeyValueTemplate {
 	}
 
 	/**
-	 * Obtain the underlying valkey specific {@link org.springframework.data.convert.EntityConverter}.
+	 * Obtain the underlying Valkey specific {@link org.springframework.data.convert.EntityConverter}.
 	 *
 	 * @return never {@literal null}.
 	 * @since 2.1
@@ -89,6 +89,7 @@ public class ValkeyKeyValueTemplate extends KeyValueTemplate {
 	 * @param type must not be {@literal null}.
 	 * @return empty list if not elements found.
 	 */
+	@SuppressWarnings("NullAway")
 	public <T> List<T> find(ValkeyCallback<?> callback, Class<T> type) {
 
 		Assert.notNull(callback, "Callback must not be null");
@@ -105,13 +106,15 @@ public class ValkeyKeyValueTemplate extends KeyValueTemplate {
 				}
 
 				Iterable<?> ids = ClassUtils.isAssignable(Iterable.class, callbackResult.getClass())
-						? (Iterable<?>) callbackResult : Collections.singleton(callbackResult);
+						? (Iterable<?>) callbackResult
+						: Collections.singleton(callbackResult);
 
 				List<T> result = new ArrayList<>();
 				for (Object id : ids) {
 
 					String idToUse = adapter.getConverter().getConversionService().canConvert(id.getClass(), String.class)
-							? adapter.getConverter().getConversionService().convert(id, String.class) : id.toString();
+							? adapter.getConverter().getConversionService().convert(id, String.class)
+							: id.toString();
 
 					findById(idToUse, type).ifPresent(result::add);
 				}
@@ -194,6 +197,7 @@ public class ValkeyKeyValueTemplate extends KeyValueTemplate {
 		}
 
 		public abstract T doInValkey(ValkeyKeyValueAdapter adapter);
+
 	}
 
 }

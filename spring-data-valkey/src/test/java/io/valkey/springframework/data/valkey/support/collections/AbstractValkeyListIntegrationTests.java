@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.support.collections;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,11 +27,12 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for ValkeyList
@@ -66,7 +65,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		this.list = (ValkeyList<T>) this.collection;
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAddIndexObjectHead() {
 
 		T t1 = getT();
@@ -81,7 +80,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.get(0)).isEqualTo(t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAddIndexObjectTail() {
 
 		T t1 = getT();
@@ -96,7 +95,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.get(2)).isEqualTo(t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAddIndexObjectMiddle() {
 
 		T t1 = getT();
@@ -110,7 +109,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThatIllegalArgumentException().isThrownBy(() -> list.add(1, t3));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void addAllIndexCollectionHead() {
 
 		T t1 = getT();
@@ -132,7 +131,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.get(1)).isEqualTo(t4);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void addAllIndexCollectionTail() {
 
 		T t1 = getT();
@@ -153,7 +152,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.get(3)).isEqualTo(t4);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void addAllIndexCollectionMiddle() {
 
 		T t1 = getT();
@@ -170,7 +169,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThatIllegalArgumentException().isThrownBy(() -> list.addAll(1, asList));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1196
+	@Test // DATAREDIS-1196
 	@EnabledOnCommand("LPOS")
 	void testIndexOfObject() {
 
@@ -186,7 +185,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.indexOf(t2)).isEqualTo(1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testOffer() {
 
 		T t1 = getT();
@@ -195,7 +194,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.get(0)).isEqualTo(t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPeek() {
 
 		assertThat(list.peek()).isNull();
@@ -211,7 +210,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.peek()).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testElement() {
 
 		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(list::element);
@@ -225,12 +224,12 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(list::element);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPop() {
 		testPoll();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPoll() {
 
 		assertThat(list.poll()).isNull();
@@ -243,7 +242,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.poll()).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPollTimeout() throws InterruptedException {
 
 		T t1 = getT();
@@ -251,7 +250,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.poll(1, TimeUnit.MILLISECONDS)).isEqualTo(t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemove() {
 
 		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(list::remove);
@@ -264,7 +263,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(list::remove);
 	}
 
-	@ParameterizedValkeyTest // GH-2039
+	@Test // GH-2039
 	@EnabledOnCommand("LMOVE")
 	@SuppressWarnings("unchecked")
 	void testMoveFirstTo() {
@@ -286,7 +285,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(target).hasSize(3).containsSequence(t2, t1, t3);
 	}
 
-	@ParameterizedValkeyTest // GH-2039
+	@Test // GH-2039
 	@EnabledOnCommand("LMOVE")
 	@SuppressWarnings("unchecked")
 	void testMoveLastTo() {
@@ -308,7 +307,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(target).hasSize(3).containsSequence(t2, t3, t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRange() {
 
 		T t1 = getT();
@@ -324,12 +323,12 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.range(1, 1).get(0)).isEqualTo(t2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemoveIndex() {
 		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> list.remove(0));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSet() {
 
 		T t1 = getT();
@@ -342,7 +341,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.get(0)).isEqualTo(t2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testTrim() {
 
 		T t1 = getT();
@@ -361,7 +360,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testCappedCollection() {
 
 		ValkeyList<T> cappedList = new DefaultValkeyList<T>(template.boundListOps(collection.getKey() + ":capped"), 1);
@@ -383,7 +382,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(cappedList.get(0)).isEqualTo(first);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAddFirst() {
 
 		T t1 = getT();
@@ -399,7 +398,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(iterator.next()).isEqualTo(t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAddLast() {
 
 		T t1 = getT();
@@ -415,7 +414,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(iterator.next()).isEqualTo(t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testDescendingIterator() {
 
 		T t1 = getT();
@@ -433,7 +432,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(iterator.next()).isEqualTo(t1);
 	}
 
-	@ParameterizedValkeyTest // GH-2602
+	@Test // GH-2602
 	void testListIteratorAddNextPreviousIsCorrect() {
 
 		T t1 = getT();
@@ -461,7 +460,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(listIterator.hasPrevious()).isTrue();
 	}
 
-	@ParameterizedValkeyTest // GH-2602
+	@Test // GH-2602
 	public void testListIteratorSetIsCorrect() {
 
 		T t1 = getT();
@@ -488,7 +487,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(this.list).containsExactly(t1, t2, t3, t4, t5);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testDrainToCollectionWithMaxElements() {
 
 		T t1 = getT();
@@ -507,7 +506,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(c).hasSize(2).contains(t1, t2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testDrainToCollection() {
 
 		T t1 = getT();
@@ -526,7 +525,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(c).hasSize(3).contains(t1, t2, t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetFirst() {
 
 		T t1 = getT();
@@ -538,27 +537,27 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.getFirst()).isEqualTo(t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testLast() {
 		testAdd();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testOfferFirst() {
 		testAddFirst();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testOfferLast() {
 		testAddLast();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPeekFirst() {
 		testPeek();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPeekLast() {
 
 		T t1 = getT();
@@ -571,12 +570,12 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPollFirst() {
 		testPoll();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPollLast() {
 
 		T t1 = getT();
@@ -591,7 +590,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list).hasSize(1).contains(t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPollLastTimeout() throws InterruptedException {
 
 		T t1 = getT();
@@ -606,42 +605,42 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list).hasSize(1).contains(t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPut() {
 		testOffer();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPutFirst() {
 		testAdd();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPutLast() {
 		testPut();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemainingCapacity() {
 		assertThat(list.remainingCapacity()).isEqualTo(Integer.MAX_VALUE);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemoveFirst() {
 		testPop();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemoveFirstOccurrence() {
 		testRemove();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemoveLast() {
 		testPollLast();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRmoveLastOccurrence() {
 
 		T t1 = getT();
@@ -656,22 +655,22 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list).hasSize(3).containsExactly(t1, t2, t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testTake() {
 		testPoll();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testTakeFirst() {
 		testTake();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testTakeLast() {
 		testPollLast();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1196
+	@Test // DATAREDIS-1196
 	@EnabledOnCommand("LPOS")
 	void lastIndexOf() {
 
@@ -687,7 +686,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(list.lastIndexOf(t1)).isEqualTo(2);
 	}
 
-	@ParameterizedValkeyTest // GH-2602
+	@Test // GH-2602
 	void testReversed() {
 
 		T elementOne = getT();
@@ -707,7 +706,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(reversedList.reversed()).isEqualTo(this.list);
 	}
 
-	@ParameterizedValkeyTest // // GH-2602
+	@Test // // GH-2602
 	public void testReversedListIterator() {
 
 		T elementOne = getT();
@@ -749,7 +748,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(reorderedList).containsExactly(elementOne, elementTwo, elementFour);
 	}
 
-	@ParameterizedValkeyTest // GH-2602
+	@Test // GH-2602
 	void testReversedWithAddFirst() {
 
 		T elementOne = getT();
@@ -769,7 +768,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(reorderedList).containsExactly(elementOne, elementTwo, elementThree);
 	}
 
-	@ParameterizedValkeyTest // GH-2602
+	@Test // GH-2602
 	void testReversedWithAddLast() {
 
 		T elementZero = getT();
@@ -791,7 +790,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(reorderedList).containsExactly(elementZero, elementOne, elementTwo);
 	}
 
-	@ParameterizedValkeyTest // GH-2602
+	@Test // GH-2602
 	void testReversedWithRemoveFirst() {
 
 		T elementOne = getT();
@@ -811,7 +810,7 @@ public abstract class AbstractValkeyListIntegrationTests<T> extends AbstractValk
 		assertThat(reorderedList).containsExactly(elementOne, elementTwo);
 	}
 
-	@ParameterizedValkeyTest // GH-2602
+	@Test // GH-2602
 	void testReversedWithRemoveLast() {
 
 		T elementOne = getT();

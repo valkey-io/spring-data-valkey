@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,9 @@ import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.core.convert.converter.Converter;
@@ -72,10 +75,9 @@ import io.valkey.springframework.data.valkey.connection.*;
 import io.valkey.springframework.data.valkey.connection.convert.TransactionResultConverter;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionProvider.TargetAware;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceResult.LettuceResultBuilder;
-import io.valkey.springframework.data.valkey.connection.lettuce.LettuceResult.LettuceStatusResult;
 import io.valkey.springframework.data.valkey.core.Cursor.CursorId;
 import io.valkey.springframework.data.valkey.core.ValkeyCommand;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
@@ -101,7 +103,9 @@ import org.springframework.util.ObjectUtils;
  * @author Tamil Selvan
  * @author ihaohong
  * @author John Blum
+ * @author Jaeik Jeong
  */
+@NullUnmarked
 public class LettuceConnection extends AbstractValkeyConnection {
 
 	private static final ExceptionTranslationStrategy EXCEPTION_TRANSLATION = new FallbackExceptionTranslationStrategy(
@@ -120,7 +124,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 		}
 
 		@Override
-		public List<Object> convert(List<Object> execResults) {
+		public @Nullable List<@Nullable Object> convert(List<Object> execResults) {
 			// Lettuce Empty list means null (watched variable modified)
 			return execResults.isEmpty() ? null : super.convert(execResults);
 		}
@@ -171,7 +175,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	 * @param timeout The connection timeout (in milliseconds)
 	 * @param client The {@link RedisClient} to use when instantiating a native connection
 	 */
-	public LettuceConnection(long timeout, RedisClient client) {
+	public LettuceConnection(long timeout, @NonNull RedisClient client) {
 		this(null, timeout, client);
 	}
 
@@ -184,7 +188,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	 * @param client The {@link RedisClient} to use when making pub/sub, blocking, and tx connections
 	 */
 	public LettuceConnection(@Nullable StatefulRedisConnection<byte[], byte[]> sharedConnection, long timeout,
-			RedisClient client) {
+			@NonNull RedisClient client) {
 		this(sharedConnection, timeout, client, 0);
 	}
 
@@ -199,7 +203,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	 * @since 1.7
 	 */
 	public LettuceConnection(@Nullable StatefulRedisConnection<byte[], byte[]> sharedConnection, long timeout,
-			@Nullable AbstractRedisClient client, int defaultDbIndex) {
+			@NonNull AbstractRedisClient client, int defaultDbIndex) {
 
 		this.connectionProvider = new StandaloneConnectionProvider((RedisClient) client, CODEC);
 		this.asyncSharedConnection = sharedConnection;
@@ -219,7 +223,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	 * @since 2.0
 	 */
 	public LettuceConnection(@Nullable StatefulRedisConnection<byte[], byte[]> sharedConnection,
-			LettuceConnectionProvider connectionProvider, long timeout, int defaultDbIndex) {
+			@NonNull LettuceConnectionProvider connectionProvider, long timeout, int defaultDbIndex) {
 
 		this((StatefulConnection<byte[], byte[]>) sharedConnection, connectionProvider, timeout, defaultDbIndex);
 	}
@@ -235,7 +239,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	 * @since 2.1
 	 */
 	LettuceConnection(@Nullable StatefulConnection<byte[], byte[]> sharedConnection,
-			LettuceConnectionProvider connectionProvider, long timeout, int defaultDbIndex) {
+			@NonNull LettuceConnectionProvider connectionProvider, long timeout, int defaultDbIndex) {
 
 		Assert.notNull(connectionProvider, "LettuceConnectionProvider must not be null");
 
@@ -544,6 +548,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 		return isAlive(subscription) ? subscription.getNativeConnection().async() : getAsyncConnection();
 	}
 
+	@Contract("null -> false")
 	private boolean isAlive(@Nullable LettuceSubscription subscription) {
 		return subscription != null && subscription.isAlive();
 	}
@@ -570,7 +575,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	}
 
 	@Override
-	public List<Object> closePipeline() {
+	public List<@Nullable Object> closePipeline() {
 
 		if (!isPipelined) {
 			return Collections.emptyList();
@@ -589,9 +594,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 		try {
 
 			boolean done = LettuceFutures.awaitAll(timeout, TimeUnit.MILLISECONDS, futures.toArray(new RedisFuture[0]));
-
 			List<Object> results = new ArrayList<>(futures.size());
-
 			Exception problem = null;
 
 			if (done) {
@@ -640,25 +643,25 @@ public class LettuceConnection extends AbstractValkeyConnection {
 
 			if (problem != null) {
 				throw new ValkeyPipelineException(problem, results);
-			}
-
-			if (done) {
+			} else if (done) {
 				return results;
 			}
 
 			throw new ValkeyPipelineException(new QueryTimeoutException("Valkey command timed out"));
+		} catch (ValkeyPipelineException ex) {
+			throw ex;
 		} catch (Exception ex) {
 			throw new ValkeyPipelineException(ex);
 		}
 	}
 
 	@Override
-	public byte[] echo(byte[] message) {
+	public byte @Nullable [] echo(byte[] message) {
 		return invoke().just(RedisClusterAsyncCommands::echo, message);
 	}
 
 	@Override
-	public String ping() {
+	public @Nullable String ping() {
 		return invoke().just(RedisClusterAsyncCommands::ping);
 	}
 
@@ -669,7 +672,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 
 		try {
 			if (isPipelined()) {
-				pipeline(newLettuceStatusResult(getAsyncDedicatedValkeyCommands().discard()));
+				pipeline(newLettuceStatusResult(getAsyncDedicatedRedisCommands().discard()));
 				return;
 			}
 			getDedicatedValkeyCommands().discard();
@@ -682,7 +685,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 
 	@Override
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public List<Object> exec() {
+	public @Nullable List<@Nullable Object> exec() {
 
 		isMulti = false;
 
@@ -690,7 +693,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 			Converter<Exception, DataAccessException> exceptionConverter = this::convertLettuceAccessException;
 
 			if (isPipelined()) {
-				RedisFuture<TransactionResult> exec = getAsyncDedicatedValkeyCommands().exec();
+				RedisFuture<TransactionResult> exec = getAsyncDedicatedRedisCommands().exec();
 
 				LettuceTransactionResultConverter resultConverter = new LettuceTransactionResultConverter(
 						new LinkedList<>(txResults), exceptionConverter);
@@ -726,7 +729,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 
 		try {
 			if (isPipelined()) {
-				getAsyncDedicatedValkeyCommands().multi();
+				getAsyncDedicatedRedisCommands().multi();
 				return;
 			}
 			getDedicatedValkeyCommands().multi();
@@ -754,11 +757,11 @@ public class LettuceConnection extends AbstractValkeyConnection {
 
 		try {
 			if (isPipelined()) {
-				pipeline(newLettuceStatusResult(getAsyncDedicatedValkeyCommands().unwatch()));
+				pipeline(newLettuceStatusResult(getAsyncDedicatedRedisCommands().unwatch()));
 				return;
 			}
 			if (isQueueing()) {
-				transaction(newLettuceStatusResult(getAsyncDedicatedValkeyCommands().unwatch()));
+				transaction(newLettuceStatusResult(getAsyncDedicatedRedisCommands().unwatch()));
 				return;
 			}
 			getDedicatedValkeyCommands().unwatch();
@@ -776,11 +779,11 @@ public class LettuceConnection extends AbstractValkeyConnection {
 
 		try {
 			if (isPipelined()) {
-				pipeline(newLettuceStatusResult(getAsyncDedicatedValkeyCommands().watch(keys)));
+				pipeline(newLettuceStatusResult(getAsyncDedicatedRedisCommands().watch(keys)));
 				return;
 			}
 			if (isQueueing()) {
-				transaction(new LettuceStatusResult(getAsyncDedicatedValkeyCommands().watch(keys)));
+				transaction(newLettuceStatusResult(getAsyncDedicatedRedisCommands().watch(keys)));
 				return;
 			}
 			getDedicatedValkeyCommands().watch(keys);
@@ -799,7 +802,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	}
 
 	@Override
-	public Subscription getSubscription() {
+	public @Nullable Subscription getSubscription() {
 		return this.subscription;
 	}
 
@@ -844,7 +847,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	}
 
 	@SuppressWarnings("unchecked")
-	<T> T failsafeReadScanValues(List<?> source, @SuppressWarnings("rawtypes") @Nullable Converter converter) {
+	<T> @Nullable T failsafeReadScanValues(List<?> source, @SuppressWarnings("rawtypes") @Nullable Converter converter) {
 
 		try {
 			return (T) (converter != null ? converter.convert(source) : source);
@@ -857,7 +860,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	 * Specifies if pipelined and transaction results should be converted to the expected data type. If false, results of
 	 * {@link #closePipeline()} and {@link #exec()} will be of the type returned by the Lettuce driver
 	 *
-	 * @param convertPipelineAndTxResults Whether or not to convert pipeline and tx results
+	 * @param convertPipelineAndTxResults whether to convert pipeline and tx results.
 	 */
 	public void setConvertPipelineAndTxResults(boolean convertPipelineAndTxResults) {
 		this.convertPipelineAndTxResults = convertPipelineAndTxResults;
@@ -996,11 +999,10 @@ public class LettuceConnection extends AbstractValkeyConnection {
 	@SuppressWarnings("unchecked")
 	private StatefulRedisSentinelConnection<String, String> getConnection(ValkeyNode sentinel) {
 		return ((TargetAware) getConnectionProvider()).getConnection(StatefulRedisSentinelConnection.class,
-				getValkeyURI(sentinel));
+				getRedisURI(sentinel));
 	}
 
-	@Nullable
-	private <T> T await(RedisFuture<T> cmd) {
+	private @Nullable <T> T await(RedisFuture<T> cmd) {
 
 		if (this.isMulti) {
 			return null;
@@ -1026,7 +1028,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 		return (RedisCommands<byte[], byte[]>) getDedicatedConnection();
 	}
 
-	private RedisAsyncCommands<byte[], byte[]> getAsyncDedicatedValkeyCommands() {
+	private RedisAsyncCommands<byte[], byte[]> getAsyncDedicatedRedisCommands() {
 		return (RedisAsyncCommands<byte[], byte[]>) getAsyncDedicatedConnection();
 	}
 
@@ -1042,8 +1044,8 @@ public class LettuceConnection extends AbstractValkeyConnection {
 		return doCreateSubscription(listener, switchToPubSub(), connectionProvider);
 	}
 
-	private RedisURI getValkeyURI(ValkeyNode node) {
-		return RedisURI.Builder.redis(node.getHost(), getPort(node)).build();
+	private RedisURI getRedisURI(ValkeyNode node) {
+		return RedisURI.Builder.redis(node.getRequiredHost(), getPort(node)).build();
 	}
 
 	private int getPort(ValkeyNode node) {
@@ -1073,7 +1075,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 		}
 	}
 
-	private void validateCommand(ProtocolKeyword command, @Nullable byte[]... args) {
+	private void validateCommand(ProtocolKeyword command, byte @Nullable []... args) {
 
 		ValkeyCommand valkeyCommand = ValkeyCommand.failsafeCommandLookup(command.toString());
 
@@ -1144,6 +1146,8 @@ public class LettuceConnection extends AbstractValkeyConnection {
 			COMMAND_OUTPUT_TYPE_MAPPING.put(SUNIONSTORE, IntegerOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(STRLEN, IntegerOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(TTL, IntegerOutput.class);
+			COMMAND_OUTPUT_TYPE_MAPPING.put(XACK, IntegerOutput.class);
+			COMMAND_OUTPUT_TYPE_MAPPING.put(XDEL, IntegerOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(XLEN, IntegerOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(XTRIM, IntegerOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(ZADD, IntegerOutput.class);
@@ -1229,6 +1233,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 			COMMAND_OUTPUT_TYPE_MAPPING.put(TYPE, StatusOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(WATCH, StatusOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(UNWATCH, StatusOutput.class);
+			COMMAND_OUTPUT_TYPE_MAPPING.put(XGROUP, StatusOutput.class);
 
 			// VALUE LIST
 			COMMAND_OUTPUT_TYPE_MAPPING.put(HMGET, ValueListOutput.class);
@@ -1240,6 +1245,8 @@ public class LettuceConnection extends AbstractValkeyConnection {
 			COMMAND_OUTPUT_TYPE_MAPPING.put(ZRANGEBYSCORE, ValueListOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(ZREVRANGE, ValueListOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(ZREVRANGEBYSCORE, ValueListOutput.class);
+			COMMAND_OUTPUT_TYPE_MAPPING.put(HGETDEL, ValueListOutput.class);
+			COMMAND_OUTPUT_TYPE_MAPPING.put(HGETEX, ValueListOutput.class);
 
 			// BOOLEAN
 			COMMAND_OUTPUT_TYPE_MAPPING.put(EXISTS, BooleanOutput.class);
@@ -1247,6 +1254,7 @@ public class LettuceConnection extends AbstractValkeyConnection {
 			COMMAND_OUTPUT_TYPE_MAPPING.put(EXPIREAT, BooleanOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(HEXISTS, BooleanOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(HSET, BooleanOutput.class);
+			COMMAND_OUTPUT_TYPE_MAPPING.put(HSETEX, BooleanOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(HSETNX, BooleanOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(MOVE, BooleanOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(COPY, BooleanOutput.class);
@@ -1271,6 +1279,10 @@ public class LettuceConnection extends AbstractValkeyConnection {
 			COMMAND_OUTPUT_TYPE_MAPPING.put(SINTER, ValueSetOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(SMEMBERS, ValueSetOutput.class);
 			COMMAND_OUTPUT_TYPE_MAPPING.put(SUNION, ValueSetOutput.class);
+
+			// ENUM SET
+			COMMAND_OUTPUT_TYPE_MAPPING.put(XACKDEL, EnumSetOutput.class);
+			COMMAND_OUTPUT_TYPE_MAPPING.put(XDELEX, EnumSetOutput.class);
 		}
 
 		/**
@@ -1312,6 +1324,11 @@ public class LettuceConnection extends AbstractValkeyConnection {
 			if (constructor == null) {
 				constructor = (Constructor<CommandOutput>) ClassUtils.getConstructorIfAvailable(type, RedisCodec.class);
 				CONSTRUCTORS.put(type, constructor);
+			}
+
+			if (constructor == null) {
+				throw new IllegalArgumentException(
+						"Cannot instantiate command output for type '%s'. No constructor accepting RedisCodec.".formatted(type));
 			}
 
 			return BeanUtils.instantiateClass(constructor, CODEC);

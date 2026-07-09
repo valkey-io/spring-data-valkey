@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 import glide.api.models.GlideString;
@@ -691,4 +691,144 @@ public class ValkeyGlideStringCommands implements ValkeyStringCommands {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
     }
+
+	@Override
+	@Nullable
+	public byte[] setGet(byte[] key, byte[] value, io.valkey.springframework.data.valkey.connection.SetCondition condition, io.valkey.springframework.data.valkey.core.types.Expiration expiration) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(value, "Value must not be null");
+		Assert.notNull(condition, "SetCondition must not be null");
+
+		try {
+			List<Object> args = new ArrayList<>();
+			args.add(key);
+			args.add(value);
+			args.add("GET");
+
+			if (expiration != null && !expiration.isPersistent()) {
+				if (expiration.isKeepTtl()) {
+					args.add("KEEPTTL");
+				} else if (expiration.isUnixTimestamp()) {
+					if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
+						args.add("EXAT");
+					} else {
+						args.add("PXAT");
+					}
+					args.add(expiration.getExpirationTime());
+				} else {
+					if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
+						args.add("EX");
+					} else {
+						args.add("PX");
+					}
+					args.add(expiration.getExpirationTime());
+				}
+			}
+
+			switch (condition.getKeyCondition()) {
+				case IF_ABSENT:
+					args.add("NX");
+					break;
+				case IF_PRESENT:
+					args.add("XX");
+					break;
+				case UPSERT:
+					break;
+			}
+
+			io.valkey.springframework.data.valkey.connection.CompareCondition compareCondition = condition.getCompareCondition();
+			if (compareCondition != null) {
+				switch (compareCondition.getComparison()) {
+					case VALUE:
+						args.add(compareCondition.getOperator() == io.valkey.springframework.data.valkey.connection.CompareCondition.ComparisonOperator.EQUALS ? "IFEQ" : "IFNE");
+						break;
+					case DIGEST:
+						args.add(compareCondition.getOperator() == io.valkey.springframework.data.valkey.connection.CompareCondition.ComparisonOperator.EQUALS ? "IFDEQ" : "IFDNE");
+						break;
+				}
+				args.add(compareCondition.getValue().asBytes());
+			}
+
+			return connection.execute("SET",
+				(GlideString glideResult) -> glideResult != null ? glideResult.getBytes() : null,
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	@Nullable
+	public Boolean set(byte[] key, byte[] value, io.valkey.springframework.data.valkey.connection.SetCondition condition, io.valkey.springframework.data.valkey.core.types.Expiration expiration) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(value, "Value must not be null");
+		Assert.notNull(condition, "SetCondition must not be null");
+
+		try {
+			List<Object> args = new ArrayList<>();
+			args.add(key);
+			args.add(value);
+
+			if (expiration != null && !expiration.isPersistent()) {
+				if (expiration.isKeepTtl()) {
+					args.add("KEEPTTL");
+				} else if (expiration.isUnixTimestamp()) {
+					if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
+						args.add("EXAT");
+					} else {
+						args.add("PXAT");
+					}
+					args.add(expiration.getExpirationTime());
+				} else {
+					if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
+						args.add("EX");
+					} else {
+						args.add("PX");
+					}
+					args.add(expiration.getExpirationTime());
+				}
+			}
+
+			final boolean hasConditionalOption;
+			switch (condition.getKeyCondition()) {
+				case IF_ABSENT:
+					args.add("NX");
+					hasConditionalOption = true;
+					break;
+				case IF_PRESENT:
+					args.add("XX");
+					hasConditionalOption = true;
+					break;
+				case UPSERT:
+				default:
+					hasConditionalOption = false;
+					break;
+			}
+
+			io.valkey.springframework.data.valkey.connection.CompareCondition compareCondition = condition.getCompareCondition();
+			final boolean hasCompareCondition = compareCondition != null;
+			if (compareCondition != null) {
+				switch (compareCondition.getComparison()) {
+					case VALUE:
+						args.add(compareCondition.getOperator() == io.valkey.springframework.data.valkey.connection.CompareCondition.ComparisonOperator.EQUALS ? "IFEQ" : "IFNE");
+						break;
+					case DIGEST:
+						args.add(compareCondition.getOperator() == io.valkey.springframework.data.valkey.connection.CompareCondition.ComparisonOperator.EQUALS ? "IFDEQ" : "IFDNE");
+						break;
+				}
+				args.add(compareCondition.getValue().asBytes());
+			}
+
+			return connection.execute("SET",
+				(String glideResult) -> {
+					if (glideResult == null) {
+						return (hasConditionalOption || hasCompareCondition) ? Boolean.FALSE : null;
+					}
+					return "OK".equals(glideResult) ? Boolean.TRUE : null;
+				},
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import io.valkey.springframework.data.valkey.core.ScanOptions;
  * @author Costin Leau
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Mingi Lee
  */
 public class DefaultValkeySet<E> extends AbstractValkeyCollection<E> implements ValkeySet<E> {
 
@@ -75,23 +76,23 @@ public class DefaultValkeySet<E> extends AbstractValkeyCollection<E> implements 
 
 	@Override
 	public Set<E> diff(ValkeySet<?> set) {
-		return boundSetOps.diff(set.getKey());
+		return boundSetOps.difference(set.getKey());
 	}
 
 	@Override
 	public Set<E> diff(Collection<? extends ValkeySet<?>> sets) {
-		return boundSetOps.diff(CollectionUtils.extractKeys(sets));
+		return boundSetOps.difference(CollectionUtils.extractKeys(sets));
 	}
 
 	@Override
 	public ValkeySet<E> diffAndStore(ValkeySet<?> set, String destKey) {
-		boundSetOps.diffAndStore(set.getKey(), destKey);
+		boundSetOps.differenceAndStore(set.getKey(), destKey);
 		return new DefaultValkeySet<>(boundSetOps.getOperations().boundSetOps(destKey));
 	}
 
 	@Override
 	public ValkeySet<E> diffAndStore(Collection<? extends ValkeySet<?>> sets, String destKey) {
-		boundSetOps.diffAndStore(CollectionUtils.extractKeys(sets), destKey);
+		boundSetOps.differenceAndStore(CollectionUtils.extractKeys(sets), destKey);
 		return new DefaultValkeySet<>(boundSetOps.getOperations().boundSetOps(destKey));
 	}
 
@@ -115,6 +116,16 @@ public class DefaultValkeySet<E> extends AbstractValkeyCollection<E> implements 
 	public ValkeySet<E> intersectAndStore(Collection<? extends ValkeySet<?>> sets, String destKey) {
 		boundSetOps.intersectAndStore(CollectionUtils.extractKeys(sets), destKey);
 		return new DefaultValkeySet<>(boundSetOps.getOperations().boundSetOps(destKey));
+	}
+
+	@Override
+	public Long intersectSize(ValkeySet<?> set) {
+		return boundSetOps.intersectSize(set.getKey());
+	}
+
+	@Override
+	public Long intersectSize(Collection<? extends ValkeySet<?>> sets) {
+		return boundSetOps.intersectSize(CollectionUtils.extractKeys(sets));
 	}
 
 	@Override

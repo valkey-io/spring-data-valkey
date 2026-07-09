@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,16 @@ import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
+
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ReactiveListCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveListCommands.Direction;
 import io.valkey.springframework.data.valkey.connection.ReactiveListCommands.LPosCommand;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands.Position;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
-import org.springframework.lang.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 
 /**
@@ -119,8 +121,8 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 
 		Assert.notNull(key, "Key must not be null");
 
-		return createMono(listCommands ->
-				listCommands.lInsert(rawKey(key), Position.BEFORE, rawValue(pivot), rawValue(value)));
+		return createMono(
+				listCommands -> listCommands.lInsert(rawKey(key), Position.BEFORE, rawValue(pivot), rawValue(value)));
 	}
 
 	@Override
@@ -162,8 +164,8 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 
 		Assert.notNull(key, "Key must not be null");
 
-		return createMono(listCommands ->
-				listCommands.lInsert(rawKey(key), Position.AFTER, rawValue(pivot), rawValue(value)));
+		return createMono(
+				listCommands -> listCommands.lInsert(rawKey(key), Position.AFTER, rawValue(pivot), rawValue(value)));
 	}
 
 	@Override
@@ -229,8 +231,8 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 
 		Assert.notNull(key, "Key must not be null");
 
-		return createMono(listCommands ->
-				listCommands.lPos(LPosCommand.lPosOf(rawValue(value)).from(rawKey(key)).rank(-1)));
+		return createMono(
+				listCommands -> listCommands.lPos(LPosCommand.lPosOf(rawValue(value)).from(rawKey(key)).rank(-1)));
 	}
 
 	@Override
@@ -251,11 +253,12 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public Mono<V> leftPop(K key, Duration timeout) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(timeout, "Duration must not be null");
-		Assert.isTrue(isZeroOrGreaterOneSecond(timeout), "Duration must be either zero or greater or equal to 1 second");
+		Assert.isTrue(TimeoutUtils.isZeroOrGreaterThanOneSecond(timeout), "Duration must be either zero or greater or equal to 1 second");
 
 		return createMono(connection -> connection.blPop(Collections.singletonList(rawKey(key)), timeout)
 				.mapNotNull(popResult -> readValue(popResult.getValue())));
@@ -278,11 +281,12 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public Mono<V> rightPop(K key, Duration timeout) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(timeout, "Duration must not be null");
-		Assert.isTrue(isZeroOrGreaterOneSecond(timeout), "Duration must be either zero or greater or equal to 1 second");
+		Assert.isTrue(TimeoutUtils.isZeroOrGreaterThanOneSecond(timeout), "Duration must be either zero or greater or equal to 1 second");
 
 		return createMono(connection -> connection.brPop(Collections.singletonList(rawKey(key)), timeout)
 				.mapNotNull(popResult -> readValue(popResult.getValue())));
@@ -294,8 +298,8 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 		Assert.notNull(sourceKey, "Source key must not be null");
 		Assert.notNull(destinationKey, "Destination key must not be null");
 
-		return createMono(connection -> connection.rPopLPush(rawKey(sourceKey), rawKey(destinationKey))
-				.map(this::readRequiredValue));
+		return createMono(
+				connection -> connection.rPopLPush(rawKey(sourceKey), rawKey(destinationKey)).map(this::readRequiredValue));
 	}
 
 	@Override
@@ -304,7 +308,7 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 		Assert.notNull(sourceKey, "Source key must not be null");
 		Assert.notNull(destinationKey, "Destination key must not be null");
 		Assert.notNull(timeout, "Duration must not be null");
-		Assert.isTrue(isZeroOrGreaterOneSecond(timeout), "Duration must be either zero or greater or equal to 1 second");
+		Assert.isTrue(TimeoutUtils.isZeroOrGreaterThanOneSecond(timeout), "Duration must be either zero or greater or equal to 1 second");
 
 		return createMono(connection -> connection.bRPopLPush(rawKey(sourceKey), rawKey(destinationKey), timeout)
 				.map(this::readRequiredValue));
@@ -332,10 +336,6 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 		return template.doCreateFlux(connection -> function.apply(connection.listCommands()));
 	}
 
-	private boolean isZeroOrGreaterOneSecond(Duration timeout) {
-		return timeout.isZero() || timeout.getNano() % TimeUnit.NANOSECONDS.convert(1, TimeUnit.SECONDS) == 0;
-	}
-
 	private ByteBuffer rawKey(K key) {
 		return serializationContext.getKeySerializationPair().write(key);
 	}
@@ -344,8 +344,8 @@ class DefaultReactiveListOperations<K, V> implements ReactiveListOperations<K, V
 		return serializationContext.getValueSerializationPair().write(value);
 	}
 
-	@Nullable
-	private V readValue(ByteBuffer buffer) {
+	@Contract("!null -> !null")
+	private @Nullable V readValue(ByteBuffer buffer) {
 		return serializationContext.getValueSerializationPair().read(buffer);
 	}
 

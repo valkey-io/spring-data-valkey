@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ package io.valkey.springframework.data.valkey.connection.stream;
 import java.util.Collections;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import org.springframework.lang.Nullable;
 
 /**
  * A {@link Record} within the stream backed by a collection of binary {@literal field/value} pairs.
@@ -61,6 +61,7 @@ public interface ByteRecord extends MapRecord<byte[], byte[], byte[]> {
 	 * @param valueSerializer can be {@literal null} if the values suite already the target format.
 	 * @return new {@link MapRecord} holding the deserialized values.
 	 */
+	@SuppressWarnings("NullAway")
 	default <K, HK, HV> MapRecord<K, HK, HV> deserialize(@Nullable ValkeySerializer<? extends K> streamSerializer,
 			@Nullable ValkeySerializer<? extends HK> fieldSerializer,
 			@Nullable ValkeySerializer<? extends HV> valueSerializer) {

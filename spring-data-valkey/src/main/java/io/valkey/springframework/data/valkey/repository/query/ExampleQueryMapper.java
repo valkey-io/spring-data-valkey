@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.ExampleMatcher.MatchMode;
@@ -34,7 +36,6 @@ import io.valkey.springframework.data.valkey.core.convert.IndexedData;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentEntity;
 import io.valkey.springframework.data.valkey.core.mapping.ValkeyPersistentProperty;
 import org.springframework.data.support.ExampleMatcherAccessor;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -98,7 +99,7 @@ public class ExampleQueryMapper {
 			return;
 		}
 
-		PersistentPropertyAccessor propertyAccessor = persistentEntity.getPropertyAccessor(probe);
+		PersistentPropertyAccessor<?> propertyAccessor = persistentEntity.getPropertyAccessor(probe);
 
 		Set<IndexedData> indexedData = getIndexedData(path, probe, persistentEntity);
 		Set<String> indexNames = indexedData.stream().map(IndexedData::getIndexName).distinct().collect(Collectors.toSet());
@@ -121,7 +122,7 @@ public class ExampleQueryMapper {
 	}
 
 	private void applyPropertySpec(String path, Predicate<String> hasIndex, ExampleMatcherAccessor exampleSpecAccessor,
-			PersistentPropertyAccessor propertyAccessor, ValkeyPersistentProperty property, MatchMode matchMode,
+			PersistentPropertyAccessor<?> propertyAccessor, ValkeyPersistentProperty property, MatchMode matchMode,
 			ValkeyOperationChain chain) {
 
 		StringMatcher stringMatcher = exampleSpecAccessor.getDefaultStringMatcher();
@@ -172,7 +173,8 @@ public class ExampleQueryMapper {
 
 		String keySpace = persistentEntity.getKeySpace();
 		return keySpace == null ? Collections.emptySet()
-				: indexResolver.resolveIndexesFor(persistentEntity.getKeySpace(), path, persistentEntity.getTypeInformation(),
+				: indexResolver.resolveIndexesFor(keySpace, path, persistentEntity.getTypeInformation(),
 						probe);
 	}
+
 }

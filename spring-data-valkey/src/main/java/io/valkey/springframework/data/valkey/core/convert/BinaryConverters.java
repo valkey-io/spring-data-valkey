@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.convert.converter.ConverterFactory;
 import org.springframework.data.convert.ReadingConverter;
@@ -82,6 +83,7 @@ final class BinaryConverters {
 		String toString(byte[] source) {
 			return new String(source, CHARSET);
 		}
+
 	}
 
 	/**
@@ -95,6 +97,7 @@ final class BinaryConverters {
 		public byte[] convert(String source) {
 			return fromString(source);
 		}
+
 	}
 
 	/**
@@ -122,6 +125,7 @@ final class BinaryConverters {
 		public byte[] convert(Number source) {
 			return fromString(source.toString());
 		}
+
 	}
 
 	/**
@@ -136,6 +140,7 @@ final class BinaryConverters {
 		public byte[] convert(Enum<?> source) {
 			return fromString(source.name());
 		}
+
 	}
 
 	/**
@@ -163,7 +168,7 @@ final class BinaryConverters {
 		 * @author Christoph Strobl
 		 * @since 1.7
 		 */
-		private class BytesToEnum<T extends Enum<T>> extends StringBasedConverter implements Converter<byte[], T> {
+		private class BytesToEnum<T extends Enum<T>> extends StringBasedConverter implements Converter<byte[], @Nullable T> {
 
 			private final Class<T> enumType;
 
@@ -172,7 +177,8 @@ final class BinaryConverters {
 			}
 
 			@Override
-			public T convert(byte[] source) {
+			@SuppressWarnings("NullAway")
+			public @Nullable T convert(byte[] source) {
 
 				if (ObjectUtils.isEmpty(source)) {
 					return null;
@@ -181,6 +187,7 @@ final class BinaryConverters {
 				return Enum.valueOf(this.enumType, toString(source).trim());
 			}
 		}
+
 	}
 
 	/**
@@ -196,7 +203,7 @@ final class BinaryConverters {
 		}
 
 		private static final class BytesToNumberConverter<T extends Number> extends StringBasedConverter
-				implements Converter<byte[], T> {
+				implements Converter<byte[], @Nullable T> {
 
 			private final Class<T> targetType;
 
@@ -205,7 +212,8 @@ final class BinaryConverters {
 			}
 
 			@Override
-			public T convert(byte[] source) {
+			@SuppressWarnings("NullAway")
+			public @Nullable T convert(byte[] source) {
 
 				if (ObjectUtils.isEmpty(source)) {
 					return null;
@@ -214,6 +222,7 @@ final class BinaryConverters {
 				return NumberUtils.parseNumber(toString(source), targetType);
 			}
 		}
+
 	}
 
 	/**
@@ -230,6 +239,7 @@ final class BinaryConverters {
 		public byte[] convert(Boolean source) {
 			return source.booleanValue() ? _true : _false;
 		}
+
 	}
 
 	/**
@@ -237,10 +247,11 @@ final class BinaryConverters {
 	 * @since 1.7
 	 */
 	@ReadingConverter
-	static class BytesToBooleanConverter extends StringBasedConverter implements Converter<byte[], Boolean> {
+	static class BytesToBooleanConverter extends StringBasedConverter implements Converter<byte[], @Nullable Boolean> {
 
 		@Override
-		public Boolean convert(byte[] source) {
+		@SuppressWarnings("NullAway")
+		public @Nullable Boolean convert(byte[] source) {
 
 			if (ObjectUtils.isEmpty(source)) {
 				return null;
@@ -249,6 +260,7 @@ final class BinaryConverters {
 			String value = toString(source);
 			return ("1".equals(value) || "true".equalsIgnoreCase(value)) ? Boolean.TRUE : Boolean.FALSE;
 		}
+
 	}
 
 	/**
@@ -262,6 +274,7 @@ final class BinaryConverters {
 		public byte[] convert(Date source) {
 			return fromString(Long.toString(source.getTime()));
 		}
+
 	}
 
 	/**
@@ -269,10 +282,11 @@ final class BinaryConverters {
 	 * @since 1.7
 	 */
 	@ReadingConverter
-	static class BytesToDateConverter extends StringBasedConverter implements Converter<byte[], Date> {
+	static class BytesToDateConverter extends StringBasedConverter implements Converter<byte[], @Nullable Date> {
 
 		@Override
-		public Date convert(byte[] source) {
+		@SuppressWarnings("NullAway")
+		public @Nullable Date convert(byte[] source) {
 
 			if (ObjectUtils.isEmpty(source)) {
 				return null;
@@ -281,16 +295,15 @@ final class BinaryConverters {
 			String value = toString(source);
 			try {
 				return new Date(NumberUtils.parseNumber(value, Long.class));
-			} catch (NumberFormatException ignore) {
-			}
+			} catch (NumberFormatException ignore) {}
 
 			try {
 				return DateFormat.getInstance().parse(value);
-			} catch (ParseException ignore) {
-			}
+			} catch (ParseException ignore) {}
 
 			throw new IllegalArgumentException("Cannot parse date out of %s".formatted(Arrays.toString(source)));
 		}
+
 	}
 
 	/**
@@ -304,6 +317,7 @@ final class BinaryConverters {
 		public byte[] convert(UUID source) {
 			return fromString(source.toString());
 		}
+
 	}
 
 	/**
@@ -311,10 +325,11 @@ final class BinaryConverters {
 	 * @since 2.2
 	 */
 	@ReadingConverter
-	static class BytesToUuidConverter extends StringBasedConverter implements Converter<byte[], UUID> {
+	static class BytesToUuidConverter extends StringBasedConverter implements Converter<byte[], @Nullable UUID> {
 
 		@Override
-		public UUID convert(byte[] source) {
+		@SuppressWarnings("NullAway")
+		public @Nullable UUID convert(byte[] source) {
 
 			if (ObjectUtils.isEmpty(source)) {
 				return null;
@@ -322,5 +337,7 @@ final class BinaryConverters {
 
 			return UUID.fromString(toString(source));
 		}
+
 	}
+
 }

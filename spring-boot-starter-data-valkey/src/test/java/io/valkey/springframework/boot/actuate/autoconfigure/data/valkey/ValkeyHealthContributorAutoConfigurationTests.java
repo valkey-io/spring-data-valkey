@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,12 @@ package io.valkey.springframework.boot.actuate.autoconfigure.data.valkey;
 
 import org.junit.jupiter.api.Test;
 
-import org.springframework.boot.actuate.health.HealthContributor;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
-import org.springframework.boot.test.context.runner.ApplicationContextRunner;
-
-import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
+import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
+import io.valkey.springframework.boot.actuate.data.valkey.ValkeyReactiveHealthIndicator;
+import org.springframework.boot.health.autoconfigure.contributor.HealthContributorAutoConfiguration;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -36,19 +36,19 @@ class ValkeyHealthContributorAutoConfigurationTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
 		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class,
-				ValkeyHealthContributorAutoConfiguration.class));
+				ValkeyHealthContributorAutoConfiguration.class, HealthContributorAutoConfiguration.class));
 
 	@Test
 	void runShouldCreateIndicator() {
 		this.contextRunner.run((context) -> assertThat(context).hasSingleBean(ValkeyHealthIndicator.class)
-			.hasSingleBean(HealthContributor.class));
+			.doesNotHaveBean(ValkeyReactiveHealthIndicator.class));
 	}
 
 	@Test
 	void runWhenDisabledShouldNotCreateIndicator() {
 		this.contextRunner.withPropertyValues("management.health.valkey.enabled:false")
 			.run((context) -> assertThat(context).doesNotHaveBean(ValkeyHealthIndicator.class)
-				.doesNotHaveBean(HealthContributor.class));
+				.doesNotHaveBean(ValkeyReactiveHealthIndicator.class));
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import java.util.Map;
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author Roman Bezpalko
+ * @author Mingi Lee
  * @see <a href="https://valkey.io/commands#set">Valkey Documentation: Set Commands</a>
  * @since 2.0
  */
@@ -180,6 +181,38 @@ public interface ReactiveSetOperations<K, V> {
 	 * @since 2.2
 	 */
 	Mono<Long> intersectAndStore(Collection<K> keys, K destKey);
+
+	/**
+	 * Returns the cardinality of the set which would result from the intersection of {@code key} and {@code otherKey}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param otherKey must not be {@literal null}.
+	 * @return
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 * @since 4.0
+	 */
+	Mono<Long> intersectSize(K key, K otherKey);
+
+	/**
+	 * Returns the cardinality of the set which would result from the intersection of {@code key} and {@code otherKeys}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param otherKeys must not be {@literal null}.
+	 * @return
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 * @since 4.0
+	 */
+	Mono<Long> intersectSize(K key, Collection<K> otherKeys);
+
+	/**
+	 * Returns the cardinality of the set which would result from the intersection of all given sets at {@code keys}.
+	 *
+	 * @param keys must not be {@literal null}.
+	 * @return
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 * @since 4.0
+	 */
+	Mono<Long> intersectSize(Collection<K> keys);
 
 	/**
 	 * Union all sets at given {@code keys} and {@code otherKey}.

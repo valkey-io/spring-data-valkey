@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,13 @@ import redis.clients.jedis.exceptions.JedisRedirectionException;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.dao.support.PersistenceExceptionTranslator;
 import io.valkey.springframework.data.valkey.ClusterRedirectException;
+import io.valkey.springframework.data.valkey.ExceptionTranslationStrategy;
 import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
 import io.valkey.springframework.data.valkey.TooManyClusterRedirectionsException;
 
@@ -39,11 +42,24 @@ import io.valkey.springframework.data.valkey.TooManyClusterRedirectionsException
  * @author Guy Korland
  * @author Mark Paluch
  */
-public class JedisExceptionConverter implements Converter<Exception, DataAccessException> {
+public class JedisExceptionConverter
+		implements PersistenceExceptionTranslator, ExceptionTranslationStrategy, Converter<Exception, @Nullable DataAccessException> {
 
 	static final JedisExceptionConverter INSTANCE = new JedisExceptionConverter();
 
-	public DataAccessException convert(Exception ex) {
+	@Override
+	public @Nullable DataAccessException translateExceptionIfPossible(RuntimeException ex) {
+		return convert(ex);
+	}
+
+	@Override
+	public @Nullable DataAccessException translate(Exception e) {
+		return convert(e);
+	}
+
+	@Override
+	@SuppressWarnings("NullAway")
+	public @Nullable DataAccessException convert(Exception ex) {
 
 		if (ex instanceof DataAccessException dae) {
 			return dae;
@@ -77,4 +93,5 @@ public class JedisExceptionConverter implements Converter<Exception, DataAccessE
 
 		return null;
 	}
+
 }

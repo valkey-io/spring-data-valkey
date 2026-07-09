@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,9 +29,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.BeanClassLoaderAware;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.ValkeySystemException;
+import io.valkey.springframework.data.valkey.connection.CompareCondition;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
@@ -55,7 +60,6 @@ import io.valkey.springframework.data.valkey.serializer.JdkSerializationValkeySe
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.SerializationUtils;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
@@ -90,10 +94,13 @@ import org.springframework.util.CollectionUtils;
  * @author ihaohong
  * @author Chen Li
  * @author Vedran Pavic
+ * @author Chris Bono
+ * @author Yordan Tsintsov
  * @param <K> the Valkey key type against which the template works (usually a String)
  * @param <V> the Valkey value type against which the template works
  * @see StringValkeyTemplate
  */
+@NullUnmarked
 public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperations<K, V>, BeanClassLoaderAware {
 
 	private boolean enableTransactionSupport = false;
@@ -233,7 +240,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	 * @since 1.8
 	 */
 	@Override
-	public void setBeanClassLoader(ClassLoader classLoader) {
+	public void setBeanClassLoader(@Nullable ClassLoader classLoader) {
 		this.classLoader = classLoader;
 	}
 
@@ -242,8 +249,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	 *
 	 * @return template default serializer.
 	 */
-	@Nullable
-	public ValkeySerializer<?> getDefaultSerializer() {
+	public @Nullable ValkeySerializer<?> getDefaultSerializer() {
 		return defaultSerializer;
 	}
 
@@ -254,7 +260,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	 *
 	 * @param serializer default serializer to use.
 	 */
-	public void setDefaultSerializer(ValkeySerializer<?> serializer) {
+	public void setDefaultSerializer(@Nullable ValkeySerializer<?> serializer) {
 		this.defaultSerializer = serializer;
 	}
 
@@ -362,8 +368,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	}
 
 	@Override
-	@Nullable
-	public <T> T execute(ValkeyCallback<T> action) {
+	public <T extends @Nullable Object> T execute(@NonNull ValkeyCallback<T> action) {
 		return execute(action, isExposeConnection());
 	}
 
@@ -375,8 +380,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	 * @param exposeConnection whether to enforce exposure of the native Valkey Connection to callback code
 	 * @return object returned by the action
 	 */
-	@Nullable
-	public <T> T execute(ValkeyCallback<T> action, boolean exposeConnection) {
+	public <T extends @Nullable Object> T execute(@NonNull ValkeyCallback<T> action, boolean exposeConnection) {
 		return execute(action, exposeConnection, false);
 	}
 
@@ -390,8 +394,8 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	 * @param pipeline whether to pipeline or not the connection for the execution
 	 * @return object returned by the action
 	 */
-	@Nullable
-	public <T> T execute(ValkeyCallback<T> action, boolean exposeConnection, boolean pipeline) {
+	public <T extends @Nullable Object> T execute(@NonNull ValkeyCallback<T> action, boolean exposeConnection,
+			boolean pipeline) {
 
 		Assert.isTrue(initialized, "template not initialized; call afterPropertiesSet() before using it");
 		Assert.notNull(action, "Callback object must not be null");
@@ -424,7 +428,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	}
 
 	@Override
-	public <T> T execute(SessionCallback<T> session) {
+	public <T extends @Nullable Object> T execute(@NonNull SessionCallback<T> session) {
 
 		Assert.isTrue(initialized, "template not initialized; call afterPropertiesSet() before using it");
 		Assert.notNull(session, "Callback object must not be null");
@@ -440,12 +444,13 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	}
 
 	@Override
-	public List<Object> executePipelined(SessionCallback<?> session) {
+	public List<Object> executePipelined(@NonNull SessionCallback<?> session) {
 		return executePipelined(session, valueSerializer);
 	}
 
 	@Override
-	public List<Object> executePipelined(SessionCallback<?> session, @Nullable ValkeySerializer<?> resultSerializer) {
+	public List<Object> executePipelined(@NonNull SessionCallback<?> session,
+			@Nullable ValkeySerializer<?> resultSerializer) {
 
 		Assert.isTrue(initialized, "template not initialized; call afterPropertiesSet() before using it");
 		Assert.notNull(session, "Callback object must not be null");
@@ -478,12 +483,13 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	}
 
 	@Override
-	public List<Object> executePipelined(ValkeyCallback<?> action) {
+	public List<Object> executePipelined(@NonNull ValkeyCallback<?> action) {
 		return executePipelined(action, valueSerializer);
 	}
 
 	@Override
-	public List<Object> executePipelined(ValkeyCallback<?> action, @Nullable ValkeySerializer<?> resultSerializer) {
+	public List<Object> executePipelined(@NonNull ValkeyCallback<?> action,
+			@Nullable ValkeySerializer<?> resultSerializer) {
 
 		return execute((ValkeyCallback<List<Object>>) connection -> {
 			connection.openPipeline();
@@ -506,18 +512,20 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	}
 
 	@Override
-	public <T> T execute(ValkeyScript<T> script, List<K> keys, Object... args) {
+	public <T extends @Nullable Object> T execute(@NonNull ValkeyScript<T> script, @NonNull List<@NonNull K> keys,
+			@NonNull Object @NonNull... args) {
 		return scriptExecutor.execute(script, keys, args);
 	}
 
 	@Override
-	public <T> T execute(ValkeyScript<T> script, ValkeySerializer<?> argsSerializer, ValkeySerializer<T> resultSerializer,
-			List<K> keys, Object... args) {
+	public <T extends @Nullable Object> T execute(@NonNull ValkeyScript<T> script,
+			@NonNull ValkeySerializer<?> argsSerializer, @NonNull ValkeySerializer<T> resultSerializer,
+			@NonNull List<@NonNull K> keys, @NonNull Object @NonNull... args) {
 		return scriptExecutor.execute(script, argsSerializer, resultSerializer, keys, args);
 	}
 
 	@Override
-	public <T extends Closeable> T executeWithStickyConnection(ValkeyCallback<T> callback) {
+	public <T extends Closeable> T executeWithStickyConnection(@NonNull ValkeyCallback<T> callback) {
 
 		Assert.isTrue(initialized, "template not initialized; call afterPropertiesSet() before using it");
 		Assert.notNull(callback, "Callback object must not be null");
@@ -546,14 +554,13 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	 * Processes the connection (before any settings are executed on it). Default implementation returns the connection as
 	 * is.
 	 *
-	 * @param connection valkey connection
+	 * @param connection Valkey connection
 	 */
 	protected ValkeyConnection preProcessConnection(ValkeyConnection connection, boolean existingConnection) {
 		return connection;
 	}
 
-	@Nullable
-	protected <T> T postProcessResult(@Nullable T result, ValkeyConnection conn, boolean existingConnection) {
+	protected @Nullable <T> T postProcessResult(@Nullable T result, ValkeyConnection conn, boolean existingConnection) {
 		return result;
 	}
 
@@ -568,6 +575,14 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 		byte[] targetKey = rawKey(target);
 
 		return doWithKeys(connection -> connection.copy(sourceKey, targetKey, replace));
+	}
+
+	@Override
+	public String getDigest(@NonNull K key) {
+
+		byte[] rawKey = rawKey(key);
+
+		return doWithKeys(connection -> connection.digest(rawKey));
 	}
 
 	@Override
@@ -606,6 +621,32 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 		byte[][] rawKeys = rawKeys(keys);
 
 		return doWithKeys(connection -> connection.del(rawKeys));
+	}
+
+	@Override
+	public Boolean delete(@NonNull K key, @NonNull Consumer<DeleteSpec<K, V>> deleteConsumer) {
+
+		Assert.notNull(deleteConsumer, "Builder customizer must not be null");
+
+		DefaultDeleteSpec<K, V> builder = new DefaultDeleteSpec<>();
+		deleteConsumer.accept(builder);
+		CompareCondition compareCondition = builder.toCompareCondition(this::rawValue);
+
+		if (compareCondition == null) {
+			return delete(key);
+		}
+
+		byte[] rawKey = rawKey(key);
+		return doWithKeys(connection -> connection.delex(rawKey, compareCondition));
+	}
+
+	@Override
+	public @Nullable Boolean compareAndDelete(@NonNull K key, @NonNull V expectedValue) {
+
+		byte[] rawKey = rawKey(key);
+		byte[] rawValue = rawValue(expectedValue);
+
+		return doWithKeys(connection -> connection.delex(rawKey, CompareCondition.ifEquals(rawValue)));
 	}
 
 	@Override
@@ -684,38 +725,31 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	}
 
 	@Override
-	public Boolean expire(K key, final long timeout, final TimeUnit unit) {
+	public Boolean expire(@NonNull K key, @NonNull Expiration expiration) {
+
+		byte[] rawKey = rawKey(key);
+		long rawTimeout = expiration.getExpirationTimeInMilliseconds();
+		return doWithKeys(connection -> connection.pExpire(rawKey, rawTimeout));
+	}
+
+	@Override
+	@Deprecated(since = "4.1")
+	public Boolean expire(K key, long timeout, TimeUnit unit) {
 
 		byte[] rawKey = rawKey(key);
 		long rawTimeout = TimeoutUtils.toMillis(timeout, unit);
-
-		return doWithKeys(connection -> {
-			try {
-				return connection.pExpire(rawKey, rawTimeout);
-			} catch (Exception ignore) {
-				// Driver may not support pExpire or we may be running on Valkey 2.4
-				return connection.expire(rawKey, TimeoutUtils.toSeconds(timeout, unit));
-			}
-		});
+		return doWithKeys(connection -> connection.pExpire(rawKey, rawTimeout));
 	}
 
 	@Override
-	public Boolean expireAt(K key, final Date date) {
+	public Boolean expireAt(K key, Date date) {
 
 		byte[] rawKey = rawKey(key);
-
-		return doWithKeys(connection -> {
-			try {
-				return connection.pExpireAt(rawKey, date.getTime());
-			} catch (Exception ignore) {
-				return connection.expireAt(rawKey, date.getTime() / 1000);
-			}
-		});
+		return doWithKeys(connection -> connection.pExpireAt(rawKey, date.getTime()));
 	}
 
-	@Nullable
 	@Override
-	public ExpireChanges.ExpiryChangeState expire(K key, Expiration expiration, ExpirationOptions options) {
+	public ExpireChanges.@Nullable ExpiryChangeState expire(K key, Expiration expiration, ExpirationOptions options) {
 
 		byte[] rawKey = rawKey(key);
 		Boolean raw = doWithKeys(connection -> connection.applyExpiration(rawKey, expiration, options));
@@ -741,14 +775,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	public Long getExpire(K key, TimeUnit timeUnit) {
 
 		byte[] rawKey = rawKey(key);
-		return doWithKeys(connection -> {
-			try {
-				return connection.pTtl(rawKey, timeUnit);
-			} catch (Exception ignore) {
-				// Driver may not support pTtl or we may be running on Valkey 2.4
-				return connection.ttl(rawKey, timeUnit);
-			}
-		});
+		return doWithKeys(connection -> connection.pTtl(rawKey, timeUnit));
 	}
 
 	@Override
@@ -777,15 +804,40 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	 * Executes the Valkey restore command. The value passed in should be the exact serialized data returned from
 	 * {@link #dump(Object)}, since Valkey uses a non-standard serialization mechanism.
 	 *
-	 * @param key The key to restore
-	 * @param value The value to restore, as returned by {@link #dump(Object)}
-	 * @param timeToLive An expiration for the restored key, or 0 for no expiration
-	 * @param unit The time unit for timeToLive
+	 * @param key key to restore.
+	 * @param value value to restore, as returned by {@link #dump(Object)}.
+	 * @param expiration expiration for the restored key, can be {@literal Expiration.persistent()} for no expiration.
+	 * @param replace use {@literal true} to replace a potentially existing value instead of erroring.
+	 * @throws ValkeySystemException if the key you are attempting to restore already exists and {@code replace} is set to
+	 *           {@literal false}.
+	 * @since 4.1
+	 */
+	@Override
+	public void restore(K key, byte[] value, Expiration expiration, boolean replace) {
+
+		byte[] rawKey = rawKey(key);
+		long rawTimeout = expiration.isPersistent() ? 0 : expiration.getExpirationTimeInMilliseconds();
+
+		doWithKeys(connection -> {
+			connection.restore(rawKey, rawTimeout, value, replace);
+			return null;
+		});
+	}
+
+	/**
+	 * Executes the Valkey restore command. The value passed in should be the exact serialized data returned from
+	 * {@link #dump(Object)}, since Valkey uses a non-standard serialization mechanism.
+	 *
+	 * @param key key to restore.
+	 * @param value value to restore, as returned by {@link #dump(Object)}.
+	 * @param timeToLive expiration for the restored key, or {@value 0} for no expiration.
+	 * @param unit time unit for {@code timeToLive}.
 	 * @param replace use {@literal true} to replace a potentially existing value instead of erroring.
 	 * @throws ValkeySystemException if the key you are attempting to restore already exists and {@code replace} is set to
 	 *           {@literal false}.
 	 */
 	@Override
+	@Deprecated(since = "4.1")
 	public void restore(K key, byte[] value, long timeToLive, TimeUnit unit, boolean replace) {
 
 		byte[] rawKey = rawKey(key);
@@ -797,8 +849,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 		});
 	}
 
-	@Nullable
-	private <T> T doWithKeys(Function<ValkeyKeyCommands, T> action) {
+	private @Nullable <T> T doWithKeys(Function<ValkeyKeyCommands, T> action) {
 		return execute((ValkeyCallback<? extends T>) connection -> action.apply(connection.keyCommands()), true);
 	}
 
@@ -888,7 +939,6 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 
 	@Override
 	public void unwatch() {
-
 		executeWithoutResult(ValkeyTxCommands::unwatch);
 	}
 
@@ -1117,8 +1167,7 @@ public class ValkeyTemplate<K, V> extends ValkeyAccessor implements ValkeyOperat
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Nullable
-	private List<Object> deserializeMixedResults(@Nullable List<Object> rawValues,
+	private @Nullable List<Object> deserializeMixedResults(@Nullable List<Object> rawValues,
 			@Nullable ValkeySerializer valueSerializer, @Nullable ValkeySerializer hashKeySerializer,
 			@Nullable ValkeySerializer hashValueSerializer) {
 

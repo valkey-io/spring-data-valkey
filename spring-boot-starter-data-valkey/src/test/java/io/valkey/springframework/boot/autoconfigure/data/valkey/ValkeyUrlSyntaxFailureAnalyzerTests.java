@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,14 +33,16 @@ class ValkeyUrlSyntaxFailureAnalyzerTests {
 	void analyzeInvalidUrlSyntax() {
 		ValkeyUrlSyntaxException exception = new ValkeyUrlSyntaxException("valkey://invalid");
 		FailureAnalysis analysis = new ValkeyUrlSyntaxFailureAnalyzer().analyze(exception);
+		assertThat(analysis).isNotNull();
 		assertThat(analysis.getDescription()).contains("The URL 'valkey://invalid' is not valid");
 		assertThat(analysis.getAction()).contains("Review the value of the property 'spring.data.valkey.url'");
 	}
 
 	@Test
-	void analyzeValkeyHttpUrl() {
+	void analyzeHttpUrl() {
 		ValkeyUrlSyntaxException exception = new ValkeyUrlSyntaxException("http://127.0.0.1:26379/mymaster");
 		FailureAnalysis analysis = new ValkeyUrlSyntaxFailureAnalyzer().analyze(exception);
+		assertThat(analysis).isNotNull();
 		assertThat(analysis.getDescription()).contains("The URL 'http://127.0.0.1:26379/mymaster' is not valid")
 			.contains("The scheme 'http' is not supported");
 		assertThat(analysis.getAction()).contains("Use the scheme 'valkey://' for insecure or 'valkeys://' for secure");
@@ -51,6 +53,7 @@ class ValkeyUrlSyntaxFailureAnalyzerTests {
 		ValkeyUrlSyntaxException exception = new ValkeyUrlSyntaxException(
 				"valkey-sentinel://username:password@127.0.0.1:26379,127.0.0.1:26380/mymaster");
 		FailureAnalysis analysis = new ValkeyUrlSyntaxFailureAnalyzer().analyze(exception);
+		assertThat(analysis).isNotNull();
 		assertThat(analysis.getDescription()).contains(
 				"The URL 'valkey-sentinel://username:password@127.0.0.1:26379,127.0.0.1:26380/mymaster' is not valid")
 			.contains("The scheme 'valkey-sentinel' is not supported");
@@ -58,11 +61,31 @@ class ValkeyUrlSyntaxFailureAnalyzerTests {
 	}
 
 	@Test
+	void analyzeRedisSentinelUrl() {
+		ValkeyUrlSyntaxException exception = new ValkeyUrlSyntaxException(
+				"redis-sentinel://username:password@127.0.0.1:26379,127.0.0.1:26380/mymaster");
+		FailureAnalysis analysis = new ValkeyUrlSyntaxFailureAnalyzer().analyze(exception);
+		assertThat(analysis).isNotNull();
+		assertThat(analysis.getDescription()).contains("The scheme 'redis-sentinel' is not supported");
+		assertThat(analysis.getAction()).contains("Use spring.data.valkey.sentinel properties");
+	}
+
+	@Test
 	void analyzeValkeySocketUrl() {
 		ValkeyUrlSyntaxException exception = new ValkeyUrlSyntaxException("valkey-socket:///valkey/valkey.sock");
 		FailureAnalysis analysis = new ValkeyUrlSyntaxFailureAnalyzer().analyze(exception);
+		assertThat(analysis).isNotNull();
 		assertThat(analysis.getDescription()).contains("The URL 'valkey-socket:///valkey/valkey.sock' is not valid")
 			.contains("The scheme 'valkey-socket' is not supported");
+		assertThat(analysis.getAction()).contains("Configure the appropriate Spring Data Valkey connection beans");
+	}
+
+	@Test
+	void analyzeRedisSocketUrl() {
+		ValkeyUrlSyntaxException exception = new ValkeyUrlSyntaxException("redis-socket:///redis/redis.sock");
+		FailureAnalysis analysis = new ValkeyUrlSyntaxFailureAnalyzer().analyze(exception);
+		assertThat(analysis).isNotNull();
+		assertThat(analysis.getDescription()).contains("The scheme 'redis-socket' is not supported");
 		assertThat(analysis.getAction()).contains("Configure the appropriate Spring Data Valkey connection beans");
 	}
 

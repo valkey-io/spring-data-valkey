@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.lang.Nullable;
 
 /**
  * The result of an asynchronous operation
@@ -31,7 +31,7 @@ import org.springframework.lang.Nullable;
  */
 public abstract class FutureResult<T> {
 
-	private T resultHolder;
+	private final T resultHolder;
 	private final Supplier<?> defaultConversionResult;
 
 	private boolean status = false;
@@ -95,8 +95,7 @@ public abstract class FutureResult<T> {
 	 * @return The converted result or {@literal null}.
 	 */
 	@SuppressWarnings("unchecked")
-	@Nullable
-	public Object convert(@Nullable Object result) {
+	public @Nullable Object convert(@Nullable Object result) {
 
 		if (result == null) {
 			return computeDefaultResult(null);
@@ -105,8 +104,7 @@ public abstract class FutureResult<T> {
 		return computeDefaultResult(converter.convert(result));
 	}
 
-	@Nullable
-	private Object computeDefaultResult(@Nullable Object source) {
+	private @Nullable Object computeDefaultResult(@Nullable Object source) {
 		return source != null ? source : defaultConversionResult.get();
 	}
 
@@ -134,8 +132,7 @@ public abstract class FutureResult<T> {
 	/**
 	 * @return The result of the operation. Can be {@literal null}.
 	 */
-	@Nullable
-	public abstract Object get();
+	public abstract @Nullable Object get();
 
 	/**
 	 * Indicate whether or not the actual result needs to be {@link #convert(Object) converted} before handing over.

@@ -28,7 +28,17 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.api.Test;
 
 import io.valkey.springframework.data.valkey.connection.Message;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
@@ -42,8 +52,6 @@ import io.valkey.springframework.data.valkey.connection.lettuce.extension.Lettuc
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 import org.springframework.lang.Nullable;
 
 /**
@@ -51,6 +59,7 @@ import org.springframework.lang.Nullable;
  *
  * @author Mark Paluch
  */
+@ParameterizedClass
 @MethodSource("testParams")
 class ValkeyMessageListenerContainerIntegrationTests {
 
@@ -94,7 +103,7 @@ class ValkeyMessageListenerContainerIntegrationTests {
 		container.destroy();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void notifiesChannelSubscriptionState() throws Exception {
 
 		AtomicReference<String> onSubscribe = new AtomicReference<>();
@@ -134,7 +143,7 @@ class ValkeyMessageListenerContainerIntegrationTests {
 		assertThat(onUnsubscribe).hasValue("a");
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void notifiesPatternSubscriptionState() throws Exception {
 
 		AtomicReference<String> onPsubscribe = new AtomicReference<>();
@@ -174,7 +183,7 @@ class ValkeyMessageListenerContainerIntegrationTests {
 		assertThat(onPunsubscribe).hasValue("a");
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void repeatedSubscribeShouldNotifyOnlyOnce() throws Exception {
 
 		AtomicInteger subscriptions1 = new AtomicInteger();
@@ -222,7 +231,7 @@ class ValkeyMessageListenerContainerIntegrationTests {
 		assertThat(subscriptions1.get() + subscriptions2.get()).isGreaterThan(0);
 	}
 
-	@ParameterizedValkeyTest // GH-964
+	@Test // GH-964
 	void subscribeAfterStart() throws Exception {
 
 		AtomicInteger subscriptions1 = new AtomicInteger();
@@ -270,7 +279,7 @@ class ValkeyMessageListenerContainerIntegrationTests {
 		assertThat(subscriptions1.get() + subscriptions2.get()).isGreaterThan(0);
 	}
 
-	@ParameterizedValkeyTest // GH-964
+	@Test // GH-964
 	void multipleStarts() throws Exception {
 
 		AtomicInteger subscriptions = new AtomicInteger();
@@ -305,7 +314,7 @@ class ValkeyMessageListenerContainerIntegrationTests {
 		container.destroy();
 	}
 
-	@ParameterizedValkeyTest // GH-964
+	@Test // GH-964
 	void shouldRegisterChannelsAndTopics() throws Exception {
 
 		AtomicInteger subscriptions = new AtomicInteger();

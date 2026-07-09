@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -59,7 +59,7 @@ class LettuceFutureUtils {
 	 * @throws CompletionException thrown if the future is completed with a checked exception.
 	 * @return the future result if completed normally.
 	 */
-	@Nullable
+	@SuppressWarnings("NullAway")
 	static <T> T join(CompletionStage<T> future) throws RuntimeException, CompletionException {
 
 		Assert.notNull(future, "CompletableFuture must not be null");
@@ -92,7 +92,7 @@ class LettuceFutureUtils {
 	 *
 	 * @return
 	 */
-	static <T> Function<Throwable, T> ignoreErrors() {
+	static <T> Function<Throwable, @Nullable T> ignoreErrors() {
 		return ignored -> null;
 	}
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import java.io.IOException;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.core.io.Resource;
-import org.springframework.lang.Nullable;
 import org.springframework.scripting.ScriptSource;
 import org.springframework.scripting.support.ResourceScriptSource;
 import org.springframework.scripting.support.StaticScriptSource;
@@ -80,6 +80,7 @@ public class DefaultValkeyScript<T> implements ValkeyScript<T>, InitializingBean
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public String getSha1() {
 
 		lock.lock();
@@ -95,12 +96,12 @@ public class DefaultValkeyScript<T> implements ValkeyScript<T>, InitializingBean
 	}
 
 	@Override
-	@Nullable
-	public Class<T> getResultType() {
+	public @Nullable Class<T> getResultType() {
 		return this.resultType;
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public String getScriptAsString() {
 
 		try {
@@ -138,4 +139,5 @@ public class DefaultValkeyScript<T> implements ValkeyScript<T>, InitializingBean
 	public void setScriptSource(ScriptSource scriptSource) {
 		this.scriptSource = scriptSource;
 	}
+
 }

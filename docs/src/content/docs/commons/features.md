@@ -38,7 +38,7 @@ GLIDE's internal connection pooling and async operations are optimized for high-
 * Property-based IAM authentication configuration
 * Property-based OpenTelemetry configuration for GLIDE
 * Auto-configuration for all three drivers (GLIDE, Lettuce, Jedis)
-* Enhanced Actuator metrics for GLIDE connections
+* Actuator health indicators for all drivers (GLIDE, Lettuce, Jedis)
 
 ## Migration from Spring Data Redis
 

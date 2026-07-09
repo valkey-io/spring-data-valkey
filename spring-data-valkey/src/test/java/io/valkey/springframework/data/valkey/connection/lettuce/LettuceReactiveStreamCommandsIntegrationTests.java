@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,24 +18,29 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 import static org.assertj.core.api.Assertions.*;
 
 import io.lettuce.core.XReadArgs;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands;
 import reactor.test.StepVerifier;
 
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 
 import org.assertj.core.data.Offset;
 import org.junit.Ignore;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.connection.Limit;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamEntryDeletionResult;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XDelOptions;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
 import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
 import io.valkey.springframework.data.valkey.connection.stream.RecordId;
 import io.valkey.springframework.data.valkey.connection.stream.StreamOffset;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for {@link LettuceReactiveStreamCommands}.
@@ -44,7 +49,9 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Christoph Strobl
  * @author Tugdual Grall
  * @author Dengliming
+ * @author Jeonggyu Choi
  */
+@ParameterizedClass
 @EnabledOnCommand("XADD")
 public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReactiveCommandsTestSupport {
 
@@ -52,7 +59,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 		super(fixture);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xAddShouldAddMessage() {
 
 		connection.streamCommands().xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)) //
@@ -66,7 +73,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xDelShouldRemoveMessage() {
 
 		RecordId messageId = connection.streamCommands()
@@ -83,7 +90,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xRangeShouldReportMessages() {
 
 		connection.streamCommands().xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
@@ -116,7 +123,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xReadShouldReadMessage() {
 
 		connection.streamCommands().xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
@@ -134,7 +141,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xReadGroupShouldReadMessage() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -154,7 +161,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xRevRangeShouldReportMessages() {
 
 		connection.streamCommands().xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_1_BBUFFER, VALUE_1_BBUFFER)) //
@@ -177,7 +184,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xGroupCreateShouldCreateGroup() {
 
 		nativeCommands.xadd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2));
@@ -188,7 +195,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xGroupCreateShouldCreateGroupBeforeStream() {
 		connection.streamCommands().xGroupCreate(KEY_1_BBUFFER, "group-1", ReadOffset.latest(), false)
 				.as(StepVerifier::create) //
@@ -201,7 +208,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	@Ignore("commands sent correctly - however lettuce returns false")
 	void xGroupDelConsumerShouldRemoveConsumer() {
 
@@ -216,7 +223,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-864
+	@Test // DATAREDIS-864
 	void xGroupDestroyShouldDestroyGroup() {
 
 		String id = nativeCommands.xadd(KEY_1, Collections.singletonMap(KEY_2, VALUE_2));
@@ -227,7 +234,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void xPendingShouldLoadOverviewCorrectly() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -252,7 +259,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 		}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void xPendingShouldLoadEmptyOverviewCorrectly() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -269,7 +276,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 		}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void xPendingShouldLoadPendingMessages() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -294,7 +301,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void xPendingShouldLoadPendingMessagesForConsumer() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -319,7 +326,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void xPendingShouldLoadPendingMessagesForNonExistingConsumer() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -340,7 +347,157 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // GH-2046
+	void xPendingShouldLoadPendingMessagesForGroupAndIdle() {
+
+		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
+		nativeCommands.xgroupCreate(XReadArgs.StreamOffset.from(KEY_1, initialMessage), "my-group");
+
+		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
+
+		connection.streamCommands()
+				.xReadGroup(Consumer.from("my-group", "my-consumer"),
+						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed()))
+				.delayElements(Duration.ofSeconds(1)).then().as(StepVerifier::create).verifyComplete();
+
+		Duration exceededIdle = Duration.of(1, ChronoUnit.MILLIS);
+
+		connection.streamCommands().xPending(KEY_1_BBUFFER, "my-group", Range.open("-", "+"), 10L, exceededIdle)
+				.delaySubscription(Duration.ofMillis(100)).as(StepVerifier::create).assertNext(it -> {
+					assertThat(it.size()).isOne();
+					assertThat(it.get(0).getConsumerName()).isEqualTo("my-consumer");
+					assertThat(it.get(0).getGroupName()).isEqualTo("my-group");
+					assertThat(it.get(0).getTotalDeliveryCount()).isOne();
+					assertThat(it.get(0).getIdAsString()).isNotNull();
+				}).verifyComplete();
+	}
+
+	@Test // GH-2046
+	void xPendingShouldLoadEmptyPendingMessagesForGroupAndIdleWhenDurationNotExceeded() {
+
+		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
+		nativeCommands.xgroupCreate(XReadArgs.StreamOffset.from(KEY_1, initialMessage), "my-group");
+
+		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
+
+		connection.streamCommands()
+				.xReadGroup(Consumer.from("my-group", "my-consumer"),
+						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed()))
+				.then().as(StepVerifier::create).verifyComplete();
+
+		Duration notExceededIdle = Duration.ofMinutes(10);
+
+		connection.streamCommands().xPending(KEY_1_BBUFFER, "my-group", Range.open("-", "+"), 10L, notExceededIdle)
+				.delaySubscription(Duration.ofMillis(100))
+
+				.as(StepVerifier::create).assertNext(it -> {
+					assertThat(it.isEmpty()).isTrue();
+				}).verifyComplete();
+	}
+
+	@Test // GH-2046
+	void xPendingShouldLoadPendingMessagesForGroupNameAndConsumerNameAndIdle() {
+
+		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
+		nativeCommands.xgroupCreate(XReadArgs.StreamOffset.from(KEY_1, initialMessage), "my-group");
+
+		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
+
+		connection.streamCommands()
+				.xReadGroup(Consumer.from("my-group", "my-consumer"),
+						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed()))
+				.then().as(StepVerifier::create).verifyComplete();
+
+		Duration exceededIdle = Duration.ofMillis(1);
+
+		connection.streamCommands()
+				.xPending(KEY_1_BBUFFER, "my-group", "my-consumer", Range.open("-", "+"), 10L, exceededIdle)
+				.delaySubscription(Duration.ofMillis(100))
+
+				.as(StepVerifier::create).assertNext(it -> {
+					assertThat(it.size()).isOne();
+					assertThat(it.get(0).getConsumerName()).isEqualTo("my-consumer");
+					assertThat(it.get(0).getGroupName()).isEqualTo("my-group");
+					assertThat(it.get(0).getTotalDeliveryCount()).isOne();
+					assertThat(it.get(0).getIdAsString()).isNotNull();
+				}).verifyComplete();
+	}
+
+	@Test // GH-2046
+	void xPendingShouldLoadEmptyPendingMessagesForGroupNameAndConsumerNameAndIdleWhenDurationNotExceeded() {
+
+		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
+		nativeCommands.xgroupCreate(XReadArgs.StreamOffset.from(KEY_1, initialMessage), "my-group");
+
+		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
+
+		connection.streamCommands()
+				.xReadGroup(Consumer.from("my-group", "my-consumer"),
+						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed()))
+				.then().as(StepVerifier::create).verifyComplete();
+
+		Duration notExceededIdle = Duration.ofMinutes(10);
+
+		connection.streamCommands()
+				.xPending(KEY_1_BBUFFER, "my-group", "my-consumer", Range.open("-", "+"), 10L, notExceededIdle)
+				.delaySubscription(Duration.ofMillis(100))
+
+				.as(StepVerifier::create).assertNext(it -> {
+					assertThat(it.isEmpty()).isTrue();
+				}).verifyComplete();
+	}
+
+	@Test // GH-2046
+	void xPendingShouldLoadPendingMessageesForConsumerAndIdle() {
+
+		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
+		nativeCommands.xgroupCreate(XReadArgs.StreamOffset.from(KEY_1, initialMessage), "my-group");
+
+		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
+
+		connection.streamCommands()
+				.xReadGroup(Consumer.from("my-group", "my-consumer"),
+						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed()))
+				.then().as(StepVerifier::create).verifyComplete();
+
+		Duration exceededIdle = Duration.ofMillis(1);
+
+		connection.streamCommands()
+				.xPending(KEY_1_BBUFFER, Consumer.from("my-group", "my-consumer"), Range.open("-", "+"), 10L, exceededIdle)
+				.delaySubscription(Duration.ofMillis(100))
+
+				.as(StepVerifier::create).assertNext(it -> {
+					assertThat(it.size()).isOne();
+					assertThat(it.get(0).getConsumerName()).isEqualTo("my-consumer");
+					assertThat(it.get(0).getGroupName()).isEqualTo("my-group");
+					assertThat(it.get(0).getTotalDeliveryCount()).isOne();
+					assertThat(it.get(0).getIdAsString()).isNotNull();
+				}).verifyComplete();
+	}
+
+	@Test // GH-2046
+	void xPendingShouldLoadEmptyPendingMessagesForConsumerAndIdleWhenDurationNotExceeded() {
+
+		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
+		nativeCommands.xgroupCreate(XReadArgs.StreamOffset.from(KEY_1, initialMessage), "my-group");
+
+		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
+
+		connection.streamCommands()
+				.xReadGroup(Consumer.from("my-group", "my-consumer"),
+						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed()))
+				.then().as(StepVerifier::create).verifyComplete();
+
+		Duration notExceededIdle = Duration.ofMinutes(10);
+
+		connection.streamCommands()
+				.xPending(KEY_1_BBUFFER, Consumer.from("my-group", "my-consumer"), Range.open("-", "+"), 10L, notExceededIdle)
+				.delaySubscription(Duration.ofMillis(100)).as(StepVerifier::create).assertNext(it -> {
+					assertThat(it.isEmpty()).isTrue();
+				}).verifyComplete();
+	}
+
+	@Test // DATAREDIS-1084
 	void xPendingShouldLoadEmptyPendingMessages() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -354,7 +511,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1084
+	@Test // DATAREDIS-1084
 	void xClaim() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -376,7 +533,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1119
+	@Test // DATAREDIS-1119
 	void xinfo() {
 
 		String firstRecord = nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
@@ -397,7 +554,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1119
+	@Test // DATAREDIS-1119
 	void xinfoNoGroup() {
 
 		String firstRecord = nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
@@ -415,7 +572,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1119
+	@Test // DATAREDIS-1119
 	void xinfoGroups() {
 
 		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
@@ -433,7 +590,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1119
+	@Test // DATAREDIS-1119
 	void xinfoGroupsNoGroup() {
 
 		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
@@ -443,7 +600,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1119
+	@Test // DATAREDIS-1119
 	void xinfoGroupsNoConsumer() {
 
 		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
@@ -459,7 +616,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1119
+	@Test // DATAREDIS-1119
 	void xinfoConsumers() {
 
 		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
@@ -477,7 +634,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1119
+	@Test // DATAREDIS-1119
 	void xinfoConsumersNoConsumer() {
 
 		nativeCommands.xadd(KEY_1, KEY_2, VALUE_2);
@@ -487,7 +644,7 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 		connection.streamCommands().xInfoConsumers(KEY_1_BBUFFER, "my-group").as(StepVerifier::create).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-1226
+	@Test // DATAREDIS-1226
 	void xClaimJustId() {
 
 		String initialMessage = nativeCommands.xadd(KEY_1, KEY_1, VALUE_1);
@@ -500,9 +657,119 @@ public class LettuceReactiveStreamCommandsIntegrationTests extends LettuceReacti
 						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed())) //
 				.delayElements(Duration.ofMillis(5)).next() //
 				.flatMapMany(record -> connection.streamCommands().xClaimJustId(KEY_1_BBUFFER, "my-group", "my-consumer",
-						XClaimOptions.minIdle(Duration.ofMillis(1)).ids(record.getId()))
-				).as(StepVerifier::create) //
+						XClaimOptions.minIdle(Duration.ofMillis(1)).ids(record.getId())))
+				.as(StepVerifier::create) //
 				.assertNext(it -> assertThat(it.getValue()).isEqualTo(expected)) //
+				.verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XDELEX")
+	void xDelExShouldDeleteEntries() {
+
+		RecordId messageId1 = connection.streamCommands()
+				.xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)).block();
+		RecordId messageId2 = connection.streamCommands()
+				.xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)).block();
+
+		connection.streamCommands().xLen(KEY_1_BBUFFER) //
+				.as(StepVerifier::create) //
+				.expectNext(2L) //
+				.verifyComplete();
+
+		XDelOptions options = XDelOptions.defaults();
+
+		connection.streamCommands().xDelEx(KEY_1_BBUFFER, options, messageId1, messageId2) //
+				.as(StepVerifier::create) //
+				.expectNext(StreamEntryDeletionResult.DELETED) //
+				.expectNext(StreamEntryDeletionResult.DELETED) //
+				.verifyComplete();
+
+		connection.streamCommands().xLen(KEY_1_BBUFFER) //
+				.as(StepVerifier::create) //
+				.expectNext(0L) //
+				.verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XDELEX")
+	void xDelExWithStringIdsShouldDeleteEntries() {
+
+		RecordId messageId1 = connection.streamCommands()
+				.xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)).block();
+		RecordId messageId2 = connection.streamCommands()
+				.xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)).block();
+
+		XDelOptions options = XDelOptions.defaults();
+
+		connection.streamCommands().xDelEx(KEY_1_BBUFFER, options, messageId1.getValue(), messageId2.getValue()) //
+				.as(StepVerifier::create) //
+				.expectNextCount(2) //
+				.verifyComplete();
+
+		connection.streamCommands().xLen(KEY_1_BBUFFER) //
+				.as(StepVerifier::create) //
+				.expectNext(0L) //
+				.verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XACKDEL")
+	void xAckDelShouldAcknowledgeAndDeleteEntries() {
+
+		RecordId messageId1 = connection.streamCommands()
+				.xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)).block();
+		RecordId messageId2 = connection.streamCommands()
+				.xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)).block();
+
+		connection.streamCommands().xGroupCreate(KEY_1_BBUFFER, "my-group", ReadOffset.from("0-0"), true) //
+				.as(StepVerifier::create) //
+				.expectNext("OK") //
+				.verifyComplete();
+
+		connection.streamCommands()
+				.xReadGroup(Consumer.from("my-group", "my-consumer"),
+						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed())) //
+				.as(StepVerifier::create) //
+				.expectNextCount(1) //
+				.verifyComplete();
+
+		XDelOptions options = XDelOptions.deletionPolicy(ValkeyStreamCommands.StreamDeletionPolicy.removeAcknowledged());
+
+		connection.streamCommands().xAckDel(KEY_1_BBUFFER, "my-group", options, messageId1, messageId2) //
+				.as(StepVerifier::create) //
+				.expectNext(StreamEntryDeletionResult.DELETED) //
+				.expectNext(StreamEntryDeletionResult.DELETED) //
+				.verifyComplete();
+	}
+
+	@Test // GH-3232
+	@EnabledOnCommand("XACKDEL")
+	void xAckDelWithStringIdsShouldWork() {
+
+		RecordId messageId1 = connection.streamCommands()
+				.xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)).block();
+		RecordId messageId2 = connection.streamCommands()
+				.xAdd(KEY_1_BBUFFER, Collections.singletonMap(KEY_2_BBUFFER, VALUE_2_BBUFFER)).block();
+
+		connection.streamCommands().xGroupCreate(KEY_1_BBUFFER, "my-group", ReadOffset.from("0-0"), true) //
+				.as(StepVerifier::create) //
+				.expectNext("OK") //
+				.verifyComplete();
+
+		connection.streamCommands()
+				.xReadGroup(Consumer.from("my-group", "my-consumer"),
+						StreamOffset.create(KEY_1_BBUFFER, ReadOffset.lastConsumed())) //
+				.as(StepVerifier::create) //
+				.expectNextCount(1) //
+				.verifyComplete();
+
+		XDelOptions options = XDelOptions.deletionPolicy(ValkeyStreamCommands.StreamDeletionPolicy.removeAcknowledged());
+
+		connection.streamCommands().xAckDel(KEY_1_BBUFFER, "my-group", options, messageId1.getValue(),
+				messageId2.getValue()) //
+				.as(StepVerifier::create) //
+				.expectNextCount(2) //
 				.verifyComplete();
 	}
 }

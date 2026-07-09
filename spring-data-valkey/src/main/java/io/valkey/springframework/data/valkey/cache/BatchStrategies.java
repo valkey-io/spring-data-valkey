@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 the original author or authors.
+ * Copyright 2021-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,17 @@
 package io.valkey.springframework.data.valkey.cache;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.Set;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import org.springframework.util.Assert;
+import org.springframework.util.CollectionUtils;
 
 /**
  * Collection of predefined {@link BatchStrategy} implementations using the Valkey {@code KEYS} or {@code SCAN} command.
@@ -33,6 +34,7 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author John Blum
+ * @author Yong-Hyun Kim
  * @since 2.6
  */
 public abstract class BatchStrategies {
@@ -79,32 +81,31 @@ public abstract class BatchStrategies {
 		@Override
 		public long cleanCache(ValkeyConnection connection, String name, byte[] pattern) {
 
-			byte[][] keys = Optional.ofNullable(connection.keys(pattern)).orElse(Collections.emptySet())
-					.toArray(new byte[0][]);
+			ValkeyKeyCommands commands = connection.keyCommands();
 
-			if (keys.length > 0) {
-				connection.del(keys);
+			Set<byte[]> keys = commands.keys(pattern);
+
+			if (CollectionUtils.isEmpty(keys)) {
+				return 0;
 			}
 
-			return keys.length;
+			commands.del(keys.toArray(new byte[0][]));
+
+			return keys.size();
 		}
 	}
 
 	/**
 	 * {@link BatchStrategy} using {@code SCAN}.
 	 */
-	static class Scan implements BatchStrategy {
-
-		private final int batchSize;
-
-		Scan(int batchSize) {
-			this.batchSize = batchSize;
-		}
+	record Scan(int batchSize) implements BatchStrategy {
 
 		@Override
 		public long cleanCache(ValkeyConnection connection, String name, byte[] pattern) {
 
-			Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions().count(batchSize).match(pattern).build());
+			ValkeyKeyCommands commands = connection.keyCommands();
+
+			Cursor<byte[]> cursor = commands.scan(ScanOptions.scanOptions().count(batchSize).match(pattern).build());
 
 			long count = 0;
 
@@ -116,8 +117,8 @@ public abstract class BatchStrategies {
 
 				count += keys.size();
 
-				if (keys.size() > 0) {
-					connection.del(keys.toArray(new byte[0][]));
+				if (!keys.isEmpty()) {
+					commands.del(keys.toArray(new byte[0][]));
 				}
 			}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -82,11 +82,12 @@ class LettuceReactiveClusterSetCommands extends LettuceReactiveSetCommands imple
 
 			return sUnion(Mono.just(SUnionCommand.keys(command.getKeys()))).next().flatMap(values -> {
 
-				Mono<Long> result = values.getOutput().collectList().flatMap(it -> {
+				Flux<ByteBuffer> output = values.getOutput();
+				Mono<Long> result = output != null ? output.collectList().flatMap(it -> {
 
 					ByteBuffer[] members = it.toArray(new ByteBuffer[0]);
 					return cmd.sadd(command.getKey(), members);
-				});
+				}) : Mono.empty();
 
 				return result.map(value -> new NumericResponse<>(command, value));
 			});
@@ -118,8 +119,8 @@ class LettuceReactiveClusterSetCommands extends LettuceReactiveSetCommands imple
 						for (List<ByteBuffer> intersecting : intersectings) {
 							source.retainAll(intersecting);
 						}
-				return source;
-			});
+						return source;
+					});
 
 			return Mono.just(new CommandResponse<>(command, result.concatMap(v -> Flux.fromStream(v.stream()))));
 		}));
@@ -142,11 +143,12 @@ class LettuceReactiveClusterSetCommands extends LettuceReactiveSetCommands imple
 
 			return sInter(Mono.just(SInterCommand.keys(command.getKeys()))).next().flatMap(values -> {
 
-				Mono<Long> result = values.getOutput().collectList().flatMap(it -> {
+				Flux<ByteBuffer> output = values.getOutput();
+				Mono<Long> result = output != null ? output.collectList().flatMap(it -> {
 
 					ByteBuffer[] members = it.toArray(new ByteBuffer[0]);
 					return cmd.sadd(command.getKey(), members);
-				});
+				}) : Mono.empty();
 
 				return result.map(value -> new NumericResponse<>(command, value));
 			});
@@ -179,11 +181,10 @@ class LettuceReactiveClusterSetCommands extends LettuceReactiveSetCommands imple
 							source.removeAll(intersecting);
 						}
 
-				return source;
-			});
+						return source;
+					});
 
 			return Mono.just(new CommandResponse<>(command, result.concatMap(v -> Flux.fromStream(v.stream()))));
-
 		}));
 	}
 
@@ -204,11 +205,12 @@ class LettuceReactiveClusterSetCommands extends LettuceReactiveSetCommands imple
 
 			return sDiff(Mono.just(SDiffCommand.keys(command.getKeys()))).next().flatMap(values -> {
 
-				Mono<Long> result = values.getOutput().collectList().flatMap(it -> {
+				Flux<ByteBuffer> output = values.getOutput();
+				Mono<Long> result = output != null ? output.collectList().flatMap(it -> {
 
 					ByteBuffer[] members = it.toArray(new ByteBuffer[0]);
 					return cmd.sadd(command.getKey(), members);
-				});
+				}) : Mono.empty();
 
 				return result.map(value -> new NumericResponse<>(command, value));
 			});
@@ -234,6 +236,7 @@ class LettuceReactiveClusterSetCommands extends LettuceReactiveSetCommands imple
 						if (!exists) {
 							return Mono.just(Boolean.FALSE);
 						}
+
 						return cmd.sismember(command.getDestination(), command.getValue()).flatMap(existsInTarget -> {
 
 							Mono<Boolean> tmp = cmd.srem(command.getKey(), command.getValue()).map(nrRemoved -> nrRemoved > 0);
@@ -243,7 +246,6 @@ class LettuceReactiveClusterSetCommands extends LettuceReactiveSetCommands imple
 							}
 							return tmp;
 						});
-
 					});
 
 			return result.defaultIfEmpty(Boolean.FALSE).map(value -> new BooleanResponse<>(command, value));

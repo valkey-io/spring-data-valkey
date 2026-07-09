@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.util.function.Function;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.TypeDescriptor;
 import org.springframework.dao.DataAccessResourceFailureException;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -38,7 +38,6 @@ import io.valkey.springframework.data.valkey.core.ValkeyCallback;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.StreamOperations;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ErrorHandler;
 import org.springframework.util.ObjectUtils;
@@ -51,6 +50,8 @@ import org.springframework.util.ObjectUtils;
  *
  * @author Mark Paluch
  * @author Christoph Strobl
+ * @author Su Ko
+ * @author Yumin Jung
  * @since 2.2
  */
 class DefaultStreamMessageListenerContainer<K, V extends Record<K, ?>> implements StreamMessageListenerContainer<K, V> {
@@ -67,6 +68,9 @@ class DefaultStreamMessageListenerContainer<K, V extends Record<K, ?>> implement
 	private final List<Subscription> subscriptions = new ArrayList<>();
 
 	private boolean running = false;
+
+	private int phase = Integer.MAX_VALUE;
+	private boolean autoStartup = true;
 
 	/**
 	 * Create a new {@link DefaultStreamMessageListenerContainer}.
@@ -90,6 +94,14 @@ class DefaultStreamMessageListenerContainer<K, V extends Record<K, ?>> implement
 			this.streamOperations = this.template.opsForStream(containerOptions.getRequiredHashMapper());
 		} else {
 			this.streamOperations = this.template.opsForStream();
+		}
+
+		if (containerOptions.isAutoStartup().isPresent()) {
+			this.autoStartup = containerOptions.isAutoStartup().get();
+		}
+
+		if (containerOptions.getPhase().isPresent()) {
+			this.phase = containerOptions.getPhase().getAsInt();
 		}
 	}
 
@@ -120,11 +132,6 @@ class DefaultStreamMessageListenerContainer<K, V extends Record<K, ?>> implement
 		template.afterPropertiesSet();
 
 		return template;
-	}
-
-	@Override
-	public boolean isAutoStartup() {
-		return false;
 	}
 
 	@Override
@@ -178,7 +185,23 @@ class DefaultStreamMessageListenerContainer<K, V extends Record<K, ?>> implement
 
 	@Override
 	public int getPhase() {
-		return Integer.MAX_VALUE;
+		return this.phase;
+	}
+
+	@Override
+	public boolean isAutoStartup() {
+		return this.autoStartup;
+	}
+
+	/**
+	 * Configure if this listener container should get started automatically at the time that the containing
+	 * {@code ApplicationContext} gets refreshed. The default is {@code true}.
+	 *
+	 * @see org.springframework.context.SmartLifecycle#isAutoStartup()
+	 * @since 4.1
+	 */
+	public void setAutoStartup(boolean autoStartup) {
+		this.autoStartup = autoStartup;
 	}
 
 	@Override
@@ -218,7 +241,7 @@ class DefaultStreamMessageListenerContainer<K, V extends Record<K, ?>> implement
 		};
 	}
 
-	@SuppressWarnings("unchecked")
+	@SuppressWarnings({ "unchecked", "NullAway" })
 	private Function<ReadOffset, List<ByteRecord>> getReadFunction(StreamReadRequest<K> streamRequest) {
 
 		byte[] rawKey = ((ValkeySerializer<K>) template.getKeySerializer())
@@ -319,6 +342,7 @@ class DefaultStreamMessageListenerContainer<K, V extends Record<K, ?>> implement
 		public int hashCode() {
 			return ObjectUtils.nullSafeHashCode(task);
 		}
+
 	}
 
 	/**
@@ -343,5 +367,7 @@ class DefaultStreamMessageListenerContainer<K, V extends Record<K, ?>> implement
 				this.logger.error("Unexpected error occurred in scheduled task", t);
 			}
 		}
+
 	}
+
 }

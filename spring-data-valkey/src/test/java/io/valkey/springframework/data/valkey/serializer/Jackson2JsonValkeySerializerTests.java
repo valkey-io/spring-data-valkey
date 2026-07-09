@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,12 +50,12 @@ class Jackson2JsonValkeySerializerTests {
 		assertThat(serializer.serialize(null)).isEqualTo(new byte[0]);
 	}
 
-	@Test // DTATVALKEY-241
+	@Test // DTATREDIS-241
 	void testJackson2JsonSerializerShouldReturnNullWhenDerserializingEmtyByteArray() {
 		assertThat(serializer.deserialize(new byte[0])).isNull();
 	}
 
-	@Test // DTATVALKEY-241
+	@Test // DTATREDIS-241
 	void testJackson2JsonSerilizerShouldThrowExceptionWhenDeserializingInvalidByteArray() {
 
 		Person person = new PersonObjectFactory().instance();
@@ -65,7 +65,7 @@ class Jackson2JsonValkeySerializerTests {
 		assertThatExceptionOfType(SerializationException.class).isThrownBy(() -> serializer.deserialize(serializedValue));
 	}
 
-	@Test // DTATVALKEY-241
+	@Test // DTATREDIS-241
 	void testJackson2JsonSerilizerThrowsExceptionWhenSettingNullObjectMapper() {
 		assertThatIllegalArgumentException().isThrownBy(() -> serializer.setObjectMapper(null));
 	}
@@ -74,7 +74,7 @@ class Jackson2JsonValkeySerializerTests {
 	void shouldConsiderWriter() {
 
 		serializer = new Jackson2JsonValkeySerializer<>(new ObjectMapper(),
-				TypeFactory.defaultInstance().constructType(Person.class), JacksonObjectReader.create(),
+				TypeFactory.defaultInstance().constructType(Person.class), Jackson2ObjectReader.create(),
 				(mapper, source) -> "foo".getBytes());
 		Person person = new PersonObjectFactory().instance();
 		assertThat(serializer.serialize(person)).isEqualTo("foo".getBytes());

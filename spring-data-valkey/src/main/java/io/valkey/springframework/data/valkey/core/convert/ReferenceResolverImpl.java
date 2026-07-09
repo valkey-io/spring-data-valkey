@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@ package io.valkey.springframework.data.valkey.core.convert;
 
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.core.ValkeyCallback;
 import io.valkey.springframework.data.valkey.core.ValkeyKeyValueAdapter;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.convert.BinaryConverters.StringToBytesConverter;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -48,11 +48,11 @@ public class ReferenceResolverImpl implements ReferenceResolver {
 	}
 
 	@Override
-	@Nullable
-	public Map<byte[], byte[]> resolveReference(Object id, String keyspace) {
+	public @Nullable Map<byte[], byte[]> resolveReference(Object id, String keyspace) {
 
 		byte[] key = converter.convert(keyspace + ":" + id);
 
 		return valkeyOps.execute((ValkeyCallback<Map<byte[], byte[]>>) connection -> connection.hGetAll(key));
 	}
+
 }

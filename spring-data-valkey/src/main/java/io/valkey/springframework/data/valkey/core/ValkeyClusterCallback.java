@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
-import org.springframework.lang.Nullable;
 
 /**
  * Callback interface for low level operations executed against a clustered Valkey environment.
@@ -38,4 +38,5 @@ public interface ValkeyClusterCallback<T> {
 	 */
 	@Nullable
 	T doInValkey(ValkeyClusterConnection connection) throws DataAccessException;
+
 }

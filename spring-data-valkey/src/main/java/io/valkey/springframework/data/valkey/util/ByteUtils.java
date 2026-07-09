@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -246,16 +249,38 @@ public final class ByteUtils {
 	}
 
 	/**
-	 * Extract/Transfer bytes from the given {@link ByteBuffer} into an array by duplicating the buffer and fetching its
-	 * content.
+	 * Convert a {@link ByteBuffer} into a {@link String}.
 	 *
-	 * @param buffer must not be {@literal null}.
-	 * @return the extracted bytes.
-	 * @since 2.1
-	 * @deprecated Since 3.2. Use {@link #getBytes(ByteBuffer)} instead.
+	 * @param source buffer.
+	 * @return the {@link String} value.
+	 * @since 4.1
 	 */
-	@Deprecated(since = "3.2")
-	public static byte[] extractBytes(ByteBuffer buffer) {
-		return getBytes(buffer);
+	public static String toString(ByteBuffer source) {
+		return toString(ByteUtils.getBytes(source));
 	}
+
+	/**
+	 * Convert a {@code byte} array into a {@link String}.
+	 *
+	 * @param source the source byte array, can be {@literal null}.
+	 * @return the {@link String} value or {@literal null} if {@code source} was {@literal null}.
+	 * @since 4.1
+	 */
+	@Contract("null -> null; !null -> !null")
+	public static @Nullable String toString(byte @Nullable [] source) {
+		return source == null ? null : new String(source);
+	}
+
+	/**
+	 * Convert a {@code byte} array into an ASCII {@link String}.
+	 *
+	 * @param source the source byte array.
+	 * @return the {@link String} value.
+	 * @since 4.1
+	 * @see StandardCharsets#US_ASCII
+	 */
+	public static String toAsciiString(byte[] source) {
+		return new String(source, StandardCharsets.US_ASCII);
+	}
+
 }

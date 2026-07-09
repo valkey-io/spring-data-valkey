@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,29 +15,38 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.Jedis;
+import redis.clients.jedis.commands.JedisBinaryCommands;
 import redis.clients.jedis.commands.PipelineBinaryCommands;
 import redis.clients.jedis.params.BitPosParams;
 import redis.clients.jedis.params.SetParams;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
+import io.valkey.springframework.data.valkey.connection.SetCondition;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
+ * {@link ValkeyStringCommands} implementation for Jedis.
+ *
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author dengliming
  * @author Marcin Grzejszczak
+ * @author Yordan Tsintsov
+ * @author Tihomir Mateev
  * @since 2.0
  */
+@NullUnmarked
 class JedisStringCommands implements ValkeyStringCommands {
 
 	private final JedisConnection connection;
@@ -46,104 +55,107 @@ class JedisStringCommands implements ValkeyStringCommands {
 		this.connection = connection;
 	}
 
+	/**
+	 * @return the {@link JedisConnection} used for command execution.
+	 */
+	protected JedisConnection getConnection() {
+		return connection;
+	}
+
 	@Override
-	public byte[] get(byte[] key) {
+	public byte[] get(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::get, PipelineBinaryCommands::get, key);
+		return connection.invoke().just(JedisBinaryCommands::get, PipelineBinaryCommands::get, key);
 	}
 
-	@Nullable
 	@Override
-	public byte[] getDel(byte[] key) {
+	public byte[] getDel(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::getDel, PipelineBinaryCommands::getDel, key);
+		return connection.invoke().just(JedisBinaryCommands::getDel, PipelineBinaryCommands::getDel, key);
 	}
 
-	@Nullable
 	@Override
-	public byte[] getEx(byte[] key, Expiration expiration) {
+	public byte[] getEx(byte @NonNull [] key, @NonNull Expiration expiration) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(expiration, "Expiration must not be null");
 
-		return connection.invoke().just(Jedis::getEx, PipelineBinaryCommands::getEx, key,
+		return connection.invoke().just(JedisBinaryCommands::getEx, PipelineBinaryCommands::getEx, key,
 				JedisConverters.toGetExParams(expiration));
 	}
 
 	@Override
-	public byte[] getSet(byte[] key, byte[] value) {
+	public byte[] getSet(byte @NonNull [] key, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().just(Jedis::getSet, PipelineBinaryCommands::getSet, key, value);
+		return connection.invoke().just(JedisBinaryCommands::getSet, PipelineBinaryCommands::getSet, key, value);
 	}
 
 	@Override
-	public List<byte[]> mGet(byte[]... keys) {
+	public List<byte[]> mGet(byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
 
-		return connection.invoke().just(Jedis::mget, PipelineBinaryCommands::mget, keys);
+		return connection.invoke().just(JedisBinaryCommands::mget, PipelineBinaryCommands::mget, keys);
 	}
 
 	@Override
-	public Boolean set(byte[] key, byte[] value) {
+	public Boolean set(byte @NonNull [] key, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().from(Jedis::set, PipelineBinaryCommands::set, key, value)
+		return connection.invoke().from(JedisBinaryCommands::set, PipelineBinaryCommands::set, key, value)
 				.get(Converters.stringToBooleanConverter());
 	}
 
 	@Override
-	public Boolean set(byte[] key, byte[] value, Expiration expiration, SetOption option) {
+	public Boolean set(byte @NonNull [] key, byte  @NonNull [] value, @NonNull SetCondition condition, @NonNull Expiration expiration) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
+		Assert.notNull(condition, "Condition must not be null");
 		Assert.notNull(expiration, "Expiration must not be null");
-		Assert.notNull(option, "Option must not be null");
 
-		SetParams params = JedisConverters.toSetCommandExPxArgument(expiration,
-				JedisConverters.toSetCommandNxXxArgument(option));
+		SetParams params = JedisConverters.toSetParams(expiration, condition);
 
-		return connection.invoke().from(Jedis::set, PipelineBinaryCommands::set, key, value, params)
+		return connection.invoke()
+				.from(JedisBinaryCommands::set, PipelineBinaryCommands::set, key, value, params)
 				.getOrElse(Converters.stringToBooleanConverter(), () -> false);
 	}
 
 	@Override
-	@Nullable
-	public byte[] setGet(byte[] key, byte[] value, Expiration expiration, SetOption option) {
+	public byte[] setGet(byte @NonNull [] key, byte @NonNull [] value, @NonNull SetCondition condition, @NonNull Expiration expiration) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
+		Assert.notNull(condition, "Condition must not be null");
 		Assert.notNull(expiration, "Expiration must not be null");
-		Assert.notNull(option, "Option must not be null");
 
-		SetParams params = JedisConverters.toSetCommandExPxArgument(expiration,
-				JedisConverters.toSetCommandNxXxArgument(option));
+		SetParams params = JedisConverters.toSetParams(expiration, condition);
 
-		return connection.invoke().just(Jedis::setGet, PipelineBinaryCommands::setGet, key, value, params);
+		return connection.invoke().just(JedisBinaryCommands::setGet, PipelineBinaryCommands::setGet, key, value, params);
 	}
 
 	@Override
-	public Boolean setNX(byte[] key, byte[] value) {
+	public Boolean setNX(byte @NonNull [] key, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().from(Jedis::setnx, PipelineBinaryCommands::setnx, key, value)
+		return connection.invoke().from(JedisBinaryCommands::setnx, PipelineBinaryCommands::setnx, key, value)
 				.get(Converters.longToBoolean());
 	}
 
 	@Override
-	public Boolean setEx(byte[] key, long seconds, byte[] value) {
+	public Boolean setEx(byte @NonNull [] key, long seconds, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
@@ -152,148 +164,148 @@ class JedisStringCommands implements ValkeyStringCommands {
 			throw new IllegalArgumentException("Time must be less than Integer.MAX_VALUE for setEx in Jedis");
 		}
 
-		return connection.invoke().from(Jedis::setex, PipelineBinaryCommands::setex, key, seconds, value)
+		return connection.invoke().from(JedisBinaryCommands::setex, PipelineBinaryCommands::setex, key, seconds, value)
 				.getOrElse(Converters.stringToBooleanConverter(), () -> false);
 	}
 
 	@Override
-	public Boolean pSetEx(byte[] key, long milliseconds, byte[] value) {
+	public Boolean pSetEx(byte @NonNull [] key, long milliseconds, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().from(Jedis::psetex, PipelineBinaryCommands::psetex, key, milliseconds, value)
+		return connection.invoke().from(JedisBinaryCommands::psetex, PipelineBinaryCommands::psetex, key, milliseconds, value)
 				.getOrElse(Converters.stringToBooleanConverter(), () -> false);
 	}
 
 	@Override
-	public Boolean mSet(Map<byte[], byte[]> tuples) {
+	public Boolean mSet(@NonNull Map<byte @NonNull [], byte @NonNull []> tuples) {
 
 		Assert.notNull(tuples, "Tuples must not be null");
 
-		return connection.invoke().from(Jedis::mset, PipelineBinaryCommands::mset, JedisConverters.toByteArrays(tuples))
+		return connection.invoke().from(JedisBinaryCommands::mset, PipelineBinaryCommands::mset, JedisConverters.toByteArrays(tuples))
 				.get(Converters.stringToBooleanConverter());
 	}
 
 	@Override
-	public Boolean mSetNX(Map<byte[], byte[]> tuples) {
+	public Boolean mSetNX(@NonNull Map<byte @NonNull [], byte @NonNull []> tuples) {
 
 		Assert.notNull(tuples, "Tuples must not be null");
 
-		return connection.invoke().from(Jedis::msetnx, PipelineBinaryCommands::msetnx, JedisConverters.toByteArrays(tuples))
+		return connection.invoke().from(JedisBinaryCommands::msetnx, PipelineBinaryCommands::msetnx, JedisConverters.toByteArrays(tuples))
 				.get(Converters.longToBoolean());
 	}
 
 	@Override
-	public Long incr(byte[] key) {
+	public Long incr(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::incr, PipelineBinaryCommands::incr, key);
+		return connection.invoke().just(JedisBinaryCommands::incr, PipelineBinaryCommands::incr, key);
 	}
 
 	@Override
-	public Long incrBy(byte[] key, long value) {
+	public Long incrBy(byte @NonNull [] key, long value) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::incrBy, PipelineBinaryCommands::incrBy, key, value);
+		return connection.invoke().just(JedisBinaryCommands::incrBy, PipelineBinaryCommands::incrBy, key, value);
 	}
 
 	@Override
-	public Double incrBy(byte[] key, double value) {
+	public Double incrBy(byte @NonNull [] key, double value) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::incrByFloat, PipelineBinaryCommands::incrByFloat, key, value);
+		return connection.invoke().just(JedisBinaryCommands::incrByFloat, PipelineBinaryCommands::incrByFloat, key, value);
 	}
 
 	@Override
-	public Long decr(byte[] key) {
+	public Long decr(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::decr, PipelineBinaryCommands::decr, key);
+		return connection.invoke().just(JedisBinaryCommands::decr, PipelineBinaryCommands::decr, key);
 	}
 
 	@Override
-	public Long decrBy(byte[] key, long value) {
+	public Long decrBy(byte @NonNull [] key, long value) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::decrBy, PipelineBinaryCommands::decrBy, key, value);
+		return connection.invoke().just(JedisBinaryCommands::decrBy, PipelineBinaryCommands::decrBy, key, value);
 	}
 
 	@Override
-	public Long append(byte[] key, byte[] value) {
-
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(value, "Value must not be null");
-
-		return connection.invoke().just(Jedis::append, PipelineBinaryCommands::append, key, value);
-	}
-
-	@Override
-	public byte[] getRange(byte[] key, long start, long end) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return connection.invoke().just(Jedis::getrange, PipelineBinaryCommands::getrange, key, start, end);
-	}
-
-	@Override
-	public void setRange(byte[] key, byte[] value, long offset) {
+	public Long append(byte @NonNull [] key, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		connection.invokeStatus().just(Jedis::setrange, PipelineBinaryCommands::setrange, key, offset, value);
+		return connection.invoke().just(JedisBinaryCommands::append, PipelineBinaryCommands::append, key, value);
 	}
 
 	@Override
-	public Boolean getBit(byte[] key, long offset) {
+	public byte[] getRange(byte @NonNull [] key, long start, long end) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::getbit, PipelineBinaryCommands::getbit, key, offset);
+		return connection.invoke().just(JedisBinaryCommands::getrange, PipelineBinaryCommands::getrange, key, start, end);
 	}
 
 	@Override
-	public Boolean setBit(byte[] key, long offset, boolean value) {
+	public void setRange(byte @NonNull [] key, byte @NonNull [] value, long offset) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(value, "Value must not be null");
+
+		connection.invokeStatus().just(JedisBinaryCommands::setrange, PipelineBinaryCommands::setrange, key, offset, value);
+	}
+
+	@Override
+	public Boolean getBit(byte @NonNull [] key, long offset) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::setbit, PipelineBinaryCommands::setbit, key, offset, value);
+		return connection.invoke().just(JedisBinaryCommands::getbit, PipelineBinaryCommands::getbit, key, offset);
 	}
 
 	@Override
-	public Long bitCount(byte[] key) {
+	public Boolean setBit(byte @NonNull [] key, long offset, boolean value) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::bitcount, PipelineBinaryCommands::bitcount, key);
+		return connection.invoke().just(JedisBinaryCommands::setbit, PipelineBinaryCommands::setbit, key, offset, value);
 	}
 
 	@Override
-	public Long bitCount(byte[] key, long start, long end) {
+	public Long bitCount(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::bitcount, PipelineBinaryCommands::bitcount, key, start, end);
+		return connection.invoke().just(JedisBinaryCommands::bitcount, PipelineBinaryCommands::bitcount, key);
 	}
 
 	@Override
-	public List<Long> bitField(byte[] key, BitFieldSubCommands subCommands) {
+	public Long bitCount(byte @NonNull [] key, long start, long end) {
+
+		Assert.notNull(key, "Key must not be null");
+
+		return connection.invoke().just(JedisBinaryCommands::bitcount, PipelineBinaryCommands::bitcount, key, start, end);
+	}
+
+	@Override
+	public List<Long> bitField(byte @NonNull [] key, @NonNull BitFieldSubCommands subCommands) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(subCommands, "Command must not be null");
 
-		return connection.invoke().just(Jedis::bitfield, PipelineBinaryCommands::bitfield, key,
+		return connection.invoke().just(JedisBinaryCommands::bitfield, PipelineBinaryCommands::bitfield, key,
 				JedisConverters.toBitfieldCommandArguments(subCommands));
 	}
 
 	@Override
-	public Long bitOp(BitOperation op, byte[] destination, byte[]... keys) {
+	public Long bitOp(@NonNull BitOperation op, byte @NonNull [] destination, byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(op, "BitOperation must not be null");
 		Assert.notNull(destination, "Destination key must not be null");
@@ -302,35 +314,35 @@ class JedisStringCommands implements ValkeyStringCommands {
 			throw new IllegalArgumentException("Bitop NOT should only be performed against one key");
 		}
 
-		return connection.invoke().just(Jedis::bitop, PipelineBinaryCommands::bitop, JedisConverters.toBitOp(op),
+		return connection.invoke().just(JedisBinaryCommands::bitop, PipelineBinaryCommands::bitop, JedisConverters.toBitOp(op),
 				destination, keys);
 	}
 
-	@Nullable
 	@Override
-	public Long bitPos(byte[] key, boolean bit, Range<Long> range) {
+	public Long bitPos(byte @NonNull [] key, boolean bit, @NonNull Range<Long> range) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(range, "Range must not be null Use Range.unbounded() instead");
 
 		if (range.getLowerBound().isBounded()) {
 
-			BitPosParams params = range.getUpperBound().isBounded()
-					? new BitPosParams(range.getLowerBound().getValue().get(), range.getUpperBound().getValue().get())
-					: new BitPosParams(range.getLowerBound().getValue().get());
+			Optional<Long> lower = range.getLowerBound().getValue();
+			Range.Bound<Long> upper = range.getUpperBound();
+			BitPosParams params = upper.isBounded() ? new BitPosParams(lower.get(), upper.getValue().get())
+					: new BitPosParams(lower.get());
 
-			return connection.invoke().just(Jedis::bitpos, PipelineBinaryCommands::bitpos, key, bit, params);
+			return connection.invoke().just(JedisBinaryCommands::bitpos, PipelineBinaryCommands::bitpos, key, bit, params);
 		}
 
-		return connection.invoke().just(Jedis::bitpos, PipelineBinaryCommands::bitpos, key, bit);
+		return connection.invoke().just(JedisBinaryCommands::bitpos, PipelineBinaryCommands::bitpos, key, bit);
 	}
 
 	@Override
-	public Long strLen(byte[] key) {
+	public Long strLen(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::strlen, PipelineBinaryCommands::strlen, key);
+		return connection.invoke().just(JedisBinaryCommands::strlen, PipelineBinaryCommands::strlen, key);
 	}
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,8 +48,8 @@ import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
 @AutoConfiguration
 @ConditionalOnClass(ValkeyOperations.class)
 @EnableConfigurationProperties(ValkeyProperties.class)
-@Import({ ValkeyGlideConnectionConfiguration.class, LettuceConnectionConfiguration.class, JedisConnectionConfiguration.class })
-public class ValkeyAutoConfiguration {
+@Import({ ValkeyGlideConnectionConfiguration.class, LettuceConnectionConfiguration.class, JedisConnectionConfiguration.class, ValkeyAnnotationDrivenConfiguration.class })
+public final class ValkeyAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(ValkeyConnectionDetails.class)
@@ -61,7 +61,7 @@ public class ValkeyAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean(name = "valkeyTemplate")
 	@ConditionalOnSingleCandidate(ValkeyConnectionFactory.class)
-	public ValkeyTemplate<Object, Object> valkeyTemplate(ValkeyConnectionFactory valkeyConnectionFactory) {
+	ValkeyTemplate<Object, Object> valkeyTemplate(ValkeyConnectionFactory valkeyConnectionFactory) {
 		ValkeyTemplate<Object, Object> template = new ValkeyTemplate<>();
 		template.setConnectionFactory(valkeyConnectionFactory);
 		return template;
@@ -70,7 +70,7 @@ public class ValkeyAutoConfiguration {
 	@Bean
 	@ConditionalOnMissingBean
 	@ConditionalOnSingleCandidate(ValkeyConnectionFactory.class)
-	public StringValkeyTemplate stringValkeyTemplate(ValkeyConnectionFactory valkeyConnectionFactory) {
+	StringValkeyTemplate stringValkeyTemplate(ValkeyConnectionFactory valkeyConnectionFactory) {
 		return new StringValkeyTemplate(valkeyConnectionFactory);
 	}
 

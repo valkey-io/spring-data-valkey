@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 the original author or authors.
+ * Copyright 2022-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,13 @@ import java.util.function.Function;
 
 import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
-
+import org.jspecify.annotations.Nullable;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.data.projection.DefaultMethodInvokingMethodInterceptor;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.stream.ReadOffset;
 import io.valkey.springframework.data.valkey.connection.stream.StreamOffset;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import org.springframework.util.ReflectionUtils;
 
 /**
@@ -133,6 +133,7 @@ class BoundOperationsProxyFactory {
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public Object invoke(MethodInvocation invocation) throws Throwable {
 
 			Method method = invocation.getMethod();
@@ -150,8 +151,8 @@ class BoundOperationsProxyFactory {
 			};
 		}
 
-		@Nullable
-		private Object doInvoke(MethodInvocation invocation, Method method, Object target, boolean considerKeyArgument) {
+		private @Nullable Object doInvoke(MethodInvocation invocation, Method method, Object target,
+				boolean considerKeyArgument) {
 
 			Method backingMethod = lookupRequiredMethod(method, target.getClass(), considerKeyArgument);
 
@@ -180,6 +181,7 @@ class BoundOperationsProxyFactory {
 				throw new UnsupportedOperationException("Should not happen", ex);
 			}
 		}
+
 	}
 
 	/**
@@ -207,6 +209,12 @@ class BoundOperationsProxyFactory {
 		}
 
 		@Override
+		public Boolean expire(Expiration expiration) {
+			return ops.expire(key, expiration);
+		}
+
+		@Override
+		@Deprecated
 		public Boolean expire(long timeout, TimeUnit unit) {
 			return ops.expire(key, timeout, unit);
 		}
@@ -245,4 +253,5 @@ class BoundOperationsProxyFactory {
 		}
 
 	}
+
 }

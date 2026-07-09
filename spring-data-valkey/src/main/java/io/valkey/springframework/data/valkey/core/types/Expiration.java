@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,14 @@
 package io.valkey.springframework.data.valkey.core.types;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.Nullable;
+
 import io.valkey.springframework.data.valkey.core.TimeoutUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
 
 /**
  * {@link Expiration} holds a {@link Long numeric value} with an associated {@link TimeUnit}.
@@ -74,27 +76,29 @@ public class Expiration {
 	 *
 	 * @param expirationTime {@link Long length of time} for the {@link Expiration}.
 	 * @param timeUnit {@link TimeUnit} used to measure the {@link Long expiration time}; can be {@literal null}.
-	 * Defaulted to {@link TimeUnit#SECONDS}
+	 *          Defaulted to {@link TimeUnit#SECONDS}
 	 * @return a new {@link Expiration} configured with the given {@link Long length of time} in {@link TimeUnit}.
 	 */
 	public static Expiration from(long expirationTime, @Nullable TimeUnit timeUnit) {
 
-		if (TimeUnit.NANOSECONDS.equals(timeUnit)
-			|| TimeUnit.MICROSECONDS.equals(timeUnit)
-			|| TimeUnit.MILLISECONDS.equals(timeUnit)) {
+		if (timeUnit == null) {
+			return new Expiration(expirationTime, TimeUnit.SECONDS);
+		}
+
+		if (TimeUnit.NANOSECONDS.equals(timeUnit) || TimeUnit.MICROSECONDS.equals(timeUnit)
+				|| TimeUnit.MILLISECONDS.equals(timeUnit)) {
 
 			return new Expiration(timeUnit.toMillis(expirationTime), TimeUnit.MILLISECONDS);
 		}
 
-		return timeUnit != null ? new Expiration(timeUnit.toSeconds(expirationTime), TimeUnit.SECONDS)
-			: new Expiration(expirationTime, TimeUnit.SECONDS);
+		return new Expiration(timeUnit.toSeconds(expirationTime), TimeUnit.SECONDS);
 	}
 
 	/**
 	 * Creates a new {@link Expiration} with the given, required {@link Duration}.
 	 * <p>
-	 * Durations with at least {@literal seconds} resolution uses {@link TimeUnit#SECONDS}. {@link Duration Durations}
-	 * in {@literal milliseconds} use {@link TimeUnit#MILLISECONDS}.
+	 * Durations with at least {@literal seconds} resolution uses {@link TimeUnit#SECONDS}. {@link Duration Durations} in
+	 * {@literal milliseconds} use {@link TimeUnit#MILLISECONDS}.
 	 *
 	 * @param duration must not be {@literal null}.
 	 * @return a new {@link Expiration} from the given {@link Duration}.
@@ -105,15 +109,15 @@ public class Expiration {
 		Assert.notNull(duration, "Duration must not be null");
 
 		return duration.isZero() ? Expiration.persistent()
-			: TimeoutUtils.hasMillis(duration) ? new Expiration(duration.toMillis(), TimeUnit.MILLISECONDS)
-			: new Expiration(duration.getSeconds(), TimeUnit.SECONDS);
+				: TimeoutUtils.hasMillis(duration) ? new Expiration(duration.toMillis(), TimeUnit.MILLISECONDS)
+						: new Expiration(duration.getSeconds(), TimeUnit.SECONDS);
 	}
 
 	/**
 	 * Obtain an {@link Expiration} that indicates to keep the existing one, e.g. when sending a {@code SET} command.
 	 * <p>
-	 * <strong>NOTE: </strong>Please follow the documentation for the individual commands to see
-	 * if keeping the existing TTL is applicable.
+	 * <strong>NOTE: </strong>Please follow the documentation for the individual commands to see if keeping the existing
+	 * TTL is applicable.
 	 *
 	 * @return never {@literal null}.
 	 * @since 2.4
@@ -157,12 +161,50 @@ public class Expiration {
 	}
 
 	/**
+	 * Get the {@link Instant time} for this {@link Expiration}.
+	 *
+	 * @param precision time precision. Must be {@link TimeUnit#SECONDS for EX} or {@link TimeUnit#MILLISECONDS for PX}
+	 *          operations.
+	 * @return the {@link Instant time} for this {@link Expiration}.
+	 * @since 4.0
+	 */
+	public Instant getExpirationInstant(TimeUnit precision) {
+
+		assertPrecision(precision);
+		return precision == TimeUnit.MILLISECONDS ? Instant.ofEpochMilli(getExpirationTime())
+				: Instant.ofEpochSecond(getExpirationTimeInSeconds());
+	}
+
+	private void assertPrecision(TimeUnit precision) {
+
+		Assert.notNull(precision, "Precision must not be null");
+		Assert.isTrue(precision == TimeUnit.MILLISECONDS || precision == TimeUnit.SECONDS,
+				"Precision must be MILLISECONDS or SECONDS");
+	}
+
+	/**
 	 * Get the {@link Long expiration time} converted into {@link TimeUnit#MILLISECONDS}.
 	 *
 	 * @return the expiration time converted into {@link TimeUnit#MILLISECONDS}.
 	 */
 	public long getExpirationTimeInMilliseconds() {
 		return getConverted(TimeUnit.MILLISECONDS);
+	}
+
+	/**
+	 * Get the {@link Duration length of time} for this {@link Expiration}.
+	 *
+	 * @param precision time precision. Must be {@link TimeUnit#SECONDS for EX} or {@link TimeUnit#MILLISECONDS for PX}
+	 *          operations.
+	 * @return the {@link Duration length of time} for this {@link Expiration}.
+	 * @since 4.0
+	 */
+	public Duration getExpirationDuration(TimeUnit precision) {
+
+		assertPrecision(precision);
+
+		return precision == TimeUnit.MILLISECONDS ? Duration.ofMillis(getExpirationTime())
+				: Duration.ofSeconds(getExpirationTimeInSeconds());
 	}
 
 	/**
@@ -184,10 +226,19 @@ public class Expiration {
 	}
 
 	/**
+	 * @return {@literal true} if the expiration is precise using millisecond-precision; {@literal false} otherwise for
+	 *         seconds precision.
+	 * @since 4.0
+	 */
+	public boolean isPrecise() {
+		return getTimeUnit() == TimeUnit.MILLISECONDS;
+	}
+
+	/**
 	 * Converts {@link #getExpirationTime() expiration time} into the given, desired {@link TimeUnit}.
 	 *
-	 * @param targetTimeUnit {@link TimeUnit} used to convert the {@link #getExpirationTime()} expiration time};
-	 * must not be {@literal null}.
+	 * @param targetTimeUnit {@link TimeUnit} used to convert the {@link #getExpirationTime()} expiration time}; must not
+	 *          be {@literal null}.
 	 * @return the {@link #getExpirationTime() expiration time} converted into the given, desired {@link TimeUnit}.
 	 * @throws IllegalArgumentException if the given {@link TimeUnit} is {@literal null}.
 	 */
@@ -237,7 +288,7 @@ public class Expiration {
 
 	@Override
 	public int hashCode() {
-		return ObjectUtils.nullSafeHashCode(new Object[] { getExpirationTime(), getTimeUnit() });
+		return Objects.hash(getExpirationTime(), getTimeUnit());
 	}
 
 	/**
@@ -272,4 +323,5 @@ public class Expiration {
 			return true;
 		}
 	}
+
 }

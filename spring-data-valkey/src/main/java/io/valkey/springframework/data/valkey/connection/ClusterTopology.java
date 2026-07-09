@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.ClusterStateFailureException;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
@@ -186,13 +186,14 @@ public class ClusterTopology {
 	}
 
 	/**
-	 * Get the {@link ValkeyClusterNode} matching matching either {@link ValkeyClusterNode#getHost() host} and
+	 * Get the {@link ValkeyClusterNode} matching either {@link ValkeyClusterNode#getHost() host} and
 	 * {@link ValkeyClusterNode#getPort() port} or {@link ValkeyClusterNode#getId() nodeId}
 	 *
 	 * @param node must not be {@literal null}
 	 * @return never {@literal null}.
 	 * @throws ClusterStateFailureException
 	 */
+	@SuppressWarnings("NullAway")
 	public ValkeyClusterNode lookup(ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ValkeyClusterNode must not be null");
@@ -202,7 +203,7 @@ public class ClusterTopology {
 		}
 
 		if (node.hasValidHost() && node.getPort() != null) {
-			return lookup(node.getHost(), node.getPort());
+			return lookup(node.getRequiredHost(), node.getRequiredPort());
 		}
 
 		if (StringUtils.hasText(node.getId())) {

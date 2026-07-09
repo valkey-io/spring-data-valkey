@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,14 +26,23 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
+
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.CommandResponse;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
-import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.MaxLenTrimStrategy;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamEntryDeletionResult;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimOperator;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimStrategy;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XDelOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XPendingOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XTrimOptions;
 import io.valkey.springframework.data.valkey.connection.stream.ByteBufferRecord;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
 import io.valkey.springframework.data.valkey.connection.stream.PendingMessage;
@@ -47,9 +56,7 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamInfo.XInfoS
 import io.valkey.springframework.data.valkey.connection.stream.StreamOffset;
 import io.valkey.springframework.data.valkey.connection.stream.StreamReadOptions;
 import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.StringUtils;
 
 /**
  * Stream-specific Valkey commands executed using reactive infrastructure.
@@ -60,6 +67,7 @@ import org.springframework.util.StringUtils;
  * @author Dengliming
  * @author Mark John Moreno
  * @author jinkshower
+ * @author Jeonggyu Choi
  * @since 2.2
  */
 public interface ReactiveStreamCommands {
@@ -137,8 +145,7 @@ public interface ReactiveStreamCommands {
 			return new AcknowledgeCommand(getKey(), group, getRecordIds());
 		}
 
-		@Nullable
-		public String getGroup() {
+		public @Nullable String getGroup() {
 			return group;
 		}
 
@@ -200,20 +207,13 @@ public interface ReactiveStreamCommands {
 	class AddStreamRecord extends KeyCommand {
 
 		private final ByteBufferRecord record;
-		private final boolean nomkstream;
-		private final @Nullable Long maxlen;
-		private final boolean approximateTrimming;
-		private final @Nullable RecordId minId;
+		private final XAddOptions options;
 
-		private AddStreamRecord(ByteBufferRecord record, @Nullable Long maxlen, boolean nomkstream,
-				boolean approximateTrimming, @Nullable RecordId minId) {
+		private AddStreamRecord(ByteBufferRecord record, XAddOptions options) {
 
 			super(record.getStream());
 			this.record = record;
-			this.maxlen = maxlen;
-			this.nomkstream = nomkstream;
-			this.approximateTrimming = approximateTrimming;
-			this.minId = minId;
+			this.options = options;
 		}
 
 		/**
@@ -226,7 +226,7 @@ public interface ReactiveStreamCommands {
 
 			Assert.notNull(record, "Record must not be null");
 
-			return new AddStreamRecord(record, null, false, false, null);
+			return new AddStreamRecord(record, XAddOptions.none());
 		}
 
 		/**
@@ -239,7 +239,7 @@ public interface ReactiveStreamCommands {
 
 			Assert.notNull(body, "Body must not be null");
 
-			return new AddStreamRecord(StreamRecords.rawBuffer(body), null, false, false, null);
+			return new AddStreamRecord(StreamRecords.rawBuffer(body), XAddOptions.none());
 		}
 
 		/**
@@ -249,7 +249,7 @@ public interface ReactiveStreamCommands {
 		 * @return a new {@link ReactiveGeoCommands.GeoAddCommand} with {@literal key} applied.
 		 */
 		public AddStreamRecord to(ByteBuffer key) {
-			return new AddStreamRecord(record.withStreamKey(key), maxlen, nomkstream, approximateTrimming, minId);
+			return new AddStreamRecord(record.withStreamKey(key), options);
 		}
 
 		/**
@@ -259,7 +259,7 @@ public interface ReactiveStreamCommands {
 		 * @since 2.6
 		 */
 		public AddStreamRecord makeNoStream() {
-			return new AddStreamRecord(record, maxlen, true, approximateTrimming, minId);
+			return new AddStreamRecord(record, XAddOptions.makeNoStream());
 		}
 
 		/**
@@ -270,7 +270,7 @@ public interface ReactiveStreamCommands {
 		 * @since 2.6
 		 */
 		public AddStreamRecord makeNoStream(boolean makeNoStream) {
-			return new AddStreamRecord(record, maxlen, makeNoStream, approximateTrimming, minId);
+			return new AddStreamRecord(record, XAddOptions.makeNoStream(makeNoStream));
 		}
 
 		/**
@@ -279,7 +279,7 @@ public interface ReactiveStreamCommands {
 		 * @return new instance of {@link AddStreamRecord}.
 		 */
 		public AddStreamRecord maxlen(long maxlen) {
-			return new AddStreamRecord(record, maxlen, nomkstream, approximateTrimming, minId);
+			return new AddStreamRecord(record, XAddOptions.maxlen(maxlen));
 		}
 
 		/**
@@ -290,7 +290,7 @@ public interface ReactiveStreamCommands {
 		 * @since 2.7
 		 */
 		public AddStreamRecord minId(RecordId minId) {
-			return new AddStreamRecord(record, maxlen, nomkstream, approximateTrimming, minId);
+			return new AddStreamRecord(record, options.minId(minId));
 		}
 
 		/**
@@ -299,7 +299,23 @@ public interface ReactiveStreamCommands {
 		 * @return new instance of {@link AddStreamRecord}.
 		 */
 		public AddStreamRecord approximateTrimming(boolean approximateTrimming) {
-			return new AddStreamRecord(record, maxlen, nomkstream, approximateTrimming, minId);
+			return new AddStreamRecord(record, options.approximateTrimming(approximateTrimming));
+		}
+
+		/**
+		 * Apply the given {@link XAddOptions} to configure the {@literal XADD} command.
+		 * <p>
+		 * This method allows setting all XADD options at once, including trimming strategies
+		 * ({@literal MAXLEN}, {@literal MINID}), stream creation behavior ({@literal NOMKSTREAM}),
+		 * and other parameters. Constructs a new command instance with all previously configured
+		 * properties except the options, which are replaced by the provided {@link XAddOptions}.
+		 *
+		 * @param options the {@link XAddOptions} to apply. Must not be {@literal null}.
+		 * @return a new {@link AddStreamRecord} with the specified options applied.
+		 * @since 4.1
+		 */
+		public AddStreamRecord withOptions(XAddOptions options) {
+			return new AddStreamRecord(record, options);
 		}
 
 		/**
@@ -318,7 +334,7 @@ public interface ReactiveStreamCommands {
 		 * @since 2.6
 		 */
 		public boolean isNoMkStream() {
-			return nomkstream;
+			return options.isNoMkStream();
 		}
 
 		/**
@@ -327,34 +343,30 @@ public interface ReactiveStreamCommands {
 		 * @return can be {@literal null}.
 		 * @since 2.3
 		 */
-		@Nullable
-		public Long getMaxlen() {
-			return maxlen;
+		public @Nullable Long getMaxlen() {
+			return options.getMaxlen();
 		}
 
 		/**
 		 * @return {@literal true} if {@literal MAXLEN} is set.
 		 * @since 2.3
 		 */
-		public boolean hasMaxlen() {
-			return maxlen != null;
-		}
+		public boolean hasMaxlen() { return options.hasMaxlen(); }
 
 		/**
 		 * @return {@literal true} if {@literal approximateTrimming} is set.
 		 * @since 2.7
 		 */
 		public boolean isApproximateTrimming() {
-			return approximateTrimming;
+			return options.isApproximateTrimming();
 		}
 
 		/**
 		 * @return the minimum record Id to retain during trimming.
 		 * @since 2.7
 		 */
-		@Nullable
-		public RecordId getMinId() {
-			return minId;
+		public @Nullable RecordId getMinId() {
+			return options.getMinId();
 		}
 
 		/**
@@ -362,7 +374,15 @@ public interface ReactiveStreamCommands {
 		 * @since 2.7
 		 */
 		public boolean hasMinId() {
-			return minId != null;
+			return options.hasMinId();
+		}
+
+		/**
+		 * @return the XAddOptions options.
+		 * @since 4.1
+		 */
+		public XAddOptions getOptions() {
+			return options;
 		}
 	}
 
@@ -405,24 +425,14 @@ public interface ReactiveStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xadd">Valkey Documentation: XADD</a>
 	 * @since 3.4
 	 */
+	@SuppressWarnings("NullAway")
 	default Mono<RecordId> xAdd(ByteBufferRecord record, XAddOptions xAddOptions) {
 
 		Assert.notNull(record, "Record must not be null");
 		Assert.notNull(xAddOptions, "XAddOptions must not be null");
 
-		AddStreamRecord addStreamRecord = AddStreamRecord.of(record)
-			.approximateTrimming(xAddOptions.isApproximateTrimming())
-			.makeNoStream(xAddOptions.isNoMkStream());
-
-		if (xAddOptions.hasMaxlen()) {
-			addStreamRecord = addStreamRecord.maxlen(xAddOptions.getMaxlen());
-		}
-
-		if (xAddOptions.hasMinId()) {
-			addStreamRecord = addStreamRecord.minId(xAddOptions.getMinId());
-		}
-
-		return xAdd(Mono.just(addStreamRecord)).next().map(CommandResponse::getOutput);
+		return xAdd(Mono.just(AddStreamRecord.of(record).withOptions(xAddOptions))).next()
+				.map(CommandResponse::getOutput);
 	}
 
 	/**
@@ -605,6 +615,194 @@ public interface ReactiveStreamCommands {
 	}
 
 	/**
+	 * {@code XDELEX} command parameters.
+	 *
+	 * @author Viktoriya Kutsarova
+	 * @since 4.1
+	 * @see <a href="https://valkey.io/commands/xdelex">Valkey Documentation: XDELEX</a>
+	 */
+	class DeleteExCommand extends KeyCommand {
+
+		private final List<RecordId> recordIds;
+		private final XDelOptions options;
+
+		private DeleteExCommand(@Nullable ByteBuffer key, List<RecordId> recordIds, XDelOptions options) {
+
+			super(key);
+			this.recordIds = recordIds;
+			this.options = options;
+		}
+
+		/**
+		 * Creates a new {@link DeleteExCommand} given a {@link ByteBuffer key}.
+		 *
+		 * @param key must not be {@literal null}.
+		 * @return a new {@link DeleteExCommand} for {@link ByteBuffer key}.
+		 */
+		public static DeleteExCommand stream(ByteBuffer key) {
+
+			Assert.notNull(key, "Key must not be null");
+
+			return new DeleteExCommand(key, Collections.emptyList(), XDelOptions.defaults());
+		}
+
+		/**
+		 * Applies the {@literal recordIds}. Constructs a new command instance with all previously configured properties.
+		 *
+		 * @param recordIds must not be {@literal null}.
+		 * @return a new {@link DeleteExCommand} with {@literal recordIds} applied.
+		 */
+		public DeleteExCommand records(String... recordIds) {
+
+			Assert.notNull(recordIds, "RecordIds must not be null");
+
+			return records(Arrays.stream(recordIds).map(RecordId::of).toArray(RecordId[]::new));
+		}
+
+		/**
+		 * Applies the {@literal recordIds}. Constructs a new command instance with all previously configured properties.
+		 *
+		 * @param recordIds must not be {@literal null}.
+		 * @return a new {@link DeleteExCommand} with {@literal recordIds} applied.
+		 */
+		public DeleteExCommand records(RecordId... recordIds) {
+
+			Assert.notNull(recordIds, "RecordIds must not be null");
+
+			List<RecordId> newRecordIds = new ArrayList<>(getRecordIds().size() + recordIds.length);
+			newRecordIds.addAll(getRecordIds());
+			newRecordIds.addAll(Arrays.asList(recordIds));
+
+			return new DeleteExCommand(getKey(), newRecordIds, options);
+		}
+
+		/**
+		 * Applies the {@link XDelOptions}. Constructs a new command instance with all previously configured properties.
+		 *
+		 * @param options must not be {@literal null}.
+		 * @return a new {@link DeleteExCommand} with {@link XDelOptions} applied.
+		 */
+		public DeleteExCommand withOptions(XDelOptions options) {
+
+			Assert.notNull(options, "XDelOptions must not be null");
+
+			return new DeleteExCommand(getKey(), recordIds, options);
+		}
+
+		public List<RecordId> getRecordIds() {
+			return recordIds;
+		}
+
+		public XDelOptions getOptions() {
+			return options;
+		}
+	}
+
+	/**
+	 * {@code XACKDEL} command parameters.
+	 *
+	 * @author Viktoriya Kutsarova
+	 * @since 4.1
+	 * @see <a href="https://valkey.io/commands/xackdel">Valkey Documentation: XACKDEL</a>
+	 */
+	class AcknowledgeDeleteCommand extends KeyCommand {
+
+		private final @Nullable String group;
+		private final List<RecordId> recordIds;
+		private final XDelOptions options;
+
+		private AcknowledgeDeleteCommand(@Nullable ByteBuffer key, @Nullable String group, List<RecordId> recordIds,
+				XDelOptions options) {
+
+			super(key);
+			this.group = group;
+			this.recordIds = recordIds;
+			this.options = options;
+		}
+
+		/**
+		 * Creates a new {@link AcknowledgeDeleteCommand} given a {@link ByteBuffer key}.
+		 *
+		 * @param key must not be {@literal null}.
+		 * @return a new {@link AcknowledgeDeleteCommand} for {@link ByteBuffer key}.
+		 */
+		public static AcknowledgeDeleteCommand stream(ByteBuffer key) {
+
+			Assert.notNull(key, "Key must not be null");
+
+			return new AcknowledgeDeleteCommand(key, null, Collections.emptyList(), XDelOptions.defaults());
+		}
+
+		/**
+		 * Applies the {@literal group}. Constructs a new command instance with all previously configured properties.
+		 *
+		 * @param group must not be {@literal null}.
+		 * @return a new {@link AcknowledgeDeleteCommand} with {@literal group} applied.
+		 */
+		public AcknowledgeDeleteCommand group(String group) {
+
+			Assert.notNull(group, "Group must not be null");
+
+			return new AcknowledgeDeleteCommand(getKey(), group, recordIds, options);
+		}
+
+		/**
+		 * Applies the {@literal recordIds}. Constructs a new command instance with all previously configured properties.
+		 *
+		 * @param recordIds must not be {@literal null}.
+		 * @return a new {@link AcknowledgeDeleteCommand} with {@literal recordIds} applied.
+		 */
+		public AcknowledgeDeleteCommand records(String... recordIds) {
+
+			Assert.notNull(recordIds, "RecordIds must not be null");
+
+			return records(Arrays.stream(recordIds).map(RecordId::of).toArray(RecordId[]::new));
+		}
+
+		/**
+		 * Applies the {@literal recordIds}. Constructs a new command instance with all previously configured properties.
+		 *
+		 * @param recordIds must not be {@literal null}.
+		 * @return a new {@link AcknowledgeDeleteCommand} with {@literal recordIds} applied.
+		 */
+		public AcknowledgeDeleteCommand records(RecordId... recordIds) {
+
+			Assert.notNull(recordIds, "RecordIds must not be null");
+
+			List<RecordId> newRecordIds = new ArrayList<>(getRecordIds().size() + recordIds.length);
+			newRecordIds.addAll(getRecordIds());
+			newRecordIds.addAll(Arrays.asList(recordIds));
+
+			return new AcknowledgeDeleteCommand(getKey(), group, newRecordIds, options);
+		}
+
+		/**
+		 * Applies the {@link XDelOptions}. Constructs a new command instance with all previously configured properties.
+		 *
+		 * @param options must not be {@literal null}.
+		 * @return a new {@link AcknowledgeDeleteCommand} with {@link XDelOptions} applied.
+		 */
+		public AcknowledgeDeleteCommand withOptions(XDelOptions options) {
+
+			Assert.notNull(options, "XDelOptions must not be null");
+
+			return new AcknowledgeDeleteCommand(getKey(), group, recordIds, options);
+		}
+
+		public @Nullable String getGroup() {
+			return group;
+		}
+
+		public List<RecordId> getRecordIds() {
+			return recordIds;
+		}
+
+		public XDelOptions getOptions() {
+			return options;
+		}
+	}
+
+	/**
 	 * Removes the specified entries from the stream. Returns the number of items deleted, that may be different from the
 	 * number of IDs passed in case certain IDs do not exist.
 	 *
@@ -647,6 +845,128 @@ public interface ReactiveStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xdel">Valkey Documentation: XDEL</a>
 	 */
 	Flux<CommandResponse<DeleteCommand, Long>> xDel(Publisher<DeleteCommand> commands);
+
+	/**
+	 * Deletes one or multiple entries from the stream at the specified key with extended options.
+	 * <p>
+	 * XDELEX is an extension of the Valkey Streams XDEL command that provides more control over how message entries
+	 * are deleted concerning consumer groups.
+	 *
+	 * @param key the stream key.
+	 * @param options the {@link XDelOptions} specifying deletion policy.
+	 * @param recordIds stream record Id's.
+	 * @return {@link Flux} emitting {@link StreamEntryDeletionResult} for each ID.
+	 * @see <a href="https://valkey.io/commands/xdelex">Valkey Documentation: XDELEX</a>
+	 * @since 4.1
+	 */
+	default Flux<StreamEntryDeletionResult> xDelEx(ByteBuffer key,
+			XDelOptions options, String... recordIds) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(options, "XDelOptions must not be null");
+		Assert.notNull(recordIds, "RecordIds must not be null");
+
+		return xDelEx(Mono.just(DeleteExCommand.stream(key).withOptions(options).records(recordIds)))
+				.flatMap(response -> Flux.fromIterable(response.getOutput() != null ? response.getOutput() : List.of()));
+	}
+
+	/**
+	 * Deletes one or multiple entries from the stream at the specified key with extended options.
+	 * <p>
+	 * XDELEX is an extension of the Valkey Streams XDEL command that provides more control over how message entries
+	 * are deleted concerning consumer groups.
+	 *
+	 * @param key the stream key.
+	 * @param options the {@link XDelOptions} specifying deletion policy.
+	 * @param recordIds stream record Id's.
+	 * @return {@link Flux} emitting {@link StreamEntryDeletionResult} for each ID.
+	 * @see <a href="https://valkey.io/commands/xdelex">Valkey Documentation: XDELEX</a>
+	 * @since 4.1
+	 */
+	default Flux<StreamEntryDeletionResult> xDelEx(ByteBuffer key,
+			XDelOptions options, RecordId... recordIds) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(options, "XDelOptions must not be null");
+		Assert.notNull(recordIds, "RecordIds must not be null");
+
+		return xDelEx(Mono.just(DeleteExCommand.stream(key).withOptions(options).records(recordIds)))
+				.flatMap(response -> Flux.fromIterable(response.getOutput() != null ? response.getOutput() : List.of()));
+	}
+
+	/**
+	 * Deletes one or multiple entries from the stream with extended options.
+	 *
+	 * @param commands must not be {@literal null}.
+	 * @return {@link Flux} emitting a list of {@link StreamEntryDeletionResult} per {@link DeleteExCommand}.
+	 * @see <a href="https://valkey.io/commands/xdelex">Valkey Documentation: XDELEX</a>
+	 * @since 4.1
+	 */
+	Flux<CommandResponse<DeleteExCommand, List<StreamEntryDeletionResult>>> xDelEx(
+			Publisher<DeleteExCommand> commands);
+
+	/**
+	 * Acknowledges and conditionally deletes one or multiple entries for a stream consumer group at the specified key.
+	 * <p>
+	 * XACKDEL combines the functionality of XACK and XDEL in Valkey Streams. It acknowledges the specified entry IDs in the
+	 * given consumer group and simultaneously attempts to delete the corresponding entries from the stream.
+	 *
+	 * @param key the stream key.
+	 * @param group name of the consumer group.
+	 * @param options the {@link XDelOptions} specifying deletion policy.
+	 * @param recordIds stream record Id's.
+	 * @return {@link Flux} emitting {@link StreamEntryDeletionResult} for each ID.
+	 * @see <a href="https://valkey.io/commands/xackdel">Valkey Documentation: XACKDEL</a>
+	 * @since 4.1
+	 */
+	default Flux<StreamEntryDeletionResult> xAckDel(ByteBuffer key, String group,
+			XDelOptions options, String... recordIds) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(group, "Group must not be null");
+		Assert.notNull(options, "XDelOptions must not be null");
+		Assert.notNull(recordIds, "RecordIds must not be null");
+
+		return xAckDel(Mono.just(AcknowledgeDeleteCommand.stream(key).group(group).withOptions(options).records(recordIds)))
+				.flatMap(response -> Flux.fromIterable(response.getOutput() != null ? response.getOutput() : List.of()));
+	}
+
+	/**
+	 * Acknowledges and conditionally deletes one or multiple entries for a stream consumer group at the specified key.
+	 * <p>
+	 * XACKDEL combines the functionality of XACK and XDEL in Valkey Streams. It acknowledges the specified entry IDs in the
+	 * given consumer group and simultaneously attempts to delete the corresponding entries from the stream.
+	 *
+	 * @param key the stream key.
+	 * @param group name of the consumer group.
+	 * @param options the {@link XDelOptions} specifying deletion policy.
+	 * @param recordIds stream record Id's.
+	 * @return {@link Flux} emitting {@link StreamEntryDeletionResult} for each ID.
+	 * @see <a href="https://valkey.io/commands/xackdel">Valkey Documentation: XACKDEL</a>
+	 * @since 4.1
+	 */
+	default Flux<StreamEntryDeletionResult> xAckDel(ByteBuffer key, String group,
+			XDelOptions options, RecordId... recordIds) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(group, "Group must not be null");
+		Assert.notNull(options, "XDelOptions must not be null");
+		Assert.notNull(recordIds, "RecordIds must not be null");
+
+		return xAckDel(Mono.just(AcknowledgeDeleteCommand.stream(key).group(group).withOptions(options).records(recordIds)))
+				.flatMap(response -> Flux.fromIterable(response.getOutput() != null ? response.getOutput() : List.of()));
+	}
+
+	/**
+	 * Acknowledges and conditionally deletes one or multiple entries for a stream consumer group.
+	 *
+	 * @param commands must not be {@literal null}.
+	 * @return {@link Flux} emitting a list of {@link StreamEntryDeletionResult} per {@link AcknowledgeDeleteCommand}.
+	 * @see <a href="https://valkey.io/commands/xackdel">Valkey Documentation: XACKDEL</a>
+	 * @since 4.1
+	 */
+	Flux<CommandResponse<AcknowledgeDeleteCommand, List<StreamEntryDeletionResult>>> xAckDel(
+			Publisher<AcknowledgeDeleteCommand> commands);
 
 	/**
 	 * Get the size of the stream stored at {@literal key}.
@@ -709,7 +1029,6 @@ public interface ReactiveStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
 	 * @since 2.3
 	 */
-	@Nullable
 	default Mono<PendingMessages> xPending(ByteBuffer key, Consumer consumer) {
 		return xPending(key, consumer.getGroup(), consumer.getName());
 	}
@@ -724,7 +1043,6 @@ public interface ReactiveStreamCommands {
 	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
 	 * @since 2.3
 	 */
-	@Nullable
 	default Mono<PendingMessages> xPending(ByteBuffer key, String groupName, String consumerName) {
 		return xPending(Mono.just(PendingRecordsCommand.pending(key, groupName).consumer(consumerName))).next()
 				.map(CommandResponse::getOutput);
@@ -748,6 +1066,27 @@ public interface ReactiveStreamCommands {
 	}
 
 	/**
+	 * Obtain detailed information about pending {@link PendingMessage messages} for a given {@link Range} within a
+	 * {@literal consumer group} and over a given {@link Duration} of idle time.
+	 *
+	 * @param key the {@literal key} the stream is stored at. Must not be {@literal null}.
+	 * @param groupName the name of the {@literal consumer group}. Must not be {@literal null}.
+	 * @param range the range of messages ids to search within. Must not be {@literal null}.
+	 * @param count limit the number of results. Must not be {@literal null}.
+	 * @param minIdleTime the minimum idle time to filter pending messages. Must not be {@literal null}.
+	 * @return pending messages for the given {@literal consumer group} or {@literal null} when used in pipeline /
+	 *         transaction.
+	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
+	 * @since 4.0
+	 */
+	default Mono<PendingMessages> xPending(ByteBuffer key, String groupName, Range<?> range, Long count,
+			Duration minIdleTime) {
+		return xPending(
+				Mono.just(PendingRecordsCommand.pending(key, groupName).range(range, count).minIdleTime(minIdleTime))).next()
+				.map(CommandResponse::getOutput);
+	}
+
+	/**
 	 * Obtain detailed information about pending {@link PendingMessage messages} for a given {@link Range} and
 	 * {@link Consumer} within a {@literal consumer group}.
 	 *
@@ -761,6 +1100,24 @@ public interface ReactiveStreamCommands {
 	 */
 	default Mono<PendingMessages> xPending(ByteBuffer key, Consumer consumer, Range<?> range, Long count) {
 		return xPending(key, consumer.getGroup(), consumer.getName(), range, count);
+	}
+
+	/**
+	 * Obtain detailed information about pending {@link PendingMessage messages} for a given {@link Range} and
+	 * {@link Consumer} within a {@literal consumer group} and over a given {@link Duration} of idle time.
+	 *
+	 * @param key the {@literal key} the stream is stored at. Must not be {@literal null}.
+	 * @param consumer the name of the {@link Consumer}. Must not be {@literal null}.
+	 * @param range the range of messages ids to search within. Must not be {@literal null}.
+	 * @param count limit the number of results. Must not be {@literal null}.
+	 * @param minIdleTime the minimum idle time to filter pending messages. Must not be {@literal null}.
+	 * @return pending messages for the given {@link Consumer} or {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
+	 * @since 4.0
+	 */
+	default Mono<PendingMessages> xPending(ByteBuffer key, Consumer consumer, Range<?> range, Long count,
+			Duration minIdleTime) {
+		return xPending(key, consumer.getGroup(), consumer.getName(), range, count, minIdleTime);
 	}
 
 	/**
@@ -784,6 +1141,27 @@ public interface ReactiveStreamCommands {
 	}
 
 	/**
+	 * Obtain detailed information about pending {@link PendingMessage messages} for a given {@link Range} and
+	 * {@literal consumer} within a {@literal consumer group} and over a given {@link Duration} of idle time.
+	 *
+	 * @param key the {@literal key} the stream is stored at. Must not be {@literal null}.
+	 * @param groupName the name of the {@literal consumer group}. Must not be {@literal null}.
+	 * @param consumerName the name of the {@literal consumer}. Must not be {@literal null}.
+	 * @param range the range of messages ids to search within. Must not be {@literal null}.
+	 * @param count limit the number of results. Must not be {@literal null}.
+	 * @param minIdleTime the minimum idle time to filter pending messages. Must not be {@literal null}.
+	 * @return pending messages for the given {@literal consumer} in given {@literal consumer group} or {@literal null}
+	 *         when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/xpending">Valkey Documentation: xpending</a>
+	 * @since 4.0
+	 */
+	default Mono<PendingMessages> xPending(ByteBuffer key, String groupName, String consumerName, Range<?> range,
+			Long count, Duration minIdleTime) {
+		return xPending(Mono.just(PendingRecordsCommand.pending(key, groupName).consumer(consumerName).range(range, count)
+				.minIdleTime(minIdleTime))).next().map(CommandResponse::getOutput);
+	}
+
+	/**
 	 * Obtain detailed information about pending {@link PendingMessage messages} applying given {@link XPendingOptions
 	 * options}.
 	 *
@@ -798,24 +1176,20 @@ public interface ReactiveStreamCommands {
 	 * Value Object holding parameters for obtaining pending messages.
 	 *
 	 * @author Christoph Strobl
+	 * @author Jeonggyu Choi
 	 * @since 2.3
 	 */
 	class PendingRecordsCommand extends KeyCommand {
 
 		private final String groupName;
-		private final @Nullable String consumerName;
-		private final Range<?> range;
-		private final @Nullable Long count;
+		private final XPendingOptions options;
 
-		private PendingRecordsCommand(ByteBuffer key, String groupName, @Nullable String consumerName, Range<?> range,
-				@Nullable Long count) {
+		private PendingRecordsCommand(@Nullable ByteBuffer key, String groupName, XPendingOptions options) {
 
 			super(key);
 
 			this.groupName = groupName;
-			this.consumerName = consumerName;
-			this.range = range;
-			this.count = count;
+			this.options = options;
 		}
 
 		/**
@@ -826,7 +1200,7 @@ public interface ReactiveStreamCommands {
 		 * @return new instance of {@link PendingRecordsCommand}.
 		 */
 		static PendingRecordsCommand pending(ByteBuffer key, String groupName) {
-			return new PendingRecordsCommand(key, groupName, null, Range.unbounded(), null);
+			return new PendingRecordsCommand(key, groupName, XPendingOptions.unbounded());
 		}
 
 		/**
@@ -841,7 +1215,7 @@ public interface ReactiveStreamCommands {
 			Assert.notNull(range, "Range must not be null");
 			Assert.isTrue(count > -1, "Count must not be negative");
 
-			return new PendingRecordsCommand(getKey(), groupName, consumerName, range, count);
+			return new PendingRecordsCommand(getKey(), groupName, options.withRange(range, count));
 		}
 
 		/**
@@ -851,7 +1225,21 @@ public interface ReactiveStreamCommands {
 		 * @return new instance of {@link PendingRecordsCommand}.
 		 */
 		public PendingRecordsCommand consumer(String consumerName) {
-			return new PendingRecordsCommand(getKey(), groupName, consumerName, range, count);
+			return new PendingRecordsCommand(getKey(), groupName, options.consumer(consumerName));
+		}
+
+		/**
+		 * Append given minimum idle time.
+		 *
+		 * @param minIdleTime must not be {@literal null}.
+		 * @return new instance of {@link PendingRecordsCommand}.
+		 * @since 4.1
+		 */
+		public PendingRecordsCommand minIdleTime(Duration minIdleTime) {
+
+			Assert.notNull(minIdleTime, "Idle must not be null");
+
+			return new PendingRecordsCommand(getKey(), groupName, options.minIdleTime(minIdleTime));
 		}
 
 		public String getGroupName() {
@@ -861,38 +1249,51 @@ public interface ReactiveStreamCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public String getConsumerName() {
-			return consumerName;
+		public @Nullable String getConsumerName() {
+			return options.getConsumerName();
 		}
 
 		/**
 		 * @return never {@literal null}.
 		 */
 		public Range<?> getRange() {
-			return range;
+			return options.getRange();
+		}
+
+		/**
+		 * @return can be {@literal null}.
+		 */
+		public @Nullable Long getCount() {
+			return options.getCount();
 		}
 
 		/**
 		 * @return can be {@literal null}.
 		 */
 		@Nullable
-		public Long getCount() {
-			return count;
+		public Duration getMinIdleTime() {
+			return options.getMinIdleTime();
 		}
 
 		/**
 		 * @return {@literal true} if a consumer name is present.
 		 */
 		public boolean hasConsumer() {
-			return StringUtils.hasText(consumerName);
+			return options.hasConsumer();
 		}
 
 		/**
 		 * @return {@literal true} count is set.
 		 */
 		public boolean isLimited() {
-			return count != null;
+			return options.isLimited();
+		}
+
+		/**
+		 * @return {@literal true} if idle is set.
+		 */
+		public boolean hasMinIdleTime() {
+			return options.hasMinIdleTime();
 		}
 	}
 
@@ -914,7 +1315,7 @@ public interface ReactiveStreamCommands {
 		 * @param range must not be {@literal null}.
 		 * @param limit must not be {@literal null}.
 		 */
-		private RangeCommand(ByteBuffer key, Range<String> range, Limit limit) {
+		private RangeCommand(@Nullable ByteBuffer key, Range<String> range, Limit limit) {
 
 			super(key);
 			this.range = range;
@@ -1104,13 +1505,11 @@ public interface ReactiveStreamCommands {
 			return streamOffsets;
 		}
 
-		@Nullable
-		public StreamReadOptions getReadOptions() {
+		public @Nullable StreamReadOptions getReadOptions() {
 			return readOptions;
 		}
 
-		@Nullable
-		public Consumer getConsumer() {
+		public @Nullable Consumer getConsumer() {
 			return consumer;
 		}
 	}
@@ -1161,7 +1560,7 @@ public interface ReactiveStreamCommands {
 
 		private final @Nullable String groupName;
 
-		private XInfoCommand(ByteBuffer key, @Nullable String groupName) {
+		private XInfoCommand(@Nullable ByteBuffer key, @Nullable String groupName) {
 
 			super(key);
 			this.groupName = groupName;
@@ -1178,8 +1577,7 @@ public interface ReactiveStreamCommands {
 			return new XInfoCommand(getKey(), groupName);
 		}
 
-		@Nullable
-		public String getGroupName() {
+		public @Nullable String getGroupName() {
 			return groupName;
 		}
 	}
@@ -1308,18 +1706,15 @@ public interface ReactiveStreamCommands {
 			return this.mkStream;
 		}
 
-		@Nullable
-		public ReadOffset getReadOffset() {
+		public @Nullable ReadOffset getReadOffset() {
 			return this.offset;
 		}
 
-		@Nullable
-		public String getGroupName() {
+		public @Nullable String getGroupName() {
 			return groupName;
 		}
 
-		@Nullable
-		public String getConsumerName() {
+		public @Nullable String getConsumerName() {
 			return consumerName;
 		}
 
@@ -1369,7 +1764,6 @@ public interface ReactiveStreamCommands {
 	 * @param consumerName the name of the consumer to remove from the group.
 	 * @return the {@link Mono} emitting {@literal ok} if successful.
 	 */
-	@Nullable
 	default Mono<String> xGroupDelConsumer(ByteBuffer key, String groupName, String consumerName) {
 		return xGroupDelConsumer(key, Consumer.from(groupName, consumerName));
 	}
@@ -1392,7 +1786,6 @@ public interface ReactiveStreamCommands {
 	 * @param groupName name of the consumer group.
 	 * @return the {@link Mono} emitting {@literal ok} if successful.
 	 */
-	@Nullable
 	default Mono<String> xGroupDestroy(ByteBuffer key, String groupName) {
 		return xGroup(GroupCommand.destroyGroup(groupName).forStream(key));
 	}
@@ -1494,13 +1887,11 @@ public interface ReactiveStreamCommands {
 	 */
 	class TrimCommand extends KeyCommand {
 
-		private @Nullable Long count;
-		private boolean approximateTrimming;
+		private final XTrimOptions options;
 
-		private TrimCommand(ByteBuffer key, @Nullable Long count, boolean approximateTrimming) {
+		private TrimCommand(@Nullable ByteBuffer key, XTrimOptions options) {
 			super(key);
-			this.count = count;
-			this.approximateTrimming = approximateTrimming;
+			this.options = options;
 		}
 
 		/**
@@ -1508,23 +1899,43 @@ public interface ReactiveStreamCommands {
 		 *
 		 * @param key must not be {@literal null}.
 		 * @return a new {@link TrimCommand} for {@link ByteBuffer key}.
+		 * @since 4.0
+		 * @deprecated since 4.0, prefer {@link #stream(ByteBuffer, XTrimOptions)} instead.
 		 */
+		@Deprecated(since = "4.0")
 		public static TrimCommand stream(ByteBuffer key) {
 
 			Assert.notNull(key, "Key must not be null");
 
-			return new TrimCommand(key, null, false);
+			return new TrimCommand(key, XTrimOptions.trim(TrimOptions.maxLen(0)));
 		}
 
 		/**
-		 * Applies the numeric {@literal count}. Constructs a new command instance with all previously configured
+		 * Creates a new {@link TrimCommand} given a {@link ByteBuffer key} and {@link XTrimOptions}.
+		 *
+		 * @param key must not be {@literal null}.
+		 * @param options must not be {@literal null}.
+		 * @return a new {@link TrimCommand} for {@link ByteBuffer key}.
+		 * @since 4.0
+		 */
+		public static TrimCommand stream(ByteBuffer key, XTrimOptions options) {
+			return new TrimCommand(key, options);
+		}
+
+		/**
+		 * Applies the numeric {@literal threshold}. Constructs a new command instance with all previously configured
 		 * properties.
 		 *
-		 * @param count
-		 * @return a new {@link TrimCommand} with {@literal count} applied.
+		 * @param threshold
+		 * @return a new {@link TrimCommand} with {@literal threshold} applied.
+		 * @deprecated since 4.0: specify a concrete trim strategy (MAXLEN or MINID) via {@link XTrimOptions}
+		 * and {@link TrimOptions} instead of using this method. Prefer
+		 * {@code options(XTrimOptions.trim(TrimOptions.maxLen(threshold)))} or construct with
+		 * {@code stream(key, XTrimOptions.trim(TrimOptions.maxLen(threshold)))}.
 		 */
-		public TrimCommand to(long count) {
-			return new TrimCommand(getKey(), count, approximateTrimming);
+		@Deprecated(since = "4.0")
+		public TrimCommand to(long threshold) {
+			return new TrimCommand(getKey(), XTrimOptions.trim(TrimOptions.maxLen(threshold)));
 		}
 
 		/**
@@ -1532,7 +1943,11 @@ public interface ReactiveStreamCommands {
 		 *
 		 * @return a new {@link TrimCommand} with {@literal approximateTrimming} applied.
 		 * @since 2.4
+		 * @deprecated since 4.0: do not toggle the trim operator in isolation. Specify a concrete trim
+		 * strategy (MAXLEN or MINID) and operator via {@link XTrimOptions} and {@link TrimOptions}, e.g.
+		 * {@code options(XTrimOptions.trim(TrimOptions.maxLen(n).approximate()))}.
 		 */
+		@Deprecated(since = "4.0")
 		public TrimCommand approximate() {
 			return approximate(true);
 		}
@@ -1543,21 +1958,59 @@ public interface ReactiveStreamCommands {
 		 * @param approximateTrimming
 		 * @return a new {@link TrimCommand} with {@literal approximateTrimming} applied.
 		 * @since 2.4
+		 * @deprecated since 4.0: do not toggle the trim operator in isolation. Specify a concrete trim
+		 * strategy (MAXLEN or MINID) and operator via {@link XTrimOptions} and {@link TrimOptions}, e.g.
+		 * {@code options(XTrimOptions.trim(TrimOptions.maxLen(n).approximate()))} or
+		 * {@code options(XTrimOptions.trim(TrimOptions.minId(id).exact()))}.
 		 */
+		@Deprecated(since = "4.0")
 		public TrimCommand approximate(boolean approximateTrimming) {
-			return new TrimCommand(getKey(), count, approximateTrimming);
+			if (approximateTrimming) {
+				return new TrimCommand(getKey(), XTrimOptions.trim(options.getTrimOptions().approximate()));
+			}
+			return new TrimCommand(getKey(), XTrimOptions.trim(options.getTrimOptions().exact()));
 		}
 
 		/**
-		 * @return can be {@literal null}.
+		 * Apply the given {@link XTrimOptions} to configure the {@literal XTRIM} command.
+		 * <p>
+		 * This method allows setting all XTRIM options at once, including trimming strategies
+		 * ({@literal MAXLEN}, {@literal MINID}) and other parameters. Constructs a new command instance with all
+		 * previously configured properties except the options, which are replaced by the provided {@link XTrimOptions}.
+		 *
+		 * @param options the {@link XTrimOptions} to apply. Must not be {@literal null}.
+		 * @return a new {@link TrimCommand} with the specified options applied.
+		 * @since 4.1
 		 */
-		@Nullable
-		public Long getCount() {
-			return count;
+		public TrimCommand options(XTrimOptions options) {
+			return new TrimCommand(getKey(), options);
 		}
 
+		/**
+		 * Returns the MAXLEN threshold if the active trim strategy is {@literal MAXLEN}; otherwise {@literal null}.
+		 *
+		 * @return can be {@literal null}.
+		 * @deprecated since 4.0: Inspect {@link #getOptions()} -> {@link XTrimOptions#getTrimOptions()} ->
+		 * {@link TrimOptions#getTrimStrategy()} and obtain the threshold from the concrete strategy instead. For example:
+		 * {@code if (strategy instanceof MaxLenTrimStrategy m) { m.threshold(); }} or
+		 * {@code if (strategy instanceof MinIdTrimStrategy i) { i.threshold(); }}.
+		 */
+		@Deprecated(since = "4.0")
+		public @Nullable Long getCount() {
+			TrimStrategy strategy = options.getTrimOptions().getTrimStrategy();
+			if (strategy instanceof MaxLenTrimStrategy maxLen) {
+				return maxLen.threshold();
+			}
+			return null;
+		}
+
+
 		public boolean isApproximateTrimming() {
-			return approximateTrimming;
+			return options.getTrimOptions().getTrimOperator() == TrimOperator.APPROXIMATE;
+		}
+
+		public XTrimOptions getOptions() {
+			return options;
 		}
 	}
 
@@ -1588,6 +2041,23 @@ public interface ReactiveStreamCommands {
 		Assert.notNull(key, "Key must not be null");
 
 		return xTrim(Mono.just(TrimCommand.stream(key).to(count).approximate(approximateTrimming))).next()
+				.map(NumericResponse::getOutput);
+	}
+
+	/**
+	 * Trims the stream to {@code count} elements.
+	 *
+	 * @param key the stream key.
+	 * @param options the trim options
+	 * @return {@link Mono} emitting the number of removed entries.
+	 * @since 4.1
+	 * @see <a href="https://valkey.io/commands/xtrim">Valkey Documentation: XTRIM</a>
+	 */
+	default Mono<Long> xTrim(ByteBuffer key, XTrimOptions options) {
+
+		Assert.notNull(key, "Key must not be null");
+
+		return xTrim(Mono.just(TrimCommand.stream(key).options(options))).next()
 				.map(NumericResponse::getOutput);
 	}
 

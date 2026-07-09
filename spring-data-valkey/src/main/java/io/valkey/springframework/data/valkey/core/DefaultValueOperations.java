@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
 import io.valkey.springframework.data.valkey.connection.DefaultedValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
+import io.valkey.springframework.data.valkey.connection.SetCondition;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
-import org.springframework.lang.Nullable;
 
 /**
  * Default implementation of {@link ValueOperations}.
@@ -38,6 +41,8 @@ import org.springframework.lang.Nullable;
  * @author Christoph Strobl
  * @author Jiahe Cai
  * @author Ehsan Alemzadeh
+ * @author Chris Bono
+ * @author Yordan Tsintsov
  */
 class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements ValueOperations<K, V> {
 
@@ -46,37 +51,39 @@ class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements V
 	}
 
 	@Override
-	public V get(Object key) {
+	public @Nullable V get(Object key) {
 		return execute(valueCallbackFor(key, DefaultedValkeyConnection::get));
 	}
 
-	@Nullable
 	@Override
-	public V getAndDelete(K key) {
+	public @Nullable V getAndDelete(K key) {
 		return execute(valueCallbackFor(key, DefaultedValkeyConnection::getDel));
 	}
 
-	@Nullable
 	@Override
-	public V getAndExpire(K key, long timeout, TimeUnit unit) {
+	public @Nullable V getAndExpire(@NonNull K key, @NonNull Expiration expiration) {
+		return execute(valueCallbackFor(key, (connection, rawKey) -> connection.getEx(rawKey, expiration)));
+	}
+
+	@Override
+	@Deprecated
+	public @Nullable V getAndExpire(K key, long timeout, TimeUnit unit) {
 		return execute(
 				valueCallbackFor(key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.from(timeout, unit))));
 	}
 
-	@Nullable
 	@Override
-	public V getAndExpire(K key, Duration timeout) {
+	public @Nullable V getAndExpire(K key, Duration timeout) {
 		return execute(valueCallbackFor(key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.from(timeout))));
 	}
 
-	@Nullable
 	@Override
-	public V getAndPersist(K key) {
+	public @Nullable V getAndPersist(K key) {
 		return execute(valueCallbackFor(key, (connection, rawKey) -> connection.getEx(rawKey, Expiration.persistent())));
 	}
 
 	@Override
-	public V getAndSet(K key, V newValue) {
+	public @Nullable V getAndSet(K key, V newValue) {
 
 		byte[] rawValue = rawValue(newValue);
 		return execute(valueCallbackFor(key, (connection, rawKey) -> connection.getSet(rawKey, rawValue)));
@@ -118,6 +125,7 @@ class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements V
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public Integer append(K key, String value) {
 
 		byte[] rawKey = rawKey(key);
@@ -138,7 +146,7 @@ class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements V
 	}
 
 	@Override
-	public List<V> multiGet(Collection<K> keys) {
+	public List<@Nullable V> multiGet(Collection<K> keys) {
 
 		if (keys.isEmpty()) {
 			return Collections.emptyList();
@@ -157,6 +165,7 @@ class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements V
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public void multiSet(Map<? extends K, ? extends V> m) {
 
 		if (m.isEmpty()) {
@@ -169,7 +178,7 @@ class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements V
 			rawKeys.put(rawKey(entry.getKey()), rawValue(entry.getValue()));
 		}
 
-		execute(connection -> {
+		execute((ValkeyCallback<@Nullable Void>) connection -> {
 			connection.mSet(rawKeys);
 			return null;
 		});
@@ -201,76 +210,90 @@ class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements V
 	}
 
 	@Override
-	public void set(K key, V value, long timeout, TimeUnit unit) {
+	public void set(K key, V value, Expiration expiration) {
 
 		byte[] rawKey = rawKey(key);
 		byte[] rawValue = rawValue(value);
 
-		execute(connection -> connection.set(rawKey, rawValue, Expiration.from(timeout, unit), SetOption.upsert()));
+		execute(connection -> connection.set(rawKey, rawValue, SetCondition.upsert(), expiration));
 	}
 
 	@Override
-	public V setGet(K key, V value, long timeout, TimeUnit unit) {
-		return doSetGet(key, value, Expiration.from(timeout, unit));
+	public @Nullable Boolean set(@NonNull K key, @NonNull V value, @NonNull Consumer<SetSpec<K, V>> setConsumer) {
+
+		DefaultSetSpec<K, V> builder = new DefaultSetSpec<>();
+		setConsumer.accept(builder);
+		SetCondition condition = builder.toSetCondition(this::rawValue);
+
+		byte[] rawKey = rawKey(key);
+		byte[] rawValue = rawValue(value);
+
+		return execute(connection -> connection.set(rawKey, rawValue, condition, builder.getExpiration()));
 	}
 
 	@Override
-	public V setGet(K key, V value, Duration duration) {
-		return doSetGet(key, value, Expiration.from(duration));
-	}
-
-	private V doSetGet(K key, V value, Expiration duration) {
+	public @Nullable V setGet(K key, V value, Expiration expiration) {
 
 		byte[] rawValue = rawValue(value);
 		return execute(new ValueDeserializingValkeyCallback(key) {
 
 			@Override
 			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
-				return connection.stringCommands().setGet(rawKey, rawValue, duration, SetOption.UPSERT);
+				return connection.stringCommands().setGet(rawKey, rawValue, SetCondition.upsert(), expiration);
 			}
 		});
 	}
 
 	@Override
-	public Boolean setIfAbsent(K key, V value) {
+	public @Nullable V setGet(@NonNull K key, @NonNull V value, @NonNull Consumer<SetSpec<K, V>> setConsumer) {
 
-		byte[] rawKey = rawKey(key);
+		DefaultSetSpec<K, V> builder = new DefaultSetSpec<>();
+		setConsumer.accept(builder);
+		SetCondition condition = builder.toSetCondition(this::rawValue);
+
 		byte[] rawValue = rawValue(value);
-		return execute(connection -> connection.set(rawKey, rawValue, Expiration.persistent(), SetOption.ifAbsent()));
+
+		return execute(new ValueDeserializingValkeyCallback(key) {
+
+			@Override
+			protected byte[] inValkey(byte[] rawKey, ValkeyConnection connection) {
+				return connection.stringCommands().setGet(rawKey, rawValue, condition, builder.getExpiration());
+			}
+		});
 	}
 
 	@Override
-	public Boolean setIfAbsent(K key, V value, long timeout, TimeUnit unit) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-
-		Expiration expiration = Expiration.from(timeout, unit);
-		return execute(connection -> connection.set(rawKey, rawValue, expiration, SetOption.ifAbsent()));
-	}
-
-	@Nullable
-	@Override
-	public Boolean setIfPresent(K key, V value) {
-
-		byte[] rawKey = rawKey(key);
-		byte[] rawValue = rawValue(value);
-
-		return execute(connection -> connection.set(rawKey, rawValue, Expiration.persistent(), SetOption.ifPresent()));
-	}
-
-	@Nullable
-	@Override
-	public Boolean setIfPresent(K key, V value, long timeout, TimeUnit unit) {
+	public Boolean setIfAbsent(K key, V value, Expiration expiration) {
 
 		byte[] rawKey = rawKey(key);
 		byte[] rawValue = rawValue(value);
 
-		Expiration expiration = Expiration.from(timeout, unit);
-		return execute(connection -> connection.set(rawKey, rawValue, expiration, SetOption.ifPresent()));
+		return execute(connection -> connection.set(rawKey, rawValue, SetCondition.ifAbsent(), expiration));
 	}
 
 	@Override
+	public Boolean setIfPresent(K key, V value, Expiration expiration) {
+
+		byte[] rawKey = rawKey(key);
+		byte[] rawValue = rawValue(value);
+
+		return execute(connection -> connection.set(rawKey, rawValue, SetCondition.ifPresent(), expiration));
+	}
+
+	@Override
+	public @Nullable Boolean compareAndSet(K key, V expectedValue, V newValue) {
+
+		byte[] rawKey = rawKey(key);
+		byte[] rawExpectedValue = rawValue(expectedValue);
+		byte[] rawNewValue = rawValue(newValue);
+
+		SetCondition condition = SetCondition.ifEquals(rawExpectedValue);
+
+		return execute(connection -> connection.set(rawKey, rawNewValue, condition, Expiration.persistent()));
+	}
+
+	@Override
+	@SuppressWarnings("NullAway")
 	public void set(K key, V value, long offset) {
 
 		byte[] rawKey = rawKey(key);
@@ -309,4 +332,5 @@ class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements V
 		byte[] rawKey = rawKey(key);
 		return execute(connection -> connection.bitField(rawKey, subCommands));
 	}
+
 }

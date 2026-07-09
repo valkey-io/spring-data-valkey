@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Entity containing the parameters for the SORT operation.
@@ -76,16 +76,14 @@ public interface SortParameters {
 	 *
 	 * @return {@code BY} pattern. {@literal null} if not set.
 	 */
-	@Nullable
-	byte[] getByPattern();
+	byte @Nullable [] getByPattern();
 
 	/**
 	 * Returns the pattern (if set) for retrieving external keys ({@code GET}). Can be null if nothing is specified.
 	 *
 	 * @return {@code GET} pattern. {@literal null} if not set.
 	 */
-	@Nullable
-	byte[][] getGetPattern();
+	byte @Nullable [][] getGetPattern();
 
 	/**
 	 * Returns the sorting limit (range or pagination). Can be null if nothing is specified.

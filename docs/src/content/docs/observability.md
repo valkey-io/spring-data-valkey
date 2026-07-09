@@ -84,7 +84,7 @@ class ObservabilityConfiguration {
   public ClientResources clientResources(ObservationRegistry observationRegistry) {
 
     return ClientResources.builder()
-              .tracing(new MicrometerTracingAdapter(observationRegistry, "my-valkey-cache"))
+              .tracing(new MicrometerTracing(observationRegistry, "my-valkey-cache"))
               .build();
   }
 

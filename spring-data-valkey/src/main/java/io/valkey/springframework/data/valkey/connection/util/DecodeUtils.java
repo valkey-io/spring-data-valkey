@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Simple class containing various decoding utilities.
@@ -32,7 +32,9 @@ import org.springframework.lang.Nullable;
  * @author Costin Leau
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @deprecated since 4.0 for removal. Use {@link Base64} encoding and decoding methods directly.
  */
+@Deprecated(since = "4.0", forRemoval = true)
 public abstract class DecodeUtils {
 
 	public static String decode(byte[] bytes) {
@@ -47,8 +49,7 @@ public abstract class DecodeUtils {
 		return result;
 	}
 
-	@Nullable
-	public static byte[] encode(@Nullable String string) {
+	public static byte @Nullable [] encode(@Nullable String string) {
 		return (string == null ? null : Base64.getEncoder().encode(string.getBytes()));
 	}
 

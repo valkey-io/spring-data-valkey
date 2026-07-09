@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.nio.charset.StandardCharsets;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.StringValkeyConnection.StringTuple;
 import io.valkey.springframework.data.valkey.connection.zset.DefaultTuple;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
-import org.springframework.lang.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**

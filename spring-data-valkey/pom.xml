@@ -85,6 +85,18 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.jspecify</groupId>
+			<artifactId>jspecify</artifactId>
+			<version>${jspecify.version}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-messaging</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-tx</artifactId>
 		</dependency>
@@ -151,6 +163,13 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
+			<groupId>tools.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>${jackson3.version}</version>
 			<optional>true</optional>
 		</dependency>
 
@@ -305,7 +324,7 @@
 		<dependency>
 			<groupId>org.msgpack</groupId>
 			<artifactId>jackson-dataformat-msgpack</artifactId>
-			<version>0.9.8</version>
+			<version>${jackson-dataformat-msgpack.version}</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -315,7 +334,12 @@
 			<version>${multithreadedtc.version}</version>
 			<scope>test</scope>
 		</dependency>
-
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>${junit4.version}</version>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>io.projectreactor</groupId>
 			<artifactId>reactor-test</artifactId>
@@ -354,7 +378,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.3.1</version>
+				<version>${maven-source-plugin.version}</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -387,7 +411,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>3.1.0</version>
+				<version>${maven-gpg-plugin.version}</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
@@ -403,7 +427,7 @@
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
-				<version>1.6.13</version>
+				<version>${nexus-staging-plugin.version}</version>
 				<extensions>true</extensions>
 				<configuration>
 					<serverId>ossrh</serverId>

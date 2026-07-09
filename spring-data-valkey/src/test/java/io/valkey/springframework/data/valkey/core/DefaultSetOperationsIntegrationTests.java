@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +24,12 @@ import java.util.List;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration test of {@link DefaultSetOperations}
@@ -37,7 +38,9 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Christoph Strobl
  * @author Thomas Darimont
  * @author Mark Paluch
+ * @author Mingi Lee
  */
+@ParameterizedClass
 @MethodSource("testParams")
 @SuppressWarnings("unchecked")
 public class DefaultSetOperationsIntegrationTests<K, V> {
@@ -69,7 +72,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testDistinctRandomMembers() {
 
 		K setKey = keyFactory.instance();
@@ -84,7 +87,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(members).contains(v1, v2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRandomMembersWithDuplicates() {
 
 		K setKey = keyFactory.instance();
@@ -97,28 +100,26 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(members).hasSize(2).contains(v1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRandomMembersNegative() {
 
 		try {
 			setOps.randomMembers(keyFactory.instance(), -1);
 			fail("IllegalArgumentException should be thrown");
-		} catch (IllegalArgumentException expected) {
-		}
+		} catch (IllegalArgumentException expected) {}
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testDistinctRandomMembersNegative() {
 
 		try {
 			setOps.distinctRandomMembers(keyFactory.instance(), -2);
 			fail("IllegalArgumentException should be thrown");
-		} catch (IllegalArgumentException expected) {
-		}
+		} catch (IllegalArgumentException expected) {}
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testMove() {
 
 		K key1 = keyFactory.instance();
@@ -135,7 +136,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testPop() {
 
 		K key = keyFactory.instance();
@@ -147,7 +148,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.members(key)).isEmpty();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-668
+	@Test // DATAREDIS-668
 	void testPopWithCount() {
 
 		K key = keyFactory.instance();
@@ -162,7 +163,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(result.get(0)).isInstanceOf(v1.getClass());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRandomMember() {
 
 		K key = keyFactory.instance();
@@ -173,7 +174,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.randomMember(key)).isEqualTo(v1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAdd() {
 
 		K key = keyFactory.instance();
@@ -185,7 +186,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testRemove() {
 
 		K key = keyFactory.instance();
@@ -200,7 +201,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.members(key)).containsOnly(v3);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-304
+	@Test // DATAREDIS-304
 	@SuppressWarnings("unchecked")
 	void testSSCanReadsValuesFully() throws IOException {
 
@@ -221,7 +222,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(count).isEqualTo(setOps.size(key));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-873
+	@Test // DATAREDIS-873
 	void diffShouldReturnDifference() {
 
 		K sourceKey1 = keyFactory.instance();
@@ -238,7 +239,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.difference(Arrays.asList(sourceKey1, sourceKey2))).contains(v1);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-873
+	@Test // DATAREDIS-873
 	void diffAndStoreShouldReturnDifferenceShouldReturnNumberOfElementsInDestination() {
 
 		K sourceKey1 = keyFactory.instance();
@@ -256,7 +257,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.differenceAndStore(Arrays.asList(sourceKey1, sourceKey2), destinationKey)).isEqualTo(1L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-873
+	@Test // DATAREDIS-873
 	void unionShouldConcatSets() {
 
 		K sourceKey1 = keyFactory.instance();
@@ -273,7 +274,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.union(Arrays.asList(sourceKey1, sourceKey2))).contains(v1, v2, v3, v4);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-873
+	@Test // DATAREDIS-873
 	void unionAndStoreShouldReturnDifferenceShouldReturnNumberOfElementsInDestination() {
 
 		K sourceKey1 = keyFactory.instance();
@@ -291,7 +292,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.unionAndStore(Arrays.asList(sourceKey1, sourceKey2), destinationKey)).isEqualTo(4L);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-873
+	@Test // DATAREDIS-873
 	void intersectShouldReturnElements() {
 
 		K sourceKey1 = keyFactory.instance();
@@ -308,7 +309,7 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.intersect(Arrays.asList(sourceKey1, sourceKey2))).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-448, DATAREDIS-873
+	@Test // DATAREDIS-448, DATAREDIS-873
 	void intersectAndStoreShouldReturnNumberOfElementsInDestination() {
 
 		K sourceKey1 = keyFactory.instance();
@@ -327,7 +328,39 @@ public class DefaultSetOperationsIntegrationTests<K, V> {
 		assertThat(setOps.intersectAndStore(Arrays.asList(sourceKey1, sourceKey2), destinationKey)).isEqualTo(2L);
 	}
 
-	@ParameterizedValkeyTest // GH-2037
+	@Test // GH-2906
+	@EnabledOnCommand("SINTERCARD")
+	void intersectSizeShouldReturnIntersectionCardinality() {
+
+		K sourceKey1 = keyFactory.instance();
+		K sourceKey2 = keyFactory.instance();
+		K sourceKey3 = keyFactory.instance();
+
+		V v1 = valueFactory.instance();
+		V v2 = valueFactory.instance();
+		V v3 = valueFactory.instance();
+		V v4 = valueFactory.instance();
+		V v5 = valueFactory.instance();
+
+		setOps.add(sourceKey1, v1, v2, v3);
+		setOps.add(sourceKey2, v2, v3, v4);
+		setOps.add(sourceKey3, v3, v4, v5);
+
+		// Test two keys intersection
+		assertThat(setOps.intersectSize(sourceKey1, sourceKey2)).isEqualTo(2L);
+
+		// Test key and collection intersection
+		assertThat(setOps.intersectSize(sourceKey1, Arrays.asList(sourceKey2, sourceKey3))).isEqualTo(1L);
+
+		// Test collection intersection
+		assertThat(setOps.intersectSize(Arrays.asList(sourceKey1, sourceKey2, sourceKey3))).isEqualTo(1L);
+
+		// Test empty intersection
+		K emptyKey = keyFactory.instance();
+		assertThat(setOps.intersectSize(sourceKey1, emptyKey)).isEqualTo(0L);
+	}
+
+	@Test // GH-2037
 	@EnabledOnCommand("SMISMEMBER")
 	void isMember() {
 

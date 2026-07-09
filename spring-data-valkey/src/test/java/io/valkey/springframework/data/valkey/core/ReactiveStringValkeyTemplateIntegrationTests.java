@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ public class ReactiveStringValkeyTemplateIntegrationTests {
 		ValkeyElementWriter<String> writer = ValkeyElementWriter.from(StringValkeySerializer.UTF_8);
 
 		ValkeySerializationContext<String, String> nullReadingContext = ValkeySerializationContext
-				.<String, String>newSerializationContext(StringValkeySerializer.UTF_8).key(buffer -> {
+				.<String, String> newSerializationContext(StringValkeySerializer.UTF_8).key(buffer -> {
 
 					String read = reader.read(buffer);
 

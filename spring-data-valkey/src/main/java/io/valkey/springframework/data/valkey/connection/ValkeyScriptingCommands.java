@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,8 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.List;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 
 /**
  * Scripting commands.
@@ -26,7 +27,9 @@ import org.springframework.lang.Nullable;
  * @author Christoph Strobl
  * @author David Liu
  * @author Mark Paluch
+ * @see ValkeyCommands
  */
+@NullUnmarked
 public interface ValkeyScriptingCommands {
 
 	/**
@@ -51,8 +54,7 @@ public interface ValkeyScriptingCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/script-load">Valkey Documentation: SCRIPT LOAD</a>
 	 */
-	@Nullable
-	String scriptLoad(byte[] script);
+	String scriptLoad(byte @NonNull [] script);
 
 	/**
 	 * Check if given {@code scriptShas} exist in script cache.
@@ -62,8 +64,7 @@ public interface ValkeyScriptingCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/script-exists">Valkey Documentation: SCRIPT EXISTS</a>
 	 */
-	@Nullable
-	List<Boolean> scriptExists(String... scriptShas);
+	List<@NonNull Boolean> scriptExists(@NonNull String @NonNull... scriptShas);
 
 	/**
 	 * Evaluate given {@code script}.
@@ -75,8 +76,8 @@ public interface ValkeyScriptingCommands {
 	 * @return script result. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/eval">Valkey Documentation: EVAL</a>
 	 */
-	@Nullable
-	<T> T eval(byte[] script, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
+	<T> T eval(byte @NonNull [] script, @NonNull ReturnType returnType, int numKeys,
+			byte @NonNull [] @NonNull... keysAndArgs);
 
 	/**
 	 * Evaluate given {@code scriptSha}.
@@ -88,8 +89,8 @@ public interface ValkeyScriptingCommands {
 	 * @return script result. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/evalsha">Valkey Documentation: EVALSHA</a>
 	 */
-	@Nullable
-	<T> T evalSha(String scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
+	<T> T evalSha(@NonNull String scriptSha, @NonNull ReturnType returnType, int numKeys,
+			byte @NonNull [] @NonNull... keysAndArgs);
 
 	/**
 	 * Evaluate given {@code scriptSha}.
@@ -102,6 +103,6 @@ public interface ValkeyScriptingCommands {
 	 * @since 1.5
 	 * @see <a href="https://valkey.io/commands/evalsha">Valkey Documentation: EVALSHA</a>
 	 */
-	@Nullable
-	<T> T evalSha(byte[] scriptSha, ReturnType returnType, int numKeys, byte[]... keysAndArgs);
+	<T> T evalSha(byte @NonNull [] scriptSha, @NonNull ReturnType returnType, int numKeys,
+			byte @NonNull [] @NonNull... keysAndArgs);
 }

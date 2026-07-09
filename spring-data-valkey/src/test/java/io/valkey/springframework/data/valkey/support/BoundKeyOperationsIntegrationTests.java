@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,22 +23,26 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.core.BoundKeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyCallback;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.support.atomic.ValkeyAtomicInteger;
 import io.valkey.springframework.data.valkey.support.atomic.ValkeyAtomicLong;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * @author Costin Leau
  * @author Jennifer Hickey
  * @author Thomas Darimont
  * @author Christoph Strobl
+ * @author Yordan Tsintsov
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public class BoundKeyOperationsIntegrationTests {
 
@@ -77,7 +81,7 @@ public class BoundKeyOperationsIntegrationTests {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testRename() throws Exception {
 
 		Object key = keyOps.getKey();
@@ -90,8 +94,36 @@ public class BoundKeyOperationsIntegrationTests {
 		assertThat(keyOps.getKey()).isEqualTo(key);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-251
-	void testExpire() throws Exception {
+	@Test
+	void testExpireWithExpiration() {
+
+		assertThat(keyOps.getExpire()).as(keyOps.getClass().getName() + " -> " + keyOps.getKey())
+				.isEqualTo(Long.valueOf(-1));
+
+		if (keyOps.expire(Expiration.seconds(10))) {
+			long expire = keyOps.getExpire().longValue();
+			assertThat(expire <= 10 && expire > 5).isTrue();
+		}
+	}
+
+	@Test
+	void testPersistWithExpiration() {
+
+		keyOps.persist();
+
+		assertThat(keyOps.getExpire()).as(keyOps.getClass().getName() + " -> " + keyOps.getKey())
+				.isEqualTo(Long.valueOf(-1));
+		if (keyOps.expire(Expiration.seconds(10))) {
+			assertThat(keyOps.getExpire().longValue() > 0).isTrue();
+		}
+
+		keyOps.persist();
+		assertThat(keyOps.getExpire().longValue()).as(keyOps.getClass().getName() + " -> " + keyOps.getKey()).isEqualTo(-1);
+	}
+
+	@Test
+	// DATAREDIS-251
+	void testExpire() {
 
 		assertThat(keyOps.getExpire()).as(keyOps.getClass().getName() + " -> " + keyOps.getKey())
 				.isEqualTo(Long.valueOf(-1));
@@ -102,8 +134,8 @@ public class BoundKeyOperationsIntegrationTests {
 		}
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-251
-	void testPersist() throws Exception {
+	@Test // DATAREDIS-251
+	void testPersist() {
 
 		keyOps.persist();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 
 /**
@@ -26,45 +28,46 @@ import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
  * @author Dennis Neufeld
  * @since 2.0
  */
+@NullUnmarked
 public interface ValkeyClusterServerCommands extends ValkeyServerCommands {
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyServerCommands#bgReWriteAof()
 	 */
-	void bgReWriteAof(ValkeyClusterNode node);
+	void bgReWriteAof(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyServerCommands#bgSave()
 	 */
-	void bgSave(ValkeyClusterNode node);
+	void bgSave(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @return
 	 * @see ValkeyServerCommands#lastSave()
 	 */
-	Long lastSave(ValkeyClusterNode node);
+	Long lastSave(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyServerCommands#save()
 	 */
-	void save(ValkeyClusterNode node);
+	void save(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @return
 	 * @see ValkeyServerCommands#dbSize()
 	 */
-	Long dbSize(ValkeyClusterNode node);
+	Long dbSize(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyServerCommands#flushDb()
 	 */
-	void flushDb(ValkeyClusterNode node);
+	void flushDb(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
@@ -72,13 +75,13 @@ public interface ValkeyClusterServerCommands extends ValkeyServerCommands {
 	 * @see ValkeyServerCommands#flushDb(FlushOption)
 	 * @since 2.7
 	 */
-	void flushDb(ValkeyClusterNode node, FlushOption option);
+	void flushDb(@NonNull ValkeyClusterNode node, @NonNull FlushOption option);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyServerCommands#flushAll()
 	 */
-	void flushAll(ValkeyClusterNode node);
+	void flushAll(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
@@ -86,14 +89,14 @@ public interface ValkeyClusterServerCommands extends ValkeyServerCommands {
 	 * @see ValkeyServerCommands#flushAll(FlushOption)
 	 * @since 2.7
 	 */
-	void flushAll(ValkeyClusterNode node, FlushOption option);
+	void flushAll(@NonNull ValkeyClusterNode node, @NonNull FlushOption option);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @return
 	 * @see ValkeyServerCommands#info()
 	 */
-	Properties info(ValkeyClusterNode node);
+	Properties info(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
@@ -101,13 +104,13 @@ public interface ValkeyClusterServerCommands extends ValkeyServerCommands {
 	 * @return
 	 * @see ValkeyServerCommands#info(String)
 	 */
-	Properties info(ValkeyClusterNode node, String section);
+	Properties info(@NonNull ValkeyClusterNode node, @NonNull String section);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyServerCommands#shutdown()
 	 */
-	void shutdown(ValkeyClusterNode node);
+	void shutdown(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
@@ -115,7 +118,7 @@ public interface ValkeyClusterServerCommands extends ValkeyServerCommands {
 	 * @return
 	 * @see ValkeyServerCommands#getConfig(String)
 	 */
-	Properties getConfig(ValkeyClusterNode node, String pattern);
+	Properties getConfig(@NonNull ValkeyClusterNode node, @NonNull String pattern);
 
 	/**
 	 * @param node must not be {@literal null}.
@@ -123,27 +126,27 @@ public interface ValkeyClusterServerCommands extends ValkeyServerCommands {
 	 * @param value
 	 * @see ValkeyServerCommands#setConfig(String, String)
 	 */
-	void setConfig(ValkeyClusterNode node, String param, String value);
+	void setConfig(@NonNull ValkeyClusterNode node, @NonNull String param, @NonNull String value);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyServerCommands#resetConfigStats()
 	 */
-	void resetConfigStats(ValkeyClusterNode node);
+	void resetConfigStats(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyServerCommands#rewriteConfig()
 	 * @since 2.5
 	 */
-	void rewriteConfig(ValkeyClusterNode node);
+	void rewriteConfig(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @return
 	 * @see ValkeyServerCommands#time()
 	 */
-	default Long time(ValkeyClusterNode node) {
+	default Long time(@NonNull ValkeyClusterNode node) {
 		return time(node, TimeUnit.MILLISECONDS);
 	}
 
@@ -154,12 +157,12 @@ public interface ValkeyClusterServerCommands extends ValkeyServerCommands {
 	 * @since 2.5
 	 * @see ValkeyServerCommands#time(TimeUnit)
 	 */
-	Long time(ValkeyClusterNode node, TimeUnit timeUnit);
+	Long time(@NonNull ValkeyClusterNode node, @NonNull TimeUnit timeUnit);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @return
 	 * @see ValkeyServerCommands#getClientList()
 	 */
-	List<ValkeyClientInfo> getClientList(ValkeyClusterNode node);
+	List<@NonNull ValkeyClientInfo> getClientList(@NonNull ValkeyClusterNode node);
 }

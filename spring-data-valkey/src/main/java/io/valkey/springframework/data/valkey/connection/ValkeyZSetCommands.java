@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.zset.Aggregate;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.connection.zset.Weights;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -39,7 +42,9 @@ import org.springframework.util.ObjectUtils;
  * @author Mark Paluch
  * @author Andrey Shlykov
  * @author Shyngys Sapraliyev
+ * @see ValkeyCommands
  */
+@NullUnmarked
 public interface ValkeyZSetCommands {
 
 	/**
@@ -51,6 +56,7 @@ public interface ValkeyZSetCommands {
 	 * @deprecated since 3.0, use {@link org.springframework.data.domain.Range} or {@link #toRange()} instead.
 	 */
 	@Deprecated
+	@NullMarked
 	class Range {
 
 		@Nullable Boundary min;
@@ -130,16 +136,14 @@ public interface ValkeyZSetCommands {
 		/**
 		 * @return {@literal null} if not set.
 		 */
-		@Nullable
-		public Boundary getMin() {
+		public @Nullable Boundary getMin() {
 			return min;
 		}
 
 		/**
 		 * @return {@literal null} if not set.
 		 */
-		@Nullable
-		public Boundary getMax() {
+		public @Nullable Boundary getMax() {
 			return max;
 		}
 
@@ -161,8 +165,7 @@ public interface ValkeyZSetCommands {
 				this.including = including;
 			}
 
-			@Nullable
-			public Object getValue() {
+			public @Nullable Object getValue() {
 				return value;
 			}
 
@@ -177,7 +180,7 @@ public interface ValkeyZSetCommands {
 		 * @return a {@link org.springframework.data.domain.Range} object using bounds from this range.
 		 * @since 3.0
 		 */
-		public <T> org.springframework.data.domain.Range<T> toRange() {
+		public <T> org.springframework.data.domain.Range<@NonNull T> toRange() {
 
 			org.springframework.data.domain.Range.Bound<Object> lower = toBound(min);
 			org.springframework.data.domain.Range.Bound<Object> upper = toBound(max);
@@ -187,7 +190,7 @@ public interface ValkeyZSetCommands {
 
 		private org.springframework.data.domain.Range.Bound<Object> toBound(@Nullable Boundary boundary) {
 
-			if (boundary == null || boundary.value == null) {
+			if (boundary == null || boundary.getValue() == null) {
 				return org.springframework.data.domain.Range.Bound.unbounded();
 			}
 
@@ -203,6 +206,7 @@ public interface ValkeyZSetCommands {
 	 * @deprecated since 3.0, use {@link io.valkey.springframework.data.valkey.connection.Limit} instead.
 	 */
 	@Deprecated
+	@NullMarked
 	class Limit extends io.valkey.springframework.data.valkey.connection.Limit {
 
 	}
@@ -214,6 +218,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.5
 	 * @see <a href="https://valkey.io/commands/zadd">Valkey Documentation: ZADD</a>
 	 */
+	@NullMarked
 	class ZAddArgs {
 
 		private static final ZAddArgs NONE = new ZAddArgs(EnumSet.noneOf(Flag.class));
@@ -374,8 +379,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zadd">Valkey Documentation: ZADD</a>
 	 */
-	@Nullable
-	default Boolean zAdd(byte[] key, double score, byte[] value) {
+	default Boolean zAdd(byte @NonNull [] key, double score, byte @NonNull [] value) {
 		return zAdd(key, score, value, ZAddArgs.NONE);
 	}
 
@@ -391,8 +395,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.5
 	 * @see <a href="https://valkey.io/commands/zadd">Valkey Documentation: ZADD</a>
 	 */
-	@Nullable
-	Boolean zAdd(byte[] key, double score, byte[] value, ZAddArgs args);
+	Boolean zAdd(byte @NonNull [] key, double score, byte @NonNull [] value, @NonNull ZAddArgs args);
 
 	/**
 	 * Add {@code tuples} to a sorted set at {@code key}, or update its {@code score} if it already exists.
@@ -402,8 +405,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zadd">Valkey Documentation: ZADD</a>
 	 */
-	@Nullable
-	default Long zAdd(byte[] key, Set<Tuple> tuples) {
+	default Long zAdd(byte @NonNull [] key, @NonNull Set<@NonNull Tuple> tuples) {
 		return zAdd(key, tuples, ZAddArgs.NONE);
 	}
 
@@ -418,7 +420,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.5
 	 * @see <a href="https://valkey.io/commands/zadd">Valkey Documentation: ZADD</a>
 	 */
-	Long zAdd(byte[] key, Set<Tuple> tuples, ZAddArgs args);
+	Long zAdd(byte @NonNull [] key, @NonNull Set<@NonNull Tuple> tuples, @NonNull ZAddArgs args);
 
 	/**
 	 * Remove {@code values} from sorted set. Return number of removed elements.
@@ -428,8 +430,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zrem">Valkey Documentation: ZREM</a>
 	 */
-	@Nullable
-	Long zRem(byte[] key, byte[]... values);
+	Long zRem(byte @NonNull [] key, byte @NonNull [] @NonNull... values);
 
 	/**
 	 * Increment the score of element with {@code value} in sorted set by {@code increment}.
@@ -440,8 +441,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zincrby">Valkey Documentation: ZINCRBY</a>
 	 */
-	@Nullable
-	Double zIncrBy(byte[] key, double increment, byte[] value);
+	Double zIncrBy(byte @NonNull [] key, double increment, byte @NonNull [] value);
 
 	/**
 	 * Get random element from sorted set at {@code key}.
@@ -451,8 +451,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zrandmember">Valkey Documentation: ZRANDMEMBER</a>
 	 */
-	@Nullable
-	byte[] zRandMember(byte[] key);
+	byte @NonNull [] zRandMember(byte @NonNull [] key);
 
 	/**
 	 * Get {@code count} random elements from sorted set at {@code key}.
@@ -466,8 +465,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zrandmember">Valkey Documentation: ZRANDMEMBER</a>
 	 */
-	@Nullable
-	List<byte[]> zRandMember(byte[] key, long count);
+	List<byte @NonNull []> zRandMember(byte @NonNull [] key, long count);
 
 	/**
 	 * Get random element from sorted set at {@code key}.
@@ -477,8 +475,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zrandmember">Valkey Documentation: ZRANDMEMBER</a>
 	 */
-	@Nullable
-	Tuple zRandMemberWithScore(byte[] key);
+	Tuple zRandMemberWithScore(byte @NonNull [] key);
 
 	/**
 	 * Get {@code count} random elements from sorted set at {@code key}.
@@ -492,8 +489,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zrandmember">Valkey Documentation: ZRANDMEMBER</a>
 	 */
-	@Nullable
-	List<Tuple> zRandMemberWithScore(byte[] key, long count);
+	List<@NonNull Tuple> zRandMemberWithScore(byte @NonNull [] key, long count);
 
 	/**
 	 * Determine the index of element with {@code value} in a sorted set.
@@ -503,8 +499,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zrank">Valkey Documentation: ZRANK</a>
 	 */
-	@Nullable
-	Long zRank(byte[] key, byte[] value);
+	Long zRank(byte @NonNull [] key, byte @NonNull [] value);
 
 	/**
 	 * Determine the index of element with {@code value} in a sorted set when scored high to low.
@@ -514,8 +509,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zrevrank">Valkey Documentation: ZREVRANK</a>
 	 */
-	@Nullable
-	Long zRevRank(byte[] key, byte[] value);
+	Long zRevRank(byte @NonNull [] key, byte @NonNull [] value);
 
 	/**
 	 * Get elements between {@code start} and {@code end} from sorted set.
@@ -527,8 +521,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrange">Valkey Documentation: ZRANGE</a>
 	 */
-	@Nullable
-	Set<byte[]> zRange(byte[] key, long start, long end);
+	Set<byte @NonNull []> zRange(byte @NonNull [] key, long start, long end);
 
 	/**
 	 * Get set of {@link Tuple}s between {@code start} and {@code end} from sorted set.
@@ -540,8 +533,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrange">Valkey Documentation: ZRANGE</a>
 	 */
-	@Nullable
-	Set<Tuple> zRangeWithScores(byte[] key, long start, long end);
+	Set<@NonNull Tuple> zRangeWithScores(byte @NonNull [] key, long start, long end);
 
 	/**
 	 * Get elements where score is between {@code min} and {@code max} from sorted set.
@@ -553,8 +545,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRangeByScore(byte[] key, double min, double max) {
+	default Set<byte @NonNull []> zRangeByScore(byte @NonNull [] key, double min, double max) {
 		return zRangeByScore(key, org.springframework.data.domain.Range.closed(min, max));
 	}
 
@@ -568,9 +559,8 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<Tuple> zRangeByScoreWithScores(byte[] key,
-			org.springframework.data.domain.Range<? extends Number> range) {
+	default Set<@NonNull Tuple> zRangeByScoreWithScores(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range) {
 		return zRangeByScoreWithScores(key, range, Limit.unlimited());
 	}
 
@@ -584,8 +574,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<Tuple> zRangeByScoreWithScores(byte[] key, double min, double max) {
+	default Set<@NonNull Tuple> zRangeByScoreWithScores(byte @NonNull [] key, double min, double max) {
 		return zRangeByScoreWithScores(key, org.springframework.data.domain.Range.closed(min, max));
 	}
 
@@ -602,8 +591,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRangeByScore(byte[] key, double min, double max, long offset, long count) {
+	default Set<byte @NonNull []> zRangeByScore(byte @NonNull [] key, double min, double max, long offset, long count) {
 		return zRangeByScore(key, org.springframework.data.domain.Range.closed(min, max),
 				new io.valkey.springframework.data.valkey.connection.Limit().offset(Long.valueOf(offset).intValue())
 						.count(Long.valueOf(count).intValue()));
@@ -622,8 +610,8 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<Tuple> zRangeByScoreWithScores(byte[] key, double min, double max, long offset, long count) {
+	default Set<@NonNull Tuple> zRangeByScoreWithScores(byte @NonNull [] key, double min, double max, long offset,
+			long count) {
 		return zRangeByScoreWithScores(key, org.springframework.data.domain.Range.closed(min, max),
 				new io.valkey.springframework.data.valkey.connection.Limit().offset(Long.valueOf(offset).intValue())
 						.count(Long.valueOf(count).intValue()));
@@ -641,9 +629,9 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	Set<Tuple> zRangeByScoreWithScores(byte[] key, org.springframework.data.domain.Range<? extends Number> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Set<@NonNull Tuple> zRangeByScoreWithScores(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * Get elements in range from {@code start} to {@code end} from sorted set ordered from high to low.
@@ -655,8 +643,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrevrange">Valkey Documentation: ZREVRANGE</a>
 	 */
-	@Nullable
-	Set<byte[]> zRevRange(byte[] key, long start, long end);
+	Set<byte @NonNull []> zRevRange(byte @NonNull [] key, long start, long end);
 
 	/**
 	 * Get set of {@link Tuple}s in range from {@code start} to {@code end} from sorted set ordered from high to low.
@@ -668,8 +655,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrevrange">Valkey Documentation: ZREVRANGE</a>
 	 */
-	@Nullable
-	Set<Tuple> zRevRangeWithScores(byte[] key, long start, long end);
+	Set<@NonNull Tuple> zRevRangeWithScores(byte @NonNull [] key, long start, long end);
 
 	/**
 	 * Get elements where score is between {@code min} and {@code max} from sorted set ordered from high to low.
@@ -681,8 +667,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrevrange">Valkey Documentation: ZREVRANGE</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRevRangeByScore(byte[] key, double min, double max) {
+	default Set<byte @NonNull []> zRevRangeByScore(byte @NonNull [] key, double min, double max) {
 		return zRevRangeByScore(key, org.springframework.data.domain.Range.closed(min, max));
 	}
 
@@ -697,8 +682,8 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrevrangebyscore">Valkey Documentation: ZREVRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRevRangeByScore(byte[] key, org.springframework.data.domain.Range<? extends Number> range) {
+	default Set<byte @NonNull []> zRevRangeByScore(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range) {
 		return zRevRangeByScore(key, range, Limit.unlimited());
 	}
 
@@ -713,8 +698,7 @@ public interface ValkeyZSetCommands {
 	 *         transaction.
 	 * @see <a href="https://valkey.io/commands/zrevrangebyscore">Valkey Documentation: ZREVRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<Tuple> zRevRangeByScoreWithScores(byte[] key, double min, double max) {
+	default Set<@NonNull Tuple> zRevRangeByScoreWithScores(byte @NonNull [] key, double min, double max) {
 		return zRevRangeByScoreWithScores(key, org.springframework.data.domain.Range.closed(min, max), Limit.unlimited());
 	}
 
@@ -730,8 +714,8 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zrevrangebyscore">Valkey Documentation: ZREVRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRevRangeByScore(byte[] key, double min, double max, long offset, long count) {
+	default Set<byte @NonNull []> zRevRangeByScore(byte @NonNull [] key, double min, double max, long offset,
+			long count) {
 
 		return zRevRangeByScore(key, org.springframework.data.domain.Range.closed(min, max),
 				new Limit().offset(Long.valueOf(offset).intValue()).count(Long.valueOf(count).intValue()));
@@ -748,9 +732,9 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrevrangebyscore">Valkey Documentation: ZREVRANGEBYSCORE</a>
 	 */
-	@Nullable
-	Set<byte[]> zRevRangeByScore(byte[] key, org.springframework.data.domain.Range<? extends Number> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Set<byte @NonNull []> zRevRangeByScore(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * Get set of {@link Tuple} in range from {@code start} to {@code end} where score is between {@code min} and
@@ -764,8 +748,8 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zrevrangebyscore">Valkey Documentation: ZREVRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<Tuple> zRevRangeByScoreWithScores(byte[] key, double min, double max, long offset, long count) {
+	default Set<@NonNull Tuple> zRevRangeByScoreWithScores(byte @NonNull [] key, double min, double max, long offset,
+			long count) {
 
 		return zRevRangeByScoreWithScores(key, org.springframework.data.domain.Range.closed(min, max),
 				new io.valkey.springframework.data.valkey.connection.Limit().offset(Long.valueOf(offset).intValue())
@@ -782,9 +766,8 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrevrangebyscore">Valkey Documentation: ZREVRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<Tuple> zRevRangeByScoreWithScores(byte[] key,
-			org.springframework.data.domain.Range<? extends Number> range) {
+	default Set<@NonNull Tuple> zRevRangeByScoreWithScores(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range) {
 		return zRevRangeByScoreWithScores(key, range, Limit.unlimited());
 	}
 
@@ -799,9 +782,9 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrevrangebyscore">Valkey Documentation: ZREVRANGEBYSCORE</a>
 	 */
-	@Nullable
-	Set<Tuple> zRevRangeByScoreWithScores(byte[] key, org.springframework.data.domain.Range<? extends Number> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Set<@NonNull Tuple> zRevRangeByScoreWithScores(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * Count number of elements within sorted set with scores between {@code min} and {@code max}.
@@ -812,8 +795,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zcount">Valkey Documentation: ZCOUNT</a>
 	 */
-	@Nullable
-	default Long zCount(byte[] key, double min, double max) {
+	default Long zCount(byte @NonNull [] key, double min, double max) {
 		return zCount(key, org.springframework.data.domain.Range.closed(min, max));
 	}
 
@@ -826,8 +808,7 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zcount">Valkey Documentation: ZCOUNT</a>
 	 */
-	@Nullable
-	Long zCount(byte[] key, org.springframework.data.domain.Range<? extends Number> range);
+	Long zCount(byte @NonNull [] key, org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range);
 
 	/**
 	 * Count number of elements within sorted set with value between {@code Range#min} and {@code Range#max} applying
@@ -839,8 +820,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.4
 	 * @see <a href="https://valkey.io/commands/zlexcount">Valkey Documentation: ZLEXCOUNT</a>
 	 */
-	@Nullable
-	Long zLexCount(byte[] key, org.springframework.data.domain.Range<byte[]> range);
+	Long zLexCount(byte @NonNull [] key, org.springframework.data.domain.@NonNull Range<byte @NonNull []> range);
 
 	/**
 	 * Remove and return the value with its score having the lowest score from sorted set at {@code key}.
@@ -850,8 +830,7 @@ public interface ValkeyZSetCommands {
 	 * @see <a href="https://valkey.io/commands/zpopmin">Valkey Documentation: ZPOPMIN</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	Tuple zPopMin(byte[] key);
+	Tuple zPopMin(byte @NonNull [] key);
 
 	/**
 	 * Remove and return {@code count} values with their score having the lowest score from sorted set at {@code key}.
@@ -862,8 +841,7 @@ public interface ValkeyZSetCommands {
 	 * @see <a href="https://valkey.io/commands/zpopmin">Valkey Documentation: ZPOPMIN</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	Set<Tuple> zPopMin(byte[] key, long count);
+	Set<@NonNull Tuple> zPopMin(byte @NonNull [] key, long count);
 
 	/**
 	 * Remove and return the value with its score having the lowest score from sorted set at {@code key}. <br />
@@ -876,8 +854,7 @@ public interface ValkeyZSetCommands {
 	 * @see <a href="https://valkey.io/commands/bzpopmin">Valkey Documentation: BZPOPMIN</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	Tuple bZPopMin(byte[] key, long timeout, TimeUnit unit);
+	Tuple bZPopMin(byte @NonNull [] key, long timeout, @NonNull TimeUnit unit);
 
 	/**
 	 * Remove and return the value with its score having the highest score from sorted set at {@code key}.
@@ -887,8 +864,7 @@ public interface ValkeyZSetCommands {
 	 * @see <a href="https://valkey.io/commands/zpopmax">Valkey Documentation: ZPOPMAX</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	Tuple zPopMax(byte[] key);
+	Tuple zPopMax(byte @NonNull [] key);
 
 	/**
 	 * Remove and return {@code count} values with their score having the highest score from sorted set at {@code key}.
@@ -899,8 +875,7 @@ public interface ValkeyZSetCommands {
 	 * @see <a href="https://valkey.io/commands/zpopmax">Valkey Documentation: ZPOPMAX</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	Set<Tuple> zPopMax(byte[] key, long count);
+	Set<@NonNull Tuple> zPopMax(byte @NonNull [] key, long count);
 
 	/**
 	 * Remove and return the value with its score having the highest score from sorted set at {@code key}. <br />
@@ -913,8 +888,7 @@ public interface ValkeyZSetCommands {
 	 * @see <a href="https://valkey.io/commands/bzpopmax">Valkey Documentation: BZPOPMAX</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	Tuple bZPopMax(byte[] key, long timeout, TimeUnit unit);
+	Tuple bZPopMax(byte @NonNull [] key, long timeout, @NonNull TimeUnit unit);
 
 	/**
 	 * Get the size of sorted set with {@code key}.
@@ -923,8 +897,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zcard">Valkey Documentation: ZCARD</a>
 	 */
-	@Nullable
-	Long zCard(byte[] key);
+	Long zCard(byte @NonNull [] key);
 
 	/**
 	 * Get the score of element with {@code value} from sorted set with key {@code key}.
@@ -934,8 +907,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zscore">Valkey Documentation: ZSCORE</a>
 	 */
-	@Nullable
-	Double zScore(byte[] key, byte[] value);
+	Double zScore(byte @NonNull [] key, byte @NonNull [] value);
 
 	/**
 	 * Get the scores of elements with {@code values} from sorted set with key {@code key}.
@@ -946,8 +918,7 @@ public interface ValkeyZSetCommands {
 	 * @see <a href="https://valkey.io/commands/zmscore">Valkey Documentation: ZMSCORE</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	List<Double> zMScore(byte[] key, byte[]... values);
+	List<@NonNull Double> zMScore(byte @NonNull [] key, byte @NonNull [] @NonNull... values);
 
 	/**
 	 * Remove elements in range between {@code start} and {@code end} from sorted set with {@code key}.
@@ -958,8 +929,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zremrangebyrank">Valkey Documentation: ZREMRANGEBYRANK</a>
 	 */
-	@Nullable
-	Long zRemRange(byte[] key, long start, long end);
+	Long zRemRange(byte @NonNull [] key, long start, long end);
 
 	/**
 	 * Remove all elements between the lexicographical {@link org.springframework.data.domain.Range}.
@@ -970,7 +940,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.5
 	 * @see <a href="https://valkey.io/commands/zremrangebylex">Valkey Documentation: ZREMRANGEBYLEX</a>
 	 */
-	Long zRemRangeByLex(byte[] key, org.springframework.data.domain.Range<byte[]> range);
+	Long zRemRangeByLex(byte @NonNull [] key, org.springframework.data.domain.@NonNull Range<byte @NonNull []> range);
 
 	/**
 	 * Remove elements with scores between {@code min} and {@code max} from sorted set with {@code key}.
@@ -981,8 +951,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zremrangebyscore">Valkey Documentation: ZREMRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Long zRemRangeByScore(byte[] key, double min, double max) {
+	default Long zRemRangeByScore(byte @NonNull [] key, double min, double max) {
 		return zRemRangeByScore(key, org.springframework.data.domain.Range.closed(min, max));
 	}
 
@@ -995,8 +964,8 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zremrangebyscore">Valkey Documentation: ZREMRANGEBYSCORE</a>
 	 */
-	@Nullable
-	Long zRemRangeByScore(byte[] key, org.springframework.data.domain.Range<? extends Number> range);
+	Long zRemRangeByScore(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range);
 
 	/**
 	 * Diff sorted {@code sets}.
@@ -1006,8 +975,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zdiff">Valkey Documentation: ZDIFF</a>
 	 */
-	@Nullable
-	Set<byte[]> zDiff(byte[]... sets);
+	Set<byte[]> zDiff(byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Diff sorted {@code sets}.
@@ -1017,8 +985,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zdiff">Valkey Documentation: ZDIFF</a>
 	 */
-	@Nullable
-	Set<Tuple> zDiffWithScores(byte[]... sets);
+	Set<@NonNull Tuple> zDiffWithScores(byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Diff sorted {@code sets} and store result in destination {@code destKey}.
@@ -1029,8 +996,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zdiffstore">Valkey Documentation: ZDIFFSTORE</a>
 	 */
-	@Nullable
-	Long zDiffStore(byte[] destKey, byte[]... sets);
+	Long zDiffStore(byte @NonNull [] destKey, byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Intersect sorted {@code sets}.
@@ -1040,8 +1006,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zinter">Valkey Documentation: ZINTER</a>
 	 */
-	@Nullable
-	Set<byte[]> zInter(byte[]... sets);
+	Set<byte @NonNull []> zInter(byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Intersect sorted {@code sets}.
@@ -1051,8 +1016,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zinter">Valkey Documentation: ZINTER</a>
 	 */
-	@Nullable
-	Set<Tuple> zInterWithScores(byte[]... sets);
+	Set<@NonNull Tuple> zInterWithScores(byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Intersect sorted {@code sets}.
@@ -1064,8 +1028,8 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zinter">Valkey Documentation: ZINTER</a>
 	 */
-	@Nullable
-	default Set<Tuple> zInterWithScores(Aggregate aggregate, int[] weights, byte[]... sets) {
+	default Set<@NonNull Tuple> zInterWithScores(@NonNull Aggregate aggregate, int[] weights,
+			byte @NonNull [] @NonNull... sets) {
 		return zInterWithScores(aggregate, Weights.of(weights), sets);
 	}
 
@@ -1079,8 +1043,8 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zinter">Valkey Documentation: ZINTER</a>
 	 */
-	@Nullable
-	Set<Tuple> zInterWithScores(Aggregate aggregate, Weights weights, byte[]... sets);
+	Set<@NonNull Tuple> zInterWithScores(@NonNull Aggregate aggregate, @NonNull Weights weights,
+			byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Intersect sorted {@code sets} and store result in destination {@code destKey}.
@@ -1090,8 +1054,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zinterstore">Valkey Documentation: ZINTERSTORE</a>
 	 */
-	@Nullable
-	Long zInterStore(byte[] destKey, byte[]... sets);
+	Long zInterStore(byte @NonNull [] destKey, byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Intersect sorted {@code sets} and store result in destination {@code destKey}.
@@ -1103,8 +1066,8 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zinterstore">Valkey Documentation: ZINTERSTORE</a>
 	 */
-	@Nullable
-	default Long zInterStore(byte[] destKey, Aggregate aggregate, int[] weights, byte[]... sets) {
+	default Long zInterStore(byte @NonNull [] destKey, @NonNull Aggregate aggregate, int @NonNull [] weights,
+			byte @NonNull [] @NonNull... sets) {
 		return zInterStore(destKey, aggregate, Weights.of(weights), sets);
 	}
 
@@ -1119,8 +1082,8 @@ public interface ValkeyZSetCommands {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/zinterstore">Valkey Documentation: ZINTERSTORE</a>
 	 */
-	@Nullable
-	Long zInterStore(byte[] destKey, Aggregate aggregate, Weights weights, byte[]... sets);
+	Long zInterStore(byte @NonNull [] destKey, @NonNull Aggregate aggregate, @NonNull Weights weights,
+			byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Union sorted {@code sets}.
@@ -1130,8 +1093,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zunion">Valkey Documentation: ZUNION</a>
 	 */
-	@Nullable
-	Set<byte[]> zUnion(byte[]... sets);
+	Set<byte @NonNull []> zUnion(byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Union sorted {@code sets}.
@@ -1141,8 +1103,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zunion">Valkey Documentation: ZUNION</a>
 	 */
-	@Nullable
-	Set<Tuple> zUnionWithScores(byte[]... sets);
+	Set<@NonNull Tuple> zUnionWithScores(byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Union sorted {@code sets}.
@@ -1154,8 +1115,8 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zunion">Valkey Documentation: ZUNION</a>
 	 */
-	@Nullable
-	default Set<Tuple> zUnionWithScores(Aggregate aggregate, int[] weights, byte[]... sets) {
+	default @Nullable Set<@NonNull Tuple> zUnionWithScores(@NonNull Aggregate aggregate, int @NonNull [] weights,
+			byte @NonNull [] @NonNull... sets) {
 		return zUnionWithScores(aggregate, Weights.of(weights), sets);
 	}
 
@@ -1169,8 +1130,8 @@ public interface ValkeyZSetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/zunion">Valkey Documentation: ZUNION</a>
 	 */
-	@Nullable
-	Set<Tuple> zUnionWithScores(Aggregate aggregate, Weights weights, byte[]... sets);
+	Set<@NonNull Tuple> zUnionWithScores(@NonNull Aggregate aggregate, @NonNull Weights weights,
+			byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Union sorted {@code sets}.
@@ -1179,8 +1140,7 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zunionstore">Valkey Documentation: ZUNIONSTORE</a>
 	 */
-	@Nullable
-	Long zUnionStore(byte[] destKey, byte[]... sets);
+	Long zUnionStore(byte @NonNull [] destKey, byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Union sorted {@code sets} and store result in destination {@code destKey}.
@@ -1192,8 +1152,8 @@ public interface ValkeyZSetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/zunionstore">Valkey Documentation: ZUNIONSTORE</a>
 	 */
-	@Nullable
-	default Long zUnionStore(byte[] destKey, Aggregate aggregate, int[] weights, byte[]... sets) {
+	default Long zUnionStore(byte @NonNull [] destKey, @NonNull Aggregate aggregate, int @NonNull [] weights,
+			byte @NonNull [] @NonNull... sets) {
 		return zUnionStore(destKey, aggregate, Weights.of(weights), sets);
 	}
 
@@ -1208,8 +1168,8 @@ public interface ValkeyZSetCommands {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/zunionstore">Valkey Documentation: ZUNIONSTORE</a>
 	 */
-	@Nullable
-	Long zUnionStore(byte[] destKey, Aggregate aggregate, Weights weights, byte[]... sets);
+	Long zUnionStore(byte @NonNull [] destKey, @NonNull Aggregate aggregate, @NonNull Weights weights,
+			byte @NonNull [] @NonNull... sets);
 
 	/**
 	 * Use a {@link Cursor} to iterate over elements in sorted set at {@code key}.
@@ -1220,7 +1180,7 @@ public interface ValkeyZSetCommands {
 	 * @since 1.4
 	 * @see <a href="https://valkey.io/commands/zscan">Valkey Documentation: ZSCAN</a>
 	 */
-	Cursor<Tuple> zScan(byte[] key, ScanOptions options);
+	Cursor<@NonNull Tuple> zScan(byte @NonNull [] key, @Nullable ScanOptions options);
 
 	/**
 	 * Get elements where score is between {@code min} and {@code max} from sorted set.
@@ -1233,9 +1193,8 @@ public interface ValkeyZSetCommands {
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 * @deprecated since 3.0, use {@link #zRangeByScore(byte[], org.springframework.data.domain.Range)} instead.
 	 */
-	@Nullable
 	@Deprecated
-	default Set<byte[]> zRangeByScore(byte[] key, String min, String max) {
+	default Set<byte @NonNull []> zRangeByScore(byte @NonNull [] key, @NonNull String min, @NonNull String max) {
 		return zRangeByScore(key, new Range().gte(min).lte(max).toRange());
 	}
 
@@ -1248,8 +1207,8 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRangeByScore(byte[] key, org.springframework.data.domain.Range<? extends Number> range) {
+	default Set<byte @NonNull []> zRangeByScore(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range) {
 		return zRangeByScore(key, range, Limit.unlimited());
 	}
 
@@ -1266,8 +1225,8 @@ public interface ValkeyZSetCommands {
 	 * @since 1.5
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	Set<byte[]> zRangeByScore(byte[] key, String min, String max, long offset, long count);
+	Set<byte @NonNull []> zRangeByScore(byte @NonNull [] key, @NonNull String min, @NonNull String max, long offset,
+			long count);
 
 	/**
 	 * Get elements in range from {@code Limit#count} to {@code Limit#offset} where score is between {@code Range#min} and
@@ -1280,9 +1239,9 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrangebyscore">Valkey Documentation: ZRANGEBYSCORE</a>
 	 */
-	@Nullable
-	Set<byte[]> zRangeByScore(byte[] key, org.springframework.data.domain.Range<? extends Number> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Set<byte @NonNull []> zRangeByScore(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * Get all the elements in the sorted set at {@literal key} in lexicographical ordering.
@@ -1292,8 +1251,7 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrangebylex">Valkey Documentation: ZRANGEBYLEX</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRangeByLex(byte[] key) {
+	default Set<byte @NonNull []> zRangeByLex(byte @NonNull [] key) {
 		return zRangeByLex(key, org.springframework.data.domain.Range.unbounded());
 	}
 
@@ -1307,8 +1265,8 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrangebylex">Valkey Documentation: ZRANGEBYLEX</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRangeByLex(byte[] key, org.springframework.data.domain.Range<byte[]> range) {
+	default Set<byte @NonNull []> zRangeByLex(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<byte @NonNull []> range) {
 		return zRangeByLex(key, range, Limit.unlimited());
 	}
 
@@ -1323,9 +1281,9 @@ public interface ValkeyZSetCommands {
 	 * @since 1.6
 	 * @see <a href="https://valkey.io/commands/zrangebylex">Valkey Documentation: ZRANGEBYLEX</a>
 	 */
-	@Nullable
-	Set<byte[]> zRangeByLex(byte[] key, org.springframework.data.domain.Range<byte[]> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Set<byte @NonNull []> zRangeByLex(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<byte @NonNull []> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * Get all the elements in the sorted set at {@literal key} in reversed lexicographical ordering.
@@ -1335,8 +1293,7 @@ public interface ValkeyZSetCommands {
 	 * @since 2.4
 	 * @see <a href="https://valkey.io/commands/zrevrangebylex">Valkey Documentation: ZREVRANGEBYLEX</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRevRangeByLex(byte[] key) {
+	default Set<byte @NonNull []> zRevRangeByLex(byte @NonNull [] key) {
 		return zRevRangeByLex(key, org.springframework.data.domain.Range.unbounded());
 	}
 
@@ -1350,8 +1307,8 @@ public interface ValkeyZSetCommands {
 	 * @since 2.4
 	 * @see <a href="https://valkey.io/commands/zrevrangebylex">Valkey Documentation: ZREVRANGEBYLEX</a>
 	 */
-	@Nullable
-	default Set<byte[]> zRevRangeByLex(byte[] key, org.springframework.data.domain.Range<byte[]> range) {
+	default Set<byte @NonNull []> zRevRangeByLex(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<byte @NonNull []> range) {
 		return zRevRangeByLex(key, range, io.valkey.springframework.data.valkey.connection.Limit.unlimited());
 	}
 
@@ -1366,9 +1323,9 @@ public interface ValkeyZSetCommands {
 	 * @since 2.4
 	 * @see <a href="https://valkey.io/commands/zrevrangebylex">Valkey Documentation: ZREVRANGEBYLEX</a>
 	 */
-	@Nullable
-	Set<byte[]> zRevRangeByLex(byte[] key, org.springframework.data.domain.Range<byte[]> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Set<byte @NonNull []> zRevRangeByLex(byte @NonNull [] key,
+			org.springframework.data.domain.@NonNull Range<byte @NonNull []> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * This command is like ZRANGE , but stores the result in the {@literal dstKey} destination key.
@@ -1380,8 +1337,8 @@ public interface ValkeyZSetCommands {
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/zrangestore">Valkey Documentation: ZRANGESTORE</a>
 	 */
-	@Nullable
-	default Long zRangeStoreByLex(byte[] dstKey, byte[] srcKey, org.springframework.data.domain.Range<byte[]> range) {
+	default Long zRangeStoreByLex(byte @NonNull [] dstKey, byte @NonNull [] srcKey,
+			org.springframework.data.domain.@NonNull Range<byte @NonNull []> range) {
 		return zRangeStoreByLex(dstKey, srcKey, range, io.valkey.springframework.data.valkey.connection.Limit.unlimited());
 	}
 
@@ -1396,9 +1353,9 @@ public interface ValkeyZSetCommands {
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/zrangestore">Valkey Documentation: ZRANGESTORE</a>
 	 */
-	@Nullable
-	Long zRangeStoreByLex(byte[] dstKey, byte[] srcKey, org.springframework.data.domain.Range<byte[]> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Long zRangeStoreByLex(byte @NonNull [] dstKey, byte @NonNull [] srcKey,
+			org.springframework.data.domain.@NonNull Range<byte @NonNull []> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * This command is like ZRANGE … REV , but stores the result in the {@literal dstKey} destination key.
@@ -1410,8 +1367,8 @@ public interface ValkeyZSetCommands {
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/zrangestore">Valkey Documentation: ZRANGESTORE</a>
 	 */
-	@Nullable
-	default Long zRangeStoreRevByLex(byte[] dstKey, byte[] srcKey, org.springframework.data.domain.Range<byte[]> range) {
+	default Long zRangeStoreRevByLex(byte @NonNull [] dstKey, byte @NonNull [] srcKey,
+			org.springframework.data.domain.@NonNull Range<byte @NonNull []> range) {
 		return zRangeStoreRevByLex(dstKey, srcKey, range, io.valkey.springframework.data.valkey.connection.Limit.unlimited());
 	}
 
@@ -1426,9 +1383,9 @@ public interface ValkeyZSetCommands {
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/zrangestore">Valkey Documentation: ZRANGESTORE</a>
 	 */
-	@Nullable
-	Long zRangeStoreRevByLex(byte[] dstKey, byte[] srcKey, org.springframework.data.domain.Range<byte[]> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Long zRangeStoreRevByLex(byte @NonNull [] dstKey, byte @NonNull [] srcKey,
+			org.springframework.data.domain.@NonNull Range<byte @NonNull []> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * This command is like ZRANGE, but stores the result in the {@literal dstKey} destination key.
@@ -1440,9 +1397,8 @@ public interface ValkeyZSetCommands {
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/zrangestore">Valkey Documentation: ZRANGESTORE</a>
 	 */
-	@Nullable
-	default Long zRangeStoreByScore(byte[] dstKey, byte[] srcKey,
-			org.springframework.data.domain.Range<? extends Number> range) {
+	default Long zRangeStoreByScore(byte @NonNull [] dstKey, byte @NonNull [] srcKey,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range) {
 		return zRangeStoreByScore(dstKey, srcKey, range, io.valkey.springframework.data.valkey.connection.Limit.unlimited());
 	}
 
@@ -1457,9 +1413,9 @@ public interface ValkeyZSetCommands {
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/zrangestore">Valkey Documentation: ZRANGESTORE</a>
 	 */
-	@Nullable
-	Long zRangeStoreByScore(byte[] dstKey, byte[] srcKey, org.springframework.data.domain.Range<? extends Number> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Long zRangeStoreByScore(byte @NonNull [] dstKey, byte @NonNull [] srcKey,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 	/**
 	 * This command is like ZRANGE … REV, but stores the result in the {@literal dstKey} destination key.
@@ -1471,9 +1427,8 @@ public interface ValkeyZSetCommands {
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/zrangestore">Valkey Documentation: ZRANGESTORE</a>
 	 */
-	@Nullable
-	default Long zRangeStoreRevByScore(byte[] dstKey, byte[] srcKey,
-			org.springframework.data.domain.Range<? extends Number> range) {
+	default Long zRangeStoreRevByScore(byte @NonNull [] dstKey, byte @NonNull [] srcKey,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range) {
 		return zRangeStoreRevByScore(dstKey, srcKey, range, io.valkey.springframework.data.valkey.connection.Limit.unlimited());
 	}
 
@@ -1488,9 +1443,8 @@ public interface ValkeyZSetCommands {
 	 * @since 3.0
 	 * @see <a href="https://valkey.io/commands/zrangestore">Valkey Documentation: ZRANGESTORE</a>
 	 */
-	@Nullable
-	Long zRangeStoreRevByScore(byte[] dstKey, byte[] srcKey,
-			org.springframework.data.domain.Range<? extends Number> range,
-			io.valkey.springframework.data.valkey.connection.Limit limit);
+	Long zRangeStoreRevByScore(byte @NonNull [] dstKey, byte @NonNull [] srcKey,
+			org.springframework.data.domain.@NonNull Range<? extends @NonNull Number> range,
+			io.valkey.springframework.data.valkey.connection.@NonNull Limit limit);
 
 }

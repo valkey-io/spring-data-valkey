@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package io.valkey.springframework.data.valkey.core.convert;
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.core.convert.support.GenericConversionService;
 import org.springframework.data.convert.DefaultTypeMapper;
@@ -28,7 +29,6 @@ import org.springframework.data.mapping.Alias;
 import org.springframework.data.mapping.PersistentEntity;
 import org.springframework.data.mapping.context.MappingContext;
 import io.valkey.springframework.data.valkey.core.convert.Bucket.BucketPropertyPath;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -144,6 +144,7 @@ public class DefaultValkeyTypeMapper extends DefaultTypeMapper<BucketPropertyPat
 			return Alias.NONE;
 		}
 
+		@SuppressWarnings("NullAway")
 		public void writeTypeTo(BucketPropertyPath sink, Object alias) {
 
 			if (typeKey != null) {
@@ -155,5 +156,7 @@ public class DefaultValkeyTypeMapper extends DefaultTypeMapper<BucketPropertyPat
 				}
 			}
 		}
+
 	}
+
 }

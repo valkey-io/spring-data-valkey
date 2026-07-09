@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 the original author or authors.
+ * Copyright 2024-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 import redis.clients.jedis.DefaultJedisClientConfig;
 
 /**
- * Strategy interface for customizing {@link DefaultJedisClientConfig.Builder JedisClientConfig}. Any ClientConfig will
- * be used to call this interface implementation so you can set the protocol, client name, etc. after Spring has applies
- * its defaults.
+ * Strategy interface for customizing {@link DefaultJedisClientConfig.Builder JedisClientConfig}. Objects implementing
+ * this interface will be invoked with any ClientConfig builder so you can customize the ClientConfig builder after
+ * Spring has applied its defaults.
  *
  * @author Mark Paluch
  * @since 3.4

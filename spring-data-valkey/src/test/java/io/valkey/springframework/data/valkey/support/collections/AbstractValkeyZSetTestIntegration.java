@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.DoubleAsStringObjectFactory;
 import io.valkey.springframework.data.valkey.DoubleObjectFactory;
@@ -42,7 +44,6 @@ import io.valkey.springframework.data.valkey.core.DefaultTypedTuple;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.ZSetOperations.TypedTuple;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration test for Valkey ZSet.
@@ -53,6 +54,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author Andrey Shlykov
  * @author Christoph Strobl
+ * @author Vinoth Selvaraj
  */
 public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValkeyCollectionIntegrationTests<T> {
 
@@ -76,7 +78,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		zSet = (ValkeyZSet<T>) collection;
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testAddWithScore() {
 		T t1 = getT();
 		T t2 = getT();
@@ -93,7 +95,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(iterator.hasNext()).isFalse();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	public void testAdd() {
 		T t1 = getT();
 		T t2 = getT();
@@ -110,7 +112,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.score(t3)).isEqualTo(d);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testFirst() {
 		T t1 = getT();
 		T t2 = getT();
@@ -124,7 +126,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.first()).isEqualTo(t1);
 	}
 
-	@ParameterizedValkeyTest // GH-2038
+	@Test // GH-2038
 	@EnabledOnCommand("ZPOPMIN")
 	void testPopFirst() {
 
@@ -140,7 +142,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest // GH-2038
+	@Test // GH-2038
 	@EnabledOnCommand("ZPOPMIN")
 	void testPopFirstWithTimeout() {
 
@@ -156,12 +158,12 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testFirstException() {
 		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> zSet.first());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testLast() {
 
 		T t1 = getT();
@@ -176,7 +178,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.last()).isEqualTo(t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@EnabledOnCommand("ZPOPMAX")
 	void testPopLast() {
 
@@ -192,7 +194,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@EnabledOnCommand("ZPOPMAX")
 	void testPopLastWithTimeout() {
 
@@ -208,12 +210,12 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet).hasSize(2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testLastException() {
 		assertThatExceptionOfType(NoSuchElementException.class).isThrownBy(() -> zSet.last());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRank() {
 		T t1 = getT();
 		T t2 = getT();
@@ -230,7 +232,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		// assertNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReverseRank() {
 		T t1 = getT();
 		T t2 = getT();
@@ -246,7 +248,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.rank(getT())).isNull();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-729
+	@Test // DATAREDIS-729
 	void testLexCountUnbounded() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -263,7 +265,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.lexCount(Range.unbounded())).isEqualTo(Long.valueOf(3));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-729
+	@Test // DATAREDIS-729
 	void testLexCountBounded() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -280,7 +282,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.lexCount(Range.rightUnbounded(Range.Bound.exclusive(t1.toString())))).isEqualTo(Long.valueOf(2));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testScore() {
 		T t1 = getT();
 		T t2 = getT();
@@ -296,7 +298,28 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.score(t3)).isEqualTo(Double.valueOf(5));
 	}
 
-	@ParameterizedValkeyTest
+	@Test // GH-3256
+	void testIncrementScore() {
+
+		ValkeyZSet<T> zSet = createZSetFor("test:zset:increment");
+		T t1 = getT();
+		T t2 = getT();
+		zSet.add(t1, 3);
+
+		zSet.incrementScore(t1, 5);
+		assertThat(zSet.score(t1)).isEqualTo(Double.valueOf(8));
+
+		zSet.incrementScore(t1, -1);
+		assertThat(zSet.score(t1)).isEqualTo(Double.valueOf(7));
+
+		// new member (absent before)
+		Double newScore = zSet.incrementScore(t2, 7);
+		assertThat(newScore).isEqualTo(Double.valueOf(7));
+		assertThat(zSet.score(t2)).isEqualTo(Double.valueOf(7));
+	}
+
+
+	@Test
 	void testDefaultScore() {
 		assertThat(zSet.getDefaultScore()).isCloseTo(1, Offset.offset(0d));
 	}
@@ -306,7 +329,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		return new DefaultValkeyZSet<>((BoundZSetOperations<String, T>) zSet.getOperations().boundZSetOps(key));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRange() {
 		T t1 = getT();
 		T t2 = getT();
@@ -323,7 +346,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(iterator.next()).isEqualTo(t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRangeWithScores() {
 
 		T t1 = getT();
@@ -347,7 +370,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuple2.getScore()).isEqualTo(Double.valueOf(3));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReverseRange() {
 		T t1 = getT();
 		T t2 = getT();
@@ -364,7 +387,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(iterator.next()).isEqualTo(t1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReverseRangeWithScores() {
 
 		T t1 = getT();
@@ -388,7 +411,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuple2.getScore()).isEqualTo(Double.valueOf(1));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-407
+	@Test // DATAREDIS-407
 	void testRangeByLexUnbounded() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -408,7 +431,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuple).isEqualTo(t1);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-407
+	@Test // DATAREDIS-407
 	void testRangeByLexBounded() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -428,7 +451,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuple).isEqualTo(t2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-407
+	@Test // DATAREDIS-407
 	void testRangeByLexUnboundedWithLimit() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -448,7 +471,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuple).isEqualTo(t2);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-407
+	@Test // DATAREDIS-407
 	void testRangeByLexBoundedWithLimit() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, LongAsStringObjectFactory.class,
@@ -467,7 +490,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuples).hasSize(2).containsSequence(t2, t3);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-729
+	@Test // DATAREDIS-729
 	void testReverseRangeByLexBoundedWithLimit() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -486,7 +509,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuples).hasSize(2).containsSequence(t2, t1);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-729
+	@Test // DATAREDIS-729
 	void testReverseRangeByScore() {
 
 		T t1 = getT();
@@ -504,7 +527,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(iterator.next()).isEqualTo(t2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReverseRangeByScoreWithScores() {
 
 		T t1 = getT();
@@ -529,7 +552,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testRangeByScore() {
 		T t1 = getT();
 		T t2 = getT();
@@ -548,7 +571,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(iterator.next()).isEqualTo(t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRangeByScoreWithScores() {
 
 		T t1 = getT();
@@ -572,7 +595,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuple2.getScore()).isEqualTo(Double.valueOf(3));
 	}
 
-	@ParameterizedValkeyTest // GH-2345
+	@Test // GH-2345
 	void testRangeAndStoreByLex() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -590,7 +613,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuples).hasSize(2).containsSequence(t2, t3);
 	}
 
-	@ParameterizedValkeyTest // GH-2345
+	@Test // GH-2345
 	void testRangeAndStoreRevByLex() {
 
 		assumeThat(factory).isOfAnyClassIn(DoubleObjectFactory.class, DoubleAsStringObjectFactory.class,
@@ -609,8 +632,8 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuples).hasSize(2).containsSequence(t1, t2);
 	}
 
-	@ParameterizedValkeyTest // GH-2345
-	@Disabled("https://github.com/spring-projects/spring-data-valkey/issues/2441")
+	@Test // GH-2345
+	@Disabled("https://github.com/spring-projects/spring-data-redis/issues/2441")
 	void testRangeAndStoreByScore() {
 
 		T t1 = getT();
@@ -625,8 +648,8 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuples).hasSize(2).containsSequence(t2, t3);
 	}
 
-	@ParameterizedValkeyTest // GH-2345
-	@Disabled("https://github.com/spring-projects/spring-data-valkey/issues/2441")
+	@Test // GH-2345
+	@Disabled("https://github.com/spring-projects/spring-data-redis/issues/2441")
 	void testRangeAndStoreRevByScore() {
 
 		T t1 = getT();
@@ -642,7 +665,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(tuples).hasSize(2).containsSequence(t2, t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemove() {
 		T t1 = getT();
 		T t2 = getT();
@@ -662,7 +685,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(iterator.next()).isEqualTo(t4);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemoveByScore() {
 		T t1 = getT();
 		T t2 = getT();
@@ -683,7 +706,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(iterator.next()).isEqualTo(t4);
 	}
 
-	@ParameterizedValkeyTest // GH-2041
+	@Test // GH-2041
 	@EnabledOnCommand("ZDIFF")
 	void testDifference() {
 
@@ -708,7 +731,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.diffWithScores(Arrays.asList(set1, set2))).containsOnly(new DefaultTypedTuple<>(t1, 1d));
 	}
 
-	@ParameterizedValkeyTest // GH-2041
+	@Test // GH-2041
 	void testDifferenceAndStore() {
 
 		ValkeyZSet<T> set1 = createZSetFor("test:zset:set1");
@@ -734,7 +757,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(diff).containsOnly(t1);
 	}
 
-	@ParameterizedValkeyTest // GH-2042
+	@Test // GH-2042
 	@EnabledOnCommand("ZINTER")
 	void testIntersect() {
 
@@ -760,7 +783,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 				.containsOnly(new DefaultTypedTuple<>(t2, 6d));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIntersectAndStore() {
 
 		ValkeyZSet<T> interSet1 = createZSetFor("test:zset:inter1");
@@ -789,7 +812,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(inter.getKey()).isEqualTo(resultName);
 	}
 
-	@ParameterizedValkeyTest // GH-2042
+	@Test // GH-2042
 	@EnabledOnCommand("ZUNION")
 	void testUnion() {
 
@@ -814,7 +837,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testUnionAndStore() {
 
 		ValkeyZSet<T> unionSet1 = createZSetFor("test:zset:union1");
@@ -844,7 +867,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(union.score(t4)).isEqualTo(Double.valueOf(5));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	public void testIterator() {
 		T t1 = getT();
 		T t2 = getT();
@@ -865,7 +888,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(iterator.hasNext()).isFalse();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	public void testToArray() {
 		T t1 = getT();
 		T t2 = getT();
@@ -881,7 +904,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(array).isEqualTo(new Object[] { t1, t2, t3, t4 });
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	public void testToArrayWithGenerics() {
 		T t1 = getT();
 		T t2 = getT();
@@ -897,7 +920,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(array).isEqualTo(new Object[] { t1, t2, t3, t4 });
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-314
+	@Test // DATAREDIS-314
 	void testScanWorksCorrectly() throws IOException {
 
 		T t1 = getT();
@@ -919,7 +942,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 
 	}
 
-	@ParameterizedValkeyTest // GH-1794
+	@Test // GH-1794
 	void testZAddIfAbsentWorks() {
 
 		T t1 = getT();
@@ -928,7 +951,7 @@ public abstract class AbstractValkeyZSetTestIntegration<T> extends AbstractValke
 		assertThat(zSet.addIfAbsent(t1, 1)).isFalse();
 	}
 
-	@ParameterizedValkeyTest // GH-2049
+	@Test // GH-2049
 	@EnabledOnCommand("ZRANDMEMBER")
 	void randMemberReturnsSomething() {
 

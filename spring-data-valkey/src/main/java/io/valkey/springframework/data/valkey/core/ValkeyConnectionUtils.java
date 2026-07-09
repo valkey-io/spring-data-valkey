@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,12 @@ import org.aopalliance.intercept.MethodInterceptor;
 import org.aopalliance.intercept.MethodInvocation;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 import org.springframework.aop.RawTargetAccess;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.dao.DataAccessException;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import org.springframework.lang.Nullable;
 import org.springframework.transaction.support.ResourceHolderSupport;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
@@ -231,7 +231,7 @@ public abstract class ValkeyConnectionUtils {
 		proxyFactory.addAdvice(new ConnectionSplittingInterceptor(factory));
 		proxyFactory.addInterface(ValkeyConnectionProxy.class);
 
-		return ValkeyConnection.class.cast(proxyFactory.getProxy());
+		return (ValkeyConnection) proxyFactory.getProxy();
 	}
 
 	/**
@@ -349,6 +349,7 @@ public abstract class ValkeyConnectionUtils {
 				doCloseConnection(connection);
 			}
 		}
+
 	}
 
 	/**
@@ -397,22 +398,8 @@ public abstract class ValkeyConnectionUtils {
 	 * @author Thomas Darimont
 	 * @author Mark Paluch
 	 */
-	private static class ValkeyTransactionSynchronizer implements TransactionSynchronization {
-
-		private final ValkeyConnectionHolder connectionHolder;
-		private final ValkeyConnection connection;
-		private final ValkeyConnectionFactory factory;
-
-		private final boolean readOnly;
-
-		ValkeyTransactionSynchronizer(ValkeyConnectionHolder connectionHolder, ValkeyConnection connection,
-				ValkeyConnectionFactory factory, boolean readOnly) {
-
-			this.connectionHolder = connectionHolder;
-			this.connection = connection;
-			this.factory = factory;
-			this.readOnly = readOnly;
-		}
+	private record ValkeyTransactionSynchronizer(ValkeyConnectionHolder connectionHolder, ValkeyConnection connection,
+			ValkeyConnectionFactory factory, boolean readOnly) implements TransactionSynchronization {
 
 		@Override
 		public void afterCompletion(int status) {
@@ -437,6 +424,7 @@ public abstract class ValkeyConnectionUtils {
 				connectionHolder.reset();
 			}
 		}
+
 	}
 
 	/**
@@ -463,11 +451,12 @@ public abstract class ValkeyConnectionUtils {
 		}
 
 		@Override
-		public Object invoke(MethodInvocation invocation) throws Throwable {
+		public @Nullable Object invoke(MethodInvocation invocation) throws Throwable {
 			return intercept(invocation.getThis(), invocation.getMethod(), invocation.getArguments());
 		}
 
-		public Object intercept(Object obj, Method method, Object[] args) throws Throwable {
+		@SuppressWarnings("NullAway")
+		public @Nullable Object intercept(@Nullable Object obj, Method method, Object[] args) throws Throwable {
 
 			if (method.getName().equals("getTargetConnection")) {
 				// Handle getTargetConnection method: return underlying ValkeyConnection.
@@ -510,8 +499,7 @@ public abstract class ValkeyConnectionUtils {
 			try {
 
 				if (commandInterfaceMethod != null) {
-					target = ReflectionUtils.invokeMethod(commandInterfaceMethod,
-							connection);
+					target = ReflectionUtils.invokeMethod(commandInterfaceMethod, connection);
 				}
 
 				return invoke(method, target, args);
@@ -535,6 +523,7 @@ public abstract class ValkeyConnectionUtils {
 		private boolean isPotentiallyThreadBoundCommand(ValkeyCommand command) {
 			return ValkeyCommand.UNKNOWN.equals(command) || !command.isReadonly();
 		}
+
 	}
 
 	/**
@@ -554,7 +543,6 @@ public abstract class ValkeyConnectionUtils {
 		 * Create a new ValkeyConnectionHolder for the given Valkey Connection assuming that there is no ongoing transaction.
 		 *
 		 * @param connection the Valkey Connection to hold.
-		 * @see #ValkeyConnectionHolder(ValkeyConnection, boolean)
 		 */
 		public ValkeyConnectionHolder(ValkeyConnection connection) {
 			this.connection = connection;
@@ -567,8 +555,7 @@ public abstract class ValkeyConnectionUtils {
 			return this.connection != null;
 		}
 
-		@Nullable
-		public ValkeyConnection getConnection() {
+		public @Nullable ValkeyConnection getConnection() {
 			return this.connection;
 		}
 
@@ -630,6 +617,7 @@ public abstract class ValkeyConnectionUtils {
 			super.clear();
 			this.transactionActive = false;
 		}
+
 	}
 
 	/**
@@ -651,4 +639,5 @@ public abstract class ValkeyConnectionUtils {
 		ValkeyConnection getTargetConnection();
 
 	}
+
 }

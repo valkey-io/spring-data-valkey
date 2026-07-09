@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,9 +49,9 @@ public interface Cursor<T> extends CloseableIterator<T> {
 	 * <strong>NOTE:</strong> the id might change while iterating items.
 	 *
 	 * @return
-	 * @deprecated since 3.3.0, use {@link #getId()} instead as the cursorId can exceed {@link Long#MAX_VALUE}.
+	 * @deprecated since 3.3, use {@link #getId()} instead as the cursorId can exceed {@link Long#MAX_VALUE}.
 	 */
-	@Deprecated(since = "3.3.0")
+	@Deprecated(since = "3.3")
 	long getCursorId();
 
 	/**

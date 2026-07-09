@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package io.valkey.springframework.data.valkey.serializer;
 
 import java.nio.ByteBuffer;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -31,7 +31,7 @@ class DefaultValkeyElementWriter<T> implements ValkeyElementWriter<T> {
 
 	private final @Nullable ValkeySerializer<T> serializer;
 
-	DefaultValkeyElementWriter(ValkeySerializer<T> serializer) {
+	DefaultValkeyElementWriter(@Nullable ValkeySerializer<T> serializer) {
 		this.serializer = serializer;
 	}
 
@@ -54,4 +54,5 @@ class DefaultValkeyElementWriter<T> implements ValkeyElementWriter<T> {
 		throw new IllegalStateException(
 				"Cannot serialize value of type %s without a serializer".formatted(ObjectUtils.nullSafeClassName(value)));
 	}
+
 }

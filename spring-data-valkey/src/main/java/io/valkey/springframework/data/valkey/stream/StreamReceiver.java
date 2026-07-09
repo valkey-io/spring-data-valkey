@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.OptionalInt;
 import java.util.function.Function;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
@@ -37,7 +38,6 @@ import io.valkey.springframework.data.valkey.hash.ObjectHashMapper;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -232,7 +232,6 @@ public interface StreamReceiver<K, V extends Record<K, ?>> {
 		/**
 		 * @return a new builder for {@link StreamReceiverOptions}.
 		 */
-		@SuppressWarnings("unchecked")
 		public static <T> StreamReceiverOptionsBuilder<String, ObjectRecord<String, T>> builder(
 				HashMapper<T, byte[], byte[]> hashMapper) {
 
@@ -276,11 +275,11 @@ public interface StreamReceiver<K, V extends Record<K, ?>> {
 			return hashValueSerializer;
 		}
 
-		@Nullable
-		public HashMapper<Object, Object, Object> getHashMapper() {
+		public @Nullable HashMapper<Object, Object, Object> getHashMapper() {
 			return hashMapper;
 		}
 
+		@SuppressWarnings("NullAway")
 		public HashMapper<Object, Object, Object> getRequiredHashMapper() {
 
 			if (!hasHashMapper()) {
@@ -321,6 +320,7 @@ public interface StreamReceiver<K, V extends Record<K, ?>> {
 		private @Nullable HashMapper<V, ?, ?> hashMapper;
 		private @Nullable Class<?> targetType;
 
+		@SuppressWarnings("NullAway")
 		private StreamReceiverOptionsBuilder() {}
 
 		/**
@@ -500,8 +500,9 @@ public interface StreamReceiver<K, V extends Record<K, ?>> {
 		 */
 		public StreamReceiverOptions<K, V> build() {
 			return new StreamReceiverOptions<>(pollTimeout, batchSize, resumeFunction, keySerializer, hashKeySerializer,
-					hashValueSerializer,
-					targetType, hashMapper);
+					hashValueSerializer, targetType, hashMapper);
 		}
+
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -260,6 +260,7 @@ class LettuceReactiveValkeyClusterConnection extends LettuceReactiveValkeyConnec
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public Mono<Void> clusterMeet(ValkeyClusterNode node) {
 
 		Assert.notNull(node, "Cluster node must not be null for CLUSTER MEET command");
@@ -267,7 +268,7 @@ class LettuceReactiveValkeyClusterConnection extends LettuceReactiveValkeyConnec
 		Assert.isTrue(node.getPort() != null && node.getPort() > 0, "Node to meet cluster must have a port greater 0");
 
 		return clusterGetNodes()
-				.flatMap(actualNode -> execute(node, cmd -> cmd.clusterMeet(node.getHost(), node.getPort()))).then();
+				.flatMap(actualNode -> execute(node, cmd -> cmd.clusterMeet(node.getRequiredHost(), node.getPort()))).then();
 	}
 
 	@Override
@@ -286,7 +287,7 @@ class LettuceReactiveValkeyClusterConnection extends LettuceReactiveValkeyConnec
 				case IMPORTING -> commands.clusterSetSlotImporting(slot, nodeId);
 				case NODE -> commands.clusterSetSlotNode(slot, nodeId);
 				case STABLE -> commands.clusterSetSlotStable(slot);
-      		};
+			};
 		}).then();
 	}
 
@@ -357,8 +358,9 @@ class LettuceReactiveValkeyClusterConnection extends LettuceReactiveValkeyConnec
 			});
 		}
 
-		return getConnection().flatMap(it -> Mono.fromCompletionStage(it.getConnectionAsync(node.getHost(), node.getPort()))
-				.map(StatefulRedisConnection::reactive));
+		return getConnection()
+				.flatMap(it -> Mono.fromCompletionStage(it.getConnectionAsync(node.getRequiredHost(), node.getRequiredPort()))
+						.map(StatefulRedisConnection::reactive));
 	}
 
 	/**

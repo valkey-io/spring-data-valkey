@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,15 @@
  */
 package io.valkey.springframework.data.valkey.cache;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatException;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
+
+import io.valkey.springframework.data.valkey.connection.SetCondition;
+import reactor.core.publisher.Mono;
+
+import java.nio.ByteBuffer;
 import java.time.Duration;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -35,7 +31,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.quality.Strictness;
 import org.springframework.dao.PessimisticLockingFailureException;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
+import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ReactiveStringCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
@@ -51,14 +51,11 @@ import io.valkey.springframework.data.valkey.core.types.Expiration;
 @ExtendWith(MockitoExtension.class)
 class DefaultValkeyCacheWriterUnitTests {
 
-	@Mock
-	private CacheStatisticsCollector mockCacheStatisticsCollector = mock(CacheStatisticsCollector.class);
+	@Mock private CacheStatisticsCollector mockCacheStatisticsCollector = mock(CacheStatisticsCollector.class);
 
-	@Mock
-	private ValkeyConnection mockConnection;
+	@Mock private ValkeyConnection mockConnection;
 
-	@Mock(strictness = Mock.Strictness.LENIENT)
-	private ValkeyConnectionFactory mockConnectionFactory;
+	@Mock(strictness = Mock.Strictness.LENIENT) private ValkeyConnectionFactory mockConnectionFactory;
 
 	@BeforeEach
 	void setup() {
@@ -126,8 +123,8 @@ class DefaultValkeyCacheWriterUnitTests {
 
 		doReturn(mockStringCommands).when(this.mockConnection).stringCommands();
 		doReturn(mockKeyCommands).when(this.mockConnection).keyCommands();
-		doThrow(new PessimisticLockingFailureException("you-shall-not-pass")).when(mockStringCommands).set(any(byte[].class),
-				any(byte[].class), any(), any());
+		doThrow(new PessimisticLockingFailureException("you-shall-not-pass")).when(mockStringCommands)
+				.set(any(byte[].class), any(byte[].class), any(SetCondition.class), any());
 
 		ValkeyCacheWriter cacheWriter = spy(
 				new DefaultValkeyCacheWriter(this.mockConnectionFactory, Duration.ofMillis(10), mock(BatchStrategy.class))
@@ -137,5 +134,63 @@ class DefaultValkeyCacheWriterUnitTests {
 				.isThrownBy(() -> cacheWriter.get("TestCache", key, () -> value, Duration.ofMillis(10), false));
 
 		verify(mockKeyCommands, never()).del(any());
+	}
+
+	@Test // GH-3236
+	void usesAsyncPutIfPossible() {
+
+		byte[] key = "TestKey".getBytes();
+		byte[] value = "TestValue".getBytes();
+
+		ValkeyConnectionFactory connectionFactory = mock(ValkeyConnectionFactory.class,
+				withSettings().extraInterfaces(ReactiveValkeyConnectionFactory.class));
+		ReactiveValkeyConnection mockConnection = mock(ReactiveValkeyConnection.class);
+		ReactiveStringCommands mockStringCommands = mock(ReactiveStringCommands.class);
+
+		doReturn(mockConnection).when((ReactiveValkeyConnectionFactory) connectionFactory).getReactiveConnection();
+		doReturn(mockStringCommands).when(mockConnection).stringCommands();
+		doReturn(Mono.just(value)).when(mockStringCommands).set(any(), any(), any(SetCondition.class), any(Expiration.class));
+
+		ValkeyCacheWriter cacheWriter = ValkeyCacheWriter.create(connectionFactory, cfg -> {
+			cfg.immediateWrites(false);
+		});
+
+		cacheWriter.put("TestCache", key, value, null);
+
+		verify(mockConnection, times(1)).stringCommands();
+		verify(mockStringCommands, times(1)).set(eq(ByteBuffer.wrap(key)), any());
+	}
+
+	@Test // GH-3236
+	void usesBlockingWritesIfConfiguredWithImmediateWritesEnabled() {
+
+		byte[] key = "TestKey".getBytes();
+		byte[] value = "TestValue".getBytes();
+
+		ValkeyConnectionFactory connectionFactory = mock(ValkeyConnectionFactory.class,
+				withSettings().strictness(Strictness.LENIENT).extraInterfaces(ReactiveValkeyConnectionFactory.class));
+		ReactiveValkeyConnection reactiveMockConnection = mock(ReactiveValkeyConnection.class,
+				withSettings().strictness(Strictness.LENIENT));
+		ReactiveStringCommands reactiveMockStringCommands = mock(ReactiveStringCommands.class,
+				withSettings().strictness(Strictness.LENIENT));
+
+		doReturn(reactiveMockConnection).when((ReactiveValkeyConnectionFactory) connectionFactory).getReactiveConnection();
+		doReturn(reactiveMockStringCommands).when(reactiveMockConnection).stringCommands();
+
+		ValkeyStringCommands mockStringCommands = mock(ValkeyStringCommands.class);
+
+		doReturn(mockStringCommands).when(this.mockConnection).stringCommands();
+		doReturn(this.mockConnection).when(connectionFactory).getConnection();
+
+		ValkeyCacheWriter cacheWriter = ValkeyCacheWriter.create(connectionFactory, cfg -> {
+			cfg.immediateWrites(true);
+		});
+
+		cacheWriter.put("TestCache", key, value, null);
+
+		verify(this.mockConnection, times(1)).stringCommands();
+		verify(mockStringCommands, times(1)).set(eq(key), any());
+		verify(reactiveMockConnection, never()).stringCommands();
+		verify(reactiveMockStringCommands, never()).set(eq(ByteBuffer.wrap(key)), any());
 	}
 }

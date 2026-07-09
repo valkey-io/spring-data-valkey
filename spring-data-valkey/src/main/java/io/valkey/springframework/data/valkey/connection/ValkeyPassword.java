@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,11 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.Arrays;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -34,6 +35,7 @@ import org.springframework.util.StringUtils;
  *
  * @author Mark Paluch
  * @author Christoph Strobl
+ * @author Yong-Hyun Kim
  * @since 2.0
  */
 public class ValkeyPassword {
@@ -54,10 +56,11 @@ public class ValkeyPassword {
 	 */
 	public static ValkeyPassword of(@Nullable String passwordAsString) {
 
-		return Optional.ofNullable(passwordAsString) //
-				.filter(StringUtils::hasText) //
-				.map(it -> new ValkeyPassword(it.toCharArray())) //
-				.orElseGet(ValkeyPassword::none);
+		if (!StringUtils.hasText(passwordAsString)) {
+			return none();
+		}
+
+		return new ValkeyPassword(passwordAsString.toCharArray());
 	}
 
 	/**
@@ -66,12 +69,13 @@ public class ValkeyPassword {
 	 * @param passwordAsChars the password as char array.
 	 * @return the {@link ValkeyPassword} for {@code passwordAsChars}.
 	 */
-	public static ValkeyPassword of(@Nullable char[] passwordAsChars) {
+	public static ValkeyPassword of(char @Nullable [] passwordAsChars) {
 
-		return Optional.ofNullable(passwordAsChars) //
-				.filter(it -> !ObjectUtils.isEmpty(passwordAsChars)) //
-				.map(it -> new ValkeyPassword(Arrays.copyOf(it, it.length))) //
-				.orElseGet(ValkeyPassword::none);
+		if (ObjectUtils.isEmpty(passwordAsChars)) {
+			return none();
+		}
+
+		return new ValkeyPassword(Arrays.copyOf(passwordAsChars, passwordAsChars.length));
 	}
 
 	/**
@@ -139,11 +143,6 @@ public class ValkeyPassword {
 	}
 
 	@Override
-	public String toString() {
-		return "%s[%s]".formatted(getClass().getSimpleName(), isPresent() ? "*****" : "<none>");
-	}
-
-	@Override
 	public boolean equals(@Nullable Object o) {
 
 		if (this == o)
@@ -158,6 +157,12 @@ public class ValkeyPassword {
 
 	@Override
 	public int hashCode() {
-		return ObjectUtils.nullSafeHashCode(thePassword);
+		return Objects.hashCode(thePassword);
 	}
+
+	@Override
+	public String toString() {
+		return "%s[%s]".formatted(getClass().getSimpleName(), isPresent() ? "*****" : "<none>");
+	}
+
 }

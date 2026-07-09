@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
@@ -47,7 +49,6 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.SlotRa
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -73,13 +74,11 @@ public class LettuceClusterConnection extends LettuceConnection
 	static final ExceptionTranslationStrategy exceptionConverter = new PassThroughExceptionTranslationStrategy(
 			LettuceExceptionConverter.INSTANCE);
 
-	private boolean disposeClusterCommandExecutorOnClose;
-
-	private ClusterCommandExecutor clusterCommandExecutor;
-
-	private ClusterTopologyProvider topologyProvider;
-
 	private final Log log = LogFactory.getLog(getClass());
+
+	private final boolean disposeClusterCommandExecutorOnClose;
+	private final ClusterCommandExecutor clusterCommandExecutor;
+	private final ClusterTopologyProvider topologyProvider;
 
 	private final LettuceClusterGeoCommands geoCommands = new LettuceClusterGeoCommands(this);
 	private final LettuceClusterHashCommands hashCommands = new LettuceClusterHashCommands(this);
@@ -285,7 +284,7 @@ public class LettuceClusterConnection extends LettuceConnection
 	}
 
 	@Override
-	public String ping(ValkeyClusterNode node) {
+	public @Nullable String ping(ValkeyClusterNode node) {
 		return this.clusterCommandExecutor.executeCommandOnSingleNode(pingCommand(), node).getValue();
 	}
 
@@ -305,10 +304,10 @@ public class LettuceClusterConnection extends LettuceConnection
 
 		ValkeyClusterNode nodeToUse = this.topologyProvider.getTopology().lookup(master);
 
-		LettuceClusterCommandCallback<Set<ValkeyClusterNode>> command = client ->
-			LettuceConverters.toSetOfValkeyClusterNodes(client.clusterSlaves(nodeToUse.getId()));
+		LettuceClusterCommandCallback<Set<ValkeyClusterNode>> command = client -> LettuceConverters
+				.toSetOfValkeyClusterNodes(client.clusterReplicas(nodeToUse.getId()));
 
-		return this.clusterCommandExecutor.executeCommandOnSingleNode(command, master).getValue();
+		return this.clusterCommandExecutor.executeCommandOnSingleNode(command, master).getRequiredValue();
 	}
 
 	@Override
@@ -316,11 +315,11 @@ public class LettuceClusterConnection extends LettuceConnection
 
 		Set<ValkeyClusterNode> activeMasterNodes = this.topologyProvider.getTopology().getActiveMasterNodes();
 
-		LettuceClusterCommandCallback<Collection<ValkeyClusterNode>> command = client ->
-			Converters.toSetOfValkeyClusterNodes(client.clusterSlaves(client.clusterMyId()));
+		LettuceClusterCommandCallback<Collection<ValkeyClusterNode>> command = client -> Converters
+				.toSetOfValkeyClusterNodes(client.clusterReplicas(client.clusterMyId()));
 
-		List<NodeResult<Collection<ValkeyClusterNode>>> nodeResults =
-			this.clusterCommandExecutor.executeCommandAsyncOnNodes(command,activeMasterNodes).getResults();
+		List<NodeResult<Collection<ValkeyClusterNode>>> nodeResults = this.clusterCommandExecutor
+				.executeCommandAsyncOnNodes(command, activeMasterNodes).getResults();
 
 		Map<ValkeyClusterNode, Collection<ValkeyClusterNode>> result = new LinkedHashMap<>();
 
@@ -336,9 +335,8 @@ public class LettuceClusterConnection extends LettuceConnection
 		return SlotHash.getSlot(key);
 	}
 
-	@Nullable
 	@Override
-	public ValkeyClusterNode clusterGetNodeForSlot(int slot) {
+	public @Nullable ValkeyClusterNode clusterGetNodeForSlot(int slot) {
 
 		Set<ValkeyClusterNode> nodes = topologyProvider.getTopology().getSlotServingNodes(slot);
 
@@ -346,15 +344,15 @@ public class LettuceClusterConnection extends LettuceConnection
 	}
 
 	@Override
-	public ValkeyClusterNode clusterGetNodeForKey(byte[] key) {
+	public @Nullable ValkeyClusterNode clusterGetNodeForKey(byte[] key) {
 		return clusterGetNodeForSlot(clusterGetSlotForKey(key));
 	}
 
 	@Override
-	public ClusterInfo clusterGetClusterInfo() {
+	public @Nullable ClusterInfo clusterGetClusterInfo() {
 
-		LettuceClusterCommandCallback<ClusterInfo> command = client ->
-				new ClusterInfo(LettuceConverters.toProperties(client.clusterInfo()));
+		LettuceClusterCommandCallback<ClusterInfo> command = client -> new ClusterInfo(
+				LettuceConverters.toProperties(client.clusterInfo()));
 
 		return this.clusterCommandExecutor.executeCommandOnArbitraryNode(command).getValue();
 	}
@@ -422,7 +420,8 @@ public class LettuceClusterConnection extends LettuceConnection
 		Assert.hasText(node.getHost(), "Node to meet cluster must have a host");
 		Assert.isTrue(node.getPort() > 0, "Node to meet cluster must have a port greater 0");
 
-		LettuceClusterCommandCallback<String> command = client -> client.clusterMeet(node.getHost(), node.getPort());
+		LettuceClusterCommandCallback<String> command = client -> client.clusterMeet(node.getRequiredHost(),
+				node.getPort());
 
 		this.clusterCommandExecutor.executeCommandOnAllNodes(command);
 	}
@@ -467,7 +466,7 @@ public class LettuceClusterConnection extends LettuceConnection
 	}
 
 	@Override
-	public Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern) {
+	public @Nullable Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern) {
 		return new LettuceClusterKeyCommands(this).keys(node, pattern);
 	}
 
@@ -476,7 +475,7 @@ public class LettuceClusterConnection extends LettuceConnection
 		return new LettuceClusterKeyCommands(this).scan(node, options);
 	}
 
-	public byte[] randomKey(ValkeyClusterNode node) {
+	public byte @Nullable [] randomKey(ValkeyClusterNode node) {
 		return new LettuceClusterKeyCommands(this).randomKey(node);
 	}
 
@@ -580,7 +579,7 @@ public class LettuceClusterConnection extends LettuceConnection
 				}
 			}
 
-			return this.connection.getConnection(node.getHost(), node.getPort()).sync();
+			return this.connection.getConnection(node.getRequiredHost(), node.getRequiredPort()).sync();
 		}
 
 		@Override

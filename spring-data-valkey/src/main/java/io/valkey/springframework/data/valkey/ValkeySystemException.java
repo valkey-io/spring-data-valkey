@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package io.valkey.springframework.data.valkey;
 
 import org.springframework.dao.UncategorizedDataAccessException;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Exception thrown when we can't classify a Valkey exception into one of Spring generic data access exceptions.

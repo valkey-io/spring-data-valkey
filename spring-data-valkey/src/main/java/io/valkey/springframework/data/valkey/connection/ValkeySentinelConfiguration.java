@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,10 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import org.springframework.core.env.MapPropertySource;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.env.PropertySource;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.SentinelConfiguration;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -62,20 +62,18 @@ public class ValkeySentinelConfiguration implements ValkeyConfiguration, Sentine
 	private ValkeyPassword dataNodePassword = ValkeyPassword.none();
 	private ValkeyPassword sentinelPassword = ValkeyPassword.none();
 
-	private final Set<ValkeyNode> sentinels;
+	private final Set<ValkeyNode> sentinels = new LinkedHashSet<>();
 
 	private @Nullable String dataNodeUsername = null;
 	private @Nullable String sentinelUsername = null;
 
 	/**
-	 * Creates a new, default {@link ValkeySentinelConfiguration}.
+	 * Creates a new, default {@code ValkeySentinelConfiguration}.
 	 */
-	public ValkeySentinelConfiguration() {
-		this(new MapPropertySource("ValkeySentinelConfiguration", Collections.emptyMap()));
-	}
+	public ValkeySentinelConfiguration() {}
 
 	/**
-	 * Creates a new {@link ValkeySentinelConfiguration} for given {@link String hostPort} combinations.
+	 * Creates a new {@code ValkeySentinelConfiguration} for given {@link String hostPort} combinations.
 	 *
 	 * <pre class="code">
 	 * sentinelHostAndPorts[0] = 127.0.0.1:23679
@@ -86,60 +84,60 @@ public class ValkeySentinelConfiguration implements ValkeyConfiguration, Sentine
 	 * @since 1.5
 	 */
 	public ValkeySentinelConfiguration(String master, Set<String> sentinelHostAndPorts) {
-		this(new MapPropertySource("ValkeySentinelConfiguration", asMap(master, sentinelHostAndPorts)));
+
+		Assert.notNull(master, "Sentinel master must not be null");
+		Assert.notNull(sentinelHostAndPorts, "Sentinel nodes must not be null");
+
+		this.master = new SentinelMasterId(master);
+
+		for (String hostAndPort : sentinelHostAndPorts) {
+			addSentinel(ValkeyNode.fromString(hostAndPort, ValkeyNode.DEFAULT_SENTINEL_PORT));
+		}
 	}
 
 	/**
-	 * Creates a new {@link ValkeySentinelConfiguration} looking up configuration values from the given
-	 * {@link PropertySource}.
-	 *
-	 * <pre class="code">
-	 * spring.valkey.sentinel.master=myMaster
-	 * spring.valkey.sentinel.nodes=127.0.0.1:23679,127.0.0.1:23680,127.0.0.1:23681
-	 * </pre>
+	 * Construct a new {@code ValkeySentinelConfiguration} from the given {@link PropertySource}.
 	 *
 	 * @param propertySource must not be {@literal null}.
-	 * @since 1.5
-	 * @deprecated since 3.3, use {@link ValkeySentinelConfiguration#of(PropertySource)} instead. This constructor will be
-	 *             made private in the next major release.
+	 * @return a new {@code ValkeySentinelConfiguration} configured from the given {@link PropertySource}.
+	 * @since 3.3
 	 */
-	@Deprecated(since = "3.3")
-	public ValkeySentinelConfiguration(PropertySource<?> propertySource) {
+	public static ValkeySentinelConfiguration of(PropertySource<?> propertySource) {
 
 		Assert.notNull(propertySource, "PropertySource must not be null");
 
-		this.sentinels = new LinkedHashSet<>();
+		ValkeySentinelConfiguration configuration = new ValkeySentinelConfiguration();
 
 		if (propertySource.containsProperty(VALKEY_SENTINEL_MASTER_CONFIG_PROPERTY)) {
 			String sentinelMaster = String.valueOf(propertySource.getProperty(VALKEY_SENTINEL_MASTER_CONFIG_PROPERTY));
-			this.setMaster(sentinelMaster);
+			configuration.setMaster(sentinelMaster);
 		}
 
 		if (propertySource.containsProperty(VALKEY_SENTINEL_NODES_CONFIG_PROPERTY)) {
 			String sentinelNodes = String.valueOf(propertySource.getProperty(VALKEY_SENTINEL_NODES_CONFIG_PROPERTY));
-			appendSentinels(commaDelimitedListToSet(sentinelNodes));
+			configuration.appendSentinels(commaDelimitedListToSet(sentinelNodes));
 		}
 
 		if (propertySource.containsProperty(VALKEY_SENTINEL_PASSWORD_CONFIG_PROPERTY)) {
 			String sentinelPassword = String.valueOf(propertySource.getProperty(VALKEY_SENTINEL_PASSWORD_CONFIG_PROPERTY));
-			this.setSentinelPassword(sentinelPassword);
+			configuration.setSentinelPassword(sentinelPassword);
 		}
 
 		if (propertySource.containsProperty(VALKEY_SENTINEL_USERNAME_CONFIG_PROPERTY)) {
 			String sentinelUsername = String.valueOf(propertySource.getProperty(VALKEY_SENTINEL_USERNAME_CONFIG_PROPERTY));
-			this.setSentinelUsername(sentinelUsername);
+			configuration.setSentinelUsername(sentinelUsername);
 		}
 
 		if (propertySource.containsProperty(VALKEY_SENTINEL_DATA_NODE_USERNAME_CONFIG_PROPERTY)) {
 			String dataNodeUsername = String
 					.valueOf(propertySource.getProperty(VALKEY_SENTINEL_DATA_NODE_USERNAME_CONFIG_PROPERTY));
-			this.setUsername(dataNodeUsername);
+			configuration.setUsername(dataNodeUsername);
 		}
 
 		if (propertySource.containsProperty(VALKEY_SENTINEL_DATA_NODE_PASSWORD_CONFIG_PROPERTY)) {
 			String dataNodePassword = String
 					.valueOf(propertySource.getProperty(VALKEY_SENTINEL_DATA_NODE_PASSWORD_CONFIG_PROPERTY));
-			this.setPassword(dataNodePassword);
+			configuration.setPassword(dataNodePassword);
 		}
 
 		if (propertySource.containsProperty(VALKEY_SENTINEL_DATA_NODE_DATABASE_CONFIG_PROPERTY)) {
@@ -151,19 +149,10 @@ public class ValkeySentinelConfiguration implements ValkeyConfiguration, Sentine
 			} catch (NumberFormatException ex) {
 				throw new IllegalArgumentException("Invalid DB index '%s'; integer required".formatted(databaseSource));
 			}
-			this.setDatabase(database);
+			configuration.setDatabase(database);
 		}
-	}
 
-	/**
-	 * Construct a new {@link ValkeySentinelConfiguration} from the given {@link PropertySource}.
-	 *
-	 * @param propertySource must not be {@literal null}.
-	 * @return a new {@link ValkeySentinelConfiguration} configured from the given {@link PropertySource}.
-	 * @since 3.3
-	 */
-	public static ValkeySentinelConfiguration of(PropertySource<?> propertySource) {
-		return new ValkeySentinelConfiguration(propertySource);
+		return configuration;
 	}
 
 	/**
@@ -205,8 +194,24 @@ public class ValkeySentinelConfiguration implements ValkeyConfiguration, Sentine
 		this.master = master;
 	}
 
-	@Nullable
-	public NamedNode getMaster() {
+	public @Nullable NamedNode getMaster() {
+		return master;
+	}
+
+	/**
+	 * Return the required master node or throw {@link IllegalStateException} if it is not set.
+	 *
+	 * @return
+	 * @since 4.1
+	 */
+	public NamedNode getRequiredMaster() {
+
+		NamedNode master = getMaster();
+
+		if (master == null) {
+			throw new IllegalStateException("Sentinel master node not set");
+		}
+
 		return master;
 	}
 
@@ -242,8 +247,8 @@ public class ValkeySentinelConfiguration implements ValkeyConfiguration, Sentine
 
 	/**
 	 * @see #sentinel(ValkeyNode)
-	 * @param host valkey sentinel node host name or ip.
-	 * @param port valkey sentinel port.
+	 * @param host Valkey sentinel node host name or ip.
+	 * @param port Valkey sentinel port.
 	 * @return this.
 	 */
 	public ValkeySentinelConfiguration sentinel(String host, Integer port) {
@@ -275,9 +280,8 @@ public class ValkeySentinelConfiguration implements ValkeyConfiguration, Sentine
 		this.dataNodeUsername = username;
 	}
 
-	@Nullable
 	@Override
-	public String getUsername() {
+	public @Nullable String getUsername() {
 		return this.dataNodeUsername;
 	}
 
@@ -294,9 +298,8 @@ public class ValkeySentinelConfiguration implements ValkeyConfiguration, Sentine
 		this.dataNodePassword = password;
 	}
 
-	@Nullable
 	@Override
-	public String getSentinelUsername() {
+	public @Nullable String getSentinelUsername() {
 		return this.sentinelUsername;
 	}
 

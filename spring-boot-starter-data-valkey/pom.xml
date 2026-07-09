@@ -128,6 +128,13 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-messaging</artifactId>
+			<version>${spring-messaging.version}</version>
+			<optional>true</optional>
+		</dependency>
+
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-testcontainers</artifactId>
 			<version>${spring-boot.version}</version>
@@ -146,6 +153,12 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-actuator-autoconfigure</artifactId>
+			<version>${spring-boot.version}</version>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-health</artifactId>
 			<version>${spring-boot.version}</version>
 			<optional>true</optional>
 		</dependency>
@@ -176,12 +189,21 @@
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers</artifactId>
+			<version>${testcontainers.version}</version>
+			<scope>compile</scope>
+			<optional>true</optional>
+		</dependency>
+		<dependency>
+			<groupId>com.redis</groupId>
+			<artifactId>testcontainers-redis</artifactId>
+			<version>${testcontainers-redis.version}</version>
 			<optional>true</optional>
 		</dependency>
 
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>junit-jupiter</artifactId>
+			<version>${testcontainers.version}</version>
 			<scope>test</scope>
 		</dependency>
 
@@ -191,20 +213,14 @@
 			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
-
-		<dependency>
-			<groupId>org.junit.platform</groupId>
-			<artifactId>junit-platform-engine</artifactId>
-			<version>${junit-platform.version}</version>
-			<scope>test</scope>
-		</dependency>
-
 		<dependency>
 			<groupId>org.junit.platform</groupId>
 			<artifactId>junit-platform-launcher</artifactId>
-			<version>${junit-platform.version}</version>
+			<version>${junit.version}</version>
 			<scope>test</scope>
 		</dependency>
+
+
 
 		<dependency>
 			<groupId>io.projectreactor</groupId>
@@ -271,13 +287,13 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.13.0</version>
+				<version>${maven-compiler-plugin.version}</version>
 			</plugin>
 
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<version>3.5.2</version>
+				<version>${maven-surefire-plugin.version}</version>
 				<configuration>
 					<!-- Retain stack traces -->
 					<argLine>-XX:-OmitStackTraceInFastThrow</argLine>
@@ -292,7 +308,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>3.3.1</version>
+				<version>${maven-source-plugin.version}</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -307,7 +323,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
-				<version>3.10.1</version>
+				<version>${maven-javadoc-plugin.version}</version>
 				<executions>
 					<execution>
 						<id>attach-javadocs</id>
@@ -322,7 +338,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-gpg-plugin</artifactId>
-				<version>3.1.0</version>
+				<version>${maven-gpg-plugin.version}</version>
 				<executions>
 					<execution>
 						<id>sign-artifacts</id>
@@ -338,7 +354,7 @@
 			<plugin>
 				<groupId>org.sonatype.plugins</groupId>
 				<artifactId>nexus-staging-maven-plugin</artifactId>
-				<version>1.6.13</version>
+				<version>${nexus-staging-plugin.version}</version>
 				<extensions>true</extensions>
 				<configuration>
 					<serverId>ossrh</serverId>

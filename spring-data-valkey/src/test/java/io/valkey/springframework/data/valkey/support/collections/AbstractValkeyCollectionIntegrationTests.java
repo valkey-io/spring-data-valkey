@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,13 @@ import java.util.List;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.ParameterizedClass;
 
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.core.ValkeyCallback;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Base test for Valkey collections.
@@ -38,6 +39,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Costin Leau
  * @author Mark Paluch
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 
@@ -84,7 +86,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 		});
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	public void testAdd() {
 		T t1 = getT();
 		assertThat(collection.add(t1)).isTrue();
@@ -93,7 +95,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testAddAll() {
 		T t1 = getT();
 		T t2 = getT();
@@ -108,7 +110,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 		assertThat(3).isEqualTo(collection.size());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testClear() {
 		T t1 = getT();
 		assertThat(collection).isEmpty();
@@ -118,7 +120,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 		assertThat(collection).isEmpty();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testContainsObject() {
 		T t1 = getT();
 		assertThat(collection).doesNotContain(t1);
@@ -127,7 +129,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testContainsAll() {
 		T t1 = getT();
 		T t2 = getT();
@@ -140,17 +142,17 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 		assertThat(collection).contains(t1, t2, t3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testEquals() {
 		// assertEquals(collection, copyStore(collection));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testHashCode() {
 		assertThat(collection.hashCode()).isNotEqualTo(collection.getKey().hashCode());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIsEmpty() {
 		assertThat(collection).isEmpty();
 		assertThat(collection.isEmpty()).isTrue();
@@ -162,7 +164,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	public void testIterator() {
 		T t1 = getT();
 		T t2 = getT();
@@ -181,7 +183,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 		assertThat(iterator.hasNext()).isFalse();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemoveObject() {
 		T t1 = getT();
 		T t2 = getT();
@@ -200,7 +202,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void removeAll() {
 		T t1 = getT();
 		T t2 = getT();
@@ -223,7 +225,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 		assertThat(collection).doesNotContain(t2, t3);
 	}
 
-	// @ParameterizedValkeyTest(expected = UnsupportedOperationException.class)
+	// @Test(expected = UnsupportedOperationException.class)
 	@SuppressWarnings("unchecked")
 	public void testRetainAll() {
 		T t1 = getT();
@@ -240,7 +242,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 		assertThat(collection).contains(t2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSize() {
 		assertThat(collection).isEmpty();
 		assertThat(collection.isEmpty()).isTrue();
@@ -252,7 +254,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	public void testToArray() {
 		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
 		List<T> list = (List<T>) Arrays.asList(expectedArray);
@@ -264,7 +266,7 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	public void testToArrayWithGenerics() {
 		Object[] expectedArray = new Object[] { getT(), getT(), getT() };
 		List<T> list = (List<T>) Arrays.asList(expectedArray);
@@ -275,14 +277,14 @@ public abstract class AbstractValkeyCollectionIntegrationTests<T> {
 		assertThat(array).isEqualTo(expectedArray);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testToString() {
 		String name = collection.toString();
 		collection.add(getT());
 		assertThat(collection.toString()).isEqualTo(name);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetKey() throws Exception {
 		assertThat(collection.getKey()).isNotNull();
 	}

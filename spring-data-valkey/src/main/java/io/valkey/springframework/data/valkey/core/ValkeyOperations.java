@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,11 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
@@ -34,12 +39,17 @@ import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import io.valkey.springframework.data.valkey.hash.HashMapper;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
  * Interface that specified a basic set of Valkey operations, implemented by {@link ValkeyTemplate}. Not often used but a
  * useful option for extensibility and testability (as it can be easily mocked or stubbed).
+ * <p>
+ * Valkey command methods are exempted from the default {@literal non-nullable} return value assumption as nullness
+ * depends not only on the command but also on the connection state. Methods invoked during a transaction or while
+ * pipelining are required to return {@literal null} at the time invoking a command as the response is not available
+ * until the transaction is executed or the pipeline is closed. To avoid excessive null checks in calling code and to
+ * not express a faulty assumption of non-nullness, all command interfaces are annotated with {@code @NullUnmarked}.
  *
  * @author Costin Leau
  * @author Christoph Strobl
@@ -50,7 +60,9 @@ import org.springframework.util.Assert;
  * @author Chen Li
  * @author Vedran Pavic
  * @author Marcin Grzejszczak
+ * @author Yordan Tsintsov
  */
+@NullUnmarked
 public interface ValkeyOperations<K, V> {
 
 	/**
@@ -66,8 +78,7 @@ public interface ValkeyOperations<K, V> {
 	 * @param action callback object that specifies the Valkey action. Must not be {@literal null}.
 	 * @return result of the given {@link ValkeyCallback#doInValkey(ValkeyConnection)} invocation.
 	 */
-	@Nullable
-	<T> T execute(ValkeyCallback<T> action);
+	<T extends @Nullable Object> T execute(@NonNull ValkeyCallback<T> action);
 
 	/**
 	 * Executes a Valkey session. Allows multiple operations to be executed in the same session enabling 'transactional'
@@ -77,8 +88,7 @@ public interface ValkeyOperations<K, V> {
 	 * @param session session callback. Must not be {@literal null}.
 	 * @return result of the given {@link SessionCallback#execute(ValkeyOperations)} invocation.
 	 */
-	@Nullable
-	<T> T execute(SessionCallback<T> session);
+	<T extends @Nullable Object> T execute(@NonNull SessionCallback<T> session);
 
 	/**
 	 * Executes the given action object on a pipelined connection, returning the results. Note that the callback
@@ -90,7 +100,8 @@ public interface ValkeyOperations<K, V> {
 	 *         collected from {@link ValkeyConnection} calls, {@link ValkeyCallback#doInValkey(ValkeyConnection)} itself must
 	 *         return {@literal null}.
 	 */
-	List<Object> executePipelined(ValkeyCallback<?> action);
+	@NonNull
+	List<Object> executePipelined(@NonNull ValkeyCallback<?> action);
 
 	/**
 	 * Executes the given action object on a pipelined connection, returning the results using a dedicated serializer.
@@ -103,7 +114,8 @@ public interface ValkeyOperations<K, V> {
 	 *         collected from {@link ValkeyConnection} calls, {@link ValkeyCallback#doInValkey(ValkeyConnection)} itself must
 	 *         return {@literal null}.
 	 */
-	List<Object> executePipelined(ValkeyCallback<?> action, ValkeySerializer<?> resultSerializer);
+	@NonNull
+	List<Object> executePipelined(@NonNull ValkeyCallback<?> action, @NonNull ValkeySerializer<?> resultSerializer);
 
 	/**
 	 * Executes the given Valkey session on a pipelined connection. Allows transactions to be pipelined. Note that the
@@ -114,7 +126,8 @@ public interface ValkeyOperations<K, V> {
 	 *         collected from {@link ValkeyOperations} calls, {@link SessionCallback#execute(ValkeyOperations)} itself must
 	 *         return {@literal null}.
 	 */
-	List<Object> executePipelined(SessionCallback<?> session);
+	@NonNull
+	List<Object> executePipelined(@NonNull SessionCallback<?> session);
 
 	/**
 	 * Executes the given Valkey session on a pipelined connection, returning the results using a dedicated serializer.
@@ -127,7 +140,8 @@ public interface ValkeyOperations<K, V> {
 	 *         collected from {@link ValkeyOperations} calls, {@link SessionCallback#execute(ValkeyOperations)} itself must
 	 *         return {@literal null}.
 	 */
-	List<Object> executePipelined(SessionCallback<?> session, ValkeySerializer<?> resultSerializer);
+	@NonNull
+	List<Object> executePipelined(@NonNull SessionCallback<?> session, @NonNull ValkeySerializer<?> resultSerializer);
 
 	/**
 	 * Executes the given {@link ValkeyScript}
@@ -138,8 +152,8 @@ public interface ValkeyOperations<K, V> {
 	 * @return The return value of the script or null if {@link ValkeyScript#getResultType()} is null, likely indicating a
 	 *         throw-away status reply (i.e. "OK")
 	 */
-	@Nullable
-	<T> T execute(ValkeyScript<T> script, List<K> keys, Object... args);
+	<T extends @Nullable Object> T execute(@NonNull ValkeyScript<T> script, @NonNull List<@NonNull K> keys,
+			@NonNull Object @NonNull... args);
 
 	/**
 	 * Executes the given {@link ValkeyScript}, using the provided {@link ValkeySerializer}s to serialize the script
@@ -153,9 +167,8 @@ public interface ValkeyOperations<K, V> {
 	 * @return The return value of the script or null if {@link ValkeyScript#getResultType()} is null, likely indicating a
 	 *         throw-away status reply (i.e. "OK")
 	 */
-	@Nullable
-	<T> T execute(ValkeyScript<T> script, ValkeySerializer<?> argsSerializer, ValkeySerializer<T> resultSerializer,
-			List<K> keys, Object... args);
+	<T extends @Nullable Object> T execute(@NonNull ValkeyScript<T> script, @NonNull ValkeySerializer<?> argsSerializer,
+			@NonNull ValkeySerializer<T> resultSerializer, @NonNull List<@NonNull K> keys, @NonNull Object @NonNull... args);
 
 	/**
 	 * Allocates and binds a new {@link ValkeyConnection} to the actual return type of the method. It is up to the caller
@@ -165,8 +178,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return the {@link Object result} of the operation performed in the callback or {@literal null}.
 	 * @since 1.8
 	 */
-	@Nullable
-	<T extends Closeable> T executeWithStickyConnection(ValkeyCallback<T> callback);
+	<T extends Closeable> T executeWithStickyConnection(@NonNull ValkeyCallback<T> callback);
 
 	// -------------------------------------------------------------------------
 	// Methods dealing with Valkey Keys
@@ -182,8 +194,18 @@ public interface ValkeyOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/copy">Valkey Documentation: COPY</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	Boolean copy(K sourceKey, K targetKey, boolean replace);
+	Boolean copy(@NonNull K sourceKey, @NonNull K targetKey, boolean replace);
+
+	/**
+	 * Get the hash digest for the value stored in the specified key as a hexadecimal string. This command is intended to
+	 * be used with string values only.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @return the digest of the key. {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/digest">Valkey Documentation: DIGEST</a>
+	 * @since 4.1
+	 */
+	String getDigest(@NonNull K key);
 
 	/**
 	 * Determine if given {@code key} exists.
@@ -192,8 +214,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal true} if key exists. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/exists">Valkey Documentation: EXISTS</a>
 	 */
-	@Nullable
-	Boolean hasKey(K key);
+	Boolean hasKey(@NonNull K key);
 
 	/**
 	 * Count the number of {@code keys} that exist.
@@ -204,8 +225,7 @@ public interface ValkeyOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/exists">Valkey Documentation: EXISTS</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	Long countExistingKeys(Collection<K> keys);
+	Long countExistingKeys(@NonNull Collection<@NonNull K> keys);
 
 	/**
 	 * Delete given {@code key}.
@@ -214,8 +234,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal true} if the key was removed.
 	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
 	 */
-	@Nullable
-	Boolean delete(K key);
+	Boolean delete(@NonNull K key);
 
 	/**
 	 * Delete given {@code keys}.
@@ -224,8 +243,33 @@ public interface ValkeyOperations<K, V> {
 	 * @return The number of keys that were removed. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
 	 */
-	@Nullable
-	Long delete(Collection<K> keys);
+	Long delete(@NonNull Collection<@NonNull K> keys);
+
+	/**
+	 * Delete given {@code key} and customize the operation through {@link DeleteSpec}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param deleteConsumer a function that consumes the {@link DeleteSpec} to configure the delete operation, must not
+	 *          be {@literal null}.
+	 * @return {@literal true} if the key was removed.
+	 * @see <a href="https://valkey.io/commands/delex">Valkey Documentation: DELEX</a>
+	 * @since 4.1
+	 */
+	Boolean delete(@NonNull K key, @NonNull Consumer<DeleteSpec<K, V>> deleteConsumer);
+
+	/**
+	 * Delete the key if the value at {@code key} equals {@code expectedValue}. Use {@link #delete(Object, Consumer)} to
+	 * customize the delete operation using e.g. a different value comparison strategy.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expectedValue the expected value, must not be {@literal null}.
+	 * @return {@code true} if successful. {@code false} return indicates that the actual value was not equal to the
+	 *         expected value or the key does not exist. {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/delex">Valkey Documentation: DELEX</a>
+	 * @see #delete(Object, Consumer)
+	 * @since 4.1
+	 */
+	Boolean compareAndDelete(@NonNull K key, @NonNull V expectedValue);
 
 	/**
 	 * Unlink the {@code key} from the keyspace. Unlike with {@link #delete(Object)} the actual memory reclaiming here
@@ -236,8 +280,7 @@ public interface ValkeyOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	Boolean unlink(K key);
+	Boolean unlink(@NonNull K key);
 
 	/**
 	 * Unlink the {@code keys} from the keyspace. Unlike with {@link #delete(Collection)} the actual memory reclaiming
@@ -248,8 +291,7 @@ public interface ValkeyOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	Long unlink(Collection<K> keys);
+	Long unlink(@NonNull Collection<@NonNull K> keys);
 
 	/**
 	 * Determine the type stored at {@code key}.
@@ -258,18 +300,19 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/type">Valkey Documentation: TYPE</a>
 	 */
-	@Nullable
-	DataType type(K key);
+	DataType type(@NonNull K key);
 
 	/**
-	 * Find all keys matching the given {@code pattern}.
+	 * Retrieve all keys matching the given pattern via {@code KEYS} command.
+	 * <p>
+	 * <strong>IMPORTANT:</strong> This command is non-interruptible and scans the entire keyspace which may cause
+	 * performance issues. Consider {@link #scan(ScanOptions)} for large datasets.
 	 *
-	 * @param pattern must not be {@literal null}.
-	 * @return {@literal null} when used in pipeline / transaction.
-	 * @see <a href="https://valkey.io/commands/keys">Valkey Documentation: KEYS</a>
+	 * @param pattern key pattern
+	 * @return set of matching keys, or {@literal null} when used in pipeline / transaction
+	 * @see <a href="https://valkey.io/commands/keys">Valkey KEYS command</a>
 	 */
-	@Nullable
-	Set<K> keys(K pattern);
+	Set<@NonNull K> keys(@NonNull K pattern);
 
 	/**
 	 * Use a {@link Cursor} to iterate over keys. <br />
@@ -281,7 +324,8 @@ public interface ValkeyOperations<K, V> {
 	 * @since 2.7
 	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
 	 */
-	Cursor<K> scan(ScanOptions options);
+	@NonNull
+	Cursor<@NonNull K> scan(@NonNull ScanOptions options);
 
 	/**
 	 * Return a random key from the keyspace.
@@ -289,7 +333,6 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal null} no keys exist or when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/randomkey">Valkey Documentation: RANDOMKEY</a>
 	 */
-	@Nullable
 	K randomKey();
 
 	/**
@@ -299,7 +342,7 @@ public interface ValkeyOperations<K, V> {
 	 * @param newKey must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/rename">Valkey Documentation: RENAME</a>
 	 */
-	void rename(K oldKey, K newKey);
+	void rename(@NonNull K oldKey, @NonNull K newKey);
 
 	/**
 	 * Rename key {@code oldKey} to {@code newKey} only if {@code newKey} does not exist.
@@ -309,8 +352,17 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/renamenx">Valkey Documentation: RENAMENX</a>
 	 */
-	@Nullable
-	Boolean renameIfAbsent(K oldKey, K newKey);
+	Boolean renameIfAbsent(@NonNull K oldKey, @NonNull K newKey);
+
+	/**
+	 * Set time to live for given {@code key}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @return changes to the expiry. {@literal null} when used in pipeline / transaction.
+	 * @since 4.1
+	 */
+	Boolean expire(@NonNull K key, @NonNull Expiration expiration);
 
 	/**
 	 * Set time to live for given {@code key}.
@@ -319,9 +371,10 @@ public interface ValkeyOperations<K, V> {
 	 * @param timeout
 	 * @param unit must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
+	 * @deprecated since 4.1 in favor of {@link #expire(Object, Expiration)}.
 	 */
-	@Nullable
-	Boolean expire(K key, long timeout, TimeUnit unit);
+	@Deprecated(since = "4.1")
+	Boolean expire(@NonNull K key, long timeout, @NonNull TimeUnit unit);
 
 	/**
 	 * Set time to live for given {@code key}.
@@ -332,13 +385,11 @@ public interface ValkeyOperations<K, V> {
 	 * @throws IllegalArgumentException if the timeout is {@literal null}.
 	 * @since 2.3
 	 */
-	@Nullable
-	default Boolean expire(K key, Duration timeout) {
+	default Boolean expire(@NonNull K key, @NonNull Duration timeout) {
 
 		Assert.notNull(timeout, "Timeout must not be null");
 
-		return TimeoutUtils.hasMillis(timeout) ? expire(key, timeout.toMillis(), TimeUnit.MILLISECONDS)
-				: expire(key, timeout.getSeconds(), TimeUnit.SECONDS);
+		return expire(key, Expiration.from(timeout));
 	}
 
 	/**
@@ -348,8 +399,7 @@ public interface ValkeyOperations<K, V> {
 	 * @param date must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 */
-	@Nullable
-	Boolean expireAt(K key, Date date);
+	Boolean expireAt(@NonNull K key, @NonNull Date date);
 
 	/**
 	 * Set the expiration for given {@code key} as a {@literal date} timestamp.
@@ -360,8 +410,7 @@ public interface ValkeyOperations<K, V> {
 	 * @throws IllegalArgumentException if the instant is {@literal null} or too large to represent as a {@code Date}.
 	 * @since 2.3
 	 */
-	@Nullable
-	default Boolean expireAt(K key, Instant expireAt) {
+	default Boolean expireAt(@NonNull K key, @NonNull Instant expireAt) {
 
 		Assert.notNull(expireAt, "Timestamp must not be null");
 
@@ -383,8 +432,8 @@ public interface ValkeyOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	ExpireChanges.ExpiryChangeState expire(K key, Expiration expiration, ExpirationOptions options);
+	ExpireChanges.ExpiryChangeState expire(@NonNull K key, @NonNull Expiration expiration,
+			@NonNull ExpirationOptions options);
 
 	/**
 	 * Returns a bound operations object to perform expiration operations on the bound key.
@@ -392,7 +441,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return the bound operations object to perform operations on the hash field expiration.
 	 * @since 3.5
 	 */
-	default BoundKeyExpirationOperations expiration(K key) {
+	default @NonNull BoundKeyExpirationOperations expiration(@NonNull K key) {
 		return new DefaultBoundKeyExpirationOperations<>(this, key);
 	}
 
@@ -403,8 +452,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@code true} when persisted successfully or {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
 	 */
-	@Nullable
-	Boolean persist(K key);
+	Boolean persist(@NonNull K key);
 
 	/**
 	 * Get the time to live for {@code key} in seconds.
@@ -413,8 +461,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
 	 */
-	@Nullable
-	Long getExpire(K key);
+	Long getExpire(@NonNull K key);
 
 	/**
 	 * Get the time to live for {@code key} in and convert it to the given {@link TimeUnit}.
@@ -424,8 +471,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 1.8
 	 */
-	@Nullable
-	Long getExpire(K key, TimeUnit timeUnit);
+	Long getExpire(@NonNull K key, @NonNull TimeUnit timeUnit);
 
 	/**
 	 * Move given {@code key} to database with {@code index}.
@@ -435,8 +481,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
 	 */
-	@Nullable
-	Boolean move(K key, int dbIndex);
+	Boolean move(@NonNull K key, int dbIndex);
 
 	/**
 	 * Retrieve serialized version of the value stored at {@code key}.
@@ -445,8 +490,20 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/dump">Valkey Documentation: DUMP</a>
 	 */
-	@Nullable
-	byte[] dump(K key);
+	byte[] dump(@NonNull K key);
+
+	/**
+	 * Create {@code key} using the {@code serializedValue}, previously obtained using {@link #dump(Object)}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @since 4.1
+	 * @see <a href="https://valkey.io/commands/restore">Valkey Documentation: RESTORE</a>
+	 */
+	default void restore(@NonNull K key, byte @NonNull [] value, @NonNull Expiration expiration) {
+		restore(key, value, expiration, false);
+	}
 
 	/**
 	 * Create {@code key} using the {@code serializedValue}, previously obtained using {@link #dump(Object)}.
@@ -456,10 +513,24 @@ public interface ValkeyOperations<K, V> {
 	 * @param timeToLive
 	 * @param unit must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/restore">Valkey Documentation: RESTORE</a>
+	 * @deprecated since 4.1 in favor of {@link #restore(Object, byte[], Expiration)}
 	 */
-	default void restore(K key, byte[] value, long timeToLive, TimeUnit unit) {
+	@Deprecated(since = "4.1")
+	default void restore(@NonNull K key, byte @NonNull [] value, long timeToLive, @NonNull TimeUnit unit) {
 		restore(key, value, timeToLive, unit, false);
 	}
+
+	/**
+	 * Create {@code key} using the {@code serializedValue}, previously obtained using {@link #dump(Object)}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @param replace use {@literal true} to replace a potentially existing value instead of erroring.
+	 * @since 4.1
+	 * @see <a href="https://valkey.io/commands/restore">Valkey Documentation: RESTORE</a>
+	 */
+	void restore(@NonNull K key, byte @NonNull [] value, @NonNull Expiration expiration, boolean replace);
 
 	/**
 	 * Create {@code key} using the {@code serializedValue}, previously obtained using {@link #dump(Object)}.
@@ -471,8 +542,10 @@ public interface ValkeyOperations<K, V> {
 	 * @param replace use {@literal true} to replace a potentially existing value instead of erroring.
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/restore">Valkey Documentation: RESTORE</a>
+	 * @deprecated since 4.1 in favor of {@link #restore(Object, byte[], Expiration, boolean)}.
 	 */
-	void restore(K key, byte[] value, long timeToLive, TimeUnit unit, boolean replace);
+	@Deprecated(since = "4.1")
+	void restore(@NonNull K key, byte @NonNull [] value, long timeToLive, @NonNull TimeUnit unit, boolean replace);
 
 	/**
 	 * Sort the elements for {@code query}.
@@ -481,8 +554,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return the results of sort. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sort">Valkey Documentation: SORT</a>
 	 */
-	@Nullable
-	List<V> sort(SortQuery<K> query);
+	List<V> sort(@NonNull SortQuery<@NonNull K> query);
 
 	/**
 	 * Sort the elements for {@code query} applying {@link ValkeySerializer}.
@@ -491,8 +563,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return the deserialized results of sort. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sort">Valkey Documentation: SORT</a>
 	 */
-	@Nullable
-	<T> List<T> sort(SortQuery<K> query, ValkeySerializer<T> resultSerializer);
+	<T> List<T> sort(@NonNull SortQuery<@NonNull K> query, @NonNull ValkeySerializer<T> resultSerializer);
 
 	/**
 	 * Sort the elements for {@code query} applying {@link BulkMapper}.
@@ -501,8 +572,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return the deserialized results of sort. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sort">Valkey Documentation: SORT</a>
 	 */
-	@Nullable
-	<T> List<T> sort(SortQuery<K> query, BulkMapper<T, V> bulkMapper);
+	<T> List<T> sort(@NonNull SortQuery<@NonNull K> query, @NonNull BulkMapper<T, V> bulkMapper);
 
 	/**
 	 * Sort the elements for {@code query} applying {@link BulkMapper} and {@link ValkeySerializer}.
@@ -511,8 +581,8 @@ public interface ValkeyOperations<K, V> {
 	 * @return the deserialized results of sort. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sort">Valkey Documentation: SORT</a>
 	 */
-	@Nullable
-	<T, S> List<T> sort(SortQuery<K> query, BulkMapper<T, S> bulkMapper, ValkeySerializer<S> resultSerializer);
+	<T, S> List<T> sort(SortQuery<@NonNull K> query, @NonNull BulkMapper<T, S> bulkMapper,
+			@NonNull ValkeySerializer<S> resultSerializer);
 
 	/**
 	 * Sort the elements for {@code query} and store result in {@code storeKey}.
@@ -522,8 +592,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return number of values. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sort">Valkey Documentation: SORT</a>
 	 */
-	@Nullable
-	Long sort(SortQuery<K> query, K storeKey);
+	Long sort(@NonNull SortQuery<@NonNull K> query, @NonNull K storeKey);
 
 	// -------------------------------------------------------------------------
 	// Methods dealing with Valkey Transactions
@@ -535,7 +604,7 @@ public interface ValkeyOperations<K, V> {
 	 * @param key must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/watch">Valkey Documentation: WATCH</a>
 	 */
-	void watch(K key);
+	void watch(@NonNull K key);
 
 	/**
 	 * Watch given {@code keys} for modifications during transaction started with {@link #multi()}.
@@ -543,7 +612,7 @@ public interface ValkeyOperations<K, V> {
 	 * @param keys must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/watch">Valkey Documentation: WATCH</a>
 	 */
-	void watch(Collection<K> keys);
+	void watch(@NonNull Collection<@NonNull K> keys);
 
 	/**
 	 * Flushes all the previously {@link #watch(Object)} keys.
@@ -574,6 +643,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return List of replies for each executed command.
 	 * @see <a href="https://valkey.io/commands/exec">Valkey Documentation: EXEC</a>
 	 */
+	@NonNull
 	List<Object> exec();
 
 	/**
@@ -585,7 +655,8 @@ public interface ValkeyOperations<K, V> {
 	 * @param valueSerializer The {@link ValkeySerializer} to use for deserializing the results of transaction exec
 	 * @return The deserialized results of transaction exec
 	 */
-	List<Object> exec(ValkeySerializer<?> valueSerializer);
+	@NonNull
+	List<Object> exec(@NonNull ValkeySerializer<?> valueSerializer);
 
 	// -------------------------------------------------------------------------
 	// Methods dealing with Valkey Server Commands
@@ -597,8 +668,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return {@link List} of {@link ValkeyClientInfo} objects.
 	 * @since 1.3
 	 */
-	@Nullable
-	List<ValkeyClientInfo> getClientList();
+	List<@NonNull ValkeyClientInfo> getClientList();
 
 	/**
 	 * Closes a given client connection identified by {@literal ip:port} given in {@code client}.
@@ -607,17 +677,17 @@ public interface ValkeyOperations<K, V> {
 	 * @param port of connection to close
 	 * @since 1.3
 	 */
-	void killClient(String host, int port);
+	void killClient(@NonNull String host, int port);
 
 	/**
-	 * Change valkey replication setting to new master.
+	 * Change Valkey replication setting to new master.
 	 *
 	 * @param host must not be {@literal null}.
 	 * @param port
 	 * @since 1.3
 	 * @see <a href="https://valkey.io/commands/replicaof">Valkey Documentation: REPLICAOF</a>
 	 */
-	void replicaOf(String host, int port);
+	void replicaOf(@NonNull String host, int port);
 
 	/**
 	 * Change server into master.
@@ -635,8 +705,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return the number of clients that received the message. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/publish">Valkey Documentation: PUBLISH</a>
 	 */
-	@Nullable
-	Long convertAndSend(String destination, Object message);
+	Long convertAndSend(@NonNull String destination, @NonNull Object message);
 
 	// -------------------------------------------------------------------------
 	// Methods to obtain specific operations interface objects.
@@ -650,6 +719,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return never {@literal null}.
 	 * @since 1.7
 	 */
+	@NonNull
 	ClusterOperations<K, V> opsForCluster();
 
 	/**
@@ -658,6 +728,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return never {@literal null}.
 	 * @since 1.8
 	 */
+	@NonNull
 	GeoOperations<K, V> opsForGeo();
 
 	/**
@@ -667,7 +738,8 @@ public interface ValkeyOperations<K, V> {
 	 * @return never {@literal null}.
 	 * @since 1.8
 	 */
-	BoundGeoOperations<K, V> boundGeoOps(K key);
+	@NonNull
+	BoundGeoOperations<K, V> boundGeoOps(@NonNull K key);
 
 	/**
 	 * Returns the operations performed on hash values.
@@ -676,7 +748,7 @@ public interface ValkeyOperations<K, V> {
 	 * @param <HV> hash value type
 	 * @return hash operations
 	 */
-	<HK, HV> HashOperations<K, HK, HV> opsForHash();
+	<HK, HV> @NonNull HashOperations<K, HK, HV> opsForHash();
 
 	/**
 	 * Returns the operations performed on hash values bound to the given key.
@@ -686,12 +758,13 @@ public interface ValkeyOperations<K, V> {
 	 * @param key Valkey key
 	 * @return hash operations bound to the given key.
 	 */
-	<HK, HV> BoundHashOperations<K, HK, HV> boundHashOps(K key);
+	<HK, HV> @NonNull BoundHashOperations<K, HK, HV> boundHashOps(@NonNull K key);
 
 	/**
 	 * @return never {@literal null}.
 	 * @since 1.5
 	 */
+	@NonNull
 	HyperLogLogOperations<K, V> opsForHyperLogLog();
 
 	/**
@@ -699,6 +772,7 @@ public interface ValkeyOperations<K, V> {
 	 *
 	 * @return list operations
 	 */
+	@NonNull
 	ListOperations<K, V> opsForList();
 
 	/**
@@ -707,6 +781,7 @@ public interface ValkeyOperations<K, V> {
 	 * @param key Valkey key
 	 * @return list operations bound to the given key
 	 */
+	@NonNull
 	BoundListOperations<K, V> boundListOps(K key);
 
 	/**
@@ -714,6 +789,7 @@ public interface ValkeyOperations<K, V> {
 	 *
 	 * @return set operations
 	 */
+	@NonNull
 	SetOperations<K, V> opsForSet();
 
 	/**
@@ -722,7 +798,8 @@ public interface ValkeyOperations<K, V> {
 	 * @param key Valkey key
 	 * @return set operations bound to the given key
 	 */
-	BoundSetOperations<K, V> boundSetOps(K key);
+	@NonNull
+	BoundSetOperations<K, V> boundSetOps(@NonNull K key);
 
 	/**
 	 * Returns the operations performed on Streams.
@@ -730,7 +807,7 @@ public interface ValkeyOperations<K, V> {
 	 * @return stream operations.
 	 * @since 2.2
 	 */
-	<HK, HV> StreamOperations<K, HK, HV> opsForStream();
+	<HK, HV> @NonNull StreamOperations<K, HK, HV> opsForStream();
 
 	/**
 	 * Returns the operations performed on Streams.
@@ -739,7 +816,8 @@ public interface ValkeyOperations<K, V> {
 	 * @return stream operations.
 	 * @since 2.2
 	 */
-	<HK, HV> StreamOperations<K, HK, HV> opsForStream(HashMapper<? super K, ? super HK, ? super HV> hashMapper);
+	<HK, HV> @NonNull StreamOperations<K, HK, HV> opsForStream(
+			@NonNull HashMapper<? super K, ? super HK, ? super HV> hashMapper);
 
 	/**
 	 * Returns the operations performed on Streams bound to the given key.
@@ -747,13 +825,14 @@ public interface ValkeyOperations<K, V> {
 	 * @return stream operations.
 	 * @since 2.2
 	 */
-	<HK, HV> BoundStreamOperations<K, HK, HV> boundStreamOps(K key);
+	<HK, HV> @NonNull BoundStreamOperations<K, HK, HV> boundStreamOps(@NonNull K key);
 
 	/**
 	 * Returns the operations performed on simple values (or Strings in Valkey terminology).
 	 *
 	 * @return value operations
 	 */
+	@NonNull
 	ValueOperations<K, V> opsForValue();
 
 	/**
@@ -762,13 +841,15 @@ public interface ValkeyOperations<K, V> {
 	 * @param key Valkey key
 	 * @return value operations bound to the given key
 	 */
-	BoundValueOperations<K, V> boundValueOps(K key);
+	@NonNull
+	BoundValueOperations<K, V> boundValueOps(@NonNull K key);
 
 	/**
 	 * Returns the operations performed on zset values (also known as sorted sets).
 	 *
 	 * @return zset operations
 	 */
+	@NonNull
 	ZSetOperations<K, V> opsForZSet();
 
 	/**
@@ -777,26 +858,31 @@ public interface ValkeyOperations<K, V> {
 	 * @param key Valkey key
 	 * @return zset operations bound to the given key.
 	 */
-	BoundZSetOperations<K, V> boundZSetOps(K key);
+	@NonNull
+	BoundZSetOperations<K, V> boundZSetOps(@NonNull K key);
 
 	/**
 	 * @return the key {@link ValkeySerializer}.
 	 */
+	@Nullable
 	ValkeySerializer<?> getKeySerializer();
 
 	/**
 	 * @return the value {@link ValkeySerializer}.
 	 */
+	@Nullable
 	ValkeySerializer<?> getValueSerializer();
 
 	/**
 	 * @return the hash key {@link ValkeySerializer}.
 	 */
+	@Nullable
 	ValkeySerializer<?> getHashKeySerializer();
 
 	/**
 	 * @return the hash value {@link ValkeySerializer}.
 	 */
+	@Nullable
 	ValkeySerializer<?> getHashValueSerializer();
 
 }

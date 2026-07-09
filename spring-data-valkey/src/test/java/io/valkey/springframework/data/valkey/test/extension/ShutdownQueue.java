@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,12 +54,21 @@ public enum ShutdownQueue {
 
 	private final LinkedList<Closeable> closeables = new LinkedList<>();
 
+	public static void register(ShutdownCloseable closeable) {
+		INSTANCE.closeables.add(closeable::close);
+	}
+
 	public static void register(Closeable closeable) {
 		INSTANCE.closeables.add(closeable);
 	}
 
 	public static void register(AutoCloseable closeable) {
 		INSTANCE.closeables.add(() -> IOUtils.closeQuietly(closeable));
+	}
+
+	public interface ShutdownCloseable {
+
+		void close();
 	}
 
 }

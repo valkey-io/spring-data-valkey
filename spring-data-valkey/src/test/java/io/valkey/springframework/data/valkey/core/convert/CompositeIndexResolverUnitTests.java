@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import org.springframework.data.util.TypeInformation;
+import org.springframework.data.core.TypeInformation;
 
 /**
  * @author Christoph Strobl
@@ -52,10 +52,10 @@ class CompositeIndexResolverUnitTests {
 	@Test // DATAREDIS-425
 	void shouldCollectionIndexesFromResolvers() {
 
-		when(resolver1.resolveIndexesFor(any(TypeInformation.class), any())).thenReturn(
-				Collections.<IndexedData> singleton(new SimpleIndexedPropertyValue("spring", "data", "valkey")));
-		when(resolver2.resolveIndexesFor(any(TypeInformation.class), any())).thenReturn(
-				Collections.<IndexedData> singleton(new SimpleIndexedPropertyValue("valkey", "data", "spring")));
+		when(resolver1.resolveIndexesFor(any(TypeInformation.class), any()))
+				.thenReturn(Collections.<IndexedData> singleton(new SimpleIndexedPropertyValue("spring", "data", "redis")));
+		when(resolver2.resolveIndexesFor(any(TypeInformation.class), any()))
+				.thenReturn(Collections.<IndexedData> singleton(new SimpleIndexedPropertyValue("redis", "data", "spring")));
 
 		CompositeIndexResolver resolver = new CompositeIndexResolver(Arrays.asList(resolver1, resolver2));
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,10 +31,10 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.ReactiveSubscription;
 import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 import io.valkey.springframework.data.valkey.connection.util.ByteArrayWrapper;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -166,7 +166,7 @@ class LettuceReactiveSubscription implements ReactiveSubscription {
 
 		private final Set<ByteArrayWrapper> targets = new ConcurrentSkipListSet<>();
 		private final AtomicLong subscribers = new AtomicLong();
-		private final AtomicReference<Flux<?>> flux = new AtomicReference<>();
+		private final AtomicReference<@Nullable Flux<?>> flux = new AtomicReference<>();
 		private final Function<Throwable, Throwable> exceptionTranslator;
 
 		private volatile @Nullable Disposable disposable;
@@ -229,7 +229,7 @@ class LettuceReactiveSubscription implements ReactiveSubscription {
 		 * @param <T> message type.
 		 * @return
 		 */
-		@SuppressWarnings("unchecked")
+		@SuppressWarnings({ "unchecked", "NullAway" })
 		<T> Flux<T> receive(Supplier<Flux<T>> connectFunction) {
 
 			Flux<?> fastPath = flux.get();

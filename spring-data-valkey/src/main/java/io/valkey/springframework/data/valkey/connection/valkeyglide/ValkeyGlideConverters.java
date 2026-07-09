@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.ByteBuffer;
@@ -104,8 +104,7 @@ public abstract class ValkeyGlideConverters {
      * @param result The Glide result to convert
      * @return The converted result
      */
-    @Nullable
-    public static Object defaultFromGlideResult(@Nullable Object result) {
+    public @Nullable static Object defaultFromGlideResult(@Nullable Object result) {
         if (result == null) {
             return null;
         }
@@ -187,8 +186,7 @@ public abstract class ValkeyGlideConverters {
      * @param bytes The bytes to convert
      * @return The resulting string or null if input is null
      */
-    @Nullable
-    public static String toString(@Nullable byte[] bytes) {
+    public @Nullable static String toString(@Nullable byte[] bytes) {
         return bytes == null ? null : new String(bytes, StandardCharsets.UTF_8);
     }
 
@@ -198,8 +196,7 @@ public abstract class ValkeyGlideConverters {
      * @param string The string to convert
      * @return The resulting byte array or null if input is null
      */
-    @Nullable
-    public static byte[] toBytes(@Nullable String string) {
+    public @Nullable static byte[] toBytes(@Nullable String string) {
         return string == null ? null : string.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -211,8 +208,7 @@ public abstract class ValkeyGlideConverters {
      * @param result The command result
      * @return Boolean representation of the result
      */
-    @Nullable
-    public static Boolean stringToBoolean(@Nullable Object result) {
+    public @Nullable static Boolean stringToBoolean(@Nullable Object result) {
         if (result == null) {
             return null;
         }
@@ -226,8 +222,7 @@ public abstract class ValkeyGlideConverters {
      * @param result The numeric command result
      * @return Boolean representation of the result
      */
-    @Nullable
-    public static Boolean numberToBoolean(@Nullable Object result) {
+    public @Nullable static Boolean numberToBoolean(@Nullable Object result) {
         return result != null ? ((Number) result).longValue() != 0 : null;
     }
 
@@ -270,8 +265,7 @@ public abstract class ValkeyGlideConverters {
      * @param glideResult The command result
      * @return Set of byte arrays
      */
-    @Nullable
-    public static Set<byte[]> toBytesSet(@Nullable Object[] glideResult) {
+    public @Nullable static Set<byte[]> toBytesSet(@Nullable Object[] glideResult) {
         if (glideResult == null) {
             return new HashSet<>();
         }
@@ -337,8 +331,7 @@ public abstract class ValkeyGlideConverters {
         // return new HashSet<>();
     }
 
-    @Nullable
-    public static Set<byte[]> toBytesSet(@Nullable Object result) {
+    public @Nullable static Set<byte[]> toBytesSet(@Nullable Object result) {
         if (result == null) {
             return new HashSet<>();
         }
@@ -397,8 +390,7 @@ public abstract class ValkeyGlideConverters {
         return new HashSet<>();
     }
 
-    @Nullable
-    public static List<Map.Entry<byte[], byte[]>> toMapEntriesList(@Nullable Object glideResult) {
+    public @Nullable static List<Map.Entry<byte[], byte[]>> toMapEntriesList(@Nullable Object glideResult) {
         if (glideResult == null) {
             return null;
         }
@@ -424,8 +416,7 @@ public abstract class ValkeyGlideConverters {
      * @param glideResult The command result
      * @return List of byte arrays
      */
-    @Nullable
-    public static List<byte[]> toBytesList(@Nullable Object[] glideResult) {
+    public @Nullable static List<byte[]> toBytesList(@Nullable Object[] glideResult) {
         if (glideResult == null) {
             return new ArrayList<>();
         }
@@ -438,8 +429,7 @@ public abstract class ValkeyGlideConverters {
         return convertedList;
     }
 
-    @Nullable
-    public static List<Long> toLongsList(@Nullable Object[] glideResult) {
+    public @Nullable static List<Long> toLongsList(@Nullable Object[] glideResult) {
         if (glideResult == null) {
             return null;
         }
@@ -451,8 +441,7 @@ public abstract class ValkeyGlideConverters {
         return resultList;
     }
 
-    @Nullable
-    public static List<Boolean> toBooleansList(@Nullable Object[] glideResult) {
+    public @Nullable static List<Boolean> toBooleansList(@Nullable Object[] glideResult) {
         if (glideResult == null) {
             return null;
         }
@@ -464,8 +453,7 @@ public abstract class ValkeyGlideConverters {
         return resultList;
     }
 
-    @Nullable
-    public static List<byte[]> toBytesList(@Nullable Object result) {
+    public @Nullable static List<byte[]> toBytesList(@Nullable Object result) {
         if (result == null) {
             return new ArrayList<>();
         }
@@ -527,8 +515,7 @@ public abstract class ValkeyGlideConverters {
         return new ArrayList<>();
     }
 
-    @Nullable
-    public static Map<byte[],  byte[]> toBytesMap(@Nullable Object glideResult) {
+    public @Nullable static Map<byte[],  byte[]> toBytesMap(@Nullable Object glideResult) {
         if (glideResult == null) {
             return null;
         }
@@ -541,7 +528,6 @@ public abstract class ValkeyGlideConverters {
         return resultMap;
     }
 
-    @Nullable
     public static Map.Entry<byte[],  byte[]> toBytesMapEntry(@Nullable Object glideResult) {
         if (glideResult == null) {
             return null;
@@ -608,8 +594,7 @@ public abstract class ValkeyGlideConverters {
      * @param result The OBJECT ENCODING command result
      * @return The corresponding ValueEncoding
      */
-    @Nullable
-    public static ValueEncoding toValueEncoding(@Nullable GlideString glideResult) {
+    public @Nullable static ValueEncoding toValueEncoding(@Nullable GlideString glideResult) {
         if (glideResult == null) {
             return ValueEncoding.ValkeyValueEncoding.VACANT;
         }

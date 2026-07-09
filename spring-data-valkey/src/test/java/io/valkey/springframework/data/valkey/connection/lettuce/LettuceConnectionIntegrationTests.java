@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,8 +115,7 @@ public class LettuceConnectionIntegrationTests extends AbstractConnectionIntegra
 			// can't do blocking ops after closing
 			connection.bLPop(1, "what".getBytes());
 			fail("Expected exception using a closed conn for dedicated ops");
-		} catch (ValkeySystemException expected) {
-		}
+		} catch (ValkeySystemException expected) {}
 	}
 
 	@Test
@@ -135,10 +134,9 @@ public class LettuceConnectionIntegrationTests extends AbstractConnectionIntegra
 		try {
 			connection.set("foo".getBytes(), "bar".getBytes());
 			fail("Exception should be thrown trying to use a closed connection");
-		} catch (ValkeySystemException expected) {
-		} finally {
+		} catch (ValkeySystemException expected) {} finally {
 
-		factory2.destroy();
+			factory2.destroy();
 		}
 	}
 
@@ -177,12 +175,12 @@ public class LettuceConnectionIntegrationTests extends AbstractConnectionIntegra
 
 		connection.set("spring", "awesome");
 		connection.set("data", "cool");
-		connection.set("valkey", "supercalifragilisticexpialidocious");
+		connection.set("redis", "supercalifragilisticexpialidocious");
 
 		assertThat(
-				(Iterable<byte[]>) connection.execute("MGET", "spring".getBytes(), "data".getBytes(), "valkey".getBytes()))
-						.isInstanceOf(List.class)
-						.contains("awesome".getBytes(), "cool".getBytes(), "supercalifragilisticexpialidocious".getBytes());
+				(Iterable<byte[]>) connection.execute("MGET", "spring".getBytes(), "data".getBytes(), "redis".getBytes()))
+				.isInstanceOf(List.class)
+				.contains("awesome".getBytes(), "cool".getBytes(), "supercalifragilisticexpialidocious".getBytes());
 	}
 
 	@Test // GH-2473

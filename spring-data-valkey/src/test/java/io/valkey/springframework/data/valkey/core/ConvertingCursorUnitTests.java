@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.Test;
 
@@ -56,10 +48,8 @@ class ConvertingCursorUnitTests {
 
 		Cursor<Object> mockCursor = mock(Cursor.class);
 
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new ConvertingCursor<>(mockCursor, null))
-			.withMessage("Converter must not be null")
-			.withNoCause();
+		assertThatIllegalArgumentException().isThrownBy(() -> new ConvertingCursor<>(mockCursor, null))
+				.withMessage("Converter must not be null").withNoCause();
 
 		verifyNoInteractions(mockCursor);
 	}
@@ -70,10 +60,8 @@ class ConvertingCursorUnitTests {
 
 		Converter<Object, Object> mockConverter = mock(Converter.class);
 
-		assertThatIllegalArgumentException()
-			.isThrownBy(() -> new ConvertingCursor<>(null, mockConverter))
-			.withMessage("Cursor must not be null")
-			.withNoCause();
+		assertThatIllegalArgumentException().isThrownBy(() -> new ConvertingCursor<>(null, mockConverter))
+				.withMessage("Cursor must not be null").withNoCause();
 
 		verifyNoInteractions(mockConverter);
 	}
@@ -149,13 +137,13 @@ class ConvertingCursorUnitTests {
 		Converter<Object, Object> mockConverter = mock(Converter.class);
 		Cursor<Object> mockCursor = mock(Cursor.class);
 
-		doReturn(1L).when(mockCursor).getCursorId();
+		doReturn(Cursor.CursorId.of(1L)).when(mockCursor).getId();
 
 		ConvertingCursor<?, ?> convertingCursor = new ConvertingCursor<>(mockCursor, mockConverter);
 
-		assertThat(convertingCursor.getCursorId()).isOne();
+		assertThat(convertingCursor.getId()).isEqualTo(Cursor.CursorId.of(1L));
 
-		verify(mockCursor, times(1)).getCursorId();
+		verify(mockCursor, times(1)).getId();
 		verifyNoMoreInteractions(mockCursor);
 		verifyNoInteractions(mockConverter);
 	}

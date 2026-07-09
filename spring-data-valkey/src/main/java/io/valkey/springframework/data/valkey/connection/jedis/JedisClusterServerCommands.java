@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,9 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor.MultiNodeResult;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor.NodeResult;
@@ -35,7 +38,6 @@ import io.valkey.springframework.data.valkey.connection.ValkeyNode;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClusterConnection.JedisClusterCommandCallback;
 import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 
@@ -44,16 +46,17 @@ import org.springframework.util.CollectionUtils;
  * @author Dennis Neufeld
  * @since 2.0
  */
+@NullUnmarked
 class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 
 	private final JedisClusterConnection connection;
 
-	JedisClusterServerCommands(JedisClusterConnection connection) {
+	JedisClusterServerCommands(@NonNull JedisClusterConnection connection) {
 		this.connection = connection;
 	}
 
 	@Override
-	public void bgReWriteAof(ValkeyClusterNode node) {
+	public void bgReWriteAof(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(Jedis::bgrewriteaof, node);
 	}
 
@@ -70,7 +73,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void bgSave(ValkeyClusterNode node) {
+	public void bgSave(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(Jedis::bgsave, node);
 	}
 
@@ -88,7 +91,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public Long lastSave(ValkeyClusterNode node) {
+	public Long lastSave(@NonNull ValkeyClusterNode node) {
 		return executeCommandOnSingleNode(Jedis::lastsave, node).getValue();
 	}
 
@@ -98,7 +101,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void save(ValkeyClusterNode node) {
+	public void save(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(Jedis::save, node);
 	}
 
@@ -119,7 +122,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public Long dbSize(ValkeyClusterNode node) {
+	public Long dbSize(@NonNull ValkeyClusterNode node) {
 		return executeCommandOnSingleNode(Jedis::dbSize, node).getValue();
 	}
 
@@ -129,17 +132,17 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void flushDb(FlushOption option) {
+	public void flushDb(@NonNull FlushOption option) {
 		executeCommandOnAllNodes(it -> it.flushDB(JedisConverters.toFlushMode(option)));
 	}
 
 	@Override
-	public void flushDb(ValkeyClusterNode node) {
+	public void flushDb(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(Jedis::flushDB, node);
 	}
 
 	@Override
-	public void flushDb(ValkeyClusterNode node, FlushOption option) {
+	public void flushDb(@NonNull ValkeyClusterNode node, @NonNull FlushOption option) {
 		executeCommandOnSingleNode(it -> it.flushDB(JedisConverters.toFlushMode(option)), node);
 	}
 
@@ -150,18 +153,18 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void flushAll(FlushOption option) {
+	public void flushAll(@NonNull FlushOption option) {
 		connection.getClusterCommandExecutor().executeCommandOnAllNodes(
 				(JedisClusterCommandCallback<String>) it -> it.flushAll(JedisConverters.toFlushMode(option)));
 	}
 
 	@Override
-	public void flushAll(ValkeyClusterNode node) {
+	public void flushAll(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(Jedis::flushAll, node);
 	}
 
 	@Override
-	public void flushAll(ValkeyClusterNode node, FlushOption option) {
+	public void flushAll(@NonNull ValkeyClusterNode node, @NonNull FlushOption option) {
 		executeCommandOnSingleNode(it -> it.flushAll(JedisConverters.toFlushMode(option)), node);
 	}
 
@@ -185,12 +188,12 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public Properties info(ValkeyClusterNode node) {
+	public Properties info(@NonNull ValkeyClusterNode node) {
 		return JedisConverters.toProperties(executeCommandOnSingleNode(Jedis::info, node).getValue());
 	}
 
 	@Override
-	public Properties info(String section) {
+	public Properties info(@NonNull String section) {
 
 		Assert.notNull(section, "Section must not be null");
 
@@ -211,7 +214,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public Properties info(ValkeyClusterNode node, String section) {
+	public Properties info(@NonNull ValkeyClusterNode node, @NonNull String section) {
 
 		Assert.notNull(section, "Section must not be null");
 
@@ -227,7 +230,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void shutdown(ValkeyClusterNode node) {
+	public void shutdown(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(jedis -> {
 			jedis.shutdown();
 			return null;
@@ -235,7 +238,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void shutdown(ShutdownOption option) {
+	public void shutdown(@NonNull ShutdownOption option) {
 
 		if (option == null) {
 			shutdown();
@@ -246,15 +249,14 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public Properties getConfig(String pattern) {
+	public Properties getConfig(@NonNull String pattern) {
 
 		Assert.notNull(pattern, "Pattern must not be null");
 
 		JedisClusterCommandCallback<Map<String, String>> command = jedis -> jedis.configGet(pattern);
 
 		List<NodeResult<Map<String, String>>> nodeResults = connection.getClusterCommandExecutor()
-				.executeCommandOnAllNodes(command)
-				.getResults();
+				.executeCommandOnAllNodes(command).getResults();
 
 		Properties nodesConfiguration = new Properties();
 
@@ -273,7 +275,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public Properties getConfig(ValkeyClusterNode node, String pattern) {
+	public Properties getConfig(@NonNull ValkeyClusterNode node, @NonNull String pattern) {
 
 		Assert.notNull(pattern, "Pattern must not be null");
 
@@ -285,7 +287,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void setConfig(String param, String value) {
+	public void setConfig(@NonNull String param, @NonNull String value) {
 
 		Assert.notNull(param, "Parameter must not be null");
 		Assert.notNull(value, "Value must not be null");
@@ -295,7 +297,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void setConfig(ValkeyClusterNode node, String param, String value) {
+	public void setConfig(@NonNull ValkeyClusterNode node, @NonNull String param, @NonNull String value) {
 
 		Assert.notNull(param, "Parameter must not be null");
 		Assert.notNull(value, "Value must not be null");
@@ -316,17 +318,17 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void resetConfigStats(ValkeyClusterNode node) {
+	public void resetConfigStats(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(Jedis::configResetStat, node);
 	}
 
 	@Override
-	public void rewriteConfig(ValkeyClusterNode node) {
+	public void rewriteConfig(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(Jedis::configRewrite, node);
 	}
 
 	@Override
-	public Long time(TimeUnit timeUnit) {
+	public Long time(@NonNull TimeUnit timeUnit) {
 
 		return convertListOfStringToTime(
 				connection.getClusterCommandExecutor()
@@ -335,7 +337,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public Long time(ValkeyClusterNode node, TimeUnit timeUnit) {
+	public Long time(@NonNull ValkeyClusterNode node, @NonNull TimeUnit timeUnit) {
 
 		return convertListOfStringToTime(
 				connection.getClusterCommandExecutor()
@@ -344,7 +346,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void killClient(String host, int port) {
+	public void killClient(@NonNull String host, int port) {
 
 		Assert.hasText(host, "Host for 'CLIENT KILL' must not be 'null' or 'empty'");
 		String hostAndPort = "%s:%d".formatted(host, port);
@@ -355,7 +357,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void setClientName(byte[] name) {
+	public void setClientName(byte @NonNull [] name) {
 		throw new InvalidDataAccessApiUsageException("CLIENT SETNAME is not supported in cluster environment");
 	}
 
@@ -365,7 +367,7 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public List<ValkeyClientInfo> getClientList() {
+	public List<@NonNull ValkeyClientInfo> getClientList() {
 
 		Collection<String> map = connection.getClusterCommandExecutor()
 				.executeCommandOnAllNodes((JedisClusterCommandCallback<String>) Jedis::clientList).resultsAsList();
@@ -378,14 +380,14 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public List<ValkeyClientInfo> getClientList(ValkeyClusterNode node) {
+	public List<@NonNull ValkeyClientInfo> getClientList(@NonNull ValkeyClusterNode node) {
 
 		return JedisConverters
 				.toListOfValkeyClientInformation(executeCommandOnSingleNode(Jedis::clientList, node).getValue());
 	}
 
 	@Override
-	public void replicaOf(String host, int port) {
+	public void replicaOf(@NonNull String host, int port) {
 		throw new InvalidDataAccessApiUsageException(
 				"REPLICAOF is not supported in cluster environment; Please use CLUSTER REPLICATE");
 	}
@@ -397,24 +399,26 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 	}
 
 	@Override
-	public void migrate(byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option) {
+	public void migrate(byte @NonNull [] key, @NonNull ValkeyNode target, int dbIndex, @Nullable MigrateOption option) {
 		migrate(key, target, dbIndex, option, Long.MAX_VALUE);
 	}
 
 	@Override
-	public void migrate(byte[] key, ValkeyNode target, int dbIndex, @Nullable MigrateOption option, long timeout) {
+	public void migrate(byte @NonNull [] key, @NonNull ValkeyNode target, int dbIndex, @Nullable MigrateOption option,
+			long timeout) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(target, "Target node must not be null");
 		int timeoutToUse = timeout <= Integer.MAX_VALUE ? (int) timeout : Integer.MAX_VALUE;
 
-		ValkeyClusterNode node = connection.getTopologyProvider().getTopology().lookup(target.getHost(), target.getPort());
+		ValkeyClusterNode node = connection.getTopologyProvider().getTopology().lookup(target.getRequiredHost(),
+				target.getRequiredPort());
 
-		executeCommandOnSingleNode(client -> client.migrate(target.getHost(), target.getPort(), key, dbIndex, timeoutToUse),
-				node);
+		executeCommandOnSingleNode(
+				client -> client.migrate(target.getRequiredHost(), target.getRequiredPort(), key, dbIndex, timeoutToUse), node);
 	}
 
-	private Long convertListOfStringToTime(List<String> serverTimeInformation, TimeUnit timeUnit) {
+	private Long convertListOfStringToTime(List<@NonNull String> serverTimeInformation, TimeUnit timeUnit) {
 
 		Assert.notEmpty(serverTimeInformation, "Received invalid result from server; Expected 2 items in collection");
 		Assert.isTrue(serverTimeInformation.size() == 2,
@@ -423,11 +427,12 @@ class JedisClusterServerCommands implements ValkeyClusterServerCommands {
 		return Converters.toTimeMillis(serverTimeInformation.get(0), serverTimeInformation.get(1), timeUnit);
 	}
 
-	private <T> NodeResult<T> executeCommandOnSingleNode(JedisClusterCommandCallback<T> cmd, ValkeyClusterNode node) {
+	private <T> NodeResult<T> executeCommandOnSingleNode(@NonNull JedisClusterCommandCallback<T> cmd,
+			@NonNull ValkeyClusterNode node) {
 		return connection.getClusterCommandExecutor().executeCommandOnSingleNode(cmd, node);
 	}
 
-	private <T> MultiNodeResult<T> executeCommandOnAllNodes(JedisClusterCommandCallback<T> cmd) {
+	private <T> MultiNodeResult<T> executeCommandOnAllNodes(@NonNull JedisClusterCommandCallback<T> cmd) {
 		return connection.getClusterCommandExecutor().executeCommandOnAllNodes(cmd);
 	}
 

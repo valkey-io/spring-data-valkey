@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,14 @@ import reactor.test.StepVerifier;
 import java.util.Collection;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.core.ReactiveOperationsTestParams.Fixture;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for {@link DefaultReactiveHyperLogLogOperations}.
@@ -36,6 +37,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author Christoph Strobl
  */
+@ParameterizedClass
 @MethodSource("testParams")
 @SuppressWarnings("unchecked")
 public class DefaultReactiveHyperLogLogOperationsIntegrationTests<K, V> {
@@ -67,7 +69,8 @@ public class DefaultReactiveHyperLogLogOperationsIntegrationTests<K, V> {
 		connection.close();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test
+	// DATAREDIS-602
 	void add() {
 
 		K key = keyFactory.instance();
@@ -79,7 +82,7 @@ public class DefaultReactiveHyperLogLogOperationsIntegrationTests<K, V> {
 		hyperLogLogOperations.size(key).as(StepVerifier::create).expectNext(2L).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void union() {
 
 		K mergedKey = keyFactory.instance();
@@ -101,7 +104,7 @@ public class DefaultReactiveHyperLogLogOperationsIntegrationTests<K, V> {
 		}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void delete() {
 
 		K key = keyFactory.instance();

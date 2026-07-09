@@ -36,7 +36,7 @@ public class TimeToLiveOnMethod {
 ```
 
 :::note
-Annotating a property explicitly with `@TimeToLive` reads back the actual `TTL` or `PTTL` value from Valkey. -1 indicates that the object has no associated expiration.
+Annotating a property explicitly with `@TimeToLive` reads back the actual `TTL` or `PTTL` value from Valkey. `-1` indicates that the object has no associated expiration.
 :::
 
 The repository implementation ensures subscription to [Valkey keyspace notifications](https://valkey.io/topics/notifications) via `io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer`.
@@ -67,8 +67,10 @@ This prevents `CONFIG` command usage.
 :::
 
 :::note
+Valkey repositories rely on Pub/Sub messages for residual index cleanup.
 Valkey Pub/Sub messages are not persistent.
 If a key expires while the application is down, the expiry event is not processed, which may lead to secondary indexes containing references to the expired object.
+Valkey does not allow for expiration of individual entries of a set that is used as secondary index.
 :::
 
 :::note

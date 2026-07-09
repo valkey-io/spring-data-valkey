@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
-import org.springframework.lang.Nullable;
 
 /**
  * Invocation handler that suppresses close calls on {@link ValkeyConnection}.
@@ -42,8 +42,7 @@ class CloseSuppressingInvocationHandler implements InvocationHandler {
 	}
 
 	@Override
-	@Nullable
-	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+	public @Nullable Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 
 		if (method.getName().equals(EQUALS)) {
 			// Only consider equal when proxies are identical.

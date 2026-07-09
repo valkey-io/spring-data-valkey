@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,13 @@ import java.util.Set;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+import org.springframework.lang.Contract;
 import org.springframework.util.Assert;
 
 /**
  * Marker interface for configuration classes related to Valkey connection setup. As the setup scenarios are quite
- * diverse instead of struggling with unifying those, {@link ValkeyConfiguration} provides means to identify
+ * diverse instead of struggling with unifying those, {@code ValkeyConfiguration} provides means to identify
  * configurations for the individual purposes.
  *
  * @author Christoph Strobl
@@ -37,11 +38,11 @@ import org.springframework.util.Assert;
 public interface ValkeyConfiguration {
 
 	/**
-	 * Get the configured database index if the current {@link ValkeyConfiguration} is
+	 * Get the configured database index if the current {@code ValkeyConfiguration} is
 	 * {@link #isDatabaseIndexAware(ValkeyConfiguration) database aware} or evaluate and return the value of the given
 	 * {@link Supplier}.
 	 *
-	 * @param other a {@code Supplier} whose result is returned if given {@link ValkeyConfiguration} is not
+	 * @param other a {@code Supplier} whose result is returned if given {@code ValkeyConfiguration} is not
 	 *          {@link #isDatabaseIndexAware(ValkeyConfiguration) database aware}.
 	 * @return never {@literal null}.
 	 * @throws IllegalArgumentException if {@code other} is {@literal null}.
@@ -51,11 +52,11 @@ public interface ValkeyConfiguration {
 	}
 
 	/**
-	 * Get the configured {@link ValkeyPassword} if the current {@link ValkeyConfiguration} is
+	 * Get the configured {@link ValkeyPassword} if the current {@code ValkeyConfiguration} is
 	 * {@link #isAuthenticationAware(ValkeyConfiguration) password aware} or evaluate and return the value of the given
 	 * {@link Supplier}.
 	 *
-	 * @param other a {@code Supplier} whose result is returned if given {@link ValkeyConfiguration} is not
+	 * @param other a {@code Supplier} whose result is returned if given {@code ValkeyConfiguration} is not
 	 *          {@link #isAuthenticationAware(ValkeyConfiguration) password aware}.
 	 * @return never {@literal null}.
 	 * @throws IllegalArgumentException if {@code other} is {@literal null}.
@@ -66,64 +67,71 @@ public interface ValkeyConfiguration {
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @return {@code true} if given {@link ValkeyConfiguration} is instance of {@link WithPassword}.
+	 * @return {@code true} if given {@code ValkeyConfiguration} is instance of {@link WithPassword}.
 	 */
+	@Contract("null -> false")
 	static boolean isAuthenticationAware(@Nullable ValkeyConfiguration configuration) {
 		return configuration instanceof WithAuthentication;
 	}
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @return {@code true} if given {@link ValkeyConfiguration} is instance of {@link WithDatabaseIndex}.
+	 * @return {@code true} if given {@code ValkeyConfiguration} is instance of {@link WithDatabaseIndex}.
 	 */
+	@Contract("null -> false")
 	static boolean isDatabaseIndexAware(@Nullable ValkeyConfiguration configuration) {
 		return configuration instanceof WithDatabaseIndex;
 	}
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @return {@code true} if given {@link ValkeyConfiguration} is instance of {@link SentinelConfiguration}.
+	 * @return {@code true} if given {@code ValkeyConfiguration} is instance of {@link SentinelConfiguration}.
 	 */
+	@Contract("null -> false")
 	static boolean isSentinelConfiguration(@Nullable ValkeyConfiguration configuration) {
 		return configuration instanceof SentinelConfiguration;
 	}
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @return {@code true} if given {@link ValkeyConfiguration} is instance of {@link WithHostAndPort}.
+	 * @return {@code true} if given {@code ValkeyConfiguration} is instance of {@link WithHostAndPort}.
 	 * @since 2.1.6
 	 */
+	@Contract("null -> false")
 	static boolean isHostAndPortAware(@Nullable ValkeyConfiguration configuration) {
 		return configuration instanceof WithHostAndPort;
 	}
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @return {@code true} if given {@link ValkeyConfiguration} is instance of {@link ClusterConfiguration}.
+	 * @return {@code true} if given {@code ValkeyConfiguration} is instance of {@link ClusterConfiguration}.
 	 */
+	@Contract("null -> false")
 	static boolean isClusterConfiguration(@Nullable ValkeyConfiguration configuration) {
 		return configuration instanceof ClusterConfiguration;
 	}
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @return {@code true} if given {@link ValkeyConfiguration} is instance of {@link StaticMasterReplicaConfiguration}.
+	 * @return {@code true} if given {@code ValkeyConfiguration} is instance of {@link StaticMasterReplicaConfiguration}.
 	 */
+	@Contract("null -> false")
 	static boolean isStaticMasterReplicaConfiguration(@Nullable ValkeyConfiguration configuration) {
 		return configuration instanceof StaticMasterReplicaConfiguration;
 	}
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @return {@code true} if given {@link ValkeyConfiguration} is instance of {@link DomainSocketConfiguration}.
+	 * @return {@code true} if given {@code ValkeyConfiguration} is instance of {@link DomainSocketConfiguration}.
 	 */
+	@Contract("null -> false")
 	static boolean isDomainSocketConfiguration(@Nullable ValkeyConfiguration configuration) {
 		return configuration instanceof DomainSocketConfiguration;
 	}
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @param other a {@code Supplier} whose result is returned if given {@link ValkeyConfiguration} is not
+	 * @param other a {@code Supplier} whose result is returned if given {@code ValkeyConfiguration} is not
 	 *          {@link #isDatabaseIndexAware(ValkeyConfiguration) database aware}.
 	 * @return never {@literal null}.
 	 * @throws IllegalArgumentException if {@code other} is {@literal null}.
@@ -136,13 +144,13 @@ public interface ValkeyConfiguration {
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @param other a {@code Supplier} whose result is returned if given {@link ValkeyConfiguration} is not
+	 * @param other a {@code Supplier} whose result is returned if given {@code ValkeyConfiguration} is not
 	 *          {@link #isAuthenticationAware(ValkeyConfiguration) password aware}.
 	 * @return can be {@literal null}.
 	 * @throws IllegalArgumentException if {@code other} is {@literal null}.
 	 */
-	@Nullable
-	static String getUsernameOrElse(@Nullable ValkeyConfiguration configuration, Supplier<String> other) {
+	static @Nullable String getUsernameOrElse(@Nullable ValkeyConfiguration configuration,
+			Supplier<@Nullable String> other) {
 
 		Assert.notNull(other, "Other must not be null");
 		return isAuthenticationAware(configuration) ? ((WithAuthentication) configuration).getUsername() : other.get();
@@ -150,7 +158,7 @@ public interface ValkeyConfiguration {
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @param other a {@code Supplier} whose result is returned if given {@link ValkeyConfiguration} is not
+	 * @param other a {@code Supplier} whose result is returned if given {@code ValkeyConfiguration} is not
 	 *          {@link #isAuthenticationAware(ValkeyConfiguration) password aware}.
 	 * @return never {@literal null}.
 	 * @throws IllegalArgumentException if {@code other} is {@literal null}.
@@ -163,7 +171,7 @@ public interface ValkeyConfiguration {
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @param other a {@code Supplier} whose result is returned if given {@link ValkeyConfiguration} is not
+	 * @param other a {@code Supplier} whose result is returned if given {@code ValkeyConfiguration} is not
 	 *          {@link #isHostAndPortAware(ValkeyConfiguration) port aware}.
 	 * @return never {@literal null}.
 	 * @throws IllegalArgumentException if {@code other} is {@literal null}.
@@ -177,7 +185,7 @@ public interface ValkeyConfiguration {
 
 	/**
 	 * @param configuration can be {@literal null}.
-	 * @param other a {@code Supplier} whose result is returned if given {@link ValkeyConfiguration} is not
+	 * @param other a {@code Supplier} whose result is returned if given {@code ValkeyConfiguration} is not
 	 *          {@link #isHostAndPortAware(ValkeyConfiguration) host aware}.
 	 * @return never {@literal null}.
 	 * @throws IllegalArgumentException if {@code other} is {@literal null}.
@@ -190,7 +198,7 @@ public interface ValkeyConfiguration {
 	}
 
 	/**
-	 * {@link ValkeyConfiguration} part suitable for configurations that may use authentication when connecting.
+	 * {@code ValkeyConfiguration} part suitable for configurations that may use authentication when connecting.
 	 *
 	 * @author Christoph Strobl
 	 * @author Mark Paluch
@@ -227,7 +235,7 @@ public interface ValkeyConfiguration {
 		 *
 		 * @param password can be {@literal null}.
 		 */
-		default void setPassword(@Nullable char[] password) {
+		default void setPassword(char @Nullable [] password) {
 			setPassword(ValkeyPassword.of(password));
 		}
 
@@ -247,7 +255,7 @@ public interface ValkeyConfiguration {
 	}
 
 	/**
-	 * {@link ValkeyConfiguration} part suitable for configurations that may use authentication when connecting.
+	 * {@code ValkeyConfiguration} part suitable for configurations that may use authentication when connecting.
 	 *
 	 * @author Christoph Strobl
 	 * @since 2.1
@@ -257,7 +265,7 @@ public interface ValkeyConfiguration {
 	}
 
 	/**
-	 * {@link ValkeyConfiguration} part suitable for configurations that use a specific database.
+	 * {@code ValkeyConfiguration} part suitable for configurations that use a specific database.
 	 *
 	 * @author Christoph Strobl
 	 * @since 2.1
@@ -280,7 +288,7 @@ public interface ValkeyConfiguration {
 	}
 
 	/**
-	 * {@link ValkeyConfiguration} part suitable for configurations that use host/port combinations for connecting.
+	 * {@code ValkeyConfiguration} part suitable for configurations that use host/port combinations for connecting.
 	 *
 	 * @author Christoph Strobl
 	 * @since 2.1
@@ -315,7 +323,7 @@ public interface ValkeyConfiguration {
 	}
 
 	/**
-	 * {@link ValkeyConfiguration} part suitable for configurations that use native domain sockets for connecting.
+	 * {@code ValkeyConfiguration} part suitable for configurations that use native domain sockets for connecting.
 	 *
 	 * @author Christoph Strobl
 	 * @since 2.1
@@ -361,7 +369,7 @@ public interface ValkeyConfiguration {
 	}
 
 	/**
-	 * Configuration interface suitable for single node valkey connections using local unix domain socket.
+	 * Configuration interface suitable for single node Valkey connections using local unix domain socket.
 	 *
 	 * @author Christoph Strobl
 	 * @since 2.1
@@ -418,8 +426,7 @@ public interface ValkeyConfiguration {
 		 * @return can be {@literal null} if not set.
 		 * @since 2.4
 		 */
-		@Nullable
-		default String getDataNodeUsername() {
+		default @Nullable String getDataNodeUsername() {
 			return getUsername();
 		}
 
@@ -468,7 +475,7 @@ public interface ValkeyConfiguration {
 		 * @param password can be {@literal null}.
 		 * @since 2.2.2
 		 */
-		default void setSentinelPassword(@Nullable char[] password) {
+		default void setSentinelPassword(char @Nullable [] password) {
 			setSentinelPassword(ValkeyPassword.of(password));
 		}
 

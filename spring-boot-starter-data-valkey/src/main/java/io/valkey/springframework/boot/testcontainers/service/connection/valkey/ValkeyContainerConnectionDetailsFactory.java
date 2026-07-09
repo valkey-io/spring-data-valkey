@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,14 @@ package io.valkey.springframework.boot.testcontainers.service.connection.valkey;
 
 import java.util.List;
 
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails;
+import com.redis.testcontainers.RedisContainer;
+import com.redis.testcontainers.RedisStackContainer;
+import org.jspecify.annotations.Nullable;
 import org.testcontainers.containers.Container;
+import org.testcontainers.containers.GenericContainer;
 
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails;
+import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.testcontainers.service.connection.ContainerConnectionDetailsFactory;
 import org.springframework.boot.testcontainers.service.connection.ContainerConnectionSource;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -38,12 +43,23 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 class ValkeyContainerConnectionDetailsFactory
 		extends ContainerConnectionDetailsFactory<Container<?>, ValkeyConnectionDetails> {
 
-	private static final List<String> VALKEY_IMAGE_NAMES = List.of("valkey/valkey");
+	private static final List<String> VALKEY_IMAGE_NAMES = List.of("valkey", "valkey/valkey", "redis",
+			"redis/redis-stack", "redis/redis-stack-server");
 
 	private static final int VALKEY_PORT = 6379;
 
 	ValkeyContainerConnectionDetailsFactory() {
 		super(VALKEY_IMAGE_NAMES);
+	}
+
+	@Override
+	protected boolean sourceAccepts(ContainerConnectionSource<Container<?>> source, Class<?> requiredContainerType,
+			Class<?> requiredConnectionDetailsType) {
+		return super.sourceAccepts(source, requiredContainerType, requiredConnectionDetailsType)
+				|| source.accepts(ContainerConnectionDetailsFactory.ANY_CONNECTION_NAME, RedisContainer.class,
+						requiredConnectionDetailsType)
+				|| source.accepts(ContainerConnectionDetailsFactory.ANY_CONNECTION_NAME, RedisStackContainer.class,
+						requiredConnectionDetailsType);
 	}
 
 	@Override
@@ -62,9 +78,13 @@ class ValkeyContainerConnectionDetailsFactory
 		}
 
 		@Override
+		public @Nullable SslBundle getSslBundle() {
+			return super.getSslBundle();
+		}
+
+		@Override
 		public Standalone getStandalone() {
-			return Standalone.of(getContainer().getHost(), getContainer().getMappedPort(VALKEY_PORT),
-					super.getSslBundle());
+			return Standalone.of(getContainer().getHost(), getContainer().getMappedPort(VALKEY_PORT));
 		}
 
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,10 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 
 /**
  * Reactive Valkey operations for simple (or in Valkey terminology 'string') values.
@@ -35,6 +37,7 @@ import io.valkey.springframework.data.valkey.connection.BitFieldSubCommands;
  *
  * @author Mark Paluch
  * @author Jiahe Cai
+ * @author Yordan Tsintsov
  * @since 2.0
  */
 public interface ReactiveValueOperations<K, V> {
@@ -43,10 +46,21 @@ public interface ReactiveValueOperations<K, V> {
 	 * Set {@code value} for {@code key}.
 	 *
 	 * @param key must not be {@literal null}.
-	 * @param value
+	 * @param value must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 */
 	Mono<Boolean> set(K key, V value);
+
+	/**
+	 * Set {@code value} for {@code key} with {@code expiration}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Mono<Boolean> set(K key, V value, Expiration expiration);
 
 	/**
 	 * Set the {@code value} and expiration {@code timeout} for {@code key}.
@@ -56,7 +70,34 @@ public interface ReactiveValueOperations<K, V> {
 	 * @param timeout must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 */
-	Mono<Boolean> set(K key, V value, Duration timeout);
+	default Mono<Boolean> set(K key, V value, Duration timeout) {
+		return set(key, value, Expiration.from(timeout));
+	}
+
+	/**
+	 * Set {@code value} for {@code key} and customize the operation through {@link SetSpec}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param spec a function that consumes the {@link SetSpec} to configure the set operation, must not be
+	 *          {@literal null}.
+	 * @return {@literal true} if the operation was successful, {@literal false} otherwise.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Mono<Boolean> set(K key, V value, Consumer<SetSpec<K, V>> spec);
+
+	/**
+	 * Set the {@code value} and {@code expiration} for {@code key}. Return the old string stored at key, or
+	 * empty if key did not exist. An error is returned and SET aborted if the value stored at key is not a string.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Mono<V> setGet(K key, V value, Expiration expiration);
 
 	/**
 	 * Set the {@code value} and expiration {@code timeout} for {@code key}. Return the old string stored at key, or empty
@@ -68,7 +109,23 @@ public interface ReactiveValueOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/setex">Valkey Documentation: SETEX</a>
 	 * @since 3.5
 	 */
-	Mono<V> setGet(K key, V value, Duration timeout);
+	default Mono<V> setGet(K key, V value, Duration timeout) {
+		return setGet(key, value, Expiration.from(timeout));
+	}
+
+	/**
+	 * Set {@code value} for {@code key} and customize the operation through {@link SetSpec}. Return the old string stored
+	 * at key, or {@literal null} if key did not exist.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param spec a function that consumes the {@link SetSpec} to configure the set operation, must not be
+	 *          {@literal null}.
+	 * @return the old value stored at key, or {@literal null} if key did not exist.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Mono<V> setGet(K key, V value, Consumer<SetSpec<K, V>> spec);
 
 	/**
 	 * Set {@code key} to hold the string {@code value} if {@code key} is absent.
@@ -77,7 +134,20 @@ public interface ReactiveValueOperations<K, V> {
 	 * @param value
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 */
-	Mono<Boolean> setIfAbsent(K key, V value);
+	default Mono<Boolean> setIfAbsent(K key, V value) {
+		return setIfAbsent(key, value, Expiration.persistent());
+	}
+
+	/**
+	 * Set {@code key} to hold the string {@code value} and {@code expiration} if {@code key} is absent.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Mono<Boolean> setIfAbsent(K key, V value, Expiration expiration);
 
 	/**
 	 * Set {@code key} to hold the string {@code value} and expiration {@code timeout} if {@code key} is absent.
@@ -88,7 +158,9 @@ public interface ReactiveValueOperations<K, V> {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 */
-	Mono<Boolean> setIfAbsent(K key, V value, Duration timeout);
+	default Mono<Boolean> setIfAbsent(K key, V value, Duration timeout) {
+		return setIfAbsent(key, value, Expiration.from(timeout));
+	}
 
 	/**
 	 * Set {@code key} to hold the string {@code value} if {@code key} is present.
@@ -97,7 +169,20 @@ public interface ReactiveValueOperations<K, V> {
 	 * @param value
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 */
-	Mono<Boolean> setIfPresent(K key, V value);
+	default Mono<Boolean> setIfPresent(K key, V value) {
+		return setIfPresent(key, value, Expiration.persistent());
+	}
+
+	/**
+	 * Set {@code key} to hold the string {@code value} if {@code key} is present.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param value must not be {@literal null}.
+	 * @param expiration must not be {@literal null}.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Mono<Boolean> setIfPresent(K key, V value, Expiration expiration);
 
 	/**
 	 * Set {@code key} to hold the string {@code value} and expiration {@code timeout} if {@code key} is present.
@@ -108,7 +193,23 @@ public interface ReactiveValueOperations<K, V> {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
 	 */
-	Mono<Boolean> setIfPresent(K key, V value, Duration timeout);
+	default Mono<Boolean> setIfPresent(K key, V value, Duration timeout) {
+		return setIfPresent(key, value, Expiration.from(timeout));
+	}
+
+	/**
+	 * Compare the value at {@code key} with {@code expectedValue} and set it to {@code newValue} if they are equal. Use
+	 * {@link #set(Object, Object, Consumer)} to customize the set operation using e.g. a different value comparison
+	 * strategy.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expectedValue the expected current value, must not be {@literal null}.
+	 * @param newValue the new value to set if comparison succeeds, must not be {@literal null}.
+	 * @return {@literal true} if the operation was successful, {@literal false} otherwise.
+	 * @see <a href="https://valkey.io/commands/set">Valkey Documentation: SET</a>
+	 * @since 4.1
+	 */
+	Mono<Boolean> compareAndSet(K key, V expectedValue, V newValue);
 
 	/**
 	 * Set multiple keys to multiple values using key-value pairs provided in {@code tuple}.
@@ -304,4 +405,5 @@ public interface ReactiveValueOperations<K, V> {
 	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
 	 */
 	Mono<Boolean> delete(K key);
+
 }

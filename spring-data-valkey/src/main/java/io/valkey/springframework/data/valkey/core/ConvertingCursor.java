@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -53,8 +53,7 @@ public class ConvertingCursor<S, T> implements Cursor<T> {
 	}
 
 	@Override
-	@Nullable
-	public T next() {
+	public @Nullable T next() {
 		return converter.convert(delegate.next());
 	}
 

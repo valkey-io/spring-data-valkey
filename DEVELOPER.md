@@ -148,10 +148,10 @@ This repository is forked from Spring Data Redis and related projects. This sect
 
 | Local Module | Redis Source Repository | Branch/Tag | Notes |
 |--------------|------------------------|------------|-------|
-| `./` | [spring-data-build](https://github.com/spring-projects/spring-data-build) | `3.5.1` | Parent for Spring Data modules |
-| `spring-data-valkey/` | [spring-data-redis](https://github.com/spring-projects/spring-data-redis) | `3.5.1` | Core Spring Data Redis functionality |
-| `spring-boot-starter-data-valkey/` | [spring-boot](https://github.com/spring-projects/spring-boot) | `3.5.1` | Spring Boot auto-configuration for Redis |
-| `docs/` | [spring-data-redis](https://github.com/spring-projects/spring-data-redis) | `3.5.1` | Documentation |
+| `./` | [spring-data-build](https://github.com/spring-projects/spring-data-build) | `4.1.0` | Parent for Spring Data modules |
+| `spring-data-valkey/` | [spring-data-redis](https://github.com/spring-projects/spring-data-redis) | `4.1.0` | Core Spring Data Redis functionality |
+| `spring-boot-starter-data-valkey/` | [spring-boot](https://github.com/spring-projects/spring-boot) | `4.0.7` | Spring Boot auto-configuration for Redis |
+| `docs/` | [spring-data-redis](https://github.com/spring-projects/spring-data-redis) | `4.1.0` | Documentation |
 | `examples/` | [spring-data-examples](https://github.com/spring-projects/spring-data-examples) | `main` | Redis examples |
 
 Key changes from Redis source:

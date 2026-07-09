@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.cache;
 
+import org.springframework.util.StringUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -24,21 +25,26 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
+
+import org.jspecify.annotations.Nullable;
 
 import org.springframework.dao.PessimisticLockingFailureException;
+import io.valkey.springframework.data.valkey.connection.ReactiveKeyCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ReactiveStringCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyStringCommands.SetOption;
+import io.valkey.springframework.data.valkey.connection.SetCondition;
+import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
@@ -61,6 +67,7 @@ import org.springframework.util.ObjectUtils;
  * @author André Prata
  * @author John Blum
  * @author ChanYoung Joung
+ * @author Youngsuk Kim
  * @since 2.0
  */
 class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
@@ -80,6 +87,8 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 
 	private final AsyncCacheWriter asyncCacheWriter;
 
+	private final boolean asynchronousWrites;
+
 	/**
 	 * @param connectionFactory must not be {@literal null}.
 	 * @param batchStrategy must not be {@literal null}.
@@ -95,19 +104,11 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 	 * @param batchStrategy must not be {@literal null}.
 	 */
 	DefaultValkeyCacheWriter(ValkeyConnectionFactory connectionFactory, Duration sleepTime, BatchStrategy batchStrategy) {
-		this(connectionFactory, sleepTime, TtlFunction.persistent(), CacheStatisticsCollector.none(), batchStrategy);
+		this(connectionFactory, sleepTime, TtlFunction.persistent(), CacheStatisticsCollector.none(), batchStrategy, true);
 	}
 
-	/**
-	 * @param connectionFactory must not be {@literal null}.
-	 * @param sleepTime sleep time between lock request attempts. Must not be {@literal null}. Use {@link Duration#ZERO}
-	 *          to disable locking.
-	 * @param lockTtl Lock TTL function must not be {@literal null}.
-	 * @param cacheStatisticsCollector must not be {@literal null}.
-	 * @param batchStrategy must not be {@literal null}.
-	 */
 	DefaultValkeyCacheWriter(ValkeyConnectionFactory connectionFactory, Duration sleepTime, TtlFunction lockTtl,
-			CacheStatisticsCollector cacheStatisticsCollector, BatchStrategy batchStrategy) {
+			CacheStatisticsCollector cacheStatisticsCollector, BatchStrategy batchStrategy, boolean asynchronousWrites) {
 
 		Assert.notNull(connectionFactory, "ConnectionFactory must not be null");
 		Assert.notNull(sleepTime, "SleepTime must not be null");
@@ -122,19 +123,123 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		this.batchStrategy = batchStrategy;
 
 		if (REACTIVE_VALKEY_CONNECTION_FACTORY_PRESENT && this.connectionFactory instanceof ReactiveValkeyConnectionFactory) {
-			asyncCacheWriter = new AsynchronousCacheWriterDelegate();
+			this.asyncCacheWriter = new AsynchronousCacheWriterDelegate();
+			this.asynchronousWrites = asynchronousWrites;
 		} else {
 			asyncCacheWriter = UnsupportedAsyncCacheWriter.INSTANCE;
+			this.asynchronousWrites = false;
 		}
 	}
 
+	/**
+	 * Create a new {@code DefaultValkeyCacheWriter} applying configuration through {@code configurerConsumer}.
+	 *
+	 * @param connectionFactory the connection factory to use.
+	 * @param configurerConsumer configuration consumer.
+	 * @return a new {@code DefaultValkeyCacheWriter}.
+	 * @since 4.0
+	 */
+	public static DefaultValkeyCacheWriter create(ValkeyConnectionFactory connectionFactory,
+			Consumer<ValkeyCacheWriterConfigurer> configurerConsumer) {
+
+		Assert.notNull(connectionFactory, "ValkeyConnectionFactory must not be null");
+		Assert.notNull(configurerConsumer, "ValkeyCacheWriterConfigurer function must not be null");
+
+		DefaultValkeyCacheWriterConfigurer config = new DefaultValkeyCacheWriterConfigurer();
+		configurerConsumer.accept(config);
+
+		return new DefaultValkeyCacheWriter(connectionFactory, config.lockSleepTime, config.lockTtlFunction,
+				config.cacheStatisticsCollector, config.batchStrategy, !config.immediateWrites);
+	}
+
+	static class DefaultValkeyCacheWriterConfigurer
+			implements ValkeyCacheWriterConfigurer, CacheLockingConfigurer, CacheLockingConfiguration {
+
+		CacheStatisticsCollector cacheStatisticsCollector = CacheStatisticsCollector.none();
+		BatchStrategy batchStrategy = BatchStrategies.keys();
+		Duration lockSleepTime = Duration.ZERO;
+		TtlFunction lockTtlFunction = TtlFunction.persistent();
+		boolean immediateWrites = false;
+
+		@Override
+		public ValkeyCacheWriterConfigurer collectStatistics(CacheStatisticsCollector cacheStatisticsCollector) {
+
+			Assert.notNull(cacheStatisticsCollector, "CacheStatisticsCollector must not be null");
+			this.cacheStatisticsCollector = cacheStatisticsCollector;
+
+			return this;
+		}
+
+		@Override
+		public ValkeyCacheWriterConfigurer batchStrategy(BatchStrategy batchStrategy) {
+
+			Assert.notNull(batchStrategy, "BatchStrategy must not be null");
+			this.batchStrategy = batchStrategy;
+
+			return this;
+		}
+
+		@Override
+		public ValkeyCacheWriterConfigurer cacheLocking(Consumer<CacheLockingConfigurer> configurerConsumer) {
+
+			Assert.notNull(configurerConsumer, "CacheLockingConfigurer function must not be null");
+			configurerConsumer.accept(this);
+
+			return this;
+		}
+
+		@Override
+		public ValkeyCacheWriterConfigurer immediateWrites(boolean enableImmediateWrites) {
+
+			this.immediateWrites = enableImmediateWrites;
+			return this;
+		}
+
+		@Override
+		public void disable() {
+			this.lockSleepTime = Duration.ZERO;
+		}
+
+		@Override
+		public void enable(Consumer<CacheLockingConfiguration> configurationConsumer) {
+
+			Assert.notNull(configurationConsumer, "CacheLockingConfigurer function must not be null");
+
+			if (this.lockSleepTime.isZero() || this.lockSleepTime.isNegative()) {
+				this.lockSleepTime = Duration.ofMillis(50);
+			}
+			configurationConsumer.accept(this);
+		}
+
+		@Override
+		public CacheLockingConfiguration sleepTime(Duration sleepTime) {
+
+			Assert.notNull(sleepTime, "Lock sleep time must not be null");
+			Assert.isTrue(isPositiveDuration(sleepTime), "Lock sleep time must not be null zero or negative");
+
+			this.lockSleepTime = sleepTime;
+
+			return this;
+		}
+
+		@Override
+		public CacheLockingConfiguration lockTimeout(TtlFunction ttlFunction) {
+
+			Assert.notNull(ttlFunction, "TTL function must not be null");
+			this.lockTtlFunction = ttlFunction;
+
+			return this;
+		}
+
+	}
+
 	@Override
-	public byte[] get(String name, byte[] key) {
+	public byte @Nullable [] get(String name, byte[] key) {
 		return get(name, key, null);
 	}
 
 	@Override
-	public byte[] get(String name, byte[] key, @Nullable Duration ttl) {
+	public byte @Nullable [] get(String name, byte[] key, @Nullable Duration ttl) {
 
 		Assert.notNull(name, "Name must not be null");
 		Assert.notNull(key, "Key must not be null");
@@ -142,11 +247,11 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		return execute(name, connection -> doGet(connection, name, key, ttl));
 	}
 
-	@Nullable
-	private byte[] doGet(ValkeyConnection connection, String name, byte[] key, @Nullable Duration ttl) {
+	@SuppressWarnings("NullAway")
+	private byte @Nullable [] doGet(ValkeyConnection connection, String name, byte[] key, @Nullable Duration ttl) {
 
-		byte[] result = shouldExpireWithin(ttl) ? connection.stringCommands().getEx(key, Expiration.from(ttl))
-				: connection.stringCommands().get(key);
+		ValkeyStringCommands commands = connection.stringCommands();
+		byte[] result = isPositiveDuration(ttl) ? commands.getEx(key, Expiration.from(ttl)) : commands.get(key);
 
 		statistics.incGets(name);
 
@@ -166,7 +271,7 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		Assert.notNull(name, "Name must not be null");
 		Assert.notNull(key, "Key must not be null");
 
-		boolean withTtl = shouldExpireWithin(ttl);
+		boolean withTtl = isPositiveDuration(ttl);
 
 		// double-checked locking optimization
 		if (isLockingCacheWriter()) {
@@ -206,6 +311,10 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		return asyncCacheWriter.isSupported();
 	}
 
+	private boolean writeAsynchronously() {
+		return supportsAsyncRetrieve() && asynchronousWrites;
+	}
+
 	@Override
 	public CompletableFuture<byte[]> retrieve(String name, byte[] key, @Nullable Duration ttl) {
 
@@ -234,18 +343,22 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		execute(name, connection -> {
-			doPut(connection, name, key, value, ttl);
-			return "OK";
-		});
-
+		if (writeAsynchronously()) {
+			asyncCacheWriter.store(name, key, value, ttl).thenRun(() -> statistics.incPuts(name));
+		} else {
+			execute(name, connection -> {
+				doPut(connection, name, key, value, ttl);
+				return "OK";
+			});
+		}
 	}
 
+	@SuppressWarnings("NullAway")
 	private void doPut(ValkeyConnection connection, String name, byte[] key, byte[] value, @Nullable Duration ttl) {
 
-		if (shouldExpireWithin(ttl)) {
-			connection.stringCommands().set(key, value, Expiration.from(ttl.toMillis(), TimeUnit.MILLISECONDS),
-					SetOption.upsert());
+		if (isPositiveDuration(ttl)) {
+			connection.stringCommands().set(key, value, SetCondition.upsert(),
+					Expiration.from(ttl.toMillis(), TimeUnit.MILLISECONDS));
 		} else {
 			connection.stringCommands().set(key, value);
 		}
@@ -265,6 +378,7 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public byte[] putIfAbsent(String name, byte[] key, byte[] value, @Nullable Duration ttl) {
 
 		Assert.notNull(name, "Name must not be null");
@@ -281,9 +395,9 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 
 				boolean put;
 
-				if (shouldExpireWithin(ttl)) {
+				if (isPositiveDuration(ttl)) {
 					put = ObjectUtils.nullSafeEquals(
-							connection.stringCommands().set(key, value, Expiration.from(ttl), SetOption.ifAbsent()), true);
+							connection.stringCommands().set(key, value, SetCondition.ifAbsent(), Expiration.from(ttl)), true);
 				} else {
 					put = ObjectUtils.nullSafeEquals(connection.stringCommands().setNX(key, value), true);
 				}
@@ -304,22 +418,49 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 	}
 
 	@Override
-	public void remove(String name, byte[] key) {
+	public void evict(String name, byte[] key) {
 
 		Assert.notNull(name, "Name must not be null");
 		Assert.notNull(key, "Key must not be null");
 
-		execute(name, connection -> connection.keyCommands().del(key));
-		statistics.incDeletes(name);
+		if (writeAsynchronously()) {
+			asyncCacheWriter.remove(name, key).thenRun(() -> statistics.incDeletes(name));
+		} else {
+			evictIfPresent(name, key);
+		}
 	}
 
 	@Override
-	public void clean(String name, byte[] pattern) {
+	public boolean evictIfPresent(String name, byte[] key) {
+
+		Long removals = execute(name, connection -> connection.keyCommands().del(key));
+		statistics.incDeletes(name);
+
+		return removals > 0;
+	}
+
+	@Override
+	public void clear(String name, byte[] pattern) {
 
 		Assert.notNull(name, "Name must not be null");
 		Assert.notNull(pattern, "Pattern must not be null");
 
-		execute(name, connection -> {
+		if (writeAsynchronously()) {
+			asyncCacheWriter.clear(name, pattern, batchStrategy)
+					.thenAccept(deleteCount -> statistics.incDeletesBy(name, deleteCount.intValue()));
+			return;
+		}
+
+		invalidate(name, pattern);
+	}
+
+	@Override
+	public boolean invalidate(String name, byte[] pattern) {
+
+		Assert.notNull(name, "Name must not be null");
+		Assert.notNull(pattern, "Pattern must not be null");
+
+		return execute(name, connection -> {
 
 			try {
 				if (isLockingCacheWriter()) {
@@ -335,13 +476,12 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 
 				statistics.incDeletesBy(name, (int) deleteCount);
 
+				return deleteCount > 0;
 			} finally {
 				if (isLockingCacheWriter()) {
 					doUnlock(name, connection);
 				}
 			}
-
-			return "OK";
 		});
 	}
 
@@ -358,7 +498,7 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 	@Override
 	public ValkeyCacheWriter withStatisticsCollector(CacheStatisticsCollector cacheStatisticsCollector) {
 		return new DefaultValkeyCacheWriter(connectionFactory, sleepTime, lockTtl, cacheStatisticsCollector,
-				this.batchStrategy);
+				this.batchStrategy, this.asynchronousWrites);
 	}
 
 	/**
@@ -376,7 +516,7 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		Expiration expiration = Expiration.from(this.lockTtl.getTimeToLive(contextualKey, contextualValue));
 		byte[] cacheLockKey = createCacheLockKey(name);
 
-		while (!ObjectUtils.nullSafeEquals(commands.set(cacheLockKey, new byte[0], expiration, SetOption.SET_IF_ABSENT),
+		while (!ObjectUtils.nullSafeEquals(commands.set(cacheLockKey, new byte[0], SetCondition.ifAbsent(), expiration),
 				true)) {
 			checkAndPotentiallyWaitUntilUnlocked(name, connection);
 		}
@@ -396,10 +536,17 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		return connection.keyCommands().del(createCacheLockKey(name));
 	}
 
-	private <T> T execute(String name, Function<ValkeyConnection, T> callback) {
+	@Override
+	public <T> T execute(Function<ValkeyConnection, T> callback) {
+		return execute(null, callback);
+	}
+
+	private <T> T execute(@Nullable String name, Function<ValkeyConnection, T> callback) {
 
 		try (ValkeyConnection connection = this.connectionFactory.getConnection()) {
-			checkAndPotentiallyWaitUntilUnlocked(name, connection);
+			if(StringUtils.hasText(name)) {
+				checkAndPotentiallyWaitUntilUnlocked(name, connection);
+			}
 			return callback.apply(connection);
 		}
 	}
@@ -425,7 +572,7 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 	 * @return {@literal true} if {@link ValkeyCacheWriter} uses locks.
 	 */
 	private boolean isLockingCacheWriter() {
-		return !this.sleepTime.isZero() && !this.sleepTime.isNegative();
+		return isPositiveDuration(this.sleepTime);
 	}
 
 	private void checkAndPotentiallyWaitUntilUnlocked(String name, ValkeyConnection connection) {
@@ -459,8 +606,8 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		return (name + "~lock").getBytes(StandardCharsets.UTF_8);
 	}
 
-	private static boolean shouldExpireWithin(@Nullable Duration ttl) {
-		return ttl != null && !ttl.isZero() && !ttl.isNegative();
+	private static boolean isPositiveDuration(@Nullable Duration duration) {
+		return duration != null && !duration.isZero() && !duration.isNegative();
 	}
 
 	/**
@@ -497,6 +644,26 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		 */
 		CompletableFuture<Void> store(String name, byte[] key, byte[] value, @Nullable Duration ttl);
 
+		/**
+		 * Remove a cache entry asynchronously.
+		 *
+		 * @param name the cache name which to store the cache entry to.
+		 * @param key the key for the cache entry. Must not be {@literal null}.
+		 * @return a future that signals completion.
+		 */
+		CompletableFuture<Void> remove(String name, byte[] key);
+
+		/**
+		 * Clear the cache asynchronously.
+		 *
+		 * @param name the cache name which to store the cache entry to.
+		 * @param pattern {@link String pattern} used to match Valkey keys to clear.
+		 * @param batchStrategy strategy to use.
+		 * @return a future that signals completion emitting the number of removed keys.
+		 * @since 4.0
+		 */
+		CompletableFuture<Long> clear(String name, byte[] pattern, BatchStrategy batchStrategy);
+
 	}
 
 	/**
@@ -522,6 +689,17 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 		public CompletableFuture<Void> store(String name, byte[] key, byte[] value, @Nullable Duration ttl) {
 			throw new UnsupportedOperationException("async store not supported");
 		}
+
+		@Override
+		public CompletableFuture<Void> remove(String name, byte[] key) {
+			throw new UnsupportedOperationException("async remove not supported");
+		}
+
+		@Override
+		public CompletableFuture<Long> clear(String name, byte[] pattern, BatchStrategy batchStrategy) {
+			throw new UnsupportedOperationException("async clean not supported");
+		}
+
 	}
 
 	/**
@@ -532,12 +710,21 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 	 */
 	class AsynchronousCacheWriterDelegate implements AsyncCacheWriter {
 
+		private static final int DEFAULT_SCAN_BATCH_SIZE = 64;
+		private final int clearBatchSize;
+
+		public AsynchronousCacheWriterDelegate() {
+			this.clearBatchSize = batchStrategy instanceof BatchStrategies.Scan scan ? scan.batchSize()
+					: DEFAULT_SCAN_BATCH_SIZE;
+		}
+
 		@Override
 		public boolean isSupported() {
 			return true;
 		}
 
 		@Override
+		@SuppressWarnings("NullAway")
 		public CompletableFuture<byte[]> retrieve(String name, byte[] key, @Nullable Duration ttl) {
 
 			return doWithConnection(connection -> {
@@ -546,10 +733,10 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 				Mono<?> cacheLockCheck = isLockingCacheWriter() ? waitForLock(connection, name) : Mono.empty();
 				ReactiveStringCommands stringCommands = connection.stringCommands();
 
-				Mono<ByteBuffer> get = shouldExpireWithin(ttl) ? stringCommands.getEx(wrappedKey, Expiration.from(ttl))
+				Mono<ByteBuffer> get = isPositiveDuration(ttl) ? stringCommands.getEx(wrappedKey, Expiration.from(ttl))
 						: stringCommands.get(wrappedKey);
 
-				return cacheLockCheck.then(get).map(ByteUtils::getBytes).toFuture();
+				return cacheLockCheck.then(get).map(ByteUtils::getBytes);
 			});
 		}
 
@@ -558,32 +745,77 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 
 			return doWithConnection(connection -> {
 
-				Mono<?> mono = isLockingCacheWriter() ? doStoreWithLocking(name, key, value, ttl, connection)
-						: doStore(key, value, ttl, connection);
+				Mono<?> mono = doWithLocking(name, key, value, connection, () -> doStore(key, value, ttl, connection));
 
-				return mono.then().toFuture();
+				return mono.then();
 			});
 		}
 
-		private Mono<Boolean> doStoreWithLocking(String name, byte[] key, byte[] value, @Nullable Duration ttl,
-				ReactiveValkeyConnection connection) {
-
-			return Mono.usingWhen(doLock(name, key, value, connection), unused -> doStore(key, value, ttl, connection),
-					unused -> doUnlock(name, connection));
-		}
-
+		@SuppressWarnings("NullAway")
 		private Mono<Boolean> doStore(byte[] cacheKey, byte[] value, @Nullable Duration ttl,
 				ReactiveValkeyConnection connection) {
 
 			ByteBuffer wrappedKey = ByteBuffer.wrap(cacheKey);
 			ByteBuffer wrappedValue = ByteBuffer.wrap(value);
 
-			if (shouldExpireWithin(ttl)) {
-				return connection.stringCommands().set(wrappedKey, wrappedValue,
-						Expiration.from(ttl.toMillis(), TimeUnit.MILLISECONDS), SetOption.upsert());
+			if (isPositiveDuration(ttl)) {
+				return connection.stringCommands().set(wrappedKey, wrappedValue, SetCondition.upsert(),
+						Expiration.from(ttl.toMillis(), TimeUnit.MILLISECONDS));
 			} else {
 				return connection.stringCommands().set(wrappedKey, wrappedValue);
 			}
+		}
+
+		@Override
+		public CompletableFuture<Void> remove(String name, byte[] key) {
+
+			return doWithConnection(connection -> {
+				return doWithLocking(name, key, null, connection, () -> doRemove(key, connection)).then();
+			});
+		}
+
+		@Override
+		public CompletableFuture<Long> clear(String name, byte[] pattern, BatchStrategy batchStrategy) {
+
+			return doWithConnection(connection -> {
+				return doWithLocking(name, pattern, null, connection, () -> doClear(pattern, connection));
+			});
+		}
+
+		private Mono<Long> doClear(byte[] pattern, ReactiveValkeyConnection connection) {
+
+			ReactiveKeyCommands commands = connection.keyCommands();
+
+			Flux<ByteBuffer> keys;
+
+			if (batchStrategy instanceof BatchStrategies.Keys) {
+				keys = commands.keys(ByteBuffer.wrap(pattern)).flatMapMany(Flux::fromIterable);
+			} else {
+				keys = commands.scan(ScanOptions.scanOptions().count(clearBatchSize).match(pattern).build());
+			}
+
+			return keys.buffer(clearBatchSize) //
+					.flatMap(commands::mUnlink) //
+					.collect(Collectors.summingLong(Long::longValue));
+		}
+
+		@SuppressWarnings("NullAway")
+		private Mono<Long> doRemove(byte[] cacheKey, ReactiveValkeyConnection connection) {
+
+			ByteBuffer wrappedKey = ByteBuffer.wrap(cacheKey);
+
+			return connection.keyCommands().unlink(wrappedKey);
+		}
+
+		private <T> Mono<T> doWithLocking(String name, byte[] key, byte @Nullable [] value,
+				ReactiveValkeyConnection connection, Supplier<Mono<T>> action) {
+
+			if (isLockingCacheWriter()) {
+				return Mono.usingWhen(doLock(name, key, value, connection), unused -> action.get(),
+						unused -> doUnlock(name, connection));
+			}
+
+			return action.get();
 		}
 
 		private Mono<Object> doLock(String name, Object contextualKey, @Nullable Object contextualValue,
@@ -593,7 +825,7 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 			ByteBuffer value = ByteBuffer.wrap(new byte[0]);
 			Expiration expiration = Expiration.from(lockTtl.getTimeToLive(contextualKey, contextualValue));
 
-			return connection.stringCommands().set(key, value, expiration, SetOption.SET_IF_ABSENT) //
+			return connection.stringCommands().set(key, value, SetCondition.ifAbsent(), expiration) //
 					// Ensure we emit an object, otherwise, the Mono.usingWhen operator doesn't run the inner resource function.
 					.thenReturn(Boolean.TRUE);
 		}
@@ -617,15 +849,16 @@ class DefaultValkeyCacheWriter implements ValkeyCacheWriter {
 					.then();
 		}
 
-		private <T> CompletableFuture<T> doWithConnection(
-				Function<ReactiveValkeyConnection, CompletableFuture<T>> callback) {
+		private <T> CompletableFuture<T> doWithConnection(Function<ReactiveValkeyConnection, Mono<T>> callback) {
 
 			ReactiveValkeyConnectionFactory cf = (ReactiveValkeyConnectionFactory) connectionFactory;
 
 			return Mono.usingWhen(Mono.fromSupplier(cf::getReactiveConnection), //
-					it -> Mono.fromCompletionStage(callback.apply(it)), //
+					callback::apply, //
 					ReactiveValkeyConnection::closeLater) //
 					.toFuture();
 		}
+
 	}
+
 }

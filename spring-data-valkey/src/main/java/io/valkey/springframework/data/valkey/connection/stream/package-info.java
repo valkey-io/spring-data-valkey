@@ -1,6 +1,5 @@
 /**
  * Data structures and interfaces to interact with Valkey Streams.
  */
-@org.springframework.lang.NonNullApi
-@org.springframework.lang.NonNullFields
+@org.jspecify.annotations.NullMarked
 package io.valkey.springframework.data.valkey.connection.stream;

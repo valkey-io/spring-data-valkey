@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
@@ -31,6 +32,7 @@ import io.valkey.springframework.data.valkey.connection.lettuce.extension.Lettuc
 import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.GenericJacksonJsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.JdkSerializationValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
@@ -39,10 +41,6 @@ import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
-
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.lang.Nullable;
 
 /**
  * @author Christoph Strobl
@@ -78,14 +76,12 @@ class CacheTestParams {
 			// Jedis Cluster
 			JedisConnectionFactory jedisClusterConnectionFactory = JedisConnectionFactoryExtension
 					.getConnectionFactory(ValkeyCluster.class);
-			factoryList
-					.add(jedisClusterConnectionFactory);
+			factoryList.add(jedisClusterConnectionFactory);
 
 			// Lettuce Cluster
 			LettuceConnectionFactory lettuceClusterConnectionFactory = LettuceConnectionFactoryExtension
 					.getConnectionFactory(ValkeyCluster.class);
-			factoryList
-					.add(lettuceClusterConnectionFactory);
+			factoryList.add(lettuceClusterConnectionFactory);
 
 			// Valkey-Glide Cluster
 			ValkeyGlideConnectionFactory valkeyGlideClusterConnectionFactory = ValkeyGlideConnectionFactoryExtension
@@ -105,10 +101,13 @@ class CacheTestParams {
 
 		OxmSerializer oxmSerializer = XstreamOxmSerializerSingleton.getInstance();
 		GenericJackson2JsonValkeySerializer jackson2Serializer = new GenericJackson2JsonValkeySerializer();
+		GenericJacksonJsonValkeySerializer jacksonSerializer = GenericJacksonJsonValkeySerializer
+				.create(it -> it.enableSpringCacheNullValueSupport().enableUnsafeDefaultTyping());
 		JdkSerializationValkeySerializer jdkSerializer = new JdkSerializationValkeySerializer();
 
 		return connectionFactories().stream().flatMap(factory -> Arrays.asList( //
 				new Object[] { factory, new FixDamnedJunitParameterizedNameForValkeySerializer(jdkSerializer) }, //
+				new Object[] { factory, new FixDamnedJunitParameterizedNameForValkeySerializer(jacksonSerializer) }, //
 				new Object[] { factory, new FixDamnedJunitParameterizedNameForValkeySerializer(jackson2Serializer) }, //
 				new Object[] { factory, new FixDamnedJunitParameterizedNameForValkeySerializer(oxmSerializer) }).stream())
 				.collect(Collectors.toList());
@@ -123,14 +122,12 @@ class CacheTestParams {
 		}
 
 		@Override
-		@Nullable
 		public byte[] serialize(@Nullable Object value) throws SerializationException {
 			return serializer.serialize(value);
 		}
 
 		@Override
-		@Nullable
-		public Object deserialize(@Nullable byte[] bytes) throws SerializationException {
+		public @Nullable Object deserialize(byte @Nullable [] bytes) throws SerializationException {
 			return serializer.deserialize(bytes);
 		}
 

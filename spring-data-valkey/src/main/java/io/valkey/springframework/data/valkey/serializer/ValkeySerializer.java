@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.serializer;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -55,13 +55,14 @@ public interface ValkeySerializer<T> {
 
 	/**
 	 * Obtain a {@link ValkeySerializer} that can read and write JSON using
-	 * <a href="https://github.com/FasterXML/jackson-core">Jackson</a>.
+	 * <a href="https://github.com/FasterXML/jackson-core">Jackson</a> with default typing enabled.
 	 *
 	 * @return never {@literal null}.
 	 * @since 2.1
 	 */
 	static ValkeySerializer<Object> json() {
-		return new GenericJackson2JsonValkeySerializer();
+		return GenericJacksonJsonValkeySerializer
+				.create(it -> it.enableSpringCacheNullValueSupport().enableUnsafeDefaultTyping());
 	}
 
 	/**
@@ -76,7 +77,7 @@ public interface ValkeySerializer<T> {
 	}
 
 	/**
-	 * Obtain a {@link ValkeySerializer} that passes thru {@code byte[]}.
+	 * Obtain a {@link ValkeySerializer} that passes through {@code byte[]}.
 	 *
 	 * @return never {@literal null}.
 	 * @since 2.2
@@ -89,9 +90,8 @@ public interface ValkeySerializer<T> {
 	 * Serialize the given object to binary data.
 	 *
 	 * @param value object to serialize. Can be {@literal null}.
-	 * @return the equivalent binary data. Can be {@literal null}.
+	 * @return the equivalent binary data. Can be an empty array but never {@literal null}.
 	 */
-	@Nullable
 	byte[] serialize(@Nullable T value) throws SerializationException;
 
 	/**
@@ -101,7 +101,16 @@ public interface ValkeySerializer<T> {
 	 * @return the equivalent object instance. Can be {@literal null}.
 	 */
 	@Nullable
-	T deserialize(@Nullable byte[] bytes) throws SerializationException;
+	T deserialize(byte @Nullable [] bytes) throws SerializationException;
+
+	default <T> @Nullable T deserialize(byte @Nullable [] source, Class<T> type) throws SerializationException {
+
+		if (canSerialize(type)) {
+			return (T) deserialize(source);
+		}
+
+		throw new SerializationException("Cannot deserialize " + type.getName() + " from " + source);
+	}
 
 	/**
 	 * Check whether the given value {@code type} can be serialized by this serializer.
@@ -121,4 +130,5 @@ public interface ValkeySerializer<T> {
 	default Class<?> getTargetType() {
 		return Object.class;
 	}
+
 }

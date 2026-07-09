@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025 the original author or authors.
+ * Copyright 2024-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.DtoInstantiatingConverter;
 import org.springframework.data.keyvalue.core.KeyValueOperations;
@@ -35,9 +37,9 @@ import io.valkey.springframework.data.valkey.core.convert.ValkeyConverter;
 import org.springframework.data.repository.query.ParameterAccessor;
 import org.springframework.data.repository.query.ParametersParameterAccessor;
 import org.springframework.data.repository.query.QueryMethod;
-import org.springframework.data.repository.query.QueryMethodEvaluationContextProvider;
 import org.springframework.data.repository.query.ResultProcessor;
 import org.springframework.data.repository.query.ReturnedType;
+import org.springframework.data.repository.query.ValueExpressionDelegate;
 import org.springframework.data.repository.query.parser.AbstractQueryCreator;
 import org.springframework.data.util.ReflectionUtils;
 import org.springframework.data.util.Streamable;
@@ -54,14 +56,14 @@ public class ValkeyPartTreeQuery extends KeyValuePartTreeQuery {
 
 	private final ValkeyKeyValueAdapter adapter;
 
-	public ValkeyPartTreeQuery(QueryMethod queryMethod, QueryMethodEvaluationContextProvider evaluationContextProvider,
+	public ValkeyPartTreeQuery(QueryMethod queryMethod, ValueExpressionDelegate valueExpressionDelegate,
 			KeyValueOperations template, Class<? extends AbstractQueryCreator<?, ?>> queryCreator) {
-		super(queryMethod, evaluationContextProvider, template, queryCreator);
+		super(queryMethod, valueExpressionDelegate, template, queryCreator);
 		this.adapter = (ValkeyKeyValueAdapter) template.getKeyValueAdapter();
 	}
 
 	@Override
-	public Object execute(Object[] parameters) {
+	public @Nullable Object execute(Object[] parameters) {
 
 		ParameterAccessor accessor = new ParametersParameterAccessor(getQueryMethod().getParameters(), parameters);
 		KeyValueQuery<?> query = prepareQuery(parameters);
@@ -80,7 +82,7 @@ public class ValkeyPartTreeQuery extends KeyValuePartTreeQuery {
 	 *
 	 * @author Mark Paluch
 	 */
-	static final class ResultProcessingConverter implements Converter<Object, Object> {
+	static final class ResultProcessingConverter implements Converter<Object, @Nullable Object> {
 
 		private final ResultProcessor processor;
 		private final MappingContext<? extends PersistentEntity<?, ?>, ? extends PersistentProperty<?>> context;
@@ -104,7 +106,8 @@ public class ValkeyPartTreeQuery extends KeyValuePartTreeQuery {
 		 * @see org.springframework.core.convert.converter.Converter#convert(java.lang.Object)
 		 */
 		@Override
-		public Object convert(Object source) {
+		@SuppressWarnings("NullAway")
+		public @Nullable Object convert(Object source) {
 
 			if (source instanceof Set<?> s) {
 
@@ -147,5 +150,7 @@ public class ValkeyPartTreeQuery extends KeyValuePartTreeQuery {
 
 			return processor.processResult(source, converter);
 		}
+
 	}
+
 }

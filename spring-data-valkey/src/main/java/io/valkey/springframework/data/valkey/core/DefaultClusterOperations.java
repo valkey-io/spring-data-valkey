@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,14 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterCommands.AddSlots;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.SlotRange;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.FlushOption;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.MigrateOption;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -37,6 +38,7 @@ import org.springframework.util.Assert;
  * @param <K>
  * @param <V>
  */
+@NullUnmarked
 class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements ClusterOperations<K, V> {
 
 	private final ValkeyTemplate<K, V> template;
@@ -46,14 +48,14 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	 *
 	 * @param template must not be {@literal null}.
 	 */
-	DefaultClusterOperations(ValkeyTemplate<K, V> template) {
+	DefaultClusterOperations(@NonNull ValkeyTemplate<K, V> template) {
 
 		super(template);
 		this.template = template;
 	}
 
 	@Override
-	public Set<K> keys(ValkeyClusterNode node, K pattern) {
+	public Set<K> keys(@NonNull ValkeyClusterNode node, @NonNull K pattern) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -61,7 +63,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public K randomKey(ValkeyClusterNode node) {
+	public K randomKey(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -69,7 +71,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public String ping(ValkeyClusterNode node) {
+	public String ping(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -77,7 +79,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void addSlots(ValkeyClusterNode node, int... slots) {
+	public void addSlots(@NonNull ValkeyClusterNode node, int... slots) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -88,7 +90,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void addSlots(ValkeyClusterNode node, SlotRange range) {
+	public void addSlots(@NonNull ValkeyClusterNode node, @NonNull SlotRange range) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 		Assert.notNull(range, "Range must not be null");
@@ -97,7 +99,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void bgReWriteAof(ValkeyClusterNode node) {
+	public void bgReWriteAof(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -108,7 +110,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void bgSave(ValkeyClusterNode node) {
+	public void bgSave(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -119,7 +121,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void meet(ValkeyClusterNode node) {
+	public void meet(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -130,7 +132,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void forget(ValkeyClusterNode node) {
+	public void forget(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -141,7 +143,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void flushDb(ValkeyClusterNode node) {
+	public void flushDb(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -152,7 +154,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void flushDb(ValkeyClusterNode node, FlushOption option) {
+	public void flushDb(@NonNull ValkeyClusterNode node, @NonNull FlushOption option) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -163,7 +165,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public Collection<ValkeyClusterNode> getReplicas(final ValkeyClusterNode node) {
+	public Collection<ValkeyClusterNode> getReplicas(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -171,7 +173,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void save(ValkeyClusterNode node) {
+	public void save(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -182,7 +184,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void shutdown(ValkeyClusterNode node) {
+	public void shutdown(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ClusterNode must not be null");
 
@@ -193,7 +195,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	}
 
 	@Override
-	public void reshard(ValkeyClusterNode source, int slot, ValkeyClusterNode target) {
+	public void reshard(@NonNull ValkeyClusterNode source, int slot, @NonNull ValkeyClusterNode target) {
 
 		Assert.notNull(source, "Source node must not be null");
 		Assert.notNull(target, "Target node must not be null");
@@ -218,8 +220,7 @@ class DefaultClusterOperations<K, V> extends AbstractOperations<K, V> implements
 	 * @param callback must not be {@literal null}.
 	 * @return execution result. Can be {@literal null}.
 	 */
-	@Nullable
-	<T> T doInCluster(ValkeyClusterCallback<T> callback) {
+	<T> T doInCluster(@NonNull ValkeyClusterCallback<T> callback) {
 
 		Assert.notNull(callback, "ClusterCallback must not be null");
 

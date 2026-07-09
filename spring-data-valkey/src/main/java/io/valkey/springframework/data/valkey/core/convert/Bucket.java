@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,10 +31,10 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
-import org.springframework.util.comparator.NullSafeComparator;
 
 /**
  * Bucket is the data bag for Valkey hash structures to be used with {@link ValkeyData}.
@@ -51,14 +51,12 @@ public class Bucket {
 	 */
 	public static final Charset CHARSET = StandardCharsets.UTF_8;
 
-	private static final Comparator<String> COMPARATOR = new NullSafeComparator<>(Comparator.<String> naturalOrder(),
-			true);
+	private static final Comparator<String> COMPARATOR = Comparator.nullsFirst(Comparator.naturalOrder());
 
 	/**
 	 * The Valkey data as {@link Map} sorted by the keys.
 	 */
-	private final NavigableMap<String, byte[]> data = new TreeMap<>(
-			COMPARATOR);
+	private final NavigableMap<String, byte[]> data = new TreeMap<>(COMPARATOR);
 
 	/**
 	 * Creates a new empty bucket.
@@ -77,7 +75,7 @@ public class Bucket {
 	 * @param path must not be {@literal null} or {@link String#isEmpty()}.
 	 * @param value can be {@literal null}.
 	 */
-	public void put(String path, @Nullable byte[] value) {
+	public void put(String path, byte @Nullable [] value) {
 
 		Assert.hasText(path, "Path to property must not be null or empty");
 		data.put(path, value);
@@ -100,8 +98,7 @@ public class Bucket {
 	 * @param path must not be {@literal null} or {@link String#isEmpty()}.
 	 * @return {@literal null} if not set.
 	 */
-	@Nullable
-	public byte[] get(String path) {
+	public byte @Nullable [] get(String path) {
 
 		Assert.hasText(path, "Path to property must not be null or empty");
 		return data.get(path);
@@ -301,13 +298,11 @@ public class Bucket {
 		}
 	}
 
-	@Nullable
-	private static String toUtf8String(byte[] raw) {
+	private @Nullable static String toUtf8String(byte[] raw) {
 
 		try {
 			return new String(raw, CHARSET);
-		} catch (Exception ignore) {
-		}
+		} catch (Exception ignore) {}
 
 		return null;
 	}
@@ -324,7 +319,7 @@ public class Bucket {
 		private final Bucket bucket;
 		private final @Nullable String prefix;
 
-		private BucketPropertyPath(Bucket bucket, String prefix) {
+		private BucketPropertyPath(Bucket bucket, @Nullable String prefix) {
 
 			Assert.notNull(bucket, "Bucket must not be null");
 
@@ -360,8 +355,7 @@ public class Bucket {
 		 * @param key must not be {@literal null} or empty.
 		 * @return the resulting value, may be {@literal null}.
 		 */
-		@Nullable
-		public byte[] get(String key) {
+		public byte @Nullable [] get(String key) {
 			return bucket.get(getPath(key));
 		}
 
@@ -383,8 +377,7 @@ public class Bucket {
 			return this.bucket;
 		}
 
-		@Nullable
-		public String getPrefix() {
+		public @Nullable String getPrefix() {
 			return this.prefix;
 		}
 	}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ public abstract class QueryUtils {
 
 	public static <K> SortParameters convertQuery(SortQuery<K> query, ValkeySerializer<String> stringSerializer) {
 
-		return new DefaultSortParameters(stringSerializer.serialize(query.getBy()), query.getLimit(), serialize(
-				query.getGetPattern(), stringSerializer), query.getOrder(), query.isAlphabetic());
+		return new DefaultSortParameters(stringSerializer.serialize(query.getBy()), query.getLimit(),
+				serialize(query.getGetPattern(), stringSerializer), query.getOrder(), query.isAlphabetic());
 	}
 
 	private static byte[][] serialize(List<String> strings, ValkeySerializer<String> stringSerializer) {
@@ -49,4 +49,5 @@ public abstract class QueryUtils {
 		}
 		return raw.toArray(new byte[raw.size()][]);
 	}
+
 }

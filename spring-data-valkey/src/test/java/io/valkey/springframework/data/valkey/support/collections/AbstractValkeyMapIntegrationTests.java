@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.ParameterizedClass;
 
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.DoubleAsStringObjectFactory;
@@ -49,8 +52,6 @@ import io.valkey.springframework.data.valkey.core.ValkeyCallback;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration test for Valkey Map.
@@ -61,6 +62,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Thomas Darimont
  * @author Christian Bühler
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 
@@ -100,7 +102,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		return new DefaultValkeyMap(store.getKey(), store.getOperations());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testClear() {
 		map.clear();
 		assertThat(map.size()).isEqualTo(0);
@@ -110,7 +112,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.size()).isEqualTo(0);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testContainsKey() {
 		K k1 = getKey();
 		K k2 = getKey();
@@ -123,14 +125,14 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.containsKey(k2)).isTrue();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testContainsValue() {
 		V v1 = getValue();
 
 		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> map.containsValue(v1));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testEquals() {
 		ValkeyStore clone = copyStore(map);
 		assertThat(map).isEqualTo(clone);
@@ -138,7 +140,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map).isEqualTo(map);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testNotEquals() {
 		ValkeyOperations<String, ?> ops = map.getOperations();
 		ValkeyStore newInstance = new DefaultValkeyMap<>(ops.<K, V> boundHashOps(map.getKey() + ":new"));
@@ -146,7 +148,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(newInstance.equals(map)).isFalse();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGet() {
 		K k1 = getKey();
 		V v1 = getValue();
@@ -156,23 +158,23 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.get(k1)).isEqualTo(v1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetKey() {
 		assertThat(map.getKey()).isNotNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	public void testGetOperations() {
 		assertThat(map.getOperations()).isEqualTo(template);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testHashCode() {
 		assertThat(map.hashCode()).isNotEqualTo(map.getKey().hashCode());
 		assertThat(copyStore(map).hashCode()).isEqualTo(map.hashCode());
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIncrementNotNumber() {
 		assumeThat(!(valueFactory instanceof LongAsStringObjectFactory)).isTrue();
 		K k1 = getKey();
@@ -188,7 +190,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		}
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIncrement() {
 		assumeThat(valueFactory instanceof LongAsStringObjectFactory).isTrue();
 		K k1 = getKey();
@@ -197,7 +199,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.increment(k1, 10)).isEqualTo(Long.valueOf(Long.valueOf((String) v1) + 10));
 	}
 
-	@ParameterizedValkeyTest // GH-3054
+	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
 	void testExpire() {
 
@@ -216,7 +218,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(ops.persist()).satisfies(ExpireChanges::allOk);
 	}
 
-	@ParameterizedValkeyTest // GH-3054
+	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
 	void testExpireAt() {
 
@@ -227,15 +229,15 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		BoundHashFieldExpirationOperations<K> ops = map.hashFieldExpiration(Collections.singletonList(k1));
 		assertThat(ops.expireAt(Instant.now().plusSeconds(5))).satisfies(ExpireChanges::allOk);
 		assertThat(ops.getTimeToLive()).satisfies(expiration -> {
-			assertThat(expiration.expirationOf(k1).raw()).isBetween(1L, 5L);
+			assertThat(expiration.expirationOf(k1).raw()).isBetween(1L, 6L);
 		});
 		assertThat(ops.getTimeToLive(TimeUnit.MILLISECONDS)).satisfies(expiration -> {
-			assertThat(expiration.expirationOf(k1).raw()).isBetween(1000L, 5000L);
+			assertThat(expiration.expirationOf(k1).raw()).isBetween(1000L, 6000L);
 		});
 		assertThat(ops.persist()).satisfies(ExpireChanges::allOk);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIncrementDouble() {
 		assumeThat(valueFactory instanceof DoubleAsStringObjectFactory).isTrue();
 		K k1 = getKey();
@@ -245,7 +247,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(twoDForm.format(map.increment(k1, 3.4))).isEqualTo(twoDForm.format(Double.valueOf((String) v1) + 3.4));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testIsEmpty() {
 		map.clear();
 		assertThat(map.isEmpty()).isTrue();
@@ -256,7 +258,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testKeySet() {
 		map.clear();
 		assertThat(map.keySet().isEmpty()).isTrue();
@@ -273,7 +275,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(keySet.size()).isEqualTo(3);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPut() {
 		K k1 = getKey();
 		K k2 = getKey();
@@ -287,7 +289,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.get(k2)).isEqualTo(v2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPutAll() {
 
 		Map<K, V> m = new LinkedHashMap<>();
@@ -309,7 +311,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.get(k2)).isEqualTo(v2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemove() {
 		K k1 = getKey();
 		K k2 = getKey();
@@ -332,7 +334,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.get(k2)).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testSize() {
 		assertThat(map.size()).isEqualTo(0);
 		map.put(getKey(), getValue());
@@ -348,7 +350,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testValues() {
 		V v1 = getValue();
 		V v2 = getValue();
@@ -368,7 +370,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 	}
 
 	@SuppressWarnings("unchecked")
-	@ParameterizedValkeyTest
+	@Test
 	void testEntrySet() {
 
 		Set<Entry<K, V>> entries = map.entrySet();
@@ -400,7 +402,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(values).doesNotContain(v2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testPutIfAbsent() {
 
 		K k1 = getKey();
@@ -420,7 +422,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.get(k2)).isEqualTo(v2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testConcurrentRemove() {
 
 		K k1 = getKey();
@@ -435,12 +437,12 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.get(k1)).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testRemoveNullValue() {
 		assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> map.remove(getKey(), null));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testConcurrentReplaceTwoArgs() {
 
 		K k1 = getKey();
@@ -457,17 +459,17 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.get(k1)).isEqualTo(v2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReplaceNullOldValue() {
 		assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> map.replace(getKey(), null, getValue()));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReplaceNullNewValue() {
 		assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> map.replace(getKey(), getValue(), null));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testConcurrentReplaceOneArg() {
 
 		K k1 = getKey();
@@ -481,12 +483,12 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.get(k1)).isEqualTo(v2);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testReplaceNullValue() {
 		assertThatExceptionOfType(NullPointerException.class).isThrownBy(() -> map.replace(getKey(), null));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-314
+	@Test // DATAREDIS-314
 	public void testScanWorksCorrectly() throws IOException {
 
 		K k1 = getKey();
@@ -507,7 +509,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		cursor.close();
 	}
 
-	@ParameterizedValkeyTest // GH-2048
+	@Test // GH-2048
 	@EnabledOnCommand("HRANDFIELD")
 	public void randomKeyFromHash() {
 
@@ -523,7 +525,7 @@ public abstract class AbstractValkeyMapIntegrationTests<K, V> {
 		assertThat(map.randomKey()).isIn(k1, k2);
 	}
 
-	@ParameterizedValkeyTest // GH-2048
+	@Test // GH-2048
 	@EnabledOnCommand("HRANDFIELD")
 	public void randomEntryFromHash() {
 

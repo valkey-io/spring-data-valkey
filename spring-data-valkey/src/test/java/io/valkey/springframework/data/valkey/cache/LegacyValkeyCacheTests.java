@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,16 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.springframework.cache.Cache;
 import org.springframework.cache.Cache.ValueRetrievalException;
@@ -38,8 +43,6 @@ import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.core.AbstractOperationsTestParams;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Tests moved over from 1.x line ValkeyCache implementation. Just removed somme of the limitations/assumptions
@@ -51,11 +54,11 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  */
 @SuppressWarnings("rawtypes")
+@ParameterizedClass
 @MethodSource("testParams")
 public class LegacyValkeyCacheTests {
 
 	private static final String CACHE_NAME = "testCache";
-
 	private final boolean allowCacheNullValues;
 
 	private ObjectFactory<Object> keyFactory;
@@ -79,7 +82,7 @@ public class LegacyValkeyCacheTests {
 
 		Collection<Object[]> params = AbstractOperationsTestParams.testParams();
 
-		Collection<Object[]> target = new ArrayList<>();
+		List<Object[]> target = new ArrayList<>();
 		for (Object[] source : params) {
 
 			Object[] cacheNullDisabled = Arrays.copyOf(source, source.length + 1);
@@ -104,7 +107,8 @@ public class LegacyValkeyCacheTests {
 			cacheConfiguration = cacheConfiguration.disableCachingNullValues();
 		}
 
-		return new ValkeyCache(CACHE_NAME, ValkeyCacheWriter.nonLockingValkeyCacheWriter(connectionFactory),
+		return new ValkeyCache(CACHE_NAME,
+				ValkeyCacheWriter.create(connectionFactory, ValkeyCacheWriter.ValkeyCacheWriterConfigurer::immediateWrites),
 				cacheConfiguration);
 	}
 
@@ -116,7 +120,7 @@ public class LegacyValkeyCacheTests {
 		return keyFactory.instance();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testCachePut() {
 
 		Object key = getKey();
@@ -131,7 +135,7 @@ public class LegacyValkeyCacheTests {
 		}
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testCacheClear() {
 
 		Object key1 = getKey();
@@ -145,11 +149,12 @@ public class LegacyValkeyCacheTests {
 		assertThat(cache.get(key2)).isNull();
 		cache.put(key2, value2);
 		cache.clear();
+
 		assertThat(cache.get(key2)).isNull();
 		assertThat(cache.get(key1)).isNull();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testConcurrentRead() throws Exception {
 
 		final Object key1 = getKey();
@@ -195,7 +200,7 @@ public class LegacyValkeyCacheTests {
 		assertThat(valueWrapper.get()).isEqualTo(v1);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testGetWhileClear() throws InterruptedException {
 
 		final Object key1 = getKey();
@@ -221,7 +226,7 @@ public class LegacyValkeyCacheTests {
 		assertThat(monitorStateException.get()).isFalse();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-243
+	@Test // DATAREDIS-243
 	void testCacheGetShouldReturnCachedInstance() {
 
 		Object key = getKey();
@@ -231,7 +236,7 @@ public class LegacyValkeyCacheTests {
 		assertThat(value).isEqualTo(cache.get(key, Object.class));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-243
+	@Test // DATAREDIS-243
 	void testCacheGetShouldRetunInstanceOfCorrectType() {
 
 		Object key = getKey();
@@ -241,7 +246,7 @@ public class LegacyValkeyCacheTests {
 		assertThat(cache.get(key, value.getClass())).isInstanceOf(value.getClass());
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-243
+	@Test // DATAREDIS-243
 	void testCacheGetShouldThrowExceptionOnInvalidType() {
 
 		Object key = getKey();
@@ -251,18 +256,18 @@ public class LegacyValkeyCacheTests {
 		assertThatIllegalStateException().isThrownBy(() -> cache.get(key, Cache.class));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-243
+	@Test // DATAREDIS-243
 	void testCacheGetShouldReturnNullIfNoCachedValueFound() {
 
 		Object key = getKey();
 		Object value = getValue();
 		cache.put(key, value);
 
-		Object invalidKey = "spring-data-valkey".getBytes();
+		Object invalidKey = "spring-data-redis".getBytes();
 		assertThat(cache.get(invalidKey, value.getClass())).isNull();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-344, DATAREDIS-416
+	@Test // DATAREDIS-344, DATAREDIS-416
 	void putIfAbsentShouldSetValueOnlyIfNotPresent() {
 
 		Object key = getKey();
@@ -280,7 +285,7 @@ public class LegacyValkeyCacheTests {
 		assertThat(wrapper.get()).isEqualTo(value);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-510, DATAREDIS-606
+	@Test // DATAREDIS-510, DATAREDIS-606
 	void cachePutWithNullShouldNotAddStuffToValkey() {
 
 		assumeThat(allowCacheNullValues).as("Only suitable when cache does NOT allow null values.").isFalse();
@@ -290,7 +295,7 @@ public class LegacyValkeyCacheTests {
 		assertThatIllegalArgumentException().isThrownBy(() -> cache.put(key, null));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-510, DATAREDIS-606
+	@Test // DATAREDIS-510, DATAREDIS-606
 	void cachePutWithNullShouldErrorAndLeaveExistingKeyUntouched() {
 
 		assumeThat(allowCacheNullValues).as("Only suitable when cache does NOT allow null values.").isFalse();
@@ -304,19 +309,18 @@ public class LegacyValkeyCacheTests {
 
 		try {
 			cache.put(key, null);
-		} catch (IllegalArgumentException expected) {
-		}
+		} catch (IllegalArgumentException expected) {}
 
 		assertThat(cache.get(key).get()).isEqualTo(value);
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-443, DATAREDIS-452
+	@Test // DATAREDIS-443, DATAREDIS-452
 	@Disabled("junit.framework.AssertionFailedError: expected:<2> but was:<1>")
 	void testCacheGetSynchronized() throws Throwable {
 		runOnce(new CacheGetWithValueLoaderIsThreadSafe(cache));
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-553
+	@Test // DATAREDIS-553
 	void cachePutWithNullShouldAddStuffToValkeyWhenCachingNullIsEnabled() {
 
 		assumeThat(allowCacheNullValues).as("Only suitable when cache does allow null values.").isTrue();
@@ -329,10 +333,10 @@ public class LegacyValkeyCacheTests {
 		assertThat(cache.get(key, String.class)).isNull();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-553
+	@Test // DATAREDIS-553
 	void testCacheGetSynchronizedNullAllowingNull() {
 
-		assumeThat(allowCacheNullValues).as("Only suitable when cache does allow null values.").isTrue();
+		Assumptions.assumeTrue(allowCacheNullValues, "Only suitable when cache does allow null values.");
 
 		Object key = getKey();
 		Object value = cache.get(key, () -> null);
@@ -341,7 +345,7 @@ public class LegacyValkeyCacheTests {
 		assertThat(cache.get(key).get()).isNull();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-553, DATAREDIS-606
+	@Test // DATAREDIS-553, DATAREDIS-606
 	void testCacheGetSynchronizedNullNotAllowingNull() {
 
 		assumeThat(allowCacheNullValues).as("Only suitable when cache does NOT allow null values.").isFalse();
@@ -350,7 +354,7 @@ public class LegacyValkeyCacheTests {
 		assertThatIllegalArgumentException().isThrownBy(() -> cache.get(key, () -> null));
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testCacheGetSynchronizedThrowsExceptionInValueLoader() {
 
 		Object key = getKey();
@@ -362,7 +366,7 @@ public class LegacyValkeyCacheTests {
 		});
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-553
+	@Test // DATAREDIS-553
 	void testCacheGetSynchronizedNullWithStoredNull() {
 
 		assumeThat(allowCacheNullValues).as("Only suitable when cache does allow null values").isTrue();

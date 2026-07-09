@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,12 +29,12 @@ import io.valkey.springframework.data.valkey.RawObjectFactory;
 import io.valkey.springframework.data.valkey.StringObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.jedis.extension.JedisConnectionFactoryExtension;
-import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
-import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
+import io.valkey.springframework.data.valkey.connection.valkeyglide.extension.ValkeyGlideConnectionFactoryExtension;
 import io.valkey.springframework.data.valkey.serializer.GenericJackson2JsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.GenericToStringSerializer;
 import io.valkey.springframework.data.valkey.serializer.Jackson2JsonValkeySerializer;
+import io.valkey.springframework.data.valkey.serializer.JacksonJsonValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.OxmSerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
@@ -111,6 +111,12 @@ abstract public class AbstractOperationsTestParams {
 		jackson2JsonPersonTemplate.setValueSerializer(jackson2JsonSerializer);
 		jackson2JsonPersonTemplate.afterPropertiesSet();
 
+		JacksonJsonValkeySerializer<Person> jackson3JsonSerializer = new JacksonJsonValkeySerializer<>(Person.class);
+		ValkeyTemplate<String, Person> jackson3JsonPersonTemplate = new ValkeyTemplate<>();
+		jackson3JsonPersonTemplate.setConnectionFactory(connectionFactory);
+		jackson3JsonPersonTemplate.setValueSerializer(jackson3JsonSerializer);
+		jackson3JsonPersonTemplate.afterPropertiesSet();
+
 		GenericJackson2JsonValkeySerializer genericJackson2JsonSerializer = new GenericJackson2JsonValkeySerializer();
 		ValkeyTemplate<String, Person> genericJackson2JsonPersonTemplate = new ValkeyTemplate<>();
 		genericJackson2JsonPersonTemplate.setConnectionFactory(connectionFactory);
@@ -126,6 +132,7 @@ abstract public class AbstractOperationsTestParams {
 				{ xstreamStringTemplate, stringFactory, stringFactory }, //
 				{ xstreamPersonTemplate, stringFactory, personFactory }, //
 				{ jackson2JsonPersonTemplate, stringFactory, personFactory }, //
+				{ jackson3JsonPersonTemplate, stringFactory, personFactory }, //
 				{ genericJackson2JsonPersonTemplate, stringFactory, personFactory } });
 	}
 }

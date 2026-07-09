@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -26,14 +27,18 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import org.reactivestreams.Publisher;
-
 import org.springframework.core.convert.ConversionService;
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.Limit;
 import io.valkey.springframework.data.valkey.connection.ReactiveStreamCommands;
-import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XTrimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XDelOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.StreamEntryDeletionResult;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.connection.stream.ByteBufferRecord;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
@@ -50,7 +55,6 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamOffset;
 import io.valkey.springframework.data.valkey.connection.stream.StreamReadOptions;
 import io.valkey.springframework.data.valkey.hash.HashMapper;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -64,29 +68,31 @@ import org.springframework.util.ClassUtils;
  * @author jinkshower
  * @since 2.2
  */
+@NullUnmarked
 class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperations<K, HK, HV> {
 
 	private final ReactiveValkeyTemplate<?, ?> template;
 	private final ValkeySerializationContext<K, ?> serializationContext;
 	private final StreamObjectMapper objectMapper;
 
-	DefaultReactiveStreamOperations(ReactiveValkeyTemplate<?, ?> template,
-			ValkeySerializationContext<K, ?> serializationContext,
-			@Nullable HashMapper<? super K, ? super HK, ? super HV> hashMapper) {
+	DefaultReactiveStreamOperations(@NonNull ReactiveValkeyTemplate<?, ?> template,
+			@NonNull ValkeySerializationContext<K, ?> serializationContext,
+			@NonNull HashMapper<? super K, ? super HK, ? super HV> hashMapper) {
 
 		this.template = template;
 		this.serializationContext = serializationContext;
 		this.objectMapper = new StreamObjectMapper(hashMapper) {
 
 			@Override
-			protected HashMapper<?, ?, ?> doGetHashMapper(ConversionService conversionService, Class<?> targetType) {
+			protected HashMapper<?, ?, ?> doGetHashMapper(@NonNull ConversionService conversionService,
+					@NonNull Class<?> targetType) {
 
 				if (objectMapper.isSimpleType(targetType) || ClassUtils.isAssignable(ByteBuffer.class, targetType)) {
 
 					return new HashMapper<>() {
 
 						@Override
-						public Map<Object, Object> toHash(Object object) {
+						public Map<Object, Object> toHash(@NonNull Object object) {
 
 							Object key = "payload";
 							Object value = object;
@@ -102,7 +108,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 						}
 
 						@Override
-						public Object fromHash(Map<Object, Object> hash) {
+						public Object fromHash(@NonNull Map<Object, Object> hash) {
 
 							Object value = hash.values().iterator().next();
 
@@ -127,7 +133,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<Long> acknowledge(K key, String group, RecordId... recordIds) {
+	public Mono<Long> acknowledge(@NonNull K key, @NonNull String group, RecordId @NonNull... recordIds) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.hasText(group, "Group must not be null or empty");
@@ -138,7 +144,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<RecordId> add(Record<K, ?> record) {
+	public Mono<RecordId> add(@NonNull Record<K, ?> record) {
 
 		Assert.notNull(record.getStream(), "Key must not be null");
 		Assert.notNull(record.getValue(), "Body must not be null");
@@ -149,7 +155,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<RecordId> add(Record<K, ?> record, XAddOptions xAddOptions) {
+	public Mono<RecordId> add(@NonNull Record<K, ?> record, @NonNull XAddOptions xAddOptions) {
 
 		Assert.notNull(record.getStream(), "Key must not be null");
 		Assert.notNull(record.getValue(), "Body must not be null");
@@ -161,14 +167,15 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Flux<MapRecord<K, HK, HV>> claim(K key, String consumerGroup, String newOwner, XClaimOptions xClaimOptions) {
+	public Flux<MapRecord<K, HK, HV>> claim(@NonNull K key, @NonNull String consumerGroup, @NonNull String newOwner,
+			@NonNull XClaimOptions xClaimOptions) {
 
 		return createFlux(streamCommands -> streamCommands.xClaim(rawKey(key), consumerGroup, newOwner, xClaimOptions)
 				.map(this::deserializeRecord));
 	}
 
 	@Override
-	public Mono<Long> delete(K key, RecordId... recordIds) {
+	public Mono<Long> delete(@NonNull K key, RecordId @NonNull... recordIds) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(recordIds, "MessageIds must not be null");
@@ -177,7 +184,31 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<String> createGroup(K key, ReadOffset readOffset, String group) {
+	public Flux<StreamEntryDeletionResult> deleteWithOptions(@NonNull K key, @NonNull XDelOptions options,
+															 @NonNull RecordId @NonNull... recordIds) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(options, "XDelOptions must not be null");
+		Assert.notNull(recordIds, "RecordIds must not be null");
+
+		return createFlux(streamCommands -> streamCommands.xDelEx(rawKey(key), options, recordIds));
+	}
+
+	@Override
+	public Flux<StreamEntryDeletionResult> acknowledgeAndDelete(@NonNull K key, @NonNull String group,
+																@NonNull XDelOptions options,
+																@NonNull RecordId @NonNull... recordIds) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.hasText(group, "Group must not be null or empty");
+		Assert.notNull(options, "XDelOptions must not be null");
+		Assert.notNull(recordIds, "RecordIds must not be null");
+
+		return createFlux(streamCommands -> streamCommands.xAckDel(rawKey(key), group, options, recordIds));
+	}
+
+	@Override
+	public Mono<String> createGroup(@NonNull K key, @NonNull ReadOffset readOffset, @NonNull String group) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(readOffset, "ReadOffset must not be null");
@@ -187,7 +218,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<String> deleteConsumer(K key, Consumer consumer) {
+	public Mono<String> deleteConsumer(@NonNull K key, @NonNull Consumer consumer) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(consumer, "Consumer must not be null");
@@ -196,7 +227,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<String> destroyGroup(K key, String group) {
+	public Mono<String> destroyGroup(@NonNull K key, @NonNull String group) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(group, "Group must not be null");
@@ -205,7 +236,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Flux<XInfoConsumer> consumers(K key, String group) {
+	public Flux<XInfoConsumer> consumers(@NonNull K key, @NonNull String group) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(group, "Group must not be null");
@@ -214,7 +245,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<XInfoStream> info(K key) {
+	public Mono<XInfoStream> info(@NonNull K key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -222,7 +253,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Flux<XInfoGroup> groups(K key) {
+	public Flux<XInfoGroup> groups(@NonNull K key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -230,7 +261,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<PendingMessages> pending(K key, String group, Range<?> range, long count) {
+	public Mono<PendingMessages> pending(@NonNull K key, @NonNull String group, @NonNull Range<?> range, long count) {
 
 		ByteBuffer rawKey = rawKey(key);
 
@@ -238,7 +269,8 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<PendingMessages> pending(K key, Consumer consumer, Range<?> range, long count) {
+	public Mono<PendingMessages> pending(@NonNull K key, @NonNull Consumer consumer, @NonNull Range<?> range,
+			long count) {
 
 		ByteBuffer rawKey = rawKey(key);
 
@@ -246,7 +278,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<PendingMessagesSummary> pending(K key, String group) {
+	public Mono<PendingMessagesSummary> pending(@NonNull K key, @NonNull String group) {
 
 		ByteBuffer rawKey = rawKey(key);
 
@@ -254,7 +286,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Mono<Long> size(K key) {
+	public Mono<Long> size(@NonNull K key) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -262,19 +294,18 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Flux<MapRecord<K, HK, HV>> range(K key, Range<String> range, Limit limit) {
+	public Flux<MapRecord<K, HK, HV>> range(@NonNull K key, @NonNull Range<String> range, @NonNull Limit limit) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(range, "Range must not be null");
 		Assert.notNull(limit, "Limit must not be null");
 
-		return createFlux(streamCommands ->
-				streamCommands.xRange(rawKey(key), range, limit).map(this::deserializeRecord));
+		return createFlux(streamCommands -> streamCommands.xRange(rawKey(key), range, limit).map(this::deserializeRecord));
 	}
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public Flux<MapRecord<K, HK, HV>> read(StreamReadOptions readOptions, StreamOffset<K>... streams) {
+	public Flux<MapRecord<K, HK, HV>> read(@NonNull StreamReadOptions readOptions, StreamOffset<K> @NonNull... streams) {
 
 		Assert.notNull(readOptions, "StreamReadOptions must not be null");
 		Assert.notNull(streams, "Streams must not be null");
@@ -289,8 +320,8 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 
 	@Override
 	@SuppressWarnings("unchecked")
-	public Flux<MapRecord<K, HK, HV>> read(Consumer consumer, StreamReadOptions readOptions,
-			StreamOffset<K>... streams) {
+	public Flux<MapRecord<K, HK, HV>> read(@NonNull Consumer consumer, @NonNull StreamReadOptions readOptions,
+			StreamOffset<K> @NonNull... streams) {
 
 		Assert.notNull(consumer, "Consumer must not be null");
 		Assert.notNull(readOptions, "StreamReadOptions must not be null");
@@ -305,30 +336,38 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public Flux<MapRecord<K, HK, HV>> reverseRange(K key, Range<String> range, Limit limit) {
+	public Flux<MapRecord<K, HK, HV>> reverseRange(@NonNull K key, @NonNull Range<String> range, @NonNull Limit limit) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(range, "Range must not be null");
 		Assert.notNull(limit, "Limit must not be null");
 
-		return createFlux(streamCommands ->
-				streamCommands.xRevRange(rawKey(key), range, limit).map(this::deserializeRecord));
+		return createFlux(
+				streamCommands -> streamCommands.xRevRange(rawKey(key), range, limit).map(this::deserializeRecord));
 	}
 
 	@Override
-	public Mono<Long> trim(K key, long count) {
+	public Mono<Long> trim(@NonNull K key, long count) {
 		return trim(key, count, false);
 	}
 
 	@Override
-	public Mono<Long> trim(K key, long count, boolean approximateTrimming) {
+	public Mono<Long> trim(@NonNull K key, long count, boolean approximateTrimming) {
 		Assert.notNull(key, "Key must not be null");
 
 		return createMono(streamCommands -> streamCommands.xTrim(rawKey(key), count, approximateTrimming));
 	}
 
 	@Override
-	public <V> HashMapper<V, HK, HV> getHashMapper(Class<V> targetType) {
+	public Mono<Long> trim(@NonNull K key, @NonNull XTrimOptions options) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(options, "XTrimOptions must not be null");
+
+		return createMono(streamCommands -> streamCommands.xTrim(rawKey(key), options));
+	}
+
+	@Override
+	public <V> HashMapper<V, HK, HV> getHashMapper(@NonNull Class<V> targetType) {
 		return objectMapper.getHashMapper(targetType);
 	}
 
@@ -361,8 +400,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 
 		try {
 			return serializationContext.getHashKeySerializationPair().write(key);
-		} catch (IllegalStateException ignore) {
-		}
+		} catch (IllegalStateException ignore) {}
 
 		return ByteBuffer.wrap(objectMapper.getConversionService().convert(key, byte[].class));
 	}
@@ -371,8 +409,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 
 		try {
 			return serializationContext.getHashValueSerializationPair().write(value);
-		} catch (IllegalStateException ignore) {
-		}
+		} catch (IllegalStateException ignore) {}
 
 		return ByteBuffer.wrap(objectMapper.getConversionService().convert(value, byte[].class));
 	}
@@ -392,7 +429,7 @@ class DefaultReactiveStreamOperations<K, HK, HV> implements ReactiveStreamOperat
 	}
 
 	@Override
-	public MapRecord<K, HK, HV> deserializeRecord(ByteBufferRecord record) {
+	public MapRecord<K, HK, HV> deserializeRecord(@NonNull ByteBufferRecord record) {
 		return record.map(it -> it.mapEntries(this::deserializeRecordFields).withStreamKey(readKey(record.getStream())));
 	}
 

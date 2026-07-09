@@ -1,0 +1,77 @@
+---
+title: Publishing Messages
+description: Sending messages using Valkey Pub/Sub
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+To publish a message, choose the abstraction level that matches your application's responsibility:
+
+* `[Reactive]ValkeyConnection` is the low-level contract and operates on already-serialized (`byte[]`) channel and message data.
+* `[Reactive]ValkeyOperations` (typically through `ValkeyTemplate`) publishes messages by using the template's configured serializers for conversion.
+* `ValkeyMessageSendingTemplate` integrates with Spring Messaging and delegates payload conversion to a `MessageConverter`, selecting converters according to the payload type and, if present, the `contentType` header.
+
+The imperative API offers all three variants.
+The reactive API offers the low-level connection and `ReactiveValkeyOperations` variants.
+
+The following table summarizes the differences between the sending options:
+
+| Variant | Responsibility | Conversion model |
+|---------|---------------|-----------------|
+| `[Reactive]ValkeyConnection` | Publish binary channel and message data. | Application code provides the binary (`byte[]`/`ByteBuffer`) values. |
+| `ValkeyTemplate` / `[Reactive]ValkeyOperations` | Publish application values through the Valkey data access abstraction. | Uses the configured value serializer for the message body. Publication is therefore bound to the template-specific value serializer. |
+| `ValkeyMessageSendingTemplate` | Publish through Spring's `Message<?>` abstraction for flexible message conversion. | Uses `ValkeyMessageConverters` to select a `MessageConverter` according to the payload type and, if present, the `MessageHeaders.CONTENT_TYPE` header. Useful for applications that already use Spring Messaging or [annotation-driven listeners](/valkey/pubsub-annotated). |
+
+The following example shows the available sending variants:
+
+<Tabs>
+<TabItem label="Imperative">
+
+```java
+// send message through connection
+ValkeyConnection connection = …
+byte[] channel = …
+byte[] message = …
+connection.pubSubCommands().publish(channel, message);
+
+// send message through ValkeyOperations
+ValkeyOperations<String, Object> operations = …
+Long numberOfClients = operations.convertAndSend("chatroom", "hello!");
+```
+
+</TabItem>
+<TabItem label="Reactive">
+
+```java
+// send message through connection
+ReactiveValkeyConnection connection = …
+ByteBuffer channel = …
+ByteBuffer message = …
+connection.pubSubCommands().publish(channel, message);
+
+// send message through ReactiveValkeyOperations
+ReactiveValkeyOperations<String, String> operations = …
+Mono<Long> numberOfClients = operations.convertAndSend("chatroom", "hello!");
+```
+
+</TabItem>
+<TabItem label="Spring Messaging">
+
+```java
+ValkeyMessageSendingTemplate template = …
+template.convertAndSend("chatroom", new Greeting("hello", "world"));
+
+template.convertAndSend("chatroom", new Greeting("hello", "world"),    // (1)
+     Map.of(MessageHeaders.CONTENT_TYPE, "application/json"));
+
+template.convertAndSend("chatroom", new Greeting("hello", "world"),    // (2)
+     Map.of(MessageHeaders.CONTENT_TYPE, JdkSerializerMessageConverter.APPLICATION_JAVA_SERIALIZED_OBJECT_VALUE));
+```
+
+1. Provide a `contentType` as hint for converter selection. Valkey Pub/Sub does not support headers so it transmits only the serialized message.
+2. Select Java Serialization for the message body. Requires `JdkSerializerMessageConverter` to use this content type.
+
+</TabItem>
+</Tabs>
+
+> **Note:** All three drivers (Valkey GLIDE, Lettuce, and Jedis) support publishing messages via Pub/Sub.

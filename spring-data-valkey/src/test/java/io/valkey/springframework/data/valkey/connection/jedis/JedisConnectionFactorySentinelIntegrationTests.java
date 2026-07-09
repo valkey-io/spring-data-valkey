@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +19,18 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.io.IOException;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConnection;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeySentinelAvailable;
-import org.springframework.lang.Nullable;
 
 /**
- * Sentinel integration tests for {@link JedisConnectionFactory}.
+ * Sentinel integration tests for {@link JedisConnectionFactory} using the legacy
+ * {@link JedisConnection} code path.
  *
  * @author Christoph Strobl
  * @author Fu Jian
@@ -38,9 +40,34 @@ import org.springframework.lang.Nullable;
 @EnabledOnValkeySentinelAvailable
 class JedisConnectionFactorySentinelIntegrationTests {
 
-	private static final ValkeySentinelConfiguration SENTINEL_CONFIG = new ValkeySentinelConfiguration().master("mymaster")
+	static final ValkeySentinelConfiguration SENTINEL_CONFIG = new ValkeySentinelConfiguration().master("mymaster")
 			.sentinel("127.0.0.1", 26379).sentinel("127.0.0.1", 26380);
-	private @Nullable JedisConnectionFactory factory;
+	@Nullable JedisConnectionFactory factory;
+
+	/**
+	 * Creates a {@link JedisConnectionFactory} that forces legacy mode for testing the legacy sentinel code path.
+	 */
+	JedisConnectionFactory createConnectionFactory(ValkeySentinelConfiguration configuration) {
+		return new JedisConnectionFactory(configuration) {
+			@Override
+			public boolean isUseUnifiedJedis() {
+				return false; // Force legacy JedisConnection
+			}
+		};
+	}
+
+	/**
+	 * Creates a {@link JedisConnectionFactory} that forces legacy mode for testing the legacy sentinel code path.
+	 */
+	JedisConnectionFactory createConnectionFactory(ValkeySentinelConfiguration configuration,
+			JedisClientConfiguration clientConfiguration) {
+		return new JedisConnectionFactory(configuration, clientConfiguration) {
+			@Override
+			public boolean isUseUnifiedJedis() {
+				return false; // Force legacy JedisConnection
+			}
+		};
+	}
 
 	@AfterEach
 	void tearDown() {
@@ -57,16 +84,15 @@ class JedisConnectionFactorySentinelIntegrationTests {
 				.sentinel("127.0.0.1", 26379).sentinel("127.0.0.1", 26380);
 		configuration.setDatabase(5);
 
-		factory = new JedisConnectionFactory(configuration);
+		factory = createConnectionFactory(configuration);
 		factory.afterPropertiesSet();
 		factory.start();
 
 		try (ValkeyConnection connection = factory.getConnection()) {
 
-			connection.serverCommands().flushAll();
 			connection.stringCommands().set("key5".getBytes(), "value5".getBytes());
+			connection.serverCommands().flushAll();
 
-			connection.select(0);
 			assertThat(connection.keyCommands().exists("key5".getBytes())).isFalse();
 		}
 	}
@@ -78,7 +104,7 @@ class JedisConnectionFactorySentinelIntegrationTests {
 				.sentinel("127.0.0.1", 26379).sentinel("127.0.0.1", 26380);
 		configuration.setDatabase(5);
 
-		factory = new JedisConnectionFactory(configuration);
+		factory = createConnectionFactory(configuration);
 		factory.afterPropertiesSet();
 		factory.start();
 
@@ -94,7 +120,7 @@ class JedisConnectionFactorySentinelIntegrationTests {
 				.clientName("clientName") //
 				.build();
 
-		factory = new JedisConnectionFactory(SENTINEL_CONFIG, clientConfiguration);
+		factory = createConnectionFactory(SENTINEL_CONFIG, clientConfiguration);
 		factory.afterPropertiesSet();
 		factory.start();
 
@@ -103,24 +129,26 @@ class JedisConnectionFactorySentinelIntegrationTests {
 			assertThat(factory.getUsePool()).isTrue();
 			assertThat(connection.getClientName()).isEqualTo("clientName");
 		}
+
 	}
 
 	@Test // DATAREDIS-324
 	void shouldSendCommandCorrectlyViaConnectionFactoryUsingSentinel() {
 
-		factory = new JedisConnectionFactory(SENTINEL_CONFIG);
+		factory = createConnectionFactory(SENTINEL_CONFIG);
 		factory.afterPropertiesSet();
 		factory.start();
 
 		try (ValkeyConnection connection = factory.getConnection()) {
 			assertThat(connection.ping()).isEqualTo("PONG");
 		}
+
 	}
 
 	@Test // DATAREDIS-552
 	void getClientNameShouldEqualWithFactorySetting() {
 
-		factory = new JedisConnectionFactory(SENTINEL_CONFIG);
+		factory = createConnectionFactory(SENTINEL_CONFIG);
 		factory.setClientName("clientName");
 		factory.afterPropertiesSet();
 		factory.start();
@@ -136,7 +164,7 @@ class JedisConnectionFactorySentinelIntegrationTests {
 		ValkeySentinelConfiguration oneDownSentinelConfig = new ValkeySentinelConfiguration().master("mymaster")
 				.sentinel("127.0.0.1", 1).sentinel("127.0.0.1", 26379);
 
-		factory = new JedisConnectionFactory(oneDownSentinelConfig);
+		factory = createConnectionFactory(oneDownSentinelConfig);
 		factory.afterPropertiesSet();
 		factory.start();
 
@@ -144,4 +172,5 @@ class JedisConnectionFactorySentinelIntegrationTests {
 			assertThat(sentinelConnection.isOpen()).isTrue();
 		}
 	}
+
 }

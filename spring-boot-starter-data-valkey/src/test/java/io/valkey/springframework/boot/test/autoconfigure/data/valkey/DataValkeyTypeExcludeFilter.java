@@ -17,15 +17,14 @@
 package io.valkey.springframework.boot.test.autoconfigure.data.valkey;
 
 import org.springframework.boot.context.TypeExcludeFilter;
-import org.springframework.boot.test.autoconfigure.filter.StandardAnnotationCustomizableTypeExcludeFilter;
+import org.springframework.boot.test.context.filter.annotation.StandardAnnotationCustomizableTypeExcludeFilter;
 
 /**
  * {@link TypeExcludeFilter} for {@link DataValkeyTest @DataValkeyTest}.
  *
  * @author Jayaram Pradhan
- * @since 0.1.0
  */
-public final class DataValkeyTypeExcludeFilter extends StandardAnnotationCustomizableTypeExcludeFilter<DataValkeyTest> {
+class DataValkeyTypeExcludeFilter extends StandardAnnotationCustomizableTypeExcludeFilter<DataValkeyTest> {
 
 	DataValkeyTypeExcludeFilter(Class<?> testClass) {
 		super(testClass);

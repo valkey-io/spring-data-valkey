@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 the original author or authors.
+ * Copyright 2022-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,10 @@ import io.lettuce.core.RedisCredentials;
 import io.lettuce.core.RedisCredentialsProvider;
 import reactor.core.publisher.Mono;
 
+import org.jspecify.annotations.Nullable;
+
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
-import org.springframework.lang.Nullable;
 
 /**
  * Factory interface to create {@link RedisCredentialsProvider} from a {@link ValkeyConfiguration}. Credentials can be
@@ -44,21 +45,18 @@ public interface ValkeyCredentialsProviderFactory {
 	 * @param valkeyConfiguration the {@link ValkeyConfiguration} object.
 	 * @return a {@link RedisCredentialsProvider} that emits {@link RedisCredentials} for data node authentication.
 	 */
-	@Nullable
-	default RedisCredentialsProvider createCredentialsProvider(ValkeyConfiguration valkeyConfiguration) {
+	default @Nullable RedisCredentialsProvider createCredentialsProvider(ValkeyConfiguration valkeyConfiguration) {
 
-		if (valkeyConfiguration instanceof ValkeyConfiguration.WithAuthentication
-				&& ((ValkeyConfiguration.WithAuthentication) valkeyConfiguration).getPassword().isPresent()) {
+		if (valkeyConfiguration instanceof ValkeyConfiguration.WithAuthentication withAuthentication
+				&& withAuthentication.getPassword().isPresent()) {
 
 			return RedisCredentialsProvider.from(() -> {
-
-				ValkeyConfiguration.WithAuthentication withAuthentication = (ValkeyConfiguration.WithAuthentication) valkeyConfiguration;
 
 				return RedisCredentials.just(withAuthentication.getUsername(), withAuthentication.getPassword().get());
 			});
 		}
 
-		return () -> Mono.just(AbsentValkeyCredentials.ANONYMOUS);
+		return () -> Mono.just(AbsentRedisCredentials.ANONYMOUS);
 	}
 
 	/**
@@ -76,19 +74,18 @@ public interface ValkeyCredentialsProviderFactory {
 					valkeyConfiguration.getSentinelPassword().get()));
 		}
 
-		return () -> Mono.just(AbsentValkeyCredentials.ANONYMOUS);
+		return () -> Mono.just(AbsentRedisCredentials.ANONYMOUS);
 	}
 
 	/**
 	 * Default anonymous {@link RedisCredentials} without username/password.
 	 */
-	enum AbsentValkeyCredentials implements RedisCredentials {
+	enum AbsentRedisCredentials implements RedisCredentials {
 
 		ANONYMOUS;
 
 		@Override
-		@Nullable
-		public String getUsername() {
+		public @Nullable String getUsername() {
 			return null;
 		}
 
@@ -98,8 +95,7 @@ public interface ValkeyCredentialsProviderFactory {
 		}
 
 		@Override
-		@Nullable
-		public char[] getPassword() {
+		public char @Nullable [] getPassword() {
 			return null;
 		}
 

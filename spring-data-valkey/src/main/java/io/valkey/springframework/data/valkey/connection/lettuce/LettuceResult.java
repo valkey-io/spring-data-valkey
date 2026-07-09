@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import io.valkey.springframework.data.valkey.connection.FutureResult;
-import org.springframework.lang.Nullable;
 
 /**
  * Lettuce specific {@link FutureResult} implementation. <br />
@@ -47,17 +47,16 @@ class LettuceResult<T, R> extends FutureResult<CompletableFuture<T>> {
 	}
 
 	@SuppressWarnings("unchecked")
-	LettuceResult(Future<T> resultHolder, Supplier<R> defaultReturnValue, boolean convertPipelineAndTxResults,
+	LettuceResult(Future<T> resultHolder, Supplier<@Nullable R> defaultReturnValue, boolean convertPipelineAndTxResults,
 			@Nullable Converter<T, R> converter) {
 
 		super((CompletableFuture<T>) resultHolder, converter, defaultReturnValue);
 		this.convertPipelineAndTxResults = convertPipelineAndTxResults;
 	}
 
-	@Nullable
 	@Override
 	@SuppressWarnings("unchecked")
-	public T get() {
+	public @Nullable T get() {
 		return (T) getResultHolder().join();
 	}
 
@@ -90,7 +89,7 @@ class LettuceResult<T, R> extends FutureResult<CompletableFuture<T>> {
 		private final Future<T> response;
 		private Converter<T, R> converter;
 		private boolean convertPipelineAndTxResults = false;
-		private Supplier<R> nullValueDefault = () -> null;
+		private Supplier<@Nullable R> nullValueDefault = () -> null;
 
 		@SuppressWarnings("unchecked")
 		LettuceResultBuilder(Future<T> response) {

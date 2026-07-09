@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,23 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+import redis.clients.jedis.RedisProtocol;
+import redis.clients.jedis.UnifiedJedis;
+import redis.clients.jedis.csc.Cache;
+
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+
 import org.springframework.core.task.AsyncTaskExecutor;
 import io.valkey.springframework.data.valkey.SettingsUtils;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
+import io.valkey.springframework.data.valkey.util.ValkeyClientLibraryInfo;
 
 /**
  * Integration tests for {@link JedisConnectionFactory}.
@@ -74,6 +82,32 @@ class JedisConnectionFactoryIntegrationTests {
 		assertThat(connection.getClientName()).isEqualTo("clientName");
 	}
 
+	@Test // GH-3268
+	@EnabledOnValkeyVersion("7.2")
+	void clientListReportsJedisLibNameWithSpringDataSuffix() {
+
+		factory = new JedisConnectionFactory(
+				new ValkeyStandaloneConfiguration(SettingsUtils.getHost(), SettingsUtils.getPort()),
+				JedisClientConfiguration.builder().clientName("clientNameLibName").build());
+		factory.afterPropertiesSet();
+		factory.start();
+
+		try (ValkeyConnection connection = factory.getConnection()) {
+
+			ValkeyClientInfo self = connection.serverCommands().getClientList()
+					.stream()
+					.filter(info -> "clientNameLibName".equals(info.getName()))
+					.findFirst()
+					.orElseThrow();
+
+			String expectedUpstreamDriver = "%s_v%s".formatted(ValkeyClientLibraryInfo.FRAMEWORK_NAME, ValkeyClientLibraryInfo.getVersion());
+			assertThat(self.get("lib-name")).startsWith("jedis(" + expectedUpstreamDriver);
+		}
+		finally {
+			factory.destroy();
+		}
+	}
+
 	@Test // GH-2503
 	void startStopStartConnectionFactory() {
 
@@ -113,4 +147,35 @@ class JedisConnectionFactoryIntegrationTests {
 
 		factory.destroy();
 	}
+
+	@Test // GH-3315
+	void shouldCustomizeStandaloneClient() {
+
+		Cache c = mock(Cache.class);
+		factory = new JedisConnectionFactory(
+				new ValkeyStandaloneConfiguration(SettingsUtils.getHost(), SettingsUtils.getPort()),
+				JedisClientConfiguration.builder().customizeClientConfig(it -> it.protocol(RedisProtocol.RESP3))
+						.customizeClient(builder -> builder.cache(c)).build());
+		factory.afterPropertiesSet();
+		factory.start();
+
+		UnifiedJedis client = factory.getRequiredRedisClient();
+		assertThat(client.getCache()).isEqualTo(c);
+	}
+
+	@Test // GH-3315
+	@EnabledOnValkeyClusterAvailable
+	void shouldCustomizeClusterClient() {
+
+		Cache c = mock(Cache.class);
+		factory = new JedisConnectionFactory(SettingsUtils.clusterConfiguration(),
+				JedisClientConfiguration.builder().customizeClientConfig(it -> it.protocol(RedisProtocol.RESP3))
+						.customizeClient(builder -> builder.cache(c)).build());
+		factory.afterPropertiesSet();
+		factory.start();
+
+		UnifiedJedis client = factory.getRequiredRedisClient();
+		assertThat(client.getCache()).isEqualTo(c);
+	}
+
 }

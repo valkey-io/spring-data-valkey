@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -101,8 +101,7 @@ class IndexWriterUnitTests {
 		byte[] indexKey1 = "persons:firstname:rand".getBytes(CHARSET);
 		byte[] indexKey2 = "persons:firstname:mat".getBytes(CHARSET);
 
-		when(connectionMock.keys(any(byte[].class)))
-				.thenReturn(new LinkedHashSet<>(Arrays.asList(indexKey1, indexKey2)));
+		when(connectionMock.keys(any(byte[].class))).thenReturn(new LinkedHashSet<>(Arrays.asList(indexKey1, indexKey2)));
 
 		writer.removeKeyFromExistingIndexes(KEY_BIN, new StubIndxedData());
 
@@ -121,8 +120,7 @@ class IndexWriterUnitTests {
 		byte[] indexKey1 = "persons:firstname:rand".getBytes(CHARSET);
 		byte[] indexKey2 = "persons:firstname:mat".getBytes(CHARSET);
 
-		when(connectionMock.keys(any(byte[].class)))
-				.thenReturn(new LinkedHashSet<>(Arrays.asList(indexKey1, indexKey2)));
+		when(connectionMock.keys(any(byte[].class))).thenReturn(new LinkedHashSet<>(Arrays.asList(indexKey1, indexKey2)));
 
 		writer.removeAllIndexes(KEYSPACE);
 
@@ -146,11 +144,11 @@ class IndexWriterUnitTests {
 
 		((GenericConversionService) converter.getConversionService()).addConverter(new Converter<DummyObject, byte[]>() {
 
-					@Override
-					public byte[] convert(DummyObject source) {
-						return identityHexString.getBytes(CHARSET);
-					}
-				});
+			@Override
+			public byte[] convert(DummyObject source) {
+				return identityHexString.getBytes(CHARSET);
+			}
+		});
 
 		writer.addKeyToIndex(KEY_BIN, new SimpleIndexedPropertyValue(KEYSPACE, "firstname", value));
 

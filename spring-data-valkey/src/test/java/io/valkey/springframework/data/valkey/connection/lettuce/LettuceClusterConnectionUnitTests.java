@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -196,15 +196,15 @@ class LettuceClusterConnectionUnitTests {
 	@Test // DATAREDIS-315
 	void keysShouldOnlyBeRunOnDedicatedNodeWhenPinned() {
 
-		when(clusterConnection2Mock.keys(any(byte[].class))).thenReturn(Collections.<byte[]> emptyList());
+		when(clusterConnection2Mock.keys(any(String.class))).thenReturn(Collections.<byte[]> emptyList());
 
 		byte[] pattern = LettuceConverters.toBytes("*");
 
 		connection.keys(CLUSTER_NODE_2, pattern);
 
-		verify(clusterConnection1Mock, never()).keys(pattern);
-		verify(clusterConnection2Mock, times(1)).keys(pattern);
-		verify(clusterConnection3Mock, never()).keys(pattern);
+		verify(clusterConnection1Mock, never()).keys(LettuceConverters.toString(pattern));
+		verify(clusterConnection2Mock, times(1)).keys(LettuceConverters.toString(pattern));
+		verify(clusterConnection3Mock, never()).keys(LettuceConverters.toString(pattern));
 	}
 
 	@Test // DATAREDIS-315

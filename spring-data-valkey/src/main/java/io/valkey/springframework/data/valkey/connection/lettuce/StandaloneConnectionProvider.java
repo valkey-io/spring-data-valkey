@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,9 +34,9 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.DirectFieldAccessor;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionProvider.TargetAware;
-import org.springframework.lang.Nullable;
 
 /**
  * {@link LettuceConnectionProvider} implementation for a standalone Valkey setup.
@@ -50,7 +50,7 @@ class StandaloneConnectionProvider implements LettuceConnectionProvider, TargetA
 	private final RedisClient client;
 	private final RedisCodec<?, ?> codec;
 	private final Optional<ReadFrom> readFrom;
-	private final Supplier<RedisURI> valkeyURISupplier;
+	private final Supplier<RedisURI> redisURISupplier;
 
 	/**
 	 * Create new {@link StandaloneConnectionProvider}.
@@ -76,11 +76,12 @@ class StandaloneConnectionProvider implements LettuceConnectionProvider, TargetA
 		this.codec = codec;
 		this.readFrom = Optional.ofNullable(readFrom);
 
-		valkeyURISupplier = new Supplier<RedisURI>() {
+		redisURISupplier = new Supplier<RedisURI>() {
 
 			AtomicReference<RedisURI> uriFieldReference = new AtomicReference<>();
 
 			@Override
+			@SuppressWarnings("NullAway")
 			public RedisURI get() {
 
 				RedisURI uri = uriFieldReference.get();
@@ -108,7 +109,7 @@ class StandaloneConnectionProvider implements LettuceConnectionProvider, TargetA
 
 		if (StatefulConnection.class.isAssignableFrom(connectionType)) {
 
-			return connectionType.cast(readFrom.map(it -> this.masterReplicaConnection(valkeyURISupplier.get(), it))
+			return connectionType.cast(readFrom.map(it -> this.masterReplicaConnection(redisURISupplier.get(), it))
 					.orElseGet(() -> client.connect(codec)));
 		}
 
@@ -117,7 +118,7 @@ class StandaloneConnectionProvider implements LettuceConnectionProvider, TargetA
 
 	@Override
 	public <T extends StatefulConnection<?, ?>> CompletionStage<T> getConnectionAsync(Class<T> connectionType) {
-		return getConnectionAsync(connectionType, valkeyURISupplier.get());
+		return getConnectionAsync(connectionType, redisURISupplier.get());
 	}
 
 	@SuppressWarnings({ "null", "unchecked", "rawtypes" })
@@ -160,8 +161,7 @@ class StandaloneConnectionProvider implements LettuceConnectionProvider, TargetA
 			ReadFrom readFrom) {
 
 		CompletableFuture<? extends StatefulRedisMasterReplicaConnection<?, ?>> connection = MasterReplica
-				.connectAsync(client,
-				codec, redisUri);
+				.connectAsync(client, codec, redisUri);
 
 		return connection.thenApply(conn -> {
 

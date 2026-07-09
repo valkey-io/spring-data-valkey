@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,12 +23,14 @@ import java.lang.annotation.Annotation;
 import java.util.Optional;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
+
+
 import org.springframework.data.keyvalue.core.KeyValueOperations;
 import io.valkey.springframework.data.valkey.repository.query.ValkeyQueryCreator;
 import io.valkey.springframework.data.valkey.repository.support.ValkeyRepositoryFactory;
 import org.springframework.data.repository.cdi.CdiRepositoryBean;
 import org.springframework.data.repository.config.CustomRepositoryImplementationDetector;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -68,3 +70,4 @@ public class ValkeyRepositoryBean<T> extends CdiRepositoryBean<T> {
 		return create(() -> new ValkeyRepositoryFactory(keyValueTemplate, ValkeyQueryCreator.class), repositoryType);
 	}
 }
+

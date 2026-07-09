@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ package io.valkey.springframework.data.valkey.connection;
 import java.util.List;
 import java.util.Set;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 
 /**
  * Set-specific commands supported by Valkey.
@@ -28,7 +29,10 @@ import org.springframework.lang.Nullable;
  * @author Costin Leau
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Mingi Lee
+ * @see ValkeyCommands
  */
+@NullUnmarked
 public interface ValkeySetCommands {
 
 	/**
@@ -39,8 +43,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sadd">Valkey Documentation: SADD</a>
 	 */
-	@Nullable
-	Long sAdd(byte[] key, byte[]... values);
+	Long sAdd(byte [] key, byte [] @NonNull... values);
 
 	/**
 	 * Remove given {@code values} from set at {@code key} and return the number of removed elements.
@@ -50,8 +53,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/srem">Valkey Documentation: SREM</a>
 	 */
-	@Nullable
-	Long sRem(byte[] key, byte[]... values);
+	Long sRem(byte [] key, byte []... values);
 
 	/**
 	 * Remove and return a random member from set at {@code key}.
@@ -60,8 +62,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when key does not exist or used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/spop">Valkey Documentation: SPOP</a>
 	 */
-	@Nullable
-	byte[] sPop(byte[] key);
+	byte[] sPop(byte [] key);
 
 	/**
 	 * Remove and return {@code count} random members from set at {@code key}.
@@ -72,8 +73,7 @@ public interface ValkeySetCommands {
 	 * @see <a href="https://valkey.io/commands/spop">Valkey Documentation: SPOP</a>
 	 * @since 2.0
 	 */
-	@Nullable
-	List<byte[]> sPop(byte[] key, long count);
+	List<byte []> sPop(byte [] key, long count);
 
 	/**
 	 * Move {@code value} from {@code srcKey} to {@code destKey}
@@ -84,8 +84,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/smove">Valkey Documentation: SMOVE</a>
 	 */
-	@Nullable
-	Boolean sMove(byte[] srcKey, byte[] destKey, byte[] value);
+	Boolean sMove(byte [] srcKey, byte [] destKey, byte [] value);
 
 	/**
 	 * Get size of set at {@code key}.
@@ -94,8 +93,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/scard">Valkey Documentation: SCARD</a>
 	 */
-	@Nullable
-	Long sCard(byte[] key);
+	Long sCard(byte [] key);
 
 	/**
 	 * Check if set at {@code key} contains {@code value}.
@@ -105,8 +103,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sismember">Valkey Documentation: SISMEMBER</a>
 	 */
-	@Nullable
-	Boolean sIsMember(byte[] key, byte[] value);
+	Boolean sIsMember(byte [] key, byte [] value);
 
 	/**
 	 * Check if set at {@code key} contains one or more {@code values}.
@@ -117,8 +114,7 @@ public interface ValkeySetCommands {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/smismember">Valkey Documentation: SMISMEMBER</a>
 	 */
-	@Nullable
-	List<Boolean> sMIsMember(byte[] key, byte[]... values);
+	List<Boolean> sMIsMember(byte [] key, byte [] @NonNull... values);
 
 	/**
 	 * Diff all sets for given {@code keys}.
@@ -127,8 +123,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sdiff">Valkey Documentation: SDIFF</a>
 	 */
-	@Nullable
-	Set<byte[]> sDiff(byte[]... keys);
+	Set<byte []> sDiff(byte [] @NonNull... keys);
 
 	/**
 	 * Diff all sets for given {@code keys} and store result in {@code destKey}.
@@ -138,8 +133,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sdiffstore">Valkey Documentation: SDIFFSTORE</a>
 	 */
-	@Nullable
-	Long sDiffStore(byte[] destKey, byte[]... keys);
+	Long sDiffStore(byte [] destKey, byte [] @NonNull... keys);
 
 	/**
 	 * Returns the members intersecting all given sets at {@code keys}.
@@ -148,8 +142,7 @@ public interface ValkeySetCommands {
 	 * @return empty {@link Set} if no intersection found. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sinter">Valkey Documentation: SINTER</a>
 	 */
-	@Nullable
-	Set<byte[]> sInter(byte[]... keys);
+	Set<byte []> sInter(byte [] @NonNull... keys);
 
 	/**
 	 * Intersect all given sets at {@code keys} and store result in {@code destKey}.
@@ -159,8 +152,17 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sinterstore">Valkey Documentation: SINTERSTORE</a>
 	 */
-	@Nullable
-	Long sInterStore(byte[] destKey, byte[]... keys);
+	Long sInterStore(byte [] destKey, byte [] @NonNull... keys);
+
+	/**
+	 * Returns the cardinality of the set which would result from the intersection of all the given sets.
+	 *
+	 * @param keys must not be {@literal null}.
+	 * @return {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 * @since 4.0
+	 */
+	Long sInterCard(byte [] @NonNull... keys);
 
 	/**
 	 * Union all sets at given {@code keys}.
@@ -169,8 +171,7 @@ public interface ValkeySetCommands {
 	 * @return empty {@link Set} if keys do not exist. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sunion">Valkey Documentation: SUNION</a>
 	 */
-	@Nullable
-	Set<byte[]> sUnion(byte[]... keys);
+	Set<byte []> sUnion(byte [] @NonNull... keys);
 
 	/**
 	 * Union all sets at given {@code keys} and store result in {@code destKey}.
@@ -180,9 +181,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sunionstore">Valkey Documentation: SUNIONSTORE</a>
 	 */
-	@Nullable
-	Long sUnionStore(byte[] destKey, byte[]... keys);
-
+	Long sUnionStore(byte [] destKey, byte [] @NonNull... keys);
 
 	/**
 	 * Get all elements of set at {@code key}.
@@ -191,8 +190,7 @@ public interface ValkeySetCommands {
 	 * @return empty {@link Set} when key does not exist. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/smembers">Valkey Documentation: SMEMBERS</a>
 	 */
-	@Nullable
-	Set<byte[]> sMembers(byte[] key);
+	Set<byte []> sMembers(byte [] key);
 
 	/**
 	 * Get random element from set at {@code key}.
@@ -201,8 +199,7 @@ public interface ValkeySetCommands {
 	 * @return can be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/srandmember">Valkey Documentation: SRANDMEMBER</a>
 	 */
-	@Nullable
-	byte[] sRandMember(byte[] key);
+	byte[] sRandMember(byte [] key);
 
 	/**
 	 * Get {@code count} random elements from set at {@code key}.
@@ -212,8 +209,7 @@ public interface ValkeySetCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/srandmember">Valkey Documentation: SRANDMEMBER</a>
 	 */
-	@Nullable
-	List<byte[]> sRandMember(byte[] key, long count);
+	List<byte []> sRandMember(byte [] key, long count);
 
 	/**
 	 * Use a {@link Cursor} to iterate over elements in set at {@code key}.
@@ -224,5 +220,5 @@ public interface ValkeySetCommands {
 	 * @since 1.4
 	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
 	 */
-	Cursor<byte[]> sScan(byte[] key, ScanOptions options);
+	Cursor<byte []> sScan(byte [] key, ScanOptions options);
 }

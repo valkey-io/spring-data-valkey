@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration.DomainSocketConfiguration;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -38,12 +38,12 @@ public class ValkeySocketConfiguration implements ValkeyConfiguration, DomainSoc
 	private ValkeyPassword password = ValkeyPassword.none();
 
 	/**
-	 * Create a new default {@link ValkeySocketConfiguration}.
+	 * Create a new default {@code ValkeySocketConfiguration}.
 	 */
 	public ValkeySocketConfiguration() {}
 
 	/**
-	 * Create a new {@link ValkeySocketConfiguration} given {@code socket}.
+	 * Create a new {@code ValkeySocketConfiguration} given {@code socket}.
 	 *
 	 * @param socket must not be {@literal null} or empty.
 	 */
@@ -84,9 +84,8 @@ public class ValkeySocketConfiguration implements ValkeyConfiguration, DomainSoc
 		this.username = username;
 	}
 
-	@Nullable
 	@Override
-	public String getUsername() {
+	public @Nullable String getUsername() {
 		return this.username;
 	}
 

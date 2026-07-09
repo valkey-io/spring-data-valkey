@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package io.valkey.springframework.data.valkey.core;
 import java.util.Collection;
 import java.util.Set;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.SlotRange;
@@ -26,26 +28,30 @@ import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.Flu
 
 /**
  * Valkey operations for cluster specific operations. A {@link ValkeyClusterNode} can be obtained from
- * {@link ValkeyClusterCommands#clusterGetNodes() a connection} or it can be
- * constructed using either {@link ValkeyClusterNode#getHost() host} and {@link ValkeyClusterNode#getPort()} or the
- * {@link ValkeyClusterNode#getId() node Id}.
+ * {@link ValkeyClusterCommands#clusterGetNodes() a connection} or it can be constructed using either
+ * {@link ValkeyClusterNode#getHost() host} and {@link ValkeyClusterNode#getPort()} or the {@link ValkeyClusterNode#getId()
+ * node Id}.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author Dennis Neufeld
  * @since 1.7
  */
+@NullUnmarked
 public interface ClusterOperations<K, V> {
 
 	/**
-	 * Get all keys located at given node.
+	 * Retrieve all keys located at given node matching the given pattern.
+	 * <p>
+	 * <strong>IMPORTANT:</strong> The {@literal KEYS} command is non-interruptible and scans the entire keyspace which
+	 * may cause performance issues.
 	 *
 	 * @param node must not be {@literal null}.
 	 * @param pattern
 	 * @return never {@literal null}.
 	 * @see ValkeyConnection#keys(byte[])
 	 */
-	Set<K> keys(ValkeyClusterNode node, K pattern);
+	Set<@NonNull K> keys(@NonNull ValkeyClusterNode node, @NonNull K pattern);
 
 	/**
 	 * Ping the given node;
@@ -54,7 +60,7 @@ public interface ClusterOperations<K, V> {
 	 * @return
 	 * @see ValkeyConnection#ping()
 	 */
-	String ping(ValkeyClusterNode node);
+	String ping(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Get a random key from the range served by the given node.
@@ -63,7 +69,7 @@ public interface ClusterOperations<K, V> {
 	 * @return
 	 * @see ValkeyConnection#randomKey()
 	 */
-	K randomKey(ValkeyClusterNode node);
+	K randomKey(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Add slots to given node;
@@ -71,7 +77,7 @@ public interface ClusterOperations<K, V> {
 	 * @param node must not be {@literal null}.
 	 * @param slots must not be {@literal null}.
 	 */
-	void addSlots(ValkeyClusterNode node, int... slots);
+	void addSlots(@NonNull ValkeyClusterNode node, int... slots);
 
 	/**
 	 * Add slots in {@link SlotRange} to given node.
@@ -79,7 +85,7 @@ public interface ClusterOperations<K, V> {
 	 * @param node must not be {@literal null}.
 	 * @param range must not be {@literal null}.
 	 */
-	void addSlots(ValkeyClusterNode node, SlotRange range);
+	void addSlots(@NonNull ValkeyClusterNode node, @NonNull SlotRange range);
 
 	/**
 	 * Start an {@literal Append Only File} rewrite process on given node.
@@ -87,7 +93,7 @@ public interface ClusterOperations<K, V> {
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyConnection#bgReWriteAof()
 	 */
-	void bgReWriteAof(ValkeyClusterNode node);
+	void bgReWriteAof(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Start background saving of db on given node.
@@ -95,21 +101,21 @@ public interface ClusterOperations<K, V> {
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyConnection#bgSave()
 	 */
-	void bgSave(ValkeyClusterNode node);
+	void bgSave(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Add the node to cluster.
 	 *
 	 * @param node must not be {@literal null}.
 	 */
-	void meet(ValkeyClusterNode node);
+	void meet(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Remove the node from the cluster.
 	 *
 	 * @param node must not be {@literal null}.
 	 */
-	void forget(ValkeyClusterNode node);
+	void forget(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Flush db on node.
@@ -117,7 +123,7 @@ public interface ClusterOperations<K, V> {
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyConnection#flushDb()
 	 */
-	void flushDb(ValkeyClusterNode node);
+	void flushDb(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Flush db on node using the specified {@link FlushOption}.
@@ -127,13 +133,13 @@ public interface ClusterOperations<K, V> {
 	 * @see ValkeyConnection#flushDb(FlushOption)
 	 * @since 2.7
 	 */
-	void flushDb(ValkeyClusterNode node, FlushOption option);
+	void flushDb(@NonNull ValkeyClusterNode node, @NonNull FlushOption option);
 
 	/**
 	 * @param node must not be {@literal null}.
 	 * @return
 	 */
-	Collection<ValkeyClusterNode> getReplicas(ValkeyClusterNode node);
+	Collection<@NonNull ValkeyClusterNode> getReplicas(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Synchronous save current db snapshot on server.
@@ -141,7 +147,7 @@ public interface ClusterOperations<K, V> {
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyConnection#save()
 	 */
-	void save(ValkeyClusterNode node);
+	void save(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Shutdown given node.
@@ -149,7 +155,7 @@ public interface ClusterOperations<K, V> {
 	 * @param node must not be {@literal null}.
 	 * @see ValkeyConnection#shutdown()
 	 */
-	void shutdown(ValkeyClusterNode node);
+	void shutdown(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Move slot assignment from one source to target node and copy keys associated with the slot.
@@ -158,5 +164,5 @@ public interface ClusterOperations<K, V> {
 	 * @param slot
 	 * @param target must not be {@literal null}.
 	 */
-	void reshard(ValkeyClusterNode source, int slot, ValkeyClusterNode target);
+	void reshard(@NonNull ValkeyClusterNode source, int slot, @NonNull ValkeyClusterNode target);
 }

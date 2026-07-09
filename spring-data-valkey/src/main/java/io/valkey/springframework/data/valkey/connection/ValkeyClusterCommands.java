@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.SlotRange;
 
 /**
@@ -30,6 +32,7 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode.SlotRa
  * @author Mark Paluch
  * @since 1.7
  */
+@NullUnmarked
 public interface ValkeyClusterCommands {
 
 	/**
@@ -38,7 +41,7 @@ public interface ValkeyClusterCommands {
 	 * @return never {@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-nodes">Valkey Documentation: CLUSTER NODES</a>
 	 */
-	Iterable<ValkeyClusterNode> clusterGetNodes();
+	Iterable<@NonNull ValkeyClusterNode> clusterGetNodes();
 
 	/**
 	 * Retrieve information about connected replicas for given master node.
@@ -47,7 +50,7 @@ public interface ValkeyClusterCommands {
 	 * @return never {@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-replicas">Valkey Documentation: CLUSTER REPLICAS</a>
 	 */
-	Collection<ValkeyClusterNode> clusterGetReplicas(ValkeyClusterNode master);
+	Collection<@NonNull ValkeyClusterNode> clusterGetReplicas(@NonNull ValkeyClusterNode master);
 
 	/**
 	 * Retrieve information about masters and their connected replicas.
@@ -55,7 +58,7 @@ public interface ValkeyClusterCommands {
 	 * @return never {@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-replicas">Valkey Documentation: CLUSTER REPLICAS</a>
 	 */
-	Map<ValkeyClusterNode, Collection<ValkeyClusterNode>> clusterGetMasterReplicaMap();
+	Map<@NonNull ValkeyClusterNode, @NonNull Collection<@NonNull ValkeyClusterNode>> clusterGetMasterReplicaMap();
 
 	/**
 	 * Find the slot for a given {@code key}.
@@ -64,7 +67,7 @@ public interface ValkeyClusterCommands {
 	 * @return
 	 * @see <a href="https://valkey.io/commands/cluster-keyslot">Valkey Documentation: CLUSTER KEYSLOT</a>
 	 */
-	Integer clusterGetSlotForKey(byte[] key);
+	Integer clusterGetSlotForKey(byte @NonNull [] key);
 
 	/**
 	 * Find the {@link ValkeyClusterNode} serving given {@literal slot}.
@@ -80,7 +83,7 @@ public interface ValkeyClusterCommands {
 	 * @param key must not be {@literal null}.
 	 * @return
 	 */
-	ValkeyClusterNode clusterGetNodeForKey(byte[] key);
+	ValkeyClusterNode clusterGetNodeForKey(byte @NonNull [] key);
 
 	/**
 	 * Get cluster information.
@@ -97,7 +100,7 @@ public interface ValkeyClusterCommands {
 	 * @param slots
 	 * @see <a href="https://valkey.io/commands/cluster-addslots">Valkey Documentation: CLUSTER ADDSLOTS</a>
 	 */
-	void clusterAddSlots(ValkeyClusterNode node, int... slots);
+	void clusterAddSlots(@NonNull ValkeyClusterNode node, int @NonNull... slots);
 
 	/**
 	 * Assign {@link SlotRange#getSlotsArray()} to given {@link ValkeyClusterNode}.
@@ -106,7 +109,7 @@ public interface ValkeyClusterCommands {
 	 * @param range must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-addslots">Valkey Documentation: CLUSTER ADDSLOTS</a>
 	 */
-	void clusterAddSlots(ValkeyClusterNode node, SlotRange range);
+	void clusterAddSlots(@NonNull ValkeyClusterNode node, @NonNull SlotRange range);
 
 	/**
 	 * Count the number of keys assigned to one {@literal slot}.
@@ -124,7 +127,7 @@ public interface ValkeyClusterCommands {
 	 * @param slots
 	 * @see <a href="https://valkey.io/commands/cluster-delslots">Valkey Documentation: CLUSTER DELSLOTS</a>
 	 */
-	void clusterDeleteSlots(ValkeyClusterNode node, int... slots);
+	void clusterDeleteSlots(@NonNull ValkeyClusterNode node, int @NonNull... slots);
 
 	/**
 	 * Removes {@link SlotRange#getSlotsArray()} from given {@link ValkeyClusterNode}.
@@ -133,7 +136,7 @@ public interface ValkeyClusterCommands {
 	 * @param range must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-delslots">Valkey Documentation: CLUSTER DELSLOTS</a>
 	 */
-	void clusterDeleteSlotsInRange(ValkeyClusterNode node, SlotRange range);
+	void clusterDeleteSlotsInRange(@NonNull ValkeyClusterNode node, @NonNull SlotRange range);
 
 	/**
 	 * Remove given {@literal node} from cluster.
@@ -141,7 +144,7 @@ public interface ValkeyClusterCommands {
 	 * @param node must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-forget">Valkey Documentation: CLUSTER FORGET</a>
 	 */
-	void clusterForget(ValkeyClusterNode node);
+	void clusterForget(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * Add given {@literal node} to cluster.
@@ -150,7 +153,7 @@ public interface ValkeyClusterCommands {
 	 *          not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-meet">Valkey Documentation: CLUSTER MEET</a>
 	 */
-	void clusterMeet(ValkeyClusterNode node);
+	void clusterMeet(@NonNull ValkeyClusterNode node);
 
 	/**
 	 * @param node must not be {@literal null}.
@@ -158,7 +161,7 @@ public interface ValkeyClusterCommands {
 	 * @param mode must not be{@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-setslot">Valkey Documentation: CLUSTER SETSLOT</a>
 	 */
-	void clusterSetSlot(ValkeyClusterNode node, int slot, AddSlots mode);
+	void clusterSetSlot(@NonNull ValkeyClusterNode node, int slot, @NonNull AddSlots mode);
 
 	/**
 	 * Get {@literal keys} served by slot.
@@ -168,7 +171,7 @@ public interface ValkeyClusterCommands {
 	 * @return
 	 * @see <a href="https://valkey.io/commands/cluster-getkeysinslot">Valkey Documentation: CLUSTER GETKEYSINSLOT</a>
 	 */
-	List<byte[]> clusterGetKeysInSlot(int slot, Integer count);
+	List<byte[]> clusterGetKeysInSlot(int slot, @NonNull Integer count);
 
 	/**
 	 * Assign a {@literal replica} to given {@literal master}.
@@ -177,7 +180,7 @@ public interface ValkeyClusterCommands {
 	 * @param replica must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/cluster-replicate">Valkey Documentation: CLUSTER REPLICATE</a>
 	 */
-	void clusterReplicate(ValkeyClusterNode master, ValkeyClusterNode replica);
+	void clusterReplicate(@NonNull ValkeyClusterNode master, @NonNull ValkeyClusterNode replica);
 
 	enum AddSlots {
 		MIGRATING, IMPORTING, STABLE, NODE

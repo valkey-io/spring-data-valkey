@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025 the original author or authors.
+ * Copyright 2020-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,6 +53,7 @@ import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.springframework.core.ResolvableType;
 import io.valkey.springframework.data.valkey.SettingsUtils;
+import io.valkey.springframework.data.valkey.test.ValkeyTestExtensionSupport;
 import org.springframework.data.util.Lazy;
 
 /**
@@ -91,7 +92,8 @@ import org.springframework.data.util.Lazy;
  * @see AfterEachCallback
  * @see AfterAllCallback
  */
-public class LettuceExtension implements ParameterResolver, AfterAllCallback, AfterEachCallback {
+public class LettuceExtension extends ValkeyTestExtensionSupport
+		implements ParameterResolver, AfterAllCallback, AfterEachCallback {
 
 	private static final ExtensionContext.Namespace NAMESPACE = ExtensionContext.Namespace.create(LettuceExtension.class);
 
@@ -113,7 +115,7 @@ public class LettuceExtension implements ParameterResolver, AfterAllCallback, Af
 			.singletonList(ValkeyCommandsFunction.INSTANCE);
 
 	@Override
-	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
+	public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext context)
 			throws ParameterResolutionException {
 		return SUPPORTED_INJECTABLE_TYPES.contains(parameterContext.getParameter().getType());
 	}
@@ -121,23 +123,23 @@ public class LettuceExtension implements ParameterResolver, AfterAllCallback, Af
 	/**
 	 * Attempt to resolve the {@code requestedResourceType}.
 	 *
-	 * @param extensionContext
+	 * @param context
 	 * @param requestedResourceType
 	 * @param <T>
 	 * @return
 	 */
-	public <T> T resolve(ExtensionContext extensionContext, Class<T> requestedResourceType) {
+	public <T> T resolve(ExtensionContext context, Class<T> requestedResourceType) {
 
-		ExtensionContext.Store store = getStore(extensionContext);
+		ExtensionContext.Store store = getStore(context);
 
 		return (T) store.getOrComputeIfAbsent(requestedResourceType, it -> findSupplier(requestedResourceType).get());
 	}
 
 	@Override
-	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext)
+	public Object resolveParameter(ParameterContext parameterContext, ExtensionContext context)
 			throws ParameterResolutionException {
 
-		ExtensionContext.Store store = getStore(extensionContext);
+		ExtensionContext.Store store = getStore(context);
 		Parameter parameter = parameterContext.getParameter();
 		Type parameterizedType = parameter.getParameterizedType();
 
@@ -200,8 +202,8 @@ public class LettuceExtension implements ParameterResolver, AfterAllCallback, Af
 				.orElseGet(() -> findSupplier(parameterizedType).get());
 	}
 
-	private ExtensionContext.Store getStore(ExtensionContext extensionContext) {
-		return extensionContext.getStore(NAMESPACE);
+	private ExtensionContext.Store getStore(ExtensionContext context) {
+		return getSessionStore(context, NAMESPACE);
 	}
 
 	private static Optional<ResourceFunction> findFunction(Type type) {

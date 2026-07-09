@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEvent;
-import org.springframework.lang.Nullable;
 
 /**
  * Valkey specific {@link ApplicationEvent} published when a key expires in Valkey.
@@ -58,8 +58,7 @@ public class ValkeyKeyspaceEvent extends ApplicationEvent {
 	 * @return can be {@literal null}.
 	 * @since 1.8
 	 */
-	@Nullable
-	public String getChannel() {
+	public @Nullable String getChannel() {
 		return this.channel;
 	}
 

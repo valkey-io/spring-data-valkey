@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,10 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
+import io.lettuce.core.cluster.ClusterTopologyRefreshOptions;
 import org.junit.jupiter.api.Test;
 
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.Lettuce;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.ValkeyGlide;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +30,23 @@ import static org.assertj.core.api.Assertions.assertThat;
  * @author Stephane Nicoll
  */
 class ValkeyPropertiesTests {
+
+	@Test
+	void lettuceDefaultsAreConsistent() {
+		Lettuce lettuce = new ValkeyProperties().getLettuce();
+		ClusterTopologyRefreshOptions defaultClusterTopologyRefreshOptions = ClusterTopologyRefreshOptions.builder()
+			.build();
+		assertThat(lettuce.getCluster().getRefresh().isDynamicRefreshSources())
+			.isEqualTo(defaultClusterTopologyRefreshOptions.useDynamicRefreshSources());
+	}
+
+	@Test
+	void sslIsNotEnabledWhenBundleIsEmpty() {
+		ValkeyProperties properties = new ValkeyProperties();
+		properties.getSsl().setBundle("");
+		assertThat(properties.getSsl().isEnabled()).isFalse();
+	}
+
 
 	@Test
 	void valkeyGlideDefaultsAreConsistent() {
@@ -42,5 +61,4 @@ class ValkeyPropertiesTests {
 		assertThat(valkeyGlide.getOpenTelemetry().isEnabled()).isEqualTo(false);
 		assertThat(valkeyGlide.getIamAuthentication()).isNull();
 	}
-
 }

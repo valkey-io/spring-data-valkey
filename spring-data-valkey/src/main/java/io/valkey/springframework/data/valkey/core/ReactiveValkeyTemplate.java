@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
+import io.valkey.springframework.data.valkey.connection.CompareCondition;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ReactiveKeyCommands;
@@ -48,7 +51,7 @@ import io.valkey.springframework.data.valkey.listener.Topic;
 import io.valkey.springframework.data.valkey.serializer.ValkeyElementReader;
 import io.valkey.springframework.data.valkey.serializer.ValkeyElementWriter;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
@@ -71,6 +74,7 @@ import org.springframework.util.ClassUtils;
  * @author Petromir Dzhunev
  * @author John Blum
  * @author Dahye Anne Lee
+ * @author Yordan Tsintsov
  * @param <K> the Valkey key type against which the template works (usually a String)
  * @param <V> the Valkey value type against which the template works
  * @since 2.0
@@ -321,6 +325,14 @@ public class ReactiveValkeyTemplate<K, V> implements ReactiveValkeyOperations<K,
 	}
 
 	@Override
+	public Mono<String> getDigest(K key) {
+
+		Assert.notNull(key, "Key must not be null");
+
+		return doCreateMono(connection -> connection.keyCommands().digest(rawKey(key)));
+	}
+
+	@Override
 	public Mono<Boolean> hasKey(K key) {
 
 		Assert.notNull(key, "Key must not be null");
@@ -410,7 +422,34 @@ public class ReactiveValkeyTemplate<K, V> implements ReactiveValkeyOperations<K,
 		return doCreateFlux(connection -> connection.keyCommands() //
 				.mDel(Flux.from(keys).map(this::rawKey).buffer(128)) //
 				.map(CommandResponse::getOutput)) //
-						.collect(Collectors.summingLong(value -> value));
+				.collect(Collectors.summingLong(value -> value));
+	}
+
+	@Override
+	public Mono<Boolean> compareAndDelete(K key, V expectedValue) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(expectedValue, "Value must not be null");
+
+		return createMono(connection -> connection.keyCommands().delex(rawKey(key),
+				CompareCondition.ifEquals(ByteUtils.getBytes(rawValue(expectedValue)))));
+	}
+
+	@Override
+	public Mono<Boolean> delete(K key, Consumer<DeleteSpec<K, V>> deleteConsumer) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(deleteConsumer, "Builder customizer must not be null");
+
+		DefaultDeleteSpec<K, V> builder = new DefaultDeleteSpec<>();
+		deleteConsumer.accept(builder);
+		CompareCondition compareCondition = builder.toCompareCondition(it -> ByteUtils.getBytes(rawValue(it)));
+
+		if (compareCondition == null) {
+			return delete(key).map(it -> it > 0);
+		}
+
+		return createMono(connection -> connection.keyCommands().delex(rawKey(key), compareCondition));
 	}
 
 	@Override
@@ -437,7 +476,7 @@ public class ReactiveValkeyTemplate<K, V> implements ReactiveValkeyOperations<K,
 		return doCreateFlux(connection -> connection.keyCommands() //
 				.mUnlink(Flux.from(keys).map(this::rawKey).buffer(128)) //
 				.map(CommandResponse::getOutput)) //
-						.collect(Collectors.summingLong(value -> value));
+				.collect(Collectors.summingLong(value -> value));
 	}
 
 	@Override
@@ -699,6 +738,10 @@ public class ReactiveValkeyTemplate<K, V> implements ReactiveValkeyOperations<K,
 		return getSerializationContext().getKeySerializationPair().getWriter().write(key);
 	}
 
+	private ByteBuffer rawValue(V value) {
+		return getSerializationContext().getValueSerializationPair().getWriter().write(value);
+	}
+
 	private List<ByteBuffer> rawKeys(Collection<K> keys) {
 
 		List<ByteBuffer> rawKeys = new ArrayList<>(keys.size());
@@ -710,8 +753,7 @@ public class ReactiveValkeyTemplate<K, V> implements ReactiveValkeyOperations<K,
 		return rawKeys;
 	}
 
-	@Nullable
-	private K readKey(ByteBuffer buffer) {
+	private @Nullable K readKey(ByteBuffer buffer) {
 		return getSerializationContext().getKeySerializationPair().getReader().read(buffer);
 	}
 

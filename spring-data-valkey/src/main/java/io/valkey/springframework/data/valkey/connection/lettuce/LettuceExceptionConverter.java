@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +25,12 @@ import io.netty.channel.ChannelException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.QueryTimeoutException;
+import org.springframework.dao.support.PersistenceExceptionTranslator;
+import io.valkey.springframework.data.valkey.ExceptionTranslationStrategy;
 import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
 import io.valkey.springframework.data.valkey.ValkeySystemException;
 
@@ -38,11 +41,24 @@ import io.valkey.springframework.data.valkey.ValkeySystemException;
  * @author Thomas Darimont
  * @author Mark Paluch
  */
-public class LettuceExceptionConverter implements Converter<Exception, DataAccessException> {
+public class LettuceExceptionConverter
+		implements PersistenceExceptionTranslator, ExceptionTranslationStrategy, Converter<Exception, @Nullable DataAccessException> {
 
 	static final LettuceExceptionConverter INSTANCE = new LettuceExceptionConverter();
 
-	public DataAccessException convert(Exception ex) {
+	@Override
+	public @Nullable DataAccessException translateExceptionIfPossible(RuntimeException ex) {
+		return convert(ex);
+	}
+
+	@Override
+	public @Nullable DataAccessException translate(Exception e) {
+		return convert(e);
+	}
+
+	@Override
+	@SuppressWarnings("NullAway")
+	public @Nullable DataAccessException convert(Exception ex) {
 
 		if (ex instanceof ExecutionException || ex instanceof RedisCommandExecutionException) {
 

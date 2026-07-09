@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor.MultiNodeResult;
 import io.valkey.springframework.data.valkey.connection.ClusterCommandExecutor.NodeResult;
@@ -39,63 +41,64 @@ import org.springframework.util.Assert;
  * @author Dennis Neufeld
  * @since 2.0
  */
+@NullUnmarked
 class LettuceClusterServerCommands extends LettuceServerCommands implements ValkeyClusterServerCommands {
 
 	private final LettuceClusterConnection connection;
 
-	LettuceClusterServerCommands(LettuceClusterConnection connection) {
+	LettuceClusterServerCommands(@NonNull LettuceClusterConnection connection) {
 
 		super(connection);
 		this.connection = connection;
 	}
 
 	@Override
-	public void bgReWriteAof(ValkeyClusterNode node) {
+	public void bgReWriteAof(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(RedisServerCommands::bgrewriteaof, node);
 	}
 
 	@Override
-	public void bgSave(ValkeyClusterNode node) {
+	public void bgSave(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(RedisServerCommands::bgsave, node);
 	}
 
 	@Override
-	public Long lastSave(ValkeyClusterNode node) {
+	public Long lastSave(@NonNull ValkeyClusterNode node) {
 		return executeCommandOnSingleNode(client -> client.lastsave().getTime(), node).getValue();
 	}
 
 	@Override
-	public void save(ValkeyClusterNode node) {
+	public void save(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(RedisServerCommands::save, node);
 	}
 
 	@Override
-	public Long dbSize(ValkeyClusterNode node) {
+	public Long dbSize(@NonNull ValkeyClusterNode node) {
 		return executeCommandOnSingleNode(RedisServerCommands::dbsize, node).getValue();
 	}
 
 	@Override
-	public void flushDb(ValkeyClusterNode node) {
+	public void flushDb(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(RedisServerCommands::flushdb, node);
 	}
 
 	@Override
-	public void flushDb(ValkeyClusterNode node, FlushOption option) {
+	public void flushDb(@NonNull ValkeyClusterNode node, @NonNull FlushOption option) {
 		executeCommandOnSingleNode(it -> it.flushdb(LettuceConverters.toFlushMode(option)), node);
 	}
 
 	@Override
-	public void flushAll(ValkeyClusterNode node) {
+	public void flushAll(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(RedisServerCommands::flushall, node);
 	}
 
 	@Override
-	public void flushAll(ValkeyClusterNode node, FlushOption option) {
+	public void flushAll(@NonNull ValkeyClusterNode node, @NonNull FlushOption option) {
 		executeCommandOnSingleNode(it -> it.flushall(LettuceConverters.toFlushMode(option)), node);
 	}
 
 	@Override
-	public Properties info(ValkeyClusterNode node) {
+	public Properties info(@NonNull ValkeyClusterNode node) {
 		return LettuceConverters.toProperties(executeCommandOnSingleNode(RedisServerCommands::info, node).getValue());
 	}
 
@@ -117,7 +120,7 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public Properties info(String section) {
+	public Properties info(@NonNull String section) {
 
 		Assert.hasText(section, "Section must not be null or empty");
 
@@ -135,7 +138,7 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public Properties info(ValkeyClusterNode node, String section) {
+	public Properties info(@NonNull ValkeyClusterNode node, @NonNull String section) {
 
 		Assert.hasText(section, "Section must not be null or empty");
 
@@ -143,16 +146,16 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public void shutdown(ValkeyClusterNode node) {
+	public void shutdown(@NonNull ValkeyClusterNode node) {
 
-		executeCommandOnSingleNode((LettuceClusterCommandCallback<Void>) client -> {
+		executeCommandOnSingleNode(client -> {
 			client.shutdown(true);
-			return null;
+			return Void.class;
 		}, node);
 	}
 
 	@Override
-	public Properties getConfig(String pattern) {
+	public Properties getConfig(@NonNull String pattern) {
 
 		Assert.hasText(pattern, "Pattern must not be null or empty");
 
@@ -171,7 +174,7 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public Properties getConfig(ValkeyClusterNode node, String pattern) {
+	public Properties getConfig(@NonNull ValkeyClusterNode node, @NonNull String pattern) {
 
 		Assert.hasText(pattern, "Pattern must not be null or empty");
 
@@ -179,7 +182,7 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public void setConfig(String param, String value) {
+	public void setConfig(@NonNull String param, @NonNull String value) {
 
 		Assert.hasText(param, "Parameter must not be null or empty");
 		Assert.notNull(value, "Value must not be null");
@@ -188,7 +191,7 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public void setConfig(ValkeyClusterNode node, String param, String value) {
+	public void setConfig(@NonNull ValkeyClusterNode node, @NonNull String param, @NonNull String value) {
 
 		Assert.hasText(param, "Parameter must not be null or empty");
 		Assert.hasText(value, "Value must not be null or empty");
@@ -202,7 +205,7 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public void resetConfigStats(ValkeyClusterNode node) {
+	public void resetConfigStats(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(RedisServerCommands::configResetstat, node);
 	}
 
@@ -212,12 +215,12 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public void rewriteConfig(ValkeyClusterNode node) {
+	public void rewriteConfig(@NonNull ValkeyClusterNode node) {
 		executeCommandOnSingleNode(RedisServerCommands::configRewrite, node);
 	}
 
 	@Override
-	public Long time(ValkeyClusterNode node, TimeUnit timeUnit) {
+	public Long time(@NonNull ValkeyClusterNode node, @NonNull TimeUnit timeUnit) {
 		return convertListOfStringToTime(executeCommandOnSingleNode(RedisServerCommands::time, node).getValue(), timeUnit);
 	}
 
@@ -234,14 +237,14 @@ class LettuceClusterServerCommands extends LettuceServerCommands implements Valk
 	}
 
 	@Override
-	public List<ValkeyClientInfo> getClientList(ValkeyClusterNode node) {
+	public List<ValkeyClientInfo> getClientList(@NonNull ValkeyClusterNode node) {
 
 		return LettuceConverters
 				.toListOfValkeyClientInformation(executeCommandOnSingleNode(RedisServerCommands::clientList, node).getValue());
 	}
 
 	@Override
-	public void replicaOf(String host, int port) {
+	public void replicaOf(@NonNull String host, int port) {
 		throw new InvalidDataAccessApiUsageException(
 				"REPLICAOF is not supported in cluster environment; Please use CLUSTER REPLICATE.");
 	}

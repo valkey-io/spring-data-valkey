@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,8 +77,8 @@ class DefaultScriptExecutorUnitTests {
 	@Test // DATAREDIS-347
 	void excuteShouldUseEvalInCaseNoSha1PresentForGivenScript() {
 
-		when(valkeyConnectionMock.evalSha(anyString(), any(ReturnType.class), anyInt())).thenThrow(
-				new ValkeySystemException("NOSCRIPT No matching script; Please use EVAL.", new Exception()));
+		when(valkeyConnectionMock.evalSha(anyString(), any(ReturnType.class), anyInt()))
+				.thenThrow(new ValkeySystemException("NOSCRIPT No matching script; Please use EVAL.", new Exception()));
 
 		executor.execute(SCRIPT, null);
 
@@ -88,8 +88,8 @@ class DefaultScriptExecutorUnitTests {
 	@Test // DATAREDIS-347
 	void excuteShouldThrowExceptionInCaseEvalShaFailsWithOtherThanValkeySystemException() {
 
-		when(valkeyConnectionMock.evalSha(anyString(), any(ReturnType.class), anyInt())).thenThrow(
-				new UnsupportedOperationException("NOSCRIPT No matching script; Please use EVAL.", new Exception()));
+		when(valkeyConnectionMock.evalSha(anyString(), any(ReturnType.class), anyInt()))
+				.thenThrow(new UnsupportedOperationException("NOSCRIPT No matching script; Please use EVAL.", new Exception()));
 
 		assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> executor.execute(SCRIPT, null));
 	}
@@ -97,8 +97,8 @@ class DefaultScriptExecutorUnitTests {
 	@Test // DATAREDIS-347
 	void excuteShouldThrowExceptionInCaseEvalShaFailsWithAlthoughTheScriptExists() {
 
-		when(valkeyConnectionMock.evalSha(anyString(), any(ReturnType.class), anyInt())).thenThrow(
-				new ValkeySystemException("Found Script but could not execute it.", new Exception()));
+		when(valkeyConnectionMock.evalSha(anyString(), any(ReturnType.class), anyInt()))
+				.thenThrow(new ValkeySystemException("Found Script but could not execute it.", new Exception()));
 
 		assertThatExceptionOfType(ValkeySystemException.class).isThrownBy(() -> executor.execute(SCRIPT, null));
 	}

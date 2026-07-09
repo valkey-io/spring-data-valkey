@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,22 +15,24 @@
  */
 package io.valkey.springframework.data.valkey.serializer;
 
+import java.io.Serializable;
+
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.serializer.DefaultDeserializer;
 import org.springframework.core.serializer.DefaultSerializer;
 import org.springframework.core.serializer.support.DeserializingConverter;
 import org.springframework.core.serializer.support.SerializingConverter;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
  * Java Serialization {@link ValkeySerializer}.
  * <p>
- * Delegates to the default (Java-based) {@link DefaultSerializer serializer}
- * and {@link DefaultDeserializer deserializer}.
+ * Delegates to the default (Java-based) {@link DefaultSerializer serializer} and {@link DefaultDeserializer
+ * deserializer}.
  * <p>
- * This {@link ValkeySerializer serializer} can be constructed with either a custom {@link ClassLoader}
- * or custom {@link Converter converters}.
+ * This {@link ValkeySerializer serializer} can be constructed with either a custom {@link ClassLoader} or custom
+ * {@link Converter converters}.
  *
  * @author Mark Pollack
  * @author Costin Leau
@@ -51,11 +53,11 @@ public class JdkSerializationValkeySerializer implements ValkeySerializer<Object
 	}
 
 	/**
-	 * Creates a new {@link JdkSerializationValkeySerializer} with the given {@link ClassLoader} used to
-	 * resolve {@link Class types} during deserialization.
+	 * Creates a new {@link JdkSerializationValkeySerializer} with the given {@link ClassLoader} used to resolve
+	 * {@link Class types} during deserialization.
 	 *
-	 * @param classLoader {@link ClassLoader} used to resolve {@link Class types} for deserialization;
-	 * can be {@literal null}.
+	 * @param classLoader {@link ClassLoader} used to resolve {@link Class types} for deserialization; can be
+	 *          {@literal null}.
 	 * @since 1.7
 	 */
 	public JdkSerializationValkeySerializer(@Nullable ClassLoader classLoader) {
@@ -66,16 +68,15 @@ public class JdkSerializationValkeySerializer implements ValkeySerializer<Object
 	 * Creates a new {@link JdkSerializationValkeySerializer} using {@link Converter converters} to serialize and
 	 * deserialize {@link Object objects}.
 	 *
-	 * @param serializer {@link Converter} used to serialize an {@link Object} to a byte array;
-	 * must not be {@literal null}.
-	 * @param deserializer {@link Converter} used to deserialize and convert a byte arra into an {@link Object};
-	 * must not be {@literal null}
-	 * @throws IllegalArgumentException if either the given {@code serializer} or {@code deserializer}
-	 * are {@literal null}.
+	 * @param serializer {@link Converter} used to serialize an {@link Object} to a byte array; must not be
+	 *          {@literal null}.
+	 * @param deserializer {@link Converter} used to deserialize and convert a byte array into an {@link Object}; must not
+	 *          be {@literal null}
+	 * @throws IllegalArgumentException if either the given {@code serializer} or {@code deserializer} are
+	 *           {@literal null}.
 	 * @since 1.7
 	 */
-	public JdkSerializationValkeySerializer(Converter<Object, byte[]> serializer,
-			Converter<byte[], Object> deserializer) {
+	public JdkSerializationValkeySerializer(Converter<Object, byte[]> serializer, Converter<byte[], Object> deserializer) {
 
 		Assert.notNull(serializer, "Serializer must not be null");
 		Assert.notNull(deserializer, "Deserializer must not be null");
@@ -84,7 +85,11 @@ public class JdkSerializationValkeySerializer implements ValkeySerializer<Object
 		this.deserializer = deserializer;
 	}
 
-	@Nullable
+	@Override
+	public boolean canSerialize(Class<?> type) {
+		return ValkeySerializer.super.canSerialize(type) && Serializable.class.isAssignableFrom(type);
+	}
+
 	@Override
 	public byte[] serialize(@Nullable Object value) {
 
@@ -93,7 +98,8 @@ public class JdkSerializationValkeySerializer implements ValkeySerializer<Object
 		}
 
 		try {
-			return serializer.convert(value);
+			byte[] result = serializer.convert(value);
+			return result == null ? SerializationUtils.EMPTY_ARRAY : result;
 		} catch (Exception ex) {
 			throw new SerializationException("Cannot serialize", ex);
 		}
@@ -101,7 +107,7 @@ public class JdkSerializationValkeySerializer implements ValkeySerializer<Object
 
 	@Nullable
 	@Override
-	public Object deserialize(@Nullable byte[] bytes) {
+	public Object deserialize(byte @Nullable [] bytes) {
 
 		if (SerializationUtils.isEmpty(bytes)) {
 			return null;
@@ -113,4 +119,5 @@ public class JdkSerializationValkeySerializer implements ValkeySerializer<Object
 			throw new SerializationException("Cannot deserialize", ex);
 		}
 	}
+
 }

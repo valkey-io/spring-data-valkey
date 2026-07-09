@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.LongBinaryOperator;
 import java.util.function.LongUnaryOperator;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataRetrievalFailureException;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
@@ -29,10 +30,10 @@ import io.valkey.springframework.data.valkey.core.BoundKeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import io.valkey.springframework.data.valkey.core.ValueOperations;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.serializer.GenericToStringSerializer;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -49,8 +50,7 @@ import org.springframework.util.Assert;
  */
 public class ValkeyAtomicLong extends Number implements Serializable, BoundKeyOperations<String> {
 
-	@Serial
-	private static final long serialVersionUID = 1L;
+	private static final @Serial long serialVersionUID = 1L;
 
 	private volatile String key;
 
@@ -375,6 +375,12 @@ public class ValkeyAtomicLong extends Number implements Serializable, BoundKeyOp
 	}
 
 	@Override
+	public Boolean expire(Expiration expiration) {
+		return generalOps.expire(key, expiration);
+	}
+
+	@Override
+	@Deprecated
 	public Boolean expire(long timeout, TimeUnit unit) {
 		return generalOps.expire(key, timeout, unit);
 	}

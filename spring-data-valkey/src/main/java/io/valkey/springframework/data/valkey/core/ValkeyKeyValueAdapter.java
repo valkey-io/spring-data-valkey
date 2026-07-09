@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.ApplicationContext;
@@ -64,7 +64,6 @@ import io.valkey.springframework.data.valkey.listener.KeyExpirationEventMessageL
 import io.valkey.springframework.data.valkey.listener.ValkeyMessageListenerContainer;
 import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.data.util.CloseableIterator;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -134,6 +133,11 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 		CREATED, STARTING, STARTED, STOPPING, STOPPED, DESTROYED;
 	}
 
+	@SuppressWarnings("NullAway")
+	protected ValkeyKeyValueAdapter() {
+		// I'm here for the sole sake of CDI
+	}
+
 	/**
 	 * Creates new {@link ValkeyKeyValueAdapter} with default {@link ValkeyMappingContext} and default
 	 * {@link ValkeyCustomConversions}.
@@ -163,7 +167,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 	 * @since 2.0
 	 */
 	public ValkeyKeyValueAdapter(ValkeyOperations<?, ?> valkeyOps, ValkeyMappingContext mappingContext,
-			@Nullable org.springframework.data.convert.CustomConversions customConversions) {
+			org.springframework.data.convert.@Nullable CustomConversions customConversions) {
 
 		super(new ValkeyQueryEngine());
 
@@ -197,12 +201,8 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 		this.valkeyOps = valkeyOps;
 	}
 
-	/**
-	 * Default constructor.
-	 */
-	protected ValkeyKeyValueAdapter() {}
-
 	@Override
+	@SuppressWarnings("NullAway")
 	public Object put(Object id, Object item, String keyspace) {
 
 		ValkeyData rdo = item instanceof ValkeyData ? (ValkeyData) item : new ValkeyData();
@@ -305,12 +305,13 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 	}
 
 	@Override
-	public Object delete(Object id, String keyspace) {
+	public @Nullable Object delete(Object id, String keyspace) {
 		return delete(id, keyspace, Object.class);
 	}
 
 	@Override
-	public <T> T delete(Object id, String keyspace, Class<T> type) {
+	@SuppressWarnings("NullAway")
+	public <T> @Nullable T delete(Object id, String keyspace, Class<T> type) {
 
 		byte[] binId = toBytes(id);
 		byte[] binKeyspace = toBytes(keyspace);
@@ -321,7 +322,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 
 			byte[] keyToDelete = createKey(keyspace, toString(id));
 
-			valkeyOps.execute((ValkeyCallback<Void>) connection -> {
+			valkeyOps.execute((ValkeyCallback<@Nullable Void>) connection -> {
 
 				connection.del(keyToDelete);
 				connection.sRem(binKeyspace, binId);
@@ -346,12 +347,12 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 	}
 
 	@Override
-	public List<?> getAllOf(String keyspace) {
+	public List<Object> getAllOf(String keyspace) {
 		return getAllOf(keyspace, Object.class, -1, -1);
 	}
 
 	@Override
-	public <T> Iterable<T> getAllOf(String keyspace, Class<T> type) {
+	public <T> List<T> getAllOf(String keyspace, Class<T> type) {
 		return getAllOf(keyspace, type, -1, -1);
 	}
 
@@ -391,9 +392,10 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public void deleteAllOf(String keyspace) {
 
-		valkeyOps.execute((ValkeyCallback<Void>) connection -> {
+		valkeyOps.execute((ValkeyCallback<@Nullable Void>) connection -> {
 
 			connection.del(toBytes(keyspace));
 			new IndexWriter(connection, converter).removeAllIndexes(keyspace);
@@ -415,12 +417,13 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 		return count != null ? count : 0;
 	}
 
+	@SuppressWarnings("NullAway")
 	public void update(PartialUpdate<?> update) {
 
 		ValkeyPersistentEntity<?> entity = this.converter.getMappingContext()
 				.getRequiredPersistentEntity(update.getTarget());
 
-		String keyspace = entity.getKeySpace();
+		String keyspace = entity.getRequiredKeySpace();
 		Object id = update.getId();
 
 		byte[] valkeyKey = createKey(keyspace, converter.getConversionService().convert(id, String.class));
@@ -552,8 +555,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 	 * @param callback must not be {@literal null}.
 	 * @see ValkeyOperations#execute(ValkeyCallback)
 	 */
-	@Nullable
-	public <T> T execute(ValkeyCallback<T> callback) {
+	public <T> @Nullable T execute(ValkeyCallback<T> callback) {
 		return valkeyOps.execute(callback);
 	}
 
@@ -584,10 +586,12 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 	/**
 	 * Convert given source to binary representation using the underlying {@link ConversionService}.
 	 */
+	@SuppressWarnings("NullAway")
 	public byte[] toBytes(Object source) {
 		return source instanceof byte[] bytes ? bytes : getConverter().getConversionService().convert(source, byte[].class);
 	}
 
+	@SuppressWarnings("NullAway")
 	private String toString(Object value) {
 		return value instanceof String stringValue ? stringValue
 				: getConverter().getConversionService().convert(value, String.class);
@@ -596,8 +600,8 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 	/**
 	 * Read back and set {@link TimeToLive} for the property.
 	 */
-	@Nullable
-	private <T> T readBackTimeToLiveIfSet(@Nullable byte[] key, @Nullable T target) {
+	@SuppressWarnings("NullAway")
+	private @Nullable <T> T readBackTimeToLiveIfSet(byte @Nullable [] key, @Nullable T target) {
 
 		if (target == null || key == null) {
 			return target;
@@ -723,6 +727,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 
 		if (isCreatedOrStopped(current)) {
 
+			Assert.state(messageListenerContainer != null, "MessageListenerContainer must not be null");
 			messageListenerContainer.start();
 
 			if (ObjectUtils.nullSafeEquals(EnableKeyspaceEvents.ON_STARTUP, this.enableKeyspaceEvents)) {
@@ -754,7 +759,9 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 				}
 			}
 
-			messageListenerContainer.stop();
+			if (messageListenerContainer != null) {
+				messageListenerContainer.stop();
+			}
 			state.set(State.STOPPED);
 		}
 	}
@@ -784,7 +791,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 	private void initMessageListenerContainer() {
 
 		this.messageListenerContainer = new ValkeyMessageListenerContainer();
-		this.messageListenerContainer.setConnectionFactory(((ValkeyTemplate<?, ?>) valkeyOps).getConnectionFactory());
+		this.messageListenerContainer.setConnectionFactory(((ValkeyTemplate<?, ?>) valkeyOps).getRequiredConnectionFactory());
 		this.messageListenerContainer.afterPropertiesSet();
 	}
 
@@ -804,6 +811,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 				listener.init();
 			}
 		}
+
 	}
 
 	/**
@@ -833,7 +841,8 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 		}
 
 		@Override
-		public void onMessage(Message message, @Nullable byte[] pattern) {
+		@SuppressWarnings("NullAway")
+		public void onMessage(Message message, byte @Nullable [] pattern) {
 
 			if (!isKeyExpirationMessage(message)) {
 				return;
@@ -863,8 +872,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 			return BinaryKeyspaceIdentifier.isValid(message.getBody());
 		}
 
-		@Nullable
-		private Object readShadowCopyIfEnabled(byte[] key) {
+		private @Nullable Object readShadowCopyIfEnabled(byte[] key) {
 
 			if (shadowCopy == ShadowCopy.OFF) {
 				return null;
@@ -872,8 +880,8 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 			return readShadowCopy(key);
 		}
 
-		@Nullable
-		private Object readShadowCopy(byte[] key) {
+		@SuppressWarnings("NullAway")
+		private @Nullable Object readShadowCopy(byte[] key) {
 
 			byte[] phantomKey = ByteUtils.concat(key,
 					converter.getConversionService().convert(KeyspaceIdentifier.PHANTOM_SUFFIX, byte[].class));
@@ -922,6 +930,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 		 * Turn {@link KeyExpirationEventMessageListener} usage off. No expiration events will be received.
 		 */
 		OFF
+
 	}
 
 	/**
@@ -947,6 +956,7 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 		 * Do not store shadow copies.
 		 */
 		OFF
+
 	}
 
 	/**
@@ -987,6 +997,9 @@ public class ValkeyKeyValueAdapter extends AbstractKeyValueAdapter
 				this.key = key;
 				this.type = type;
 			}
+
 		}
+
 	}
+
 }

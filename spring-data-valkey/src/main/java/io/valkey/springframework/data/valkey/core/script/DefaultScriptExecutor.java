@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,10 @@
 package io.valkey.springframework.data.valkey.core.script;
 
 import java.util.List;
+
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 import io.valkey.springframework.data.valkey.ValkeySystemException;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
@@ -35,6 +39,7 @@ import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
  * @author Mark Paluch
  * @param <K> The type of keys that may be passed during script execution
  */
+@NullUnmarked
 public class DefaultScriptExecutor<K> implements ScriptExecutor<K> {
 
 	private final ValkeyTemplate<K, ?> template;
@@ -42,19 +47,21 @@ public class DefaultScriptExecutor<K> implements ScriptExecutor<K> {
 	/**
 	 * @param template The {@link ValkeyTemplate} to use
 	 */
-	public DefaultScriptExecutor(ValkeyTemplate<K, ?> template) {
+	public DefaultScriptExecutor(@NonNull ValkeyTemplate<K, ?> template) {
 		this.template = template;
 	}
 
 	@SuppressWarnings("unchecked")
-	public <T> T execute(final ValkeyScript<T> script, final List<K> keys, final Object... args) {
+	public <T extends @Nullable Object> T execute(@NonNull ValkeyScript<T> script, @NonNull List<@NonNull K> keys,
+			@NonNull Object @NonNull... args) {
 		// use the Template's value serializer for args and result
 		return execute(script, template.getValueSerializer(), (ValkeySerializer<T>) template.getValueSerializer(), keys,
 				args);
 	}
 
-	public <T> T execute(final ValkeyScript<T> script, final ValkeySerializer<?> argsSerializer,
-			final ValkeySerializer<T> resultSerializer, final List<K> keys, final Object... args) {
+	public <T extends @Nullable Object> T execute(@NonNull ValkeyScript<T> script,
+			@NonNull ValkeySerializer<?> argsSerializer, @NonNull ValkeySerializer<T> resultSerializer,
+			@NonNull List<@NonNull K> keys, @NonNull Object @NonNull... args) {
 		return template.execute((ValkeyCallback<T>) connection -> {
 			final ReturnType returnType = ReturnType.fromJavaType(script.getResultType());
 			final byte[][] keysAndArgs = keysAndArgs(argsSerializer, keys, args);
@@ -125,7 +132,8 @@ public class DefaultScriptExecutor<K> implements ScriptExecutor<K> {
 	}
 
 	@SuppressWarnings("rawtypes")
-	protected ValkeySerializer keySerializer() {
+	protected @Nullable ValkeySerializer keySerializer() {
 		return template.getKeySerializer();
 	}
+
 }

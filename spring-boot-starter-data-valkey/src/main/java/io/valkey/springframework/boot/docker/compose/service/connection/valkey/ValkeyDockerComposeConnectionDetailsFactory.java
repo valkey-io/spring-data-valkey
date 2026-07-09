@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,17 @@
 
 package io.valkey.springframework.boot.docker.compose.service.connection.valkey;
 
+import org.jspecify.annotations.Nullable;
+
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails;
 import org.springframework.boot.docker.compose.core.RunningService;
 import org.springframework.boot.docker.compose.service.connection.DockerComposeConnectionDetailsFactory;
 import org.springframework.boot.docker.compose.service.connection.DockerComposeConnectionSource;
+import org.springframework.boot.ssl.SslBundle;
 
 /**
- * {@link DockerComposeConnectionDetailsFactory} to create {@link ValkeyConnectionDetails}
- * for a {@code valkey} service.
+ * {@link DockerComposeConnectionDetailsFactory} to create
+ * {@link ValkeyConnectionDetails} for a {@code valkey} service.
  *
  * @author Moritz Halbritter
  * @author Andy Wilkinson
@@ -34,7 +37,7 @@ import org.springframework.boot.docker.compose.service.connection.DockerComposeC
 class ValkeyDockerComposeConnectionDetailsFactory
 		extends DockerComposeConnectionDetailsFactory<ValkeyConnectionDetails> {
 
-	private static final String[] VALKEY_CONTAINER_NAMES = { "valkey/valkey" };
+	private static final String[] VALKEY_CONTAINER_NAMES = { "valkey", "valkey/valkey", "redis/redis-stack", "redis/redis-stack-server" };
 
 	private static final int VALKEY_PORT = 6379;
 
@@ -48,16 +51,25 @@ class ValkeyDockerComposeConnectionDetailsFactory
 	}
 
 	/**
-	 * {@link ValkeyConnectionDetails} backed by a {@code valkey} {@link RunningService}.
+	 * {@link ValkeyConnectionDetails} backed by a {@code valkey}
+	 * {@link RunningService}.
 	 */
 	static class ValkeyDockerComposeConnectionDetails extends DockerComposeConnectionDetails
 			implements ValkeyConnectionDetails {
 
 		private final Standalone standalone;
 
+		private final @Nullable SslBundle sslBundle;
+
 		ValkeyDockerComposeConnectionDetails(RunningService service) {
 			super(service);
-			this.standalone = Standalone.of(service.host(), service.ports().get(VALKEY_PORT), getSslBundle(service));
+			this.standalone = Standalone.of(service.host(), service.ports().get(VALKEY_PORT));
+			this.sslBundle = getSslBundle(service);
+		}
+
+		@Override
+		public @Nullable SslBundle getSslBundle() {
+			return this.sslBundle;
 		}
 
 		@Override

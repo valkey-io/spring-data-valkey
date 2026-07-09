@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,26 +49,26 @@ class LettuceSentinelConnectionUnitTests {
 
 	private static final String MASTER_ID = "mymaster";
 
-	private @Mock RedisClient valkeyClientMock;
+	private @Mock RedisClient redisClientMock;
 
 	private @Mock StatefulRedisSentinelConnection<String, String> connectionMock;
 	private @Mock RedisSentinelCommands<String, String> sentinelCommandsMock;
 
-	private @Mock RedisFuture<List<Map<String, String>>> valkeyFutureMock;
+	private @Mock RedisFuture<List<Map<String, String>>> redisFutureMock;
 
 	private LettuceSentinelConnection connection;
 
 	@BeforeEach
 	void setUp() {
 
-		when(valkeyClientMock.connectSentinel()).thenReturn(connectionMock);
+		when(redisClientMock.connectSentinel()).thenReturn(connectionMock);
 		when(connectionMock.sync()).thenReturn(sentinelCommandsMock);
-		this.connection = new LettuceSentinelConnection(valkeyClientMock);
+		this.connection = new LettuceSentinelConnection(redisClientMock);
 	}
 
 	@Test // DATAREDIS-348
 	void shouldConnectAfterCreation() {
-		verify(valkeyClientMock, times(1)).connectSentinel();
+		verify(redisClientMock, times(1)).connectSentinel();
 	}
 
 	@Test // DATAREDIS-348

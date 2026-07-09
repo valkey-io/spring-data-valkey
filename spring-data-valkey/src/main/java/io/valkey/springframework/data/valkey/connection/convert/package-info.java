@@ -1,6 +1,5 @@
 /**
  * Valkey specific converters used for sending data and parsing responses.
  */
-@org.springframework.lang.NonNullApi
-@org.springframework.lang.NonNullFields
+@org.jspecify.annotations.NullMarked
 package io.valkey.springframework.data.valkey.connection.convert;

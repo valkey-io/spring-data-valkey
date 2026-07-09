@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,18 +28,21 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
+
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ReactiveHashCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveHashCommands.HashExpireCommand;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
+import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.types.Expirations;
 import io.valkey.springframework.data.valkey.core.types.Expirations.Timeouts;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -109,6 +112,43 @@ class DefaultReactiveHashOperations<H, HK, HV> implements ReactiveHashOperations
 				.map(this::rawHashKey) //
 				.collectList() //
 				.flatMap(hks -> hashCommands.hMGet(rawKey(key), hks)).map(this::deserializeHashValues));
+	}
+
+	@Override
+	public Mono<List<HV>> getAndDelete(H key, Collection<HK> hashKeys) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(hashKeys, "Hash keys must not be null");
+		Assert.notEmpty(hashKeys, "Hash keys must not be empty");
+
+		return createMono(hashCommands -> Flux.fromIterable(hashKeys) //
+				.map(this::rawHashKey) //
+				.collectList() //
+				.flatMap(hks -> hashCommands.hGetDel(rawKey(key), hks)).map(this::deserializeHashValues));
+	}
+
+	@Override
+	public Mono<Boolean> putAndExpire(H key, Map<? extends HK, ? extends HV> map,
+			ValkeyHashCommands.@NonNull HashFieldSetOption condition, @Nullable Expiration expiration) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(map, "Map must not be null");
+		Assert.notNull(condition, "Condition must not be null");
+
+		return createMono(hashCommands -> Flux.fromIterable(() -> map.entrySet().iterator()) //
+				.collectMap(entry -> rawHashKey(entry.getKey()), entry -> rawHashValue(entry.getValue())) //
+				.flatMap(serialized -> hashCommands.hSetEx(rawKey(key), serialized, condition, expiration)));
+	}
+
+	@Override
+	public Mono<List<HV>> getAndExpire(H key, @Nullable Expiration expiration, Collection<HK> hashKeys) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(hashKeys, "Hash keys must not be null");
+		Assert.notEmpty(hashKeys, "Hash keys must not be empty");
+
+		return createMono(hashCommands -> Flux.fromIterable(hashKeys) //
+				.map(this::rawHashKey) //
+				.collectList() //
+				.flatMap(hks -> hashCommands.hGetEx(rawKey(key), expiration, hks)).map(this::deserializeHashValues));
 	}
 
 	@Override
@@ -353,8 +393,7 @@ class DefaultReactiveHashOperations<H, HK, HV> implements ReactiveHashOperations
 	}
 
 	@SuppressWarnings("unchecked")
-	@Nullable
-	private HK readHashKey(ByteBuffer value) {
+	private @Nullable HK readHashKey(ByteBuffer value) {
 		return (HK) serializationContext.getHashKeySerializationPair().read(value);
 	}
 
@@ -370,8 +409,7 @@ class DefaultReactiveHashOperations<H, HK, HV> implements ReactiveHashOperations
 	}
 
 	@SuppressWarnings("unchecked")
-	@Nullable
-	private HV readHashValue(@Nullable ByteBuffer value) {
+	private @Nullable HV readHashValue(@Nullable ByteBuffer value) {
 		return value != null ? (HV) serializationContext.getHashValueSerializationPair().read(value) : null;
 	}
 

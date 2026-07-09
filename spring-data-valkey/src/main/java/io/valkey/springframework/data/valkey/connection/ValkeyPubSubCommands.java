@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 
 /**
  * PubSub-specific Valkey commands.
@@ -24,6 +26,7 @@ import org.springframework.lang.Nullable;
  * @author Mark Paluch
  * @author Christoph Strobl
  */
+@NullUnmarked
 public interface ValkeyPubSubCommands {
 
 	/**
@@ -49,8 +52,7 @@ public interface ValkeyPubSubCommands {
 	 * @return the number of clients that received the message or {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/publish">Valkey Documentation: PUBLISH</a>
 	 */
-	@Nullable
-	Long publish(byte[] channel, byte[] message);
+	Long publish(byte @NonNull [] channel, byte @NonNull [] message);
 
 	/**
 	 * Subscribes the connection to the given channels. Once subscribed, a connection enters listening mode and can only
@@ -62,7 +64,7 @@ public interface ValkeyPubSubCommands {
 	 * @param channels channel names, must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/subscribe">Valkey Documentation: SUBSCRIBE</a>
 	 */
-	void subscribe(MessageListener listener, byte[]... channels);
+	void subscribe(@NonNull MessageListener listener, byte @NonNull [] @NonNull... channels);
 
 	/**
 	 * Subscribes the connection to all channels matching the given patterns. Once subscribed, a connection enters
@@ -75,5 +77,5 @@ public interface ValkeyPubSubCommands {
 	 * @param patterns channel name patterns, must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/psubscribe">Valkey Documentation: PSUBSCRIBE</a>
 	 */
-	void pSubscribe(MessageListener listener, byte[]... patterns);
+	void pSubscribe(@NonNull MessageListener listener, byte @NonNull [] @NonNull... patterns);
 }

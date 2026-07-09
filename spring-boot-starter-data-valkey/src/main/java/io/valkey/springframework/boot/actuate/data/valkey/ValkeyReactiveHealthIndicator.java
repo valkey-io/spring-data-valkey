@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,9 @@ import java.util.Properties;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
-import org.springframework.boot.actuate.health.AbstractReactiveHealthIndicator;
-import org.springframework.boot.actuate.health.Health;
-import org.springframework.boot.actuate.health.ReactiveHealthIndicator;
-
+import org.springframework.boot.health.contributor.AbstractReactiveHealthIndicator;
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.ReactiveHealthIndicator;
 import io.valkey.springframework.data.valkey.connection.ClusterInfo;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyClusterConnection;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Listener of messages published in Valkey. A MessageListener can implement {@link SubscriptionListener} to receive
@@ -34,5 +34,5 @@ public interface MessageListener {
 	 * @param message message must not be {@literal null}.
 	 * @param pattern pattern matching the channel (if specified) - can be {@literal null}.
 	 */
-	void onMessage(Message message, @Nullable byte[] pattern);
+	void onMessage(Message message, byte @Nullable [] pattern);
 }

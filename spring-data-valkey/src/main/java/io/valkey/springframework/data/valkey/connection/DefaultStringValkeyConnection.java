@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,9 @@ import java.util.function.IntFunction;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Distance;
@@ -62,7 +64,6 @@ import io.valkey.springframework.data.valkey.domain.geo.GeoReference.GeoMemberRe
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -81,7 +82,11 @@ import org.springframework.util.ObjectUtils;
  * @author ihaohong
  * @author Dennis Neufeld
  * @author Shyngys Sapraliyev
+ * @author Jeonggyu Choi
+ * @author Mingi Lee
+ * @author Yordan Tsintsov
  */
+@NullUnmarked
 @SuppressWarnings({ "ConstantConditions", "deprecation" })
 public class DefaultStringValkeyConnection implements StringValkeyConnection, DecoratedValkeyConnection {
 
@@ -98,14 +103,12 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	private ListConverter<Tuple, StringTuple> tupleListToStringTuple = new ListConverter<>(new TupleConverter());
 	private ListConverter<byte[], String> byteListToStringList = new ListConverter<>(bytesToString);
 	private MapConverter<byte[], String> byteMapToStringMap = new MapConverter<>(bytesToString);
-	private MapConverter<String, byte[]> stringMapToByteMap = new MapConverter<>(stringToBytes);
 	private SetConverter<byte[], String> byteSetToStringSet = new SetConverter<>(bytesToString);
 	private Converter<GeoResults<GeoLocation<byte[]>>, GeoResults<GeoLocation<String>>> byteGeoResultsToStringGeoResults;
 	private Converter<ByteRecord, StringRecord> byteMapRecordToStringMapRecordConverter = new Converter<ByteRecord, StringRecord>() {
 
-		@Nullable
 		@Override
-		public StringRecord convert(ByteRecord source) {
+		public @Nullable StringRecord convert(ByteRecord source) {
 			return StringRecord.of(source.deserialize(serializer));
 		}
 	};
@@ -129,9 +132,8 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 
 	private class SerializingConverter implements Converter<String, byte[]> {
 
-		@Nullable
 		@Override
-		public byte[] convert(String source) {
+		public byte @Nullable [] convert(String source) {
 			return serializer.serialize(source);
 		}
 	}
@@ -288,6 +290,11 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	@Override
+	public String digest(byte @NonNull [] key) {
+		return convertAndReturn(delegate.digest(key), Converters.identityConverter());
+	}
+
+	@Override
 	public Long dbSize() {
 		return convertAndReturn(delegate.dbSize(), Converters.identityConverter());
 	}
@@ -305,6 +312,11 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	@Override
 	public Long del(byte[]... keys) {
 		return convertAndReturn(delegate.del(keys), Converters.identityConverter());
+	}
+
+	@Override
+	public Boolean delex(byte[] key, CompareCondition condition) {
+		return convertAndReturn(delegate.delex(key, condition), Converters.identityConverter());
 	}
 
 	@Override
@@ -392,27 +404,23 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return convertAndReturn(delegate.get(key), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public byte[] getDel(byte[] key) {
+	public byte @Nullable [] getDel(byte[] key) {
 		return convertAndReturn(delegate.getDel(key), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public String getDel(String key) {
+	public @Nullable String getDel(String key) {
 		return convertAndReturn(delegate.getDel(serialize(key)), bytesToString);
 	}
 
-	@Nullable
 	@Override
-	public byte[] getEx(byte[] key, Expiration expiration) {
+	public byte @Nullable [] getEx(byte[] key, Expiration expiration) {
 		return convertAndReturn(delegate.getEx(key, expiration), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public String getEx(String key, Expiration expiration) {
+	public @Nullable String getEx(String key, Expiration expiration) {
 		return convertAndReturn(delegate.getEx(serialize(key), expiration), bytesToString);
 	}
 
@@ -776,13 +784,18 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	@Override
-	public Boolean set(byte[] key, byte[] value, Expiration expiration, SetOption option) {
-		return convertAndReturn(delegate.set(key, value, expiration, option), Converters.identityConverter());
+	public byte[] setGet(byte[] key, byte[] value, Expiration expiration, SetOption option) {
+		return convertAndReturn(delegate.setGet(key, value, expiration, option), Converters.identityConverter());
 	}
 
 	@Override
-	public byte[] setGet(byte[] key, byte[] value, Expiration expiration, SetOption option) {
-		return convertAndReturn(delegate.setGet(key, value, expiration, option), Converters.identityConverter());
+	public Boolean set(byte[] key, byte[] value, SetCondition condition, Expiration expiration) {
+		return convertAndReturn(delegate.set(key, value, condition, expiration), Converters.identityConverter());
+	}
+
+	@Override
+	public byte[] setGet(byte[] key, byte[] value, SetCondition condition, Expiration expiration) {
+		return convertAndReturn(delegate.setGet(key, value, condition, expiration), Converters.identityConverter());
 	}
 
 	@Override
@@ -833,6 +846,11 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	@Override
 	public Long sInterStore(byte[] destKey, byte[]... keys) {
 		return convertAndReturn(delegate.sInterStore(destKey, keys), Converters.identityConverter());
+	}
+
+	@Override
+	public Long sInterCard(byte[]... keys) {
+		return convertAndReturn(delegate.sInterCard(keys), Converters.identityConverter());
 	}
 
 	@Override
@@ -925,9 +943,8 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return convertAndReturn(delegate.bitOp(op, destination, keys), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Long bitPos(byte[] key, boolean bit, org.springframework.data.domain.Range<Long> range) {
+	public @Nullable Long bitPos(byte[] key, boolean bit, org.springframework.data.domain.Range<Long> range) {
 		return convertAndReturn(delegate.bitPos(key, bit, range), Converters.identityConverter());
 	}
 
@@ -1006,82 +1023,69 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return convertAndReturn(delegate.zIncrBy(key, increment, value), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<byte[]> zDiff(byte[]... sets) {
+	public @Nullable Set<byte[]> zDiff(byte[]... sets) {
 		return convertAndReturn(delegate.zDiff(sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<Tuple> zDiffWithScores(byte[]... sets) {
+	public @Nullable Set<Tuple> zDiffWithScores(byte[]... sets) {
 		return convertAndReturn(delegate.zDiffWithScores(sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Long zDiffStore(byte[] destKey, byte[]... sets) {
+	public @Nullable Long zDiffStore(byte[] destKey, byte[]... sets) {
 		return convertAndReturn(delegate.zDiffStore(destKey, sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<String> zDiff(String... sets) {
+	public @Nullable Set<String> zDiff(String... sets) {
 		return convertAndReturn(delegate.zDiff(serializeMulti(sets)), byteSetToStringSet);
 	}
 
-	@Nullable
 	@Override
-	public Set<StringTuple> zDiffWithScores(String... sets) {
+	public @Nullable Set<StringTuple> zDiffWithScores(String... sets) {
 		return convertAndReturn(delegate.zDiffWithScores(serializeMulti(sets)), tupleToStringTuple);
 	}
 
-	@Nullable
 	@Override
-	public Long zDiffStore(String destKey, String... sets) {
+	public @Nullable Long zDiffStore(String destKey, String... sets) {
 		return convertAndReturn(delegate.zDiffStore(serialize(destKey), serializeMulti(sets)),
 				Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<byte[]> zInter(byte[]... sets) {
+	public @Nullable Set<byte[]> zInter(byte[]... sets) {
 		return convertAndReturn(delegate.zInter(sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<Tuple> zInterWithScores(byte[]... sets) {
+	public @Nullable Set<Tuple> zInterWithScores(byte[]... sets) {
 		return convertAndReturn(delegate.zInterWithScores(sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<Tuple> zInterWithScores(Aggregate aggregate, Weights weights, byte[]... sets) {
+	public @Nullable Set<Tuple> zInterWithScores(Aggregate aggregate, Weights weights, byte[]... sets) {
 		return convertAndReturn(delegate.zInterWithScores(aggregate, weights, sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<String> zInter(String... sets) {
+	public @Nullable Set<String> zInter(String... sets) {
 		return convertAndReturn(delegate.zInter(serializeMulti(sets)), byteSetToStringSet);
 	}
 
-	@Nullable
 	@Override
-	public Set<StringTuple> zInterWithScores(String... sets) {
+	public @Nullable Set<StringTuple> zInterWithScores(String... sets) {
 		return convertAndReturn(delegate.zInterWithScores(serializeMulti(sets)), tupleToStringTuple);
 	}
 
-	@Nullable
 	@Override
-	public Set<StringTuple> zInterWithScores(Aggregate aggregate, Weights weights, String... sets) {
+	public @Nullable Set<StringTuple> zInterWithScores(Aggregate aggregate, Weights weights, String... sets) {
 		return convertAndReturn(delegate.zInterWithScores(aggregate, weights, serializeMulti(sets)), tupleToStringTuple);
 	}
 
-	@Nullable
 	@Override
-	public Long zInterStore(byte[] destKey, Aggregate aggregate, int[] weights, byte[]... sets) {
+	public @Nullable Long zInterStore(byte[] destKey, Aggregate aggregate, int[] weights, byte[]... sets) {
 		return convertAndReturn(delegate.zInterStore(destKey, aggregate, Weights.of(weights), sets),
 				Converters.identityConverter());
 	}
@@ -1249,39 +1253,33 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return convertAndReturn(delegate.zMScore(key, values), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<byte[]> zUnion(byte[]... sets) {
+	public @Nullable Set<byte[]> zUnion(byte[]... sets) {
 		return convertAndReturn(delegate.zUnion(sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<Tuple> zUnionWithScores(byte[]... sets) {
+	public @Nullable Set<Tuple> zUnionWithScores(byte[]... sets) {
 		return convertAndReturn(delegate.zUnionWithScores(sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<Tuple> zUnionWithScores(Aggregate aggregate, Weights weights, byte[]... sets) {
+	public @Nullable Set<Tuple> zUnionWithScores(Aggregate aggregate, Weights weights, byte[]... sets) {
 		return convertAndReturn(delegate.zUnionWithScores(aggregate, weights, sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Set<String> zUnion(String... sets) {
+	public @Nullable Set<String> zUnion(String... sets) {
 		return convertAndReturn(delegate.zUnion(serializeMulti(sets)), byteSetToStringSet);
 	}
 
-	@Nullable
 	@Override
-	public Set<StringTuple> zUnionWithScores(String... sets) {
+	public @Nullable Set<StringTuple> zUnionWithScores(String... sets) {
 		return convertAndReturn(delegate.zUnionWithScores(serializeMulti(sets)), tupleToStringTuple);
 	}
 
-	@Nullable
 	@Override
-	public Set<StringTuple> zUnionWithScores(Aggregate aggregate, Weights weights, String... sets) {
+	public @Nullable Set<StringTuple> zUnionWithScores(Aggregate aggregate, Weights weights, String... sets) {
 		return convertAndReturn(delegate.zUnionWithScores(aggregate, weights, serializeMulti(sets)), tupleToStringTuple);
 	}
 
@@ -1290,9 +1288,8 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return convertAndReturn(delegate.zUnionStore(destKey, aggregate, weights, sets), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Long zUnionStore(byte[] destKey, Aggregate aggregate, int[] weights, byte[]... sets) {
+	public @Nullable Long zUnionStore(byte[] destKey, Aggregate aggregate, int[] weights, byte[]... sets) {
 		return convertAndReturn(delegate.zUnionStore(destKey, aggregate, Weights.of(weights), sets),
 				Converters.identityConverter());
 	}
@@ -1404,8 +1401,7 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	@SuppressWarnings("unchecked")
 	private GeoReference<byte[]> serialize(GeoReference<String> data) {
 		return data instanceof GeoReference.GeoMemberReference
-				? GeoReference
-						.fromMember(serializer.serialize(((GeoMemberReference<String>) data).getMember()))
+				? GeoReference.fromMember(serializer.serialize(((GeoMemberReference<String>) data).getMember()))
 				: (GeoReference) data;
 	}
 
@@ -1466,6 +1462,11 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	@Override
+	public String digest(@NonNull String key) {
+		return digest(serialize(key));
+	}
+
+	@Override
 	public Long decr(String key) {
 		return decr(serialize(key));
 	}
@@ -1478,6 +1479,11 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	@Override
 	public Long del(String... keys) {
 		return del(serializeMulti(keys));
+	}
+
+	@Override
+	public Boolean delex(String key, CompareCondition condition) {
+		return convertAndReturn(delegate.delex(serialize(key), condition), Converters.identityConverter());
 	}
 
 	@Override
@@ -1555,52 +1561,44 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return hIncrBy(serialize(key), serialize(field), delta);
 	}
 
-	@Nullable
 	@Override
-	public byte[] hRandField(byte[] key) {
+	public byte @Nullable [] hRandField(byte[] key) {
 		return convertAndReturn(delegate.hRandField(key), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public Entry<byte[], byte[]> hRandFieldWithValues(byte[] key) {
+	public @Nullable Entry<byte[], byte[]> hRandFieldWithValues(byte[] key) {
 		return convertAndReturn(delegate.hRandFieldWithValues(key), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public List<byte[]> hRandField(byte[] key, long count) {
+	public @Nullable List<byte[]> hRandField(byte[] key, long count) {
 		return convertAndReturn(delegate.hRandField(key, count), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public List<Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count) {
+	public @Nullable List<Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count) {
 		return convertAndReturn(delegate.hRandFieldWithValues(key, count), Converters.identityConverter());
 	}
 
-	@Nullable
 	@Override
-	public String hRandField(String key) {
+	public @Nullable String hRandField(String key) {
 		return convertAndReturn(delegate.hRandField(serialize(key)), bytesToString);
 	}
 
-	@Nullable
 	@Override
-	public Entry<String, String> hRandFieldWithValues(String key) {
+	public @Nullable Entry<String, String> hRandFieldWithValues(String key) {
 		return convertAndReturn(delegate.hRandFieldWithValues(serialize(key)),
 				(Converter<Entry<byte[], byte[]>, Entry<String, String>>) this::convertEntry);
 	}
 
-	@Nullable
 	@Override
-	public List<String> hRandField(String key, long count) {
+	public @Nullable List<String> hRandField(String key, long count) {
 		return convertAndReturn(delegate.hRandField(serialize(key), count), byteListToStringList);
 	}
 
-	@Nullable
 	@Override
-	public List<Entry<String, String>> hRandFieldWithValues(String key, long count) {
+	public @Nullable List<Entry<String, String>> hRandFieldWithValues(String key, long count) {
 		return convertAndReturn(delegate.hRandFieldWithValues(serialize(key), count),
 				new ListConverter<>(this::convertEntry));
 	}
@@ -1638,6 +1636,23 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	@Override
 	public List<String> hVals(String key) {
 		return convertAndReturn(delegate.hVals(serialize(key)), byteListToStringList);
+	}
+
+	@Override
+	public List<String> hGetDel(String key, String... fields) {
+		return convertAndReturn(delegate.hGetDel(serialize(key), serializeMulti(fields)), byteListToStringList);
+	}
+
+	@Override
+	public List<String> hGetEx(String key, Expiration expiration, String... fields) {
+		return convertAndReturn(delegate.hGetEx(serialize(key), expiration, serializeMulti(fields)), byteListToStringList);
+	}
+
+	@Override
+	public Boolean hSetEx(@NonNull String key, @NonNull Map<@NonNull String, String> hashes, HashFieldSetOption condition,
+			Expiration expiration) {
+		return convertAndReturn(delegate.hSetEx(serialize(key), serialize(hashes), condition, expiration),
+				Converters.identityConverter());
 	}
 
 	@Override
@@ -1821,6 +1836,24 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	@Override
+	public Boolean set(@NonNull String key, @NonNull String value, SetCondition condition, Expiration expiration) {
+
+		SetCondition conditionToUse = condition != null ? condition : SetCondition.upsert();
+		Expiration expirationToUse = expiration != null ? expiration : Expiration.persistent();
+
+		return set(serialize(key), serialize(value), conditionToUse, expirationToUse);
+	}
+
+	@Override
+	public String setGet(@NonNull String key, @NonNull String value, SetCondition condition, Expiration expiration) {
+
+		SetCondition conditionToUse = condition != null ? condition : SetCondition.upsert();
+		Expiration expirationToUse = expiration != null ? expiration : Expiration.persistent();
+
+		return convertAndReturn(delegate.setGet(serialize(key), serialize(value), conditionToUse, expirationToUse), bytesToString);
+	}
+
+	@Override
 	public Boolean setBit(String key, long offset, boolean value) {
 		return setBit(serialize(key), offset, value);
 	}
@@ -1853,6 +1886,11 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	@Override
 	public Long sInterStore(String destKey, String... keys) {
 		return sInterStore(serialize(destKey), serializeMulti(keys));
+	}
+
+	@Override
+	public Long sInterCard(String... keys) {
+		return sInterCard(serializeMulti(keys));
 	}
 
 	@Override
@@ -1945,9 +1983,8 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return bitOp(op, serialize(destination), serializeMulti(keys));
 	}
 
-	@Nullable
 	@Override
-	public Long bitPos(String key, boolean bit, org.springframework.data.domain.Range<Long> range) {
+	public @Nullable Long bitPos(String key, boolean bit, org.springframework.data.domain.Range<Long> range) {
 		return bitPos(serialize(key), bit, range);
 	}
 
@@ -1981,9 +2018,8 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return type(serialize(key));
 	}
 
-	@Nullable
 	@Override
-	public Long touch(String... keys) {
+	public @Nullable Long touch(String... keys) {
 		return touch(serializeMulti(keys));
 	}
 
@@ -2022,75 +2058,63 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return delegate.zLexCount(key, range);
 	}
 
-	@Nullable
 	@Override
-	public Tuple zPopMin(byte[] key) {
+	public @Nullable Tuple zPopMin(byte[] key) {
 		return delegate.zPopMin(key);
 	}
 
-	@Nullable
 	@Override
-	public StringTuple zPopMin(String key) {
+	public @Nullable StringTuple zPopMin(String key) {
 		return convertAndReturn(delegate.zPopMin(serialize(key)), tupleConverter);
 	}
 
-	@Nullable
 	@Override
-	public Set<Tuple> zPopMin(byte[] key, long count) {
+	public @Nullable Set<Tuple> zPopMin(byte[] key, long count) {
 		return delegate.zPopMin(key, count);
 	}
 
-	@Nullable
 	@Override
-	public Set<StringTuple> zPopMin(String key, long count) {
+	public @Nullable Set<StringTuple> zPopMin(String key, long count) {
 		return convertAndReturn(delegate.zPopMin(serialize(key), count), tupleToStringTuple);
 	}
 
-	@Nullable
 	@Override
-	public Tuple bZPopMin(byte[] key, long timeout, TimeUnit unit) {
+	public @Nullable Tuple bZPopMin(byte[] key, long timeout, TimeUnit unit) {
 		return delegate.bZPopMin(key, timeout, unit);
 	}
 
-	@Nullable
 	@Override
-	public StringTuple bZPopMin(String key, long timeout, TimeUnit unit) {
+	public @Nullable StringTuple bZPopMin(String key, long timeout, TimeUnit unit) {
 		return convertAndReturn(delegate.bZPopMin(serialize(key), timeout, unit), tupleConverter);
 	}
 
-	@Nullable
 	@Override
-	public Tuple zPopMax(byte[] key) {
+	public @Nullable Tuple zPopMax(byte[] key) {
 		return delegate.zPopMax(key);
 	}
 
-	@Nullable
 	@Override
-	public StringTuple zPopMax(String key) {
+	public @Nullable StringTuple zPopMax(String key) {
 		return convertAndReturn(delegate.zPopMax(serialize(key)), tupleConverter);
 	}
 
-	@Nullable
 	@Override
-	public Set<Tuple> zPopMax(byte[] key, long count) {
+	public @Nullable Set<Tuple> zPopMax(byte[] key, long count) {
 		return delegate.zPopMax(key, count);
 	}
 
-	@Nullable
 	@Override
-	public Set<StringTuple> zPopMax(String key, long count) {
+	public @Nullable Set<StringTuple> zPopMax(String key, long count) {
 		return convertAndReturn(delegate.zPopMax(serialize(key), count), tupleToStringTuple);
 	}
 
-	@Nullable
 	@Override
-	public Tuple bZPopMax(byte[] key, long timeout, TimeUnit unit) {
+	public @Nullable Tuple bZPopMax(byte[] key, long timeout, TimeUnit unit) {
 		return delegate.bZPopMax(key, timeout, unit);
 	}
 
-	@Nullable
 	@Override
-	public StringTuple bZPopMax(String key, long timeout, TimeUnit unit) {
+	public @Nullable StringTuple bZPopMax(String key, long timeout, TimeUnit unit) {
 		return convertAndReturn(delegate.bZPopMax(serialize(key), timeout, unit), tupleConverter);
 	}
 
@@ -2581,8 +2605,7 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	public @Nullable List<Long> applyHashFieldExpiration(byte[] key,
-			io.valkey.springframework.data.valkey.core.types.Expiration expiration,
-			ExpirationOptions options, byte[]... fields) {
+			io.valkey.springframework.data.valkey.core.types.Expiration expiration, ExpirationOptions options, byte[]... fields) {
 		return this.delegate.applyHashFieldExpiration(key, expiration, options, fields);
 	}
 
@@ -2627,9 +2650,24 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return this.delegate.hTtl(key, timeUnit, fields);
 	}
 
+	@Override
+	public List<byte[]> hGetDel(@NonNull byte[] key, @NonNull byte[]... fields) {
+		return convertAndReturn(delegate.hGetDel(key, fields), Converters.identityConverter());
+	}
+
+	@Override
+	public List<byte[]> hGetEx(@NonNull byte[] key, @Nullable Expiration expiration, @NonNull byte[]... fields) {
+		return convertAndReturn(delegate.hGetEx(key, expiration, fields), Converters.identityConverter());
+	}
+
+	@Override
+	public Boolean hSetEx(@NonNull byte[] key, @NonNull Map<byte[], byte[]> hashes, @NonNull HashFieldSetOption condition,
+			@Nullable Expiration expiration) {
+		return convertAndReturn(delegate.hSetEx(key, hashes, condition, expiration), Converters.identityConverter());
+	}
+
 	public @Nullable List<Long> applyExpiration(String key,
-			io.valkey.springframework.data.valkey.core.types.Expiration expiration,
-			ExpirationOptions options, String... fields) {
+			io.valkey.springframework.data.valkey.core.types.Expiration expiration, ExpirationOptions options, String... fields) {
 		return this.applyHashFieldExpiration(serialize(key), expiration, options, serializeMulti(fields));
 	}
 
@@ -2818,16 +2856,14 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	@Override
-	public Long zRangeStoreByLex(byte[] dstKey, byte[] srcKey,
-								 org.springframework.data.domain.Range<byte[]> range,
-								 io.valkey.springframework.data.valkey.connection.Limit limit) {
-		return convertAndReturn(delegate.zRangeStoreByLex(dstKey, srcKey, range, limit),
-				Converters.identityConverter());
+	public Long zRangeStoreByLex(byte[] dstKey, byte[] srcKey, org.springframework.data.domain.Range<byte[]> range,
+			io.valkey.springframework.data.valkey.connection.Limit limit) {
+		return convertAndReturn(delegate.zRangeStoreByLex(dstKey, srcKey, range, limit), Converters.identityConverter());
 	}
 
 	@Override
-	public Long zRangeStoreByLex(String dstKey, String srcKey,
-			org.springframework.data.domain.Range<String> range, io.valkey.springframework.data.valkey.connection.Limit limit) {
+	public Long zRangeStoreByLex(String dstKey, String srcKey, org.springframework.data.domain.Range<String> range,
+			io.valkey.springframework.data.valkey.connection.Limit limit) {
 		return convertAndReturn(delegate.zRangeStoreByLex(serialize(dstKey), serialize(srcKey), serialize(range), limit),
 				Converters.identityConverter());
 	}
@@ -2848,9 +2884,8 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	@Override
 	public Long zRangeStoreByScore(byte[] dstKey, byte[] srcKey,
 			org.springframework.data.domain.Range<? extends Number> range,
-								   io.valkey.springframework.data.valkey.connection.Limit limit) {
-		return convertAndReturn(delegate.zRangeStoreByScore(dstKey, srcKey, range, limit),
-				Converters.identityConverter());
+			io.valkey.springframework.data.valkey.connection.Limit limit) {
+		return convertAndReturn(delegate.zRangeStoreByScore(dstKey, srcKey, range, limit), Converters.identityConverter());
 	}
 
 	@Override
@@ -2915,6 +2950,18 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	@Override
+	public List<StreamEntryDeletionResult> xDelEx(String key, XDelOptions options, RecordId... recordIds) {
+		return convertAndReturn(delegate.xDelEx(serialize(key), options, recordIds),
+				Converters.identityConverter());
+	}
+
+	@Override
+	public List<StreamEntryDeletionResult> xAckDel(String key, String group, XDelOptions options, RecordId... recordIds) {
+		return convertAndReturn(delegate.xAckDel(serialize(key), group, options, recordIds),
+				Converters.identityConverter());
+	}
+
+	@Override
 	public String xGroupCreate(String key, ReadOffset readOffset, String group) {
 		return convertAndReturn(delegate.xGroupCreate(serialize(key), group, readOffset), Converters.identityConverter());
 	}
@@ -2968,9 +3015,23 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	@Override
+	public PendingMessages xPending(String key, String groupName, String consumerName,
+			org.springframework.data.domain.Range<String> range, Long count, Duration minIdleTime) {
+		return convertAndReturn(delegate.xPending(serialize(key), groupName, consumerName, range, count, minIdleTime),
+				Converters.identityConverter());
+	}
+
+	@Override
 	public PendingMessages xPending(String key, String groupName, org.springframework.data.domain.Range<String> range,
 			Long count) {
 		return convertAndReturn(delegate.xPending(serialize(key), groupName, range, count), Converters.identityConverter());
+	}
+
+	@Override
+	public PendingMessages xPending(String key, String groupName, org.springframework.data.domain.Range<String> range,
+			Long count, Duration minIdleTime) {
+		return convertAndReturn(delegate.xPending(serialize(key), groupName, range, count, minIdleTime),
+				Converters.identityConverter());
 	}
 
 	@Override
@@ -3017,6 +3078,11 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	}
 
 	@Override
+	public Long xTrim(String key, XTrimOptions options) {
+		return convertAndReturn(delegate.xTrim(serialize(key), options), Converters.identityConverter());
+	}
+
+	@Override
 	public Long xAck(byte[] key, String group, RecordId... recordIds) {
 		return delegate.xAck(key, group, recordIds);
 	}
@@ -3039,6 +3105,16 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 	@Override
 	public Long xDel(byte[] key, RecordId... recordIds) {
 		return delegate.xDel(key, recordIds);
+	}
+
+	@Override
+	public List<StreamEntryDeletionResult> xDelEx(byte[] key, XDelOptions options, RecordId... recordIds) {
+		return delegate.xDelEx(key, options, recordIds);
+	}
+
+	@Override
+	public List<StreamEntryDeletionResult> xAckDel(byte[] key, String group, XDelOptions options, RecordId... recordIds) {
+		return delegate.xAckDel(key, group, options, recordIds);
 	}
 
 	@Override
@@ -3124,6 +3200,11 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		return delegate.xTrim(key, count, approximateTrimming);
 	}
 
+	@Override
+	public Long xTrim(byte[] key, XTrimOptions options) {
+		return delegate.xTrim(key, options);
+	}
+
 	/**
 	 * Specifies if pipelined and tx results should be deserialized to Strings. If false, results of
 	 * {@link #closePipeline()} and {@link #exec()} will be of the type returned by the underlying connection
@@ -3134,9 +3215,8 @@ public class DefaultStringValkeyConnection implements StringValkeyConnection, De
 		this.deserializePipelineAndTxResults = deserializePipelineAndTxResults;
 	}
 
-	@SuppressWarnings("unchecked")
-	@Nullable
-	private <T> T convertAndReturn(@Nullable Object value, Converter converter) {
+	@SuppressWarnings({ "unchecked", "rawtypes" })
+	private <T> @Nullable T convertAndReturn(@Nullable Object value, Converter converter) {
 
 		if (isFutureConversion()) {
 

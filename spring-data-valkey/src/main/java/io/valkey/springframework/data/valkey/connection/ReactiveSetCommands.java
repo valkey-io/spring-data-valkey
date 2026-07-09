@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.ByteBufferResponse;
@@ -35,7 +36,6 @@ import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.MultiValueResponse;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -43,6 +43,7 @@ import org.springframework.util.Assert;
  *
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @author Mingi Lee
  * @since 2.0
  */
 public interface ReactiveSetCommands {
@@ -55,7 +56,7 @@ public interface ReactiveSetCommands {
 	 */
 	class SAddCommand extends KeyCommand {
 
-		private List<ByteBuffer> values;
+		private final List<ByteBuffer> values;
 
 		private SAddCommand(@Nullable ByteBuffer key, List<ByteBuffer> values) {
 
@@ -415,8 +416,7 @@ public interface ReactiveSetCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public ByteBuffer getDestination() {
+		public @Nullable ByteBuffer getDestination() {
 			return destination;
 		}
 
@@ -663,8 +663,7 @@ public interface ReactiveSetCommands {
 		}
 
 		@Override
-		@Nullable
-		public ByteBuffer getKey() {
+		public @Nullable ByteBuffer getKey() {
 			return null;
 		}
 
@@ -778,6 +777,73 @@ public interface ReactiveSetCommands {
 	Flux<NumericResponse<SInterStoreCommand, Long>> sInterStore(Publisher<SInterStoreCommand> commands);
 
 	/**
+	 * {@code SINTERCARD} command parameters.
+	 *
+	 * @author Mingi Lee
+	 * @since 4.0
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 */
+	class SInterCardCommand implements Command {
+
+		private final List<ByteBuffer> keys;
+
+		private SInterCardCommand(List<ByteBuffer> keys) {
+			this.keys = keys;
+		}
+
+		/**
+		 * Creates a new {@link SInterCardCommand} given a {@link Collection} of keys.
+		 *
+		 * @param keys must not be {@literal null}.
+		 * @return a new {@link SInterCardCommand} for a {@link Collection} of keys.
+		 */
+		public static SInterCardCommand keys(Collection<ByteBuffer> keys) {
+
+			Assert.notNull(keys, "Keys must not be null");
+
+			return new SInterCardCommand(new ArrayList<>(keys));
+		}
+
+		@Override
+		public @Nullable ByteBuffer getKey() {
+			return null;
+		}
+
+		/**
+		 * @return never {@literal null}.
+		 */
+		public List<ByteBuffer> getKeys() {
+			return keys;
+		}
+	}
+
+	/**
+	 * Returns the cardinality of the set which would result from the intersection of all given sets at {@literal keys}.
+	 *
+	 * @param keys must not be {@literal null}.
+	 * @return
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 * @since 4.0
+	 */
+	default Mono<Long> sInterCard(Collection<ByteBuffer> keys) {
+
+		Assert.notNull(keys, "Keys must not be null");
+
+		return sInterCard(Mono.just(SInterCardCommand.keys(keys))).next().map(NumericResponse::getOutput);
+	}
+
+	/**
+	 * Returns the cardinality of the set which would result from the intersection of all given sets at
+	 * {@link SInterCardCommand#getKeys()}.
+	 *
+	 * @param commands must not be {@literal null}.
+	 * @return
+	 * @see <a href="https://valkey.io/commands/sintercard">Valkey Documentation: SINTERCARD</a>
+	 * @since 4.0
+	 */
+	Flux<NumericResponse<SInterCardCommand, Long>> sInterCard(Publisher<SInterCardCommand> commands);
+
+	/**
 	 * {@code SUNION} command parameters.
 	 *
 	 * @author Christoph Strobl
@@ -805,8 +871,7 @@ public interface ReactiveSetCommands {
 		}
 
 		@Override
-		@Nullable
-		public ByteBuffer getKey() {
+		public @Nullable ByteBuffer getKey() {
 			return null;
 		}
 
@@ -947,8 +1012,7 @@ public interface ReactiveSetCommands {
 		}
 
 		@Override
-		@Nullable
-		public ByteBuffer getKey() {
+		public @Nullable ByteBuffer getKey() {
 			return null;
 		}
 

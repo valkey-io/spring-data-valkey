@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 the original author or authors.
+ * Copyright 2021-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Pipeline;
 import redis.clients.jedis.Response;
 import redis.clients.jedis.Transaction;
+import redis.clients.jedis.UnifiedJedis;
 import redis.clients.jedis.commands.DatabasePipelineCommands;
 import redis.clients.jedis.commands.PipelineBinaryCommands;
+import redis.clients.jedis.commands.StreamPipelineBinaryCommands;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,28 +32,29 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
- * Utility for functional invocation of Jedis methods. Typically used to express the method call as method reference and
- * passing method arguments through one of the {@code just} or {@code from} methods.
+ * Utility for functional invocation of UnifiedJedis methods. Typically used to express the method call as method
+ * reference and passing method arguments through one of the {@code just} or {@code from} methods.
  * <p>
  * {@code just} methods record the method call and evaluate the method result immediately. {@code from} methods allows
  * composing a functional pipeline to transform the result using a {@link Converter}.
  * <p>
  * Usage example:
  * <p>
+ *
  * <pre class="code">
  * JedisInvoker invoker = …;
  *
- * Long result = invoker.just(BinaryJedisCommands::geoadd, ValkeyPipeline::geoadd, key, point.getX(), point.getY(), member);
+ * Long result = invoker.just(BinaryJedisCommands::geoadd, RedisPipeline::geoadd, key, point.getX(), point.getY(), member);
  *
- * List&lt;byte[]&gt; result = invoker.from(BinaryJedisCommands::geohash, ValkeyPipeline::geohash, key, members)
+ * List&lt;byte[]&gt; result = invoker.from(BinaryJedisCommands::geohash, RedisPipeline::geohash, key, members)
  * 				.get(JedisConverters.bytesListToStringListConverter());
  * </pre>
  * <p>
@@ -62,6 +64,7 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author John Blum
+ * @author Tihomir Mateev
  * @since 2.5
  */
 class JedisInvoker {
@@ -77,8 +80,7 @@ class JedisInvoker {
 	 *
 	 * @param function must not be {@literal null}.
 	 */
-	@Nullable
-	<R> R just(ConnectionFunction0<R> function) {
+	<R> @Nullable R just(ConnectionFunction0<@Nullable R> function) {
 
 		Assert.notNull(function, "ConnectionFunction must not be null");
 
@@ -93,8 +95,7 @@ class JedisInvoker {
 	 * @param function must not be {@literal null}.
 	 * @param pipelineFunction must not be {@literal null}.
 	 */
-	@Nullable
-	<R> R just(ConnectionFunction0<R> function, PipelineFunction0<R> pipelineFunction) {
+	<R> @Nullable R just(ConnectionFunction0<@Nullable R> function, PipelineFunction0<@Nullable R> pipelineFunction) {
 
 		Assert.notNull(function, "ConnectionFunction must not be null");
 		Assert.notNull(pipelineFunction, "PipelineFunction must not be null");
@@ -109,8 +110,8 @@ class JedisInvoker {
 	 * @param pipelineFunction must not be {@literal null}.
 	 * @param t1 first argument.
 	 */
-	@Nullable
-	<R, T1> R just(ConnectionFunction1<T1, R> function, PipelineFunction1<T1, R> pipelineFunction, T1 t1) {
+	<R, T1> @Nullable R just(ConnectionFunction1<T1, @Nullable R> function,
+			PipelineFunction1<T1, @Nullable R> pipelineFunction, T1 t1) {
 
 		Assert.notNull(function, "ConnectionFunction must not be null");
 		Assert.notNull(pipelineFunction, "PipelineFunction must not be null");
@@ -126,9 +127,8 @@ class JedisInvoker {
 	 * @param t1 first argument.
 	 * @param t2 second argument.
 	 */
-	@Nullable
-	<R, T1, T2> R just(ConnectionFunction2<T1, T2, R> function, PipelineFunction2<T1, T2, R> pipelineFunction, T1 t1,
-			T2 t2) {
+	<R, T1, T2> @Nullable R just(ConnectionFunction2<T1, T2, @Nullable R> function,
+			PipelineFunction2<T1, T2, @Nullable R> pipelineFunction, T1 t1, T2 t2) {
 
 		Assert.notNull(function, "ConnectionFunction must not be null");
 		Assert.notNull(pipelineFunction, "PipelineFunction must not be null");
@@ -145,9 +145,8 @@ class JedisInvoker {
 	 * @param t2 second argument.
 	 * @param t3 third argument.
 	 */
-	@Nullable
-	<R, T1, T2, T3> R just(ConnectionFunction3<T1, T2, T3, R> function, PipelineFunction3<T1, T2, T3, R> pipelineFunction,
-			T1 t1, T2 t2, T3 t3) {
+	<R, T1, T2, T3> @Nullable R just(ConnectionFunction3<T1, T2, T3, @Nullable R> function,
+			PipelineFunction3<T1, T2, T3, @Nullable R> pipelineFunction, T1 t1, T2 t2, T3 t3) {
 
 		Assert.notNull(function, "ConnectionFunction must not be null");
 		Assert.notNull(pipelineFunction, "PipelineFunction must not be null");
@@ -165,9 +164,8 @@ class JedisInvoker {
 	 * @param t3 third argument.
 	 * @param t4 fourth argument.
 	 */
-	@Nullable
-	<R, T1, T2, T3, T4> R just(ConnectionFunction4<T1, T2, T3, T4, R> function,
-			PipelineFunction4<T1, T2, T3, T4, R> pipelineFunction, T1 t1, T2 t2, T3 t3, T4 t4) {
+	<R, T1, T2, T3, T4> @Nullable R just(ConnectionFunction4<T1, T2, T3, T4, @Nullable R> function,
+			PipelineFunction4<T1, T2, T3, T4, @Nullable R> pipelineFunction, T1 t1, T2 t2, T3 t3, T4 t4) {
 
 		Assert.notNull(function, "ConnectionFunction must not be null");
 		Assert.notNull(pipelineFunction, "PipelineFunction must not be null");
@@ -187,9 +185,8 @@ class JedisInvoker {
 	 * @param t4 fourth argument.
 	 * @param t5 fifth argument.
 	 */
-	@Nullable
-	<R, T1, T2, T3, T4, T5> R just(ConnectionFunction5<T1, T2, T3, T4, T5, R> function,
-			PipelineFunction5<T1, T2, T3, T4, T5, R> pipelineFunction, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) {
+	<R, T1, T2, T3, T4, T5> @Nullable R just(ConnectionFunction5<T1, T2, T3, T4, T5, @Nullable R> function,
+			PipelineFunction5<T1, T2, T3, T4, T5, @Nullable R> pipelineFunction, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5) {
 
 		Assert.notNull(function, "ConnectionFunction must not be null");
 		Assert.notNull(pipelineFunction, "PipelineFunction must not be null");
@@ -210,9 +207,9 @@ class JedisInvoker {
 	 * @param t5 fifth argument.
 	 * @param t6 sixth argument.
 	 */
-	@Nullable
-	<R, T1, T2, T3, T4, T5, T6> R just(ConnectionFunction6<T1, T2, T3, T4, T5, T6, R> function,
-			PipelineFunction6<T1, T2, T3, T4, T5, T6, R> pipelineFunction, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6) {
+	<R, T1, T2, T3, T4, T5, T6> @Nullable R just(ConnectionFunction6<T1, T2, T3, T4, T5, T6, @Nullable R> function,
+			PipelineFunction6<T1, T2, T3, T4, T5, T6, @Nullable R> pipelineFunction, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5,
+			T6 t6) {
 
 		Assert.notNull(function, "ConnectionFunction must not be null");
 		Assert.notNull(pipelineFunction, "PipelineFunction must not be null");
@@ -397,7 +394,7 @@ class JedisInvoker {
 		Assert.notNull(function, "ConnectionFunction must not be null");
 		Assert.notNull(pipelineFunction, "PipelineFunction must not be null");
 
-		return new DefaultManyInvocationSpec<>((Function<Jedis, R>) function::apply, pipelineFunction::apply, synchronizer);
+		return new DefaultManyInvocationSpec<>((Function<UnifiedJedis, R>) function::apply, pipelineFunction::apply, synchronizer);
 	}
 
 	/**
@@ -548,8 +545,7 @@ class JedisInvoker {
 		 * @param <T> target type.
 		 * @return the converted result, can be {@literal null}.
 		 */
-		@Nullable
-		default <T> T orElse(Converter<S, T> converter, @Nullable T nullDefault) {
+		default <T> @Nullable T orElse(Converter<S, T> converter, @Nullable T nullDefault) {
 			return getOrElse(converter, () -> nullDefault);
 		}
 
@@ -562,8 +558,7 @@ class JedisInvoker {
 		 * @param <T> target type.
 		 * @return the converted result, can be {@literal null}.
 		 */
-		@Nullable
-		<T> T getOrElse(Converter<S, T> converter, Supplier<T> nullDefault);
+		<T> @Nullable T getOrElse(Converter<S, T> converter, Supplier<T> nullDefault);
 	}
 
 	/**
@@ -614,7 +609,7 @@ class JedisInvoker {
 	}
 
 	/**
-	 * A function accepting {@link Jedis} with 0 arguments.
+	 * A function accepting {@link UnifiedJedis} with 0 arguments.
 	 *
 	 * @param <R>
 	 */
@@ -626,11 +621,11 @@ class JedisInvoker {
 		 *
 		 * @param connection the connection in use. Never {@literal null}.
 		 */
-		R apply(Jedis connection);
+		R apply(UnifiedJedis connection);
 	}
 
 	/**
-	 * A function accepting {@link Jedis} with 1 argument.
+	 * A function accepting {@link UnifiedJedis} with 1 argument.
 	 *
 	 * @param <T1>
 	 * @param <R>
@@ -644,11 +639,11 @@ class JedisInvoker {
 		 * @param connection the connection in use. Never {@literal null}.
 		 * @param t1 first argument.
 		 */
-		R apply(Jedis connection, T1 t1);
+		R apply(UnifiedJedis connection, T1 t1);
 	}
 
 	/**
-	 * A function accepting {@link Jedis} with 2 arguments.
+	 * A function accepting {@link UnifiedJedis} with 2 arguments.
 	 *
 	 * @param <T1>
 	 * @param <T2>
@@ -664,11 +659,11 @@ class JedisInvoker {
 		 * @param t1 first argument.
 		 * @param t2 second argument.
 		 */
-		R apply(Jedis connection, T1 t1, T2 t2);
+		R apply(UnifiedJedis connection, T1 t1, T2 t2);
 	}
 
 	/**
-	 * A function accepting {@link Jedis} with 3 arguments.
+	 * A function accepting {@link UnifiedJedis} with 3 arguments.
 	 *
 	 * @param <T1>
 	 * @param <T2>
@@ -686,11 +681,11 @@ class JedisInvoker {
 		 * @param t2 second argument.
 		 * @param t3 third argument.
 		 */
-		R apply(Jedis connection, T1 t1, T2 t2, T3 t3);
+		R apply(UnifiedJedis connection, T1 t1, T2 t2, T3 t3);
 	}
 
 	/**
-	 * A function accepting {@link Jedis} with 4 arguments.
+	 * A function accepting {@link UnifiedJedis} with 4 arguments.
 	 *
 	 * @param <T1>
 	 * @param <T2>
@@ -710,11 +705,11 @@ class JedisInvoker {
 		 * @param t3 third argument.
 		 * @param t4 fourth argument.
 		 */
-		R apply(Jedis connection, T1 t1, T2 t2, T3 t3, T4 t4);
+		R apply(UnifiedJedis connection, T1 t1, T2 t2, T3 t3, T4 t4);
 	}
 
 	/**
-	 * A function accepting {@link Jedis} with 5 arguments.
+	 * A function accepting {@link UnifiedJedis} with 5 arguments.
 	 *
 	 * @param <T1>
 	 * @param <T2>
@@ -736,11 +731,11 @@ class JedisInvoker {
 		 * @param t4 fourth argument.
 		 * @param t5 fifth argument.
 		 */
-		R apply(Jedis connection, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5);
+		R apply(UnifiedJedis connection, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5);
 	}
 
 	/**
-	 * A function accepting {@link Jedis} with 6 arguments.
+	 * A function accepting {@link UnifiedJedis} with 6 arguments.
 	 *
 	 * @param <T1>
 	 * @param <T2>
@@ -764,7 +759,7 @@ class JedisInvoker {
 		 * @param t5 fifth argument.
 		 * @param t6 sixth argument.
 		 */
-		R apply(Jedis connection, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6);
+		R apply(UnifiedJedis connection, T1 t1, T2 t2, T3 t3, T4 t4, T5 t5, T6 t6);
 	}
 
 	/**
@@ -923,11 +918,11 @@ class JedisInvoker {
 
 	static class DefaultSingleInvocationSpec<S> implements SingleInvocationSpec<S> {
 
-		private final Function<Jedis, S> parentFunction;
+		private final Function<UnifiedJedis, S> parentFunction;
 		private final Function<ResponseCommands, Response<S>> parentPipelineFunction;
 		private final Synchronizer synchronizer;
 
-		DefaultSingleInvocationSpec(Function<Jedis, S> parentFunction,
+		DefaultSingleInvocationSpec(Function<UnifiedJedis, S> parentFunction,
 				Function<ResponseCommands, Response<S>> parentPipelineFunction, Synchronizer synchronizer) {
 
 			this.parentFunction = parentFunction;
@@ -936,13 +931,12 @@ class JedisInvoker {
 		}
 
 		@Override
-		public <T> T get(Converter<S, T> converter) {
+		public <T> @Nullable T get(Converter<S, @Nullable T> converter) {
 			return getOrElse(converter, () -> null);
 		}
 
-		@Nullable
 		@Override
-		public <T> T getOrElse(Converter<S, T> converter, Supplier<T> nullDefault) {
+		public <T> @Nullable T getOrElse(Converter<S, T> converter, Supplier<T> nullDefault) {
 
 			Assert.notNull(converter, "Converter must not be null");
 
@@ -952,12 +946,12 @@ class JedisInvoker {
 
 	static class DefaultManyInvocationSpec<S> implements ManyInvocationSpec<S> {
 
-		private final Function<Jedis, Collection<S>> parentFunction;
+		private final Function<UnifiedJedis, Collection<S>> parentFunction;
 		private final Function<ResponseCommands, Response<Collection<S>>> parentPipelineFunction;
 		private final Synchronizer synchronizer;
 
 		@SuppressWarnings({ "rawtypes", "unchecked" })
-		DefaultManyInvocationSpec(Function<Jedis, ? extends Collection<S>> parentFunction,
+		DefaultManyInvocationSpec(Function<UnifiedJedis, ? extends Collection<S>> parentFunction,
 				Function<ResponseCommands, Response<? extends Collection<S>>> parentPipelineFunction,
 				Synchronizer synchronizer) {
 
@@ -1021,27 +1015,27 @@ class JedisInvoker {
 
 		@Nullable
 		@SuppressWarnings({ "unchecked", "rawtypes" })
-		default <I, T> T invoke(Function<Jedis, I> callFunction, Function<ResponseCommands, Response<I>> pipelineFunction) {
+		default <I, T> T invoke(Function<UnifiedJedis, I> callFunction, Function<ResponseCommands, Response<I>> pipelineFunction) {
 
 			return (T) doInvoke((Function) callFunction, (Function) pipelineFunction, Converters.identityConverter(),
 					() -> null);
 		}
 
-		@Nullable
 		@SuppressWarnings({ "unchecked", "rawtypes" })
-		default <I, T> T invoke(Function<Jedis, I> callFunction, Function<ResponseCommands, Response<I>> pipelineFunction,
-				Converter<I, T> converter, Supplier<T> nullDefault) {
+		default <I, T> @Nullable T invoke(Function<UnifiedJedis, I> callFunction,
+				Function<ResponseCommands, Response<I>> pipelineFunction, Converter<I, @Nullable T> converter,
+				Supplier<@Nullable T> nullDefault) {
 
 			return (T) doInvoke((Function) callFunction, (Function) pipelineFunction, (Converter<Object, Object>) converter,
 					(Supplier<Object>) nullDefault);
 		}
 
 		@Nullable
-		Object doInvoke(Function<Jedis, Object> callFunction, Function<ResponseCommands, Response<Object>> pipelineFunction,
+		Object doInvoke(Function<UnifiedJedis, Object> callFunction, Function<ResponseCommands, Response<Object>> pipelineFunction,
 				Converter<Object, Object> converter, Supplier<Object> nullDefault);
 	}
 
-	interface ResponseCommands extends PipelineBinaryCommands, DatabasePipelineCommands {
+	interface ResponseCommands extends PipelineBinaryCommands, DatabasePipelineCommands, StreamPipelineBinaryCommands {
 
 		Response<Long> publish(String channel, String message);
 	}

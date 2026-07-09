@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,8 +49,11 @@ import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfigur
 import io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration;
 import io.valkey.springframework.data.valkey.connection.StringValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.lettuce.extension.LettuceConnectionFactoryExtension;
+import io.valkey.springframework.data.valkey.core.types.ValkeyClientInfo;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
+import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
+import io.valkey.springframework.data.valkey.util.ValkeyClientLibraryInfo;
 
 /**
  * Integration test of {@link LettuceConnectionFactory}
@@ -274,8 +277,7 @@ class LettuceConnectionFactoryTests {
 		try {
 			factory.getConnection();
 			fail("Expected connection failure exception");
-		} catch (ValkeyConnectionFailureException expected) {
-		}
+		} catch (ValkeyConnectionFailureException expected) {}
 	}
 
 	@Test
@@ -522,6 +524,35 @@ class LettuceConnectionFactoryTests {
 		connection.close();
 	}
 
+		@Test // GH-3268
+		@EnabledOnValkeyVersion("7.2")
+		void clientListReportsLettuceLibNameWithSpringDataSuffix() {
+
+			LettuceClientConfiguration configuration = LettuceTestClientConfiguration.builder().clientName("clientNameLibName")
+					.build();
+
+			LettuceConnectionFactory factory = new LettuceConnectionFactory(new ValkeyStandaloneConfiguration(), configuration);
+			factory.setShareNativeConnection(false);
+			factory.start();
+
+			ConnectionFactoryTracker.add(factory);
+
+			try (ValkeyConnection connection = factory.getConnection()) {
+
+				ValkeyClientInfo self = connection.serverCommands().getClientList()
+						.stream()
+						.filter(info -> "clientNameLibName".equals(info.getName()))
+						.findFirst()
+						.orElseThrow();
+
+				String expectedUpstreamDriver = "%s_v%s".formatted(ValkeyClientLibraryInfo.FRAMEWORK_NAME, ValkeyClientLibraryInfo.getVersion());
+				assertThat(self.get("lib-name")).startsWith("Lettuce(" + expectedUpstreamDriver);
+
+			} finally {
+				factory.destroy();
+			}
+		}
+
 	@Test // DATAREDIS-576
 	void getClientNameShouldEqualWithFactorySetting() {
 
@@ -543,8 +574,9 @@ class LettuceConnectionFactoryTests {
 
 		LettuceClientConfiguration configuration = LettuceTestClientConfiguration.builder().build();
 
-		ValkeyStaticMasterReplicaConfiguration elastiCache = new ValkeyStaticMasterReplicaConfiguration(
-				SettingsUtils.getHost()).node(SettingsUtils.getHost(), SettingsUtils.getPort() + 1);
+		ValkeyStaticMasterReplicaConfiguration elastiCache = new ValkeyStaticMasterReplicaConfiguration()
+				.node(SettingsUtils.getHost(), SettingsUtils.getPort())
+				.node(SettingsUtils.getHost(), SettingsUtils.getPort() + 1);
 
 		LettuceConnectionFactory factory = new LettuceConnectionFactory(elastiCache, configuration);
 		factory.setEagerInitialization(true);

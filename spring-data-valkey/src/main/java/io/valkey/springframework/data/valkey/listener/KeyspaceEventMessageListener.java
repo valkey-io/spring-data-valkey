@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package io.valkey.springframework.data.valkey.listener;
 
 import java.util.Properties;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
 import io.valkey.springframework.data.valkey.connection.Message;
@@ -24,7 +25,6 @@ import io.valkey.springframework.data.valkey.connection.MessageListener;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -76,7 +76,7 @@ public abstract class KeyspaceEventMessageListener implements MessageListener, I
 	}
 
 	@Override
-	public void onMessage(Message message, @Nullable byte[] pattern) {
+	public void onMessage(Message message, byte @Nullable [] pattern) {
 
 		if (ObjectUtils.isEmpty(message.getChannel()) || ObjectUtils.isEmpty(message.getBody())) {
 			return;
@@ -93,7 +93,7 @@ public abstract class KeyspaceEventMessageListener implements MessageListener, I
 	protected abstract void doHandleMessage(Message message);
 
 	/**
-	 * Initialize the message listener by writing requried valkey config for {@literal notify-keyspace-events} and
+	 * Initialize the message listener by writing required Valkey config for {@literal notify-keyspace-events} and
 	 * registering the listener within the container.
 	 */
 	public void init() {

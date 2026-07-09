@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,11 @@ import java.util.Collections;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.cache.support.NullValue;
 import org.springframework.core.KotlinDetector;
 import org.springframework.data.util.Lazy;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
@@ -59,24 +60,27 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
  * Generic Jackson 2-based {@link ValkeySerializer} that maps {@link Object objects} to and from {@literal JSON} using
  * dynamic typing.
  * <p>
- * {@literal JSON} reading and writing can be customized by configuring a {@link JacksonObjectReader} and
- * {@link JacksonObjectWriter}.
+ * {@literal JSON} reading and writing can be customized by configuring a {@link Jackson2ObjectReader} and
+ * {@link Jackson2ObjectWriter}.
  *
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author Mao Shuai
  * @author John Blum
  * @author Anne Lee
- * @see io.valkey.springframework.data.valkey.serializer.JacksonObjectReader
- * @see io.valkey.springframework.data.valkey.serializer.JacksonObjectWriter
+ * @see Jackson2ObjectReader
+ * @see Jackson2ObjectWriter
  * @see com.fasterxml.jackson.databind.ObjectMapper
  * @since 1.6
+ * @deprecated since 4.0 in favor of {@link GenericJacksonJsonValkeySerializer}
  */
+@SuppressWarnings("removal")
+@Deprecated(since = "4.0", forRemoval = true)
 public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Object> {
 
-	private final JacksonObjectReader reader;
+	private final Jackson2ObjectReader reader;
 
-	private final JacksonObjectWriter writer;
+	private final Jackson2ObjectWriter writer;
 
 	private final Lazy<Boolean> defaultTypingEnabled;
 
@@ -105,27 +109,27 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 	 * @see ObjectMapper#activateDefaultTyping(PolymorphicTypeValidator, DefaultTyping, As)
 	 */
 	public GenericJackson2JsonValkeySerializer(@Nullable String typeHintPropertyName) {
-		this(typeHintPropertyName, JacksonObjectReader.create(), JacksonObjectWriter.create());
+		this(typeHintPropertyName, Jackson2ObjectReader.create(), Jackson2ObjectWriter.create());
 	}
 
 	/**
 	 * Creates {@link GenericJackson2JsonValkeySerializer} initialized with an {@link ObjectMapper} configured for default
-	 * typing using the given {@link String name} along with the given, required {@link JacksonObjectReader} and
-	 * {@link JacksonObjectWriter} used to read/write {@link Object Objects} de/serialized as JSON.
+	 * typing using the given {@link String name} along with the given, required {@link Jackson2ObjectReader} and
+	 * {@link Jackson2ObjectWriter} used to read/write {@link Object Objects} de/serialized as JSON.
 	 * <p>
 	 * In case {@link String name} is {@literal empty} or {@literal null}, then {@link JsonTypeInfo.Id#CLASS} will be
 	 * used.
 	 *
 	 * @param typeHintPropertyName {@link String name} of the JSON property holding type information; can be
 	 *          {@literal null}.
-	 * @param reader {@link JacksonObjectReader} function to read objects using {@link ObjectMapper}.
-	 * @param writer {@link JacksonObjectWriter} function to write objects using {@link ObjectMapper}.
+	 * @param reader {@link Jackson2ObjectReader} function to read objects using {@link ObjectMapper}.
+	 * @param writer {@link Jackson2ObjectWriter} function to write objects using {@link ObjectMapper}.
 	 * @see ObjectMapper#activateDefaultTypingAsProperty(PolymorphicTypeValidator, DefaultTyping, String)
 	 * @see ObjectMapper#activateDefaultTyping(PolymorphicTypeValidator, DefaultTyping, As)
 	 * @since 3.0
 	 */
-	public GenericJackson2JsonValkeySerializer(@Nullable String typeHintPropertyName, JacksonObjectReader reader,
-			JacksonObjectWriter writer) {
+	public GenericJackson2JsonValkeySerializer(@Nullable String typeHintPropertyName, Jackson2ObjectReader reader,
+			Jackson2ObjectWriter writer) {
 
 		this(new ObjectMapper(), reader, writer, typeHintPropertyName);
 
@@ -142,7 +146,7 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 	 * @param mapper must not be {@literal null}.
 	 */
 	public GenericJackson2JsonValkeySerializer(ObjectMapper mapper) {
-		this(mapper, JacksonObjectReader.create(), JacksonObjectWriter.create());
+		this(mapper, Jackson2ObjectReader.create(), Jackson2ObjectWriter.create());
 	}
 
 	/**
@@ -151,17 +155,17 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 	 * specific types.
 	 *
 	 * @param mapper must not be {@literal null}.
-	 * @param reader the {@link JacksonObjectReader} function to read objects using {@link ObjectMapper}.
-	 * @param writer the {@link JacksonObjectWriter} function to write objects using {@link ObjectMapper}.
+	 * @param reader the {@link Jackson2ObjectReader} function to read objects using {@link ObjectMapper}.
+	 * @param writer the {@link Jackson2ObjectWriter} function to write objects using {@link ObjectMapper}.
 	 * @since 3.0
 	 */
-	public GenericJackson2JsonValkeySerializer(ObjectMapper mapper, JacksonObjectReader reader,
-			JacksonObjectWriter writer) {
+	public GenericJackson2JsonValkeySerializer(ObjectMapper mapper, Jackson2ObjectReader reader,
+			Jackson2ObjectWriter writer) {
 		this(mapper, reader, writer, null);
 	}
 
-	private GenericJackson2JsonValkeySerializer(ObjectMapper mapper, JacksonObjectReader reader,
-			JacksonObjectWriter writer, @Nullable String typeHintPropertyName) {
+	private GenericJackson2JsonValkeySerializer(ObjectMapper mapper, Jackson2ObjectReader reader,
+			Jackson2ObjectWriter writer, @Nullable String typeHintPropertyName) {
 
 		Assert.notNull(mapper, "ObjectMapper must not be null");
 		Assert.notNull(reader, "Reader must not be null");
@@ -276,8 +280,7 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 	}
 
 	@Override
-	@Nullable
-	public Object deserialize(@Nullable byte[] source) throws SerializationException {
+	public @Nullable Object deserialize(byte @Nullable [] source) throws SerializationException {
 		return deserialize(source, Object.class);
 	}
 
@@ -294,9 +297,8 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 	 * @throws SerializationException if the array of bytes cannot be deserialized as an instance of the given
 	 *           {@link Class type}
 	 */
-	@Nullable
 	@SuppressWarnings("unchecked")
-	public <T> T deserialize(@Nullable byte[] source, Class<T> type) throws SerializationException {
+	public <T> @Nullable T deserialize(byte @Nullable [] source, Class<T> type) throws SerializationException {
 
 		Assert.notNull(type, "Deserialization type must not be null;"
 				+ " Please provide Object.class to make use of Jackson2 default typing.");
@@ -410,6 +412,7 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 			cfg.initialize(parser);
 			return parser;
 		}
+
 	}
 
 	/**
@@ -449,6 +452,7 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 
 			serialize(value, jsonGenerator, serializers);
 		}
+
 	}
 
 	/**
@@ -462,9 +466,9 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 
 		private @Nullable String typeHintPropertyName;
 
-		private JacksonObjectReader reader = JacksonObjectReader.create();
+		private Jackson2ObjectReader reader = Jackson2ObjectReader.create();
 
-		private JacksonObjectWriter writer = JacksonObjectWriter.create();
+		private Jackson2ObjectWriter writer = Jackson2ObjectWriter.create();
 
 		private @Nullable ObjectMapper objectMapper;
 
@@ -520,12 +524,12 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 		}
 
 		/**
-		 * Configure {@link JacksonObjectReader}.
+		 * Configure {@link Jackson2ObjectReader}.
 		 *
 		 * @param reader must not be {@literal null}.
 		 * @return this {@link GenericJackson2JsonValkeySerializer.GenericJackson2JsonValkeySerializerBuilder}.
 		 */
-		public GenericJackson2JsonValkeySerializerBuilder reader(JacksonObjectReader reader) {
+		public GenericJackson2JsonValkeySerializerBuilder reader(Jackson2ObjectReader reader) {
 
 			Assert.notNull(reader, "JacksonObjectReader must not be null");
 
@@ -534,12 +538,12 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 		}
 
 		/**
-		 * Configure {@link JacksonObjectWriter}.
+		 * Configure {@link Jackson2ObjectWriter}.
 		 *
 		 * @param writer must not be {@literal null}.
 		 * @return this {@link GenericJackson2JsonValkeySerializer.GenericJackson2JsonValkeySerializerBuilder}.
 		 */
-		public GenericJackson2JsonValkeySerializerBuilder writer(JacksonObjectWriter writer) {
+		public GenericJackson2JsonValkeySerializerBuilder writer(Jackson2ObjectWriter writer) {
 
 			Assert.notNull(writer, "JacksonObjectWriter must not be null");
 
@@ -602,6 +606,7 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 
 			return new GenericJackson2JsonValkeySerializer(objectMapper, this.reader, this.writer, this.typeHintPropertyName);
 		}
+
 	}
 
 	/**
@@ -672,5 +677,7 @@ public class GenericJackson2JsonValkeySerializer implements ValkeySerializer<Obj
 
 			return type;
 		}
+
 	}
+
 }

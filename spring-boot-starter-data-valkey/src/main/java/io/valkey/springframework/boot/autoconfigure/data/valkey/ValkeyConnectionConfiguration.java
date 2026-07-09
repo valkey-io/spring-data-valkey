@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,13 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.beans.factory.ObjectProvider;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.Cluster;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.Node;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.Sentinel;
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.Standalone;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.Pool;
 import org.springframework.boot.ssl.SslBundle;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
@@ -30,6 +33,8 @@ import io.valkey.springframework.data.valkey.connection.ValkeyNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration;
+import org.springframework.util.Assert;
 import org.springframework.util.ClassUtils;
 
 /**
@@ -52,24 +57,29 @@ abstract class ValkeyConnectionConfiguration {
 
 	private final ValkeyProperties properties;
 
-	private final ValkeyStandaloneConfiguration standaloneConfiguration;
+	private final @Nullable ValkeyStandaloneConfiguration standaloneConfiguration;
 
-	private final ValkeySentinelConfiguration sentinelConfiguration;
+	private final @Nullable ValkeySentinelConfiguration sentinelConfiguration;
 
-	private final ValkeyClusterConfiguration clusterConfiguration;
+	private final @Nullable ValkeyClusterConfiguration clusterConfiguration;
+
+	private final @Nullable ValkeyStaticMasterReplicaConfiguration masterReplicaConfiguration;
 
 	private final ValkeyConnectionDetails connectionDetails;
 
 	protected final Mode mode;
 
-	protected ValkeyConnectionConfiguration(ValkeyProperties properties, ValkeyConnectionDetails connectionDetails,
+	protected ValkeyConnectionConfiguration(ValkeyProperties properties,
+			ValkeyConnectionDetails connectionDetails,
 			ObjectProvider<ValkeyStandaloneConfiguration> standaloneConfigurationProvider,
 			ObjectProvider<ValkeySentinelConfiguration> sentinelConfigurationProvider,
-			ObjectProvider<ValkeyClusterConfiguration> clusterConfigurationProvider) {
+			ObjectProvider<ValkeyClusterConfiguration> clusterConfigurationProvider,
+			ObjectProvider<ValkeyStaticMasterReplicaConfiguration> masterReplicaConfiguration) {
 		this.properties = properties;
 		this.standaloneConfiguration = standaloneConfigurationProvider.getIfAvailable();
 		this.sentinelConfiguration = sentinelConfigurationProvider.getIfAvailable();
 		this.clusterConfiguration = clusterConfigurationProvider.getIfAvailable();
+		this.masterReplicaConfiguration = masterReplicaConfiguration.getIfAvailable();
 		this.connectionDetails = connectionDetails;
 		this.mode = determineMode();
 	}
@@ -79,15 +89,17 @@ abstract class ValkeyConnectionConfiguration {
 			return this.standaloneConfiguration;
 		}
 		ValkeyStandaloneConfiguration config = new ValkeyStandaloneConfiguration();
-		config.setHostName(this.connectionDetails.getStandalone().getHost());
-		config.setPort(this.connectionDetails.getStandalone().getPort());
+		Standalone standalone = this.connectionDetails.getStandalone();
+		Assert.state(standalone != null, "'standalone' must not be null");
+		config.setHostName(standalone.getHost());
+		config.setPort(standalone.getPort());
 		config.setUsername(this.connectionDetails.getUsername());
 		config.setPassword(ValkeyPassword.of(this.connectionDetails.getPassword()));
-		config.setDatabase(this.connectionDetails.getStandalone().getDatabase());
+		config.setDatabase(standalone.getDatabase());
 		return config;
 	}
 
-	protected final ValkeySentinelConfiguration getSentinelConfig() {
+	protected final @Nullable ValkeySentinelConfiguration getSentinelConfig() {
 		if (this.sentinelConfiguration != null) {
 			return this.sentinelConfiguration;
 		}
@@ -115,7 +127,7 @@ abstract class ValkeyConnectionConfiguration {
 	 * Create a {@link ValkeyClusterConfiguration} if necessary.
 	 * @return {@literal null} if no cluster settings are set.
 	 */
-	protected final ValkeyClusterConfiguration getClusterConfiguration() {
+	protected final @Nullable ValkeyClusterConfiguration getClusterConfiguration() {
 		if (this.clusterConfiguration != null) {
 			return this.clusterConfiguration;
 		}
@@ -126,6 +138,26 @@ abstract class ValkeyConnectionConfiguration {
 			if (clusterProperties != null && clusterProperties.getMaxRedirects() != null) {
 				config.setMaxRedirects(clusterProperties.getMaxRedirects());
 			}
+			config.setUsername(this.connectionDetails.getUsername());
+			String password = this.connectionDetails.getPassword();
+			if (password != null) {
+				config.setPassword(ValkeyPassword.of(password));
+			}
+			return config;
+		}
+		return null;
+	}
+
+	protected final @Nullable ValkeyStaticMasterReplicaConfiguration getMasterReplicaConfiguration() {
+		if (this.masterReplicaConfiguration != null) {
+			return this.masterReplicaConfiguration;
+		}
+		if (this.connectionDetails.getMasterReplica() != null) {
+			List<Node> nodes = this.connectionDetails.getMasterReplica().getNodes();
+			Assert.state(!nodes.isEmpty(), "At least one node is required for master-replica configuration");
+			ValkeyStaticMasterReplicaConfiguration config = new ValkeyStaticMasterReplicaConfiguration(
+					nodes.get(0).host(), nodes.get(0).port());
+			nodes.stream().skip(1).forEach((node) -> config.addNode(node.host(), node.port()));
 			config.setUsername(this.connectionDetails.getUsername());
 			String password = this.connectionDetails.getPassword();
 			if (password != null) {
@@ -148,23 +180,16 @@ abstract class ValkeyConnectionConfiguration {
 		return this.properties;
 	}
 
-	protected SslBundle getSslBundle() {
-		return switch (this.mode) {
-			case STANDALONE -> (this.connectionDetails.getStandalone() != null)
-					? this.connectionDetails.getStandalone().getSslBundle() : null;
-			case CLUSTER -> (this.connectionDetails.getCluster() != null)
-					? this.connectionDetails.getCluster().getSslBundle() : null;
-			case SENTINEL -> (this.connectionDetails.getSentinel() != null)
-					? this.connectionDetails.getSentinel().getSslBundle() : null;
-		};
+	protected @Nullable SslBundle getSslBundle() {
+		return this.connectionDetails.getSslBundle();
 	}
 
 	protected final boolean isSslEnabled() {
 		return getProperties().getSsl().isEnabled();
 	}
 
-	protected final boolean urlUsesSsl() {
-		return ValkeyUrl.of(this.properties.getUrl()).useSsl();
+	protected final boolean urlUsesSsl(String url) {
+		return ValkeyUrl.of(url).useSsl();
 	}
 
 	protected boolean isPoolEnabled(Pool pool) {
@@ -191,12 +216,15 @@ abstract class ValkeyConnectionConfiguration {
 		if (getClusterConfiguration() != null) {
 			return Mode.CLUSTER;
 		}
+		if (getMasterReplicaConfiguration() != null) {
+			return Mode.MASTER_REPLICA;
+		}
 		return Mode.STANDALONE;
 	}
 
 	enum Mode {
 
-		STANDALONE, CLUSTER, SENTINEL
+		STANDALONE, CLUSTER, MASTER_REPLICA, SENTINEL
 
 	}
 

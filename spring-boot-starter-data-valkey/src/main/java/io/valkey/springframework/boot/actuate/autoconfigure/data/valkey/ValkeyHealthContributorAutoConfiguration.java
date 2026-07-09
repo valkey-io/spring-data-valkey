@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +17,23 @@
 package io.valkey.springframework.boot.actuate.autoconfigure.data.valkey;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.actuate.autoconfigure.health.CompositeHealthContributorConfiguration;
-import org.springframework.boot.actuate.autoconfigure.health.ConditionalOnEnabledHealthIndicator;
-import org.springframework.boot.actuate.health.HealthContributor;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.context.annotation.Bean;
-
-import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyAutoConfiguration;
+import io.valkey.springframework.boot.actuate.data.valkey.ValkeyHealthIndicator;
+import org.springframework.boot.health.autoconfigure.contributor.CompositeHealthContributorConfiguration;
+import org.springframework.boot.health.autoconfigure.contributor.ConditionalOnEnabledHealthIndicator;
+import org.springframework.boot.health.contributor.HealthContributor;
+import org.springframework.boot.health.contributor.HealthIndicator;
+import org.springframework.context.annotation.Bean;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 
 /**
- * {@link EnableAutoConfiguration Auto-configuration} for {@link ValkeyHealthIndicator}.
+ * {@link EnableAutoConfiguration Auto-configuration} for
+ * {@link ValkeyHealthIndicator}.
  *
  * @author Christian Dupuis
  * @author Richard Santana
@@ -40,11 +41,12 @@ import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
  * @author Mark Paluch
  * @since 2.1.0
  */
-@AutoConfiguration(after = { ValkeyAutoConfiguration.class, ValkeyReactiveHealthContributorAutoConfiguration.class })
-@ConditionalOnClass({ ValkeyConnectionFactory.class, HealthContributor.class })
+@AutoConfiguration(
+		after = { ValkeyAutoConfiguration.class, ValkeyReactiveHealthContributorAutoConfiguration.class })
+@ConditionalOnClass({ ValkeyConnectionFactory.class, HealthIndicator.class, ConditionalOnEnabledHealthIndicator.class })
 @ConditionalOnBean(ValkeyConnectionFactory.class)
 @ConditionalOnEnabledHealthIndicator("valkey")
-public class ValkeyHealthContributorAutoConfiguration
+public final class ValkeyHealthContributorAutoConfiguration
 		extends CompositeHealthContributorConfiguration<ValkeyHealthIndicator, ValkeyConnectionFactory> {
 
 	ValkeyHealthContributorAutoConfiguration() {
@@ -53,7 +55,7 @@ public class ValkeyHealthContributorAutoConfiguration
 
 	@Bean
 	@ConditionalOnMissingBean(name = { "valkeyHealthIndicator", "valkeyHealthContributor" })
-	public HealthContributor valkeyHealthContributor(ConfigurableListableBeanFactory beanFactory) {
+	HealthContributor valkeyHealthContributor(ConfigurableListableBeanFactory beanFactory) {
 		return createContributor(beanFactory, ValkeyConnectionFactory.class);
 	}
 

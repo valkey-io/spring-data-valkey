@@ -1,5 +1,5 @@
 /*
- * Copyright 2019-2025 the original author or authors.
+ * Copyright 2019-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -46,7 +47,6 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConfiguration;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
-import org.springframework.lang.Nullable;
 
 /**
  * Integration tests to listen for keyspace notifications.

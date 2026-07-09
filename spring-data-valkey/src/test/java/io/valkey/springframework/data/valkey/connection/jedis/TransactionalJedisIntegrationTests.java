@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,19 +22,32 @@ import io.valkey.springframework.data.valkey.connection.AbstractTransactionalTes
 import org.springframework.test.context.ContextConfiguration;
 
 /**
+ * Integration tests for Spring {@code @Transactional} support with legacy {@link JedisConnection}.
+ * <p>
+ * Tests rollback/commit behavior and transaction synchronization when using the legacy Jedis API with
+ * {@link JedisConnection}.
+ *
  * @author Christoph Strobl
  * @author Mark Paluch
+ * @see TransactionalUnifiedJedisIntegrationTests
+ * @see JedisConnection
  */
 @ContextConfiguration
 public class TransactionalJedisIntegrationTests extends AbstractTransactionalTestBase {
 
 	@Configuration
-	public static class JedisContextConfiguration extends ValkeyContextConfiguration {
+	public static class JedisConfiguration extends ValkeyContextConfiguration {
 
 		@Override
 		@Bean
 		public JedisConnectionFactory valkeyConnectionFactory() {
-			return new JedisConnectionFactory(SettingsUtils.standaloneConfiguration());
+			// Use anonymous subclass to force legacy JedisConnection mode
+			return new JedisConnectionFactory(SettingsUtils.standaloneConfiguration()) {
+				@Override
+				public boolean isUseUnifiedJedis() {
+					return false; // Force legacy JedisConnection
+				}
+			};
 		}
 	}
 }

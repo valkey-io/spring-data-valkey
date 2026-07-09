@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 
 /**
  * {@literal HyperLogLog} specific commands supported by Valkey.
@@ -23,7 +24,9 @@ import org.springframework.lang.Nullable;
  * @author Christoph Strobl
  * @author Mark Paluch
  * @since 1.5
+ * @see ValkeyCommands
  */
+@NullUnmarked
 public interface ValkeyHyperLogLogCommands {
 
 	/**
@@ -34,8 +37,7 @@ public interface ValkeyHyperLogLogCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/pfadd">Valkey Documentation: PFADD</a>
 	 */
-	@Nullable
-	Long pfAdd(byte[] key, byte[]... values);
+	Long pfAdd(byte @NonNull [] key, byte @NonNull [] @NonNull... values);
 
 	/**
 	 * Return the approximated cardinality of the structures observed by the HyperLogLog at {@literal key(s)}.
@@ -44,8 +46,7 @@ public interface ValkeyHyperLogLogCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/pfcount">Valkey Documentation: PFCOUNT</a>
 	 */
-	@Nullable
-	Long pfCount(byte[]... keys);
+	Long pfCount(byte @NonNull [] @NonNull... keys);
 
 	/**
 	 * Merge N different HyperLogLogs at {@literal sourceKeys} into a single {@literal destinationKey}.
@@ -54,6 +55,6 @@ public interface ValkeyHyperLogLogCommands {
 	 * @param sourceKeys must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/pfmerge">Valkey Documentation: PFMERGE</a>
 	 */
-	void pfMerge(byte[] destinationKey, byte[]... sourceKeys);
+	void pfMerge(byte @NonNull [] destinationKey, byte @NonNull [] @NonNull... sourceKeys);
 
 }

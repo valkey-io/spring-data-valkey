@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,10 @@ import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.ObjectFactory;
 import io.valkey.springframework.data.valkey.RawObjectFactory;
@@ -41,14 +44,14 @@ import io.valkey.springframework.data.valkey.StringObjectFactory;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnection;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
+import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
 import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import io.valkey.springframework.data.valkey.test.extension.LettuceTestClientResources;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * Integration tests for {@link DefaultReactiveHashOperations}.
@@ -56,6 +59,7 @@ import io.valkey.springframework.data.valkey.test.extension.parametrized.Paramet
  * @author Mark Paluch
  * @author Christoph Strobl
  */
+@ParameterizedClass
 @MethodSource("testParams")
 @SuppressWarnings("unchecked")
 public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
@@ -110,7 +114,8 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 		connection.close();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test
+	// DATAREDIS-602
 	void remove() {
 
 		K key = keyFactory.instance();
@@ -128,7 +133,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void hasKey() {
 
 		K key = keyFactory.instance();
@@ -151,7 +156,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void get() {
 
 		K key = keyFactory.instance();
@@ -169,14 +174,14 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-824
+	@Test // DATAREDIS-824
 	void getAbsentKey() {
 
 		hashOperations.get(keyFactory.instance(), hashKeyFactory.instance()).as(StepVerifier::create) //
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void multiGet() {
 
 		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
@@ -198,7 +203,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-824
+	@Test // DATAREDIS-824
 	void multiGetAbsentKeys() {
 
 		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
@@ -212,7 +217,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void increment() {
 
 		assumeThat(hashValueFactory instanceof StringObjectFactory).isTrue();
@@ -237,7 +242,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2048
+	@Test // GH-2048
 	@EnabledOnCommand("HRANDFIELD")
 	void randomField() {
 
@@ -272,7 +277,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-2048
+	@Test // GH-2048
 	@EnabledOnCommand("HRANDFIELD")
 	void randomValue() {
 
@@ -312,7 +317,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	@DisabledOnOs(value = MAC, architectures = "aarch64")
 	@SuppressWarnings("unchecked")
 	void incrementDouble() {
@@ -339,7 +344,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void keys() {
 
 		assumeThat(hashKeyFactory instanceof StringObjectFactory).isTrue();
@@ -359,7 +364,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void size() {
 
 		K key = keyFactory.instance();
@@ -377,7 +382,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void putAll() {
 
 		K key = keyFactory.instance();
@@ -400,7 +405,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void put() {
 
 		K key = keyFactory.instance();
@@ -413,7 +418,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void putIfAbsent() {
 
 		K key = keyFactory.instance();
@@ -432,7 +437,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void values() {
 
 		assumeThat(hashValueFactory instanceof StringObjectFactory).isTrue();
@@ -452,7 +457,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void entries() {
 
 		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
@@ -479,7 +484,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-743
+	@Test // DATAREDIS-743
 	void scan() {
 
 		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
@@ -507,7 +512,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 	}
 
 	@EnabledOnCommand("HEXPIRE") // GH-3054
-	@ParameterizedValkeyTest
+	@Test
 	void testExpireAndGetExpireMillis() {
 
 		K key = keyFactory.instance();
@@ -531,7 +536,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-3054
+	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
 	void testExpireWithOptions() {
 
@@ -568,7 +573,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-3054
+	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
 	void testExpireAndGetExpireSeconds() {
 
@@ -594,7 +599,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-3054
+	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
 	void testExpireAtAndGetExpireMillis() {
 
@@ -619,7 +624,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // GH-3054
+	@Test // GH-3054
 	@EnabledOnCommand("HEXPIRE")
 	void testPersistAndGetExpireMillis() {
 
@@ -648,7 +653,7 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				}).verifyComplete();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-602
+	@Test // DATAREDIS-602
 	void delete() {
 
 		K key = keyFactory.instance();
@@ -681,5 +686,364 @@ public class DefaultReactiveHashOperationsIntegrationTests<K, HK, HV> {
 				.as(StepVerifier::create) //
 				.expectNext(true) //
 				.verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETDEL")
+	void getAndDeleteSingleKey() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+
+		putAll(key, hashkey1, hashvalue1, hashkey2, hashvalue2);
+
+		hashOperations.getAndDelete(key, Arrays.asList(hashkey1)).as(StepVerifier::create).consumeNextWith(actual -> {
+			assertThat(actual).hasSize(1).containsExactly(hashvalue1);
+		}).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey1).as(StepVerifier::create).expectNext(false).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(true).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETDEL")
+	void getAndDeletePartialKeys() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+
+		putAll(key, hashkey1, hashvalue1, hashkey2, hashvalue2);
+
+		hashOperations.getAndDelete(key, Arrays.asList(hashkey1)).as(StepVerifier::create).consumeNextWith(actual -> {
+			assertThat(actual).hasSize(1).containsExactly(hashvalue1);
+		}).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey1).as(StepVerifier::create).expectNext(false).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.get(key, hashkey2).as(StepVerifier::create).expectNext(hashvalue2).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETDEL")
+	void getAndDeleteNonExistentKeys() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+		HK nonExistentKey = hashKeyFactory.instance();
+
+		putAll(key, hashkey1, hashvalue1, hashkey2, hashvalue2);
+
+		hashOperations.getAndDelete(key, Arrays.asList(nonExistentKey)).as(StepVerifier::create).consumeNextWith(actual -> {
+			assertThat(actual).hasSize(1).containsExactly((HV) null);
+		}).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey1).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(true).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETDEL")
+	void getAndDeleteKeyDeletionBehavior() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+
+		putAll(key, hashkey1, hashvalue1, hashkey2, hashvalue2);
+
+		valkeyTemplate.hasKey(key).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.getAndDelete(key, Arrays.asList(hashkey1, hashkey2)).as(StepVerifier::create)
+				.consumeNextWith(actual -> {
+					assertThat(actual).hasSize(2).containsSequence(hashvalue1, hashvalue2);
+				}).verifyComplete();
+
+		hashOperations.size(key).as(StepVerifier::create).expectNext(0L).verifyComplete();
+
+		valkeyTemplate.hasKey(key).as(StepVerifier::create).expectNext(false).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETDEL")
+	void getAndDeleteFromNonExistentHash() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K nonExistentKey = keyFactory.instance();
+		HK hashkey = hashKeyFactory.instance();
+
+		hashOperations.getAndDelete(nonExistentKey, Arrays.asList(hashkey)).as(StepVerifier::create)
+				.consumeNextWith(actual -> {
+					assertThat(actual).hasSize(1).containsExactly((HV) null);
+				}).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETEX")
+	void getAndExpireSingleKey() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+
+		putAll(key, hashkey1, hashvalue1, hashkey2, hashvalue2);
+
+		hashOperations.getAndExpire(key, Expiration.seconds(60), Arrays.asList(hashkey1)).as(StepVerifier::create)
+				.consumeNextWith(actual -> {
+					assertThat(actual).hasSize(1).containsExactly(hashvalue1);
+				}).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey1).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(true).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETEX")
+	void getAndExpireMultipleKeys() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+
+		putAll(key, hashkey1, hashvalue1, hashkey2, hashvalue2);
+
+		hashOperations.getAndExpire(key, Expiration.seconds(120), Arrays.asList(hashkey1, hashkey2))
+				.as(StepVerifier::create).consumeNextWith(actual -> {
+					assertThat(actual).hasSize(2).containsExactly(hashvalue1, hashvalue2);
+				}).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey1).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(true).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HGETEX")
+	void getAndExpireNonExistentKey() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+
+		hashOperations.getAndExpire(key, Expiration.seconds(60), Arrays.asList(hashkey1)).as(StepVerifier::create)
+				.consumeNextWith(actual -> {
+					assertThat(actual).hasSize(1).containsExactly((HV) null);
+				}).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void putAndExpireUpsert() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+
+		Map<HK, HV> fieldMap = Map.of(hashkey1, hashvalue1, hashkey2, hashvalue2);
+
+		hashOperations.putAndExpire(key, fieldMap, ValkeyHashCommands.HashFieldSetOption.upsert(), Expiration.seconds(60))
+				.as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		// Verify fields were set
+		hashOperations.hasKey(key, hashkey1).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.get(key, hashkey1).as(StepVerifier::create).expectNext(hashvalue1).verifyComplete();
+
+		hashOperations.get(key, hashkey2).as(StepVerifier::create).expectNext(hashvalue2).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void putAndExpireIfNoneExist() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+		HK hashkey3 = hashKeyFactory.instance();
+		HV hashvalue3 = hashValueFactory.instance();
+
+		// Set up existing field
+		hashOperations.put(key, hashkey1, hashvalue1).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		// Try to set fields where one already exists - should fail
+		Map<HK, HV> fieldMap = Map.of(hashkey1, hashvalue2, hashkey2, hashvalue2);
+
+		hashOperations
+				.putAndExpire(key, fieldMap, ValkeyHashCommands.HashFieldSetOption.ifNoneExist(), Expiration.seconds(60))
+				.as(StepVerifier::create).expectNext(false).verifyComplete();
+
+		// Verify original value unchanged and new field not set
+		hashOperations.get(key, hashkey1).as(StepVerifier::create).expectNext(hashvalue1).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(false).verifyComplete();
+
+		// Try with all new fields - should succeed
+		Map<HK, HV> newFieldMap = Map.of(hashkey2, hashvalue2, hashkey3, hashvalue3);
+
+		hashOperations
+				.putAndExpire(key, newFieldMap, ValkeyHashCommands.HashFieldSetOption.ifNoneExist(), Expiration.seconds(120))
+				.as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		// Verify new fields were set
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey3).as(StepVerifier::create).expectNext(true).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void putAndExpireIfAllExist() {
+
+		assumeThat(hashKeyFactory instanceof StringObjectFactory && hashValueFactory instanceof StringObjectFactory)
+				.isTrue();
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+		HK hashkey3 = hashKeyFactory.instance();
+		HV hashvalue3 = hashValueFactory.instance();
+
+		// Set up existing fields
+		putAll(key, hashkey1, hashvalue1, hashkey2, hashvalue2);
+
+		// Try to update existing fields - should succeed
+		Map<HK, HV> fieldMap = Map.of(hashkey1, hashvalue3, hashkey2, hashvalue3);
+
+		hashOperations
+				.putAndExpire(key, fieldMap, ValkeyHashCommands.HashFieldSetOption.ifAllExist(), Expiration.seconds(60))
+				.as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		// Verify values were updated
+		hashOperations.get(key, hashkey1).as(StepVerifier::create).expectNext(hashvalue3).verifyComplete();
+
+		hashOperations.get(key, hashkey2).as(StepVerifier::create).expectNext(hashvalue3).verifyComplete();
+
+		// Try with non-existent field - should fail
+		Map<HK, HV> mixedFieldMap = Map.of(hashkey1, hashvalue1, hashkey3, hashvalue1);
+
+		hashOperations
+				.putAndExpire(key, mixedFieldMap, ValkeyHashCommands.HashFieldSetOption.ifAllExist(), Expiration.seconds(120))
+				.as(StepVerifier::create).expectNext(false).verifyComplete();
+
+		// Verify values unchanged
+		hashOperations.get(key, hashkey1).as(StepVerifier::create).expectNext(hashvalue3).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey3).as(StepVerifier::create).expectNext(false).verifyComplete();
+	}
+
+	@Test // GH-3211
+	@EnabledOnCommand("HSETEX")
+	void putAndExpireWithDifferentExpirationPolicies() {
+
+		K key = keyFactory.instance();
+		HK hashkey1 = hashKeyFactory.instance();
+		HV hashvalue1 = hashValueFactory.instance();
+		HK hashkey2 = hashKeyFactory.instance();
+		HV hashvalue2 = hashValueFactory.instance();
+		HK hashkey3 = hashKeyFactory.instance();
+		HV hashvalue3 = hashValueFactory.instance();
+		HK hashkey4 = hashKeyFactory.instance();
+		HV hashvalue4 = hashValueFactory.instance();
+		HK hashkey5 = hashKeyFactory.instance();
+		HV hashvalue5 = hashValueFactory.instance();
+
+		// Test with seconds expiration
+		Map<HK, HV> fieldMap1 = Map.of(hashkey1, hashvalue1);
+		hashOperations.putAndExpire(key, fieldMap1, ValkeyHashCommands.HashFieldSetOption.upsert(), Expiration.seconds(60))
+				.as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey1).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		// Test with milliseconds expiration
+		Map<HK, HV> fieldMap2 = Map.of(hashkey2, hashvalue2);
+		hashOperations
+				.putAndExpire(key, fieldMap2, ValkeyHashCommands.HashFieldSetOption.upsert(), Expiration.milliseconds(120000))
+				.as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey2).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		// Test with Duration expiration
+		Map<HK, HV> fieldMap3 = Map.of(hashkey3, hashvalue3);
+		hashOperations.putAndExpire(key, fieldMap3, ValkeyHashCommands.HashFieldSetOption.upsert(),
+				Expiration.from(Duration.ofMinutes(3))).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey3).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		// Test with unix timestamp expiration (5 minutes from now)
+		long futureTimestamp = System.currentTimeMillis() / 1000 + 300; // 5 minutes from now
+		Map<HK, HV> fieldMap4 = Map.of(hashkey4, hashvalue4);
+		hashOperations
+				.putAndExpire(key, fieldMap4, ValkeyHashCommands.HashFieldSetOption.upsert(),
+						Expiration.unixTimestamp(futureTimestamp, TimeUnit.SECONDS))
+				.as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey4).as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		// Test with keepTtl expiration
+		// First set a field with TTL, then update it with keepTtl
+		hashOperations.put(key, hashkey5, hashvalue5).as(StepVerifier::create).expectNext(true).verifyComplete();
+		hashOperations.expire(key, Duration.ofMinutes(4), Arrays.asList(hashkey5)).as(StepVerifier::create)
+				.expectNextCount(1).verifyComplete();
+
+		Map<HK, HV> fieldMap5 = Map.of(hashkey5, hashvalue5);
+		hashOperations.putAndExpire(key, fieldMap5, ValkeyHashCommands.HashFieldSetOption.upsert(), Expiration.keepTtl())
+				.as(StepVerifier::create).expectNext(true).verifyComplete();
+
+		hashOperations.hasKey(key, hashkey5).as(StepVerifier::create).expectNext(true).verifyComplete();
 	}
 }

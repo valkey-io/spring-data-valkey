@@ -38,7 +38,7 @@ import glide.api.models.ClusterValue;
 import glide.api.models.GlideString;
 import glide.api.models.commands.scan.ClusterScanCursor;
 import glide.api.models.commands.scan.ScanOptions;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.StringUtils;
 
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;

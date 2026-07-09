@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands.Direction;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -29,6 +30,7 @@ import org.springframework.util.Assert;
  * @author Costin Leau
  * @author Mark Paluch
  */
+@NullUnmarked
 public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 
 	/**
@@ -39,7 +41,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lrange">Valkey Documentation: LRANGE</a>
 	 */
-	@Nullable
 	List<V> range(long start, long end);
 
 	/**
@@ -57,7 +58,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/llen">Valkey Documentation: LLEN</a>
 	 */
-	@Nullable
 	Long size();
 
 	/**
@@ -67,7 +67,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lpush">Valkey Documentation: LPUSH</a>
 	 */
-	@Nullable
 	Long leftPush(V value);
 
 	/**
@@ -77,7 +76,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lpush">Valkey Documentation: LPUSH</a>
 	 */
-	@Nullable
 	Long leftPushAll(V... values);
 
 	/**
@@ -87,7 +85,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lpushx">Valkey Documentation: LPUSHX</a>
 	 */
-	@Nullable
 	Long leftPushIfPresent(V value);
 
 	/**
@@ -97,8 +94,7 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lpush">Valkey Documentation: LPUSH</a>
 	 */
-	@Nullable
-	Long leftPush(V pivot, V value);
+	Long leftPush(@NonNull V pivot, V value);
 
 	/**
 	 * Append {@code value} to the bound key.
@@ -107,7 +103,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/rpush">Valkey Documentation: RPUSH</a>
 	 */
-	@Nullable
 	Long rightPush(V value);
 
 	/**
@@ -117,8 +112,7 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/rpush">Valkey Documentation: RPUSH</a>
 	 */
-	@Nullable
-	Long rightPushAll(V... values);
+	Long rightPushAll(V @NonNull... values);
 
 	/**
 	 * Append {@code values} to the bound key only if the list exists.
@@ -127,7 +121,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/rpushx">Valkey Documentation: RPUSHX</a>
 	 */
-	@Nullable
 	Long rightPushIfPresent(V value);
 
 	/**
@@ -137,8 +130,7 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lpush">Valkey Documentation: RPUSH</a>
 	 */
-	@Nullable
-	Long rightPush(V pivot, V value);
+	Long rightPush(@NonNull V pivot, V value);
 
 	/**
 	 * Atomically returns and removes the first/last element (head/tail depending on the {@code from} argument) of the
@@ -152,8 +144,7 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/lmove">Valkey Documentation: LMOVE</a>
 	 */
-	@Nullable
-	V move(Direction from, K destinationKey, Direction to);
+	V move(@NonNull Direction from, @NonNull K destinationKey, @NonNull Direction to);
 
 	/**
 	 * Atomically returns and removes the first/last element (head/tail depending on the {@code from} argument) of the
@@ -170,8 +161,7 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/blmove">Valkey Documentation: BLMOVE</a>
 	 */
-	@Nullable
-	V move(Direction from, K destinationKey, Direction to, Duration timeout);
+	V move(@NonNull Direction from, @NonNull K destinationKey, @NonNull Direction to, @NonNull Duration timeout);
 
 	/**
 	 * Atomically returns and removes the first/last element (head/tail depending on the {@code from} argument) of the
@@ -188,9 +178,11 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/blmove">Valkey Documentation: BLMOVE</a>
+	 * @deprecated since 4.1 in favor of {@link #move(Direction, Object, Direction, Duration)}.
 	 */
-	@Nullable
-	V move(Direction from, K destinationKey, Direction to, long timeout, TimeUnit unit);
+	@Deprecated(since = "4.1")
+	V move(@NonNull Direction from, @NonNull K destinationKey, @NonNull Direction to, long timeout,
+			@NonNull TimeUnit unit);
 
 	/**
 	 * Set the {@code value} list element at {@code index}.
@@ -209,7 +201,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lrem">Valkey Documentation: LREM</a>
 	 */
-	@Nullable
 	Long remove(long count, Object value);
 
 	/**
@@ -218,7 +209,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 3.4
 	 */
-	@Nullable
 	V getFirst();
 
 	/**
@@ -227,7 +217,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @since 3.4
 	 */
-	@Nullable
 	V getLast();
 
 	/**
@@ -237,7 +226,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lindex">Valkey Documentation: LINDEX</a>
 	 */
-	@Nullable
 	V index(long index);
 
 	/**
@@ -249,7 +237,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @since 2.4
 	 * @see <a href="https://valkey.io/commands/lpos">Valkey Documentation: LPOS</a>
 	 */
-	@Nullable
 	Long indexOf(V value);
 
 	/**
@@ -261,7 +248,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @since 2.4
 	 * @see <a href="https://valkey.io/commands/lpos">Valkey Documentation: LPOS</a>
 	 */
-	@Nullable
 	Long lastIndexOf(V value);
 
 	/**
@@ -270,7 +256,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/lpop">Valkey Documentation: LPOP</a>
 	 */
-	@Nullable
 	V leftPop();
 
 	/**
@@ -281,7 +266,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @see <a href="https://valkey.io/commands/lpop">Valkey Documentation: LPOP</a>
 	 * @since 2.6
 	 */
-	@Nullable
 	List<V> leftPop(long count);
 
 	/**
@@ -292,9 +276,10 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @param unit must not be {@literal null}.
 	 * @return {@literal null} when timeout reached or used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/blpop">Valkey Documentation: BLPOP</a>
+	 * @deprecated since 4.1 in favor of {@link #leftPop(Duration)}.
 	 */
-	@Nullable
-	V leftPop(long timeout, TimeUnit unit);
+	@Deprecated(since = "4.1")
+	V leftPop(long timeout, @NonNull TimeUnit unit);
 
 	/**
 	 * Removes and returns first element from lists stored at the bound key . <br>
@@ -306,7 +291,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @since 2.3
 	 * @see <a href="https://valkey.io/commands/blpop">Valkey Documentation: BLPOP</a>
 	 */
-	@Nullable
 	default V leftPop(Duration timeout) {
 
 		Assert.notNull(timeout, "Timeout must not be null");
@@ -321,7 +305,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/rpop">Valkey Documentation: RPOP</a>
 	 */
-	@Nullable
 	V rightPop();
 
 	/**
@@ -332,7 +315,6 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @see <a href="https://valkey.io/commands/rpop">Valkey Documentation: RPOP</a>
 	 * @since 2.6
 	 */
-	@Nullable
 	List<V> rightPop(long count);
 
 	/**
@@ -343,9 +325,10 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @param unit must not be {@literal null}.
 	 * @return {@literal null} when timeout reached or used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/brpop">Valkey Documentation: BRPOP</a>
+	 * @deprecated since 4.1 in favor of {@link #leftPop(Duration)}.
 	 */
-	@Nullable
-	V rightPop(long timeout, TimeUnit unit);
+	@Deprecated(since = "4.1")
+	V rightPop(long timeout, @NonNull TimeUnit unit);
 
 	/**
 	 * Removes and returns last element from lists stored at the bound key. <br>
@@ -357,8 +340,7 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 	 * @since 2.3
 	 * @see <a href="https://valkey.io/commands/brpop">Valkey Documentation: BRPOP</a>
 	 */
-	@Nullable
-	default V rightPop(Duration timeout) {
+	default V rightPop(@NonNull Duration timeout) {
 
 		Assert.notNull(timeout, "Timeout must not be null");
 		Assert.isTrue(!timeout.isNegative(), "Timeout must not be negative");
@@ -366,5 +348,9 @@ public interface BoundListOperations<K, V> extends BoundKeyOperations<K> {
 		return rightPop(TimeoutUtils.toSeconds(timeout), TimeUnit.SECONDS);
 	}
 
+	/**
+	 * @return the underlying {@link ValkeyOperations} used to execute commands.
+	 */
+	@NonNull
 	ValkeyOperations<K, V> getOperations();
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,9 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.Point;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -80,8 +80,7 @@ public class ValkeyOperationChain {
 		this.near = near;
 	}
 
-	@Nullable
-	public NearPath getNear() {
+	public @Nullable NearPath getNear() {
 		return near;
 	}
 
@@ -114,8 +113,7 @@ public class ValkeyOperationChain {
 			return values;
 		}
 
-		@Nullable
-		public Object getFirstValue() {
+		public @Nullable Object getFirstValue() {
 			return values.isEmpty() ? null : values.iterator().next();
 		}
 
@@ -127,8 +125,10 @@ public class ValkeyOperationChain {
 		@Override
 		public boolean equals(@Nullable Object o) {
 
-			if (this == o) return true;
-			if (o == null || getClass() != o.getClass()) return false;
+			if (this == o)
+				return true;
+			if (o == null || getClass() != o.getClass())
+				return false;
 
 			PathAndValue that = (PathAndValue) o;
 
@@ -144,6 +144,7 @@ public class ValkeyOperationChain {
 			result = 31 * result + ObjectUtils.nullSafeHashCode(values);
 			return result;
 		}
+
 	}
 
 	/**
@@ -156,7 +157,7 @@ public class ValkeyOperationChain {
 			super(path, Arrays.asList(point, distance));
 		}
 
-		public Point getPoint() {
+		public @Nullable Point getPoint() {
 			return (Point) getFirstValue();
 		}
 
@@ -166,5 +167,7 @@ public class ValkeyOperationChain {
 			it.next();
 			return (Distance) it.next();
 		}
+
 	}
+
 }

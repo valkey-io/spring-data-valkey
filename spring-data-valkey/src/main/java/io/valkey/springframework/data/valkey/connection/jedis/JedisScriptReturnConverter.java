@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025 the original author or authors.
+ * Copyright 2013-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.core.convert.converter.Converter;
 import io.valkey.springframework.data.valkey.connection.ReturnType;
-import org.springframework.lang.Nullable;
 
 /**
  * Converts the value returned by Jedis script eval to the expected {@link ReturnType}
@@ -35,8 +35,8 @@ public class JedisScriptReturnConverter implements Converter<Object, Object> {
 		this.returnType = returnType;
 	}
 
-	@SuppressWarnings("unchecked")
-	public Object convert(@Nullable Object result) {
+	@SuppressWarnings({ "unchecked", "NullAway" })
+	public @Nullable Object convert(@Nullable Object result) {
 		if (result instanceof String stringResult) {
 			// evalsha converts byte[] to String. Convert back for consistency
 			return JedisConverters.toBytes(stringResult);
@@ -51,7 +51,7 @@ public class JedisScriptReturnConverter implements Converter<Object, Object> {
 			}
 			return ((Long) result == 1);
 		}
-		if (returnType == ReturnType.MULTI) {
+		if (returnType == ReturnType.MULTI && result != null) {
 			List<Object> resultList = (List<Object>) result;
 			List<Object> convertedResults = new ArrayList<>();
 			for (Object res : resultList) {

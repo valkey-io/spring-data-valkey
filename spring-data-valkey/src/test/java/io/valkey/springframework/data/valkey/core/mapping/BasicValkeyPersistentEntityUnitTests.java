@@ -28,7 +28,7 @@ import org.springframework.data.keyvalue.core.mapping.KeySpaceResolver;
 import org.springframework.data.mapping.MappingException;
 import io.valkey.springframework.data.valkey.core.TimeToLiveAccessor;
 import io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities;
-import org.springframework.data.util.TypeInformation;
+import org.springframework.data.core.TypeInformation;
 
 /**
  * @author Christoph Strobl

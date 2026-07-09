@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,8 @@ import java.util.Arrays;
 import java.util.Collection;
 
 import org.junit.jupiter.api.Disabled;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
 
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.LongObjectFactory;
@@ -44,12 +45,12 @@ import io.valkey.springframework.data.valkey.serializer.StringValkeySerializer;
 import io.valkey.springframework.data.valkey.test.XstreamOxmSerializerSingleton;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyClusterAvailable;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
 
 /**
  * @author Christoph Strobl
  * @author Mark Paluch
  */
+@ParameterizedClass
 @EnabledOnValkeyClusterAvailable
 public class ValkeyClusterTemplateIntegrationTests<K, V> extends ValkeyTemplateIntegrationTests<K, V> {
 
@@ -58,93 +59,93 @@ public class ValkeyClusterTemplateIntegrationTests<K, V> extends ValkeyTemplateI
 		super(valkeyTemplate, keyFactory, valueFactory);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Pipeline not supported in cluster mode")
 	public void testExecutePipelinedNonNullValkeyCallback() {
 		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
 				.isThrownBy(super::testExecutePipelinedNonNullValkeyCallback);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Pipeline not supported in cluster mode")
 	public void testExecutePipelinedTx() {
 		super.testExecutePipelinedTx();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Watch only supported on same connection...")
 	public void testWatch() {
 		super.testWatch();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Watch only supported on same connection...")
 	public void testUnwatch() {
 		super.testUnwatch();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("EXEC only supported on same connection...")
 	public void testExec() {
 		super.testExec();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Pipeline not supported in cluster mode")
 	public void testExecutePipelinedNonNullSessionCallback() {
 		assertThatExceptionOfType(InvalidDataAccessApiUsageException.class)
 				.isThrownBy(super::testExecutePipelinedNonNullSessionCallback);
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("PubSub not supported in cluster mode")
 	public void testConvertAndSend() {
 		super.testConvertAndSend();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Watch only supported on same connection...")
 	public void testExecConversionDisabled() {
 		super.testExecConversionDisabled();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Discard only supported on same connection...")
 	public void testDiscard() {
 		super.testDiscard();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Pipleline not supported in cluster mode")
 	public void testExecutePipelined() {
 		super.testExecutePipelined();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("Watch only supported on same connection...")
 	public void testWatchMultipleKeys() {
 		super.testWatchMultipleKeys();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("This one fails when using GET options on numbers")
 	public void testSortBulkMapper() {
 		super.testSortBulkMapper();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("This one fails when using GET options on numbers")
 	public void testGetExpireMillisUsingTransactions() {
 		super.testGetExpireMillisUsingTransactions();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	@Disabled("This one fails when using GET options on numbers")
 	public void testGetExpireMillisUsingPipelining() {
 		super.testGetExpireMillisUsingPipelining();
 	}
 
-	@ParameterizedValkeyTest
+	@Test
 	void testScan() {
 
 		// Only Lettuce supports cluster-wide scanning
@@ -152,14 +153,12 @@ public class ValkeyClusterTemplateIntegrationTests<K, V> extends ValkeyTemplateI
 		super.testScan();
 	}
 
-	@Parameters
 	public static Collection<Object[]> testParams() {
 
 		ObjectFactory<String> stringFactory = new StringObjectFactory();
 		ObjectFactory<Long> longFactory = new LongObjectFactory();
 		ObjectFactory<byte[]> rawFactory = new RawObjectFactory();
 		ObjectFactory<Person> personFactory = new PersonObjectFactory();
-
 
 		OxmSerializer serializer = XstreamOxmSerializerSingleton.getInstance();
 		Jackson2JsonValkeySerializer<Person> jackson2JsonSerializer = new Jackson2JsonValkeySerializer<>(Person.class);
@@ -269,7 +268,6 @@ public class ValkeyClusterTemplateIntegrationTests<K, V> extends ValkeyTemplateI
 		valkeyGlideJackson2JsonPersonTemplate.setConnectionFactory(valkeyGlideConnectionFactory);
 		valkeyGlideJackson2JsonPersonTemplate.setValueSerializer(jackson2JsonSerializer);
 		valkeyGlideJackson2JsonPersonTemplate.afterPropertiesSet();
-
 
 		return Arrays.asList(new Object[][] { //
 

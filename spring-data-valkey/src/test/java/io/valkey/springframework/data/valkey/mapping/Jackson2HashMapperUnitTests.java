@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 	void shouldMapTypedListOfSimpleType() {
 
 		WithList source = new WithList();
-		source.strings = Arrays.asList("spring", "data", "valkey");
+		source.strings = Arrays.asList("spring", "data", "redis");
 		assertBackAndForwardMapping(source);
 	}
 
@@ -119,7 +119,7 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 		source.strings = new LinkedHashMap<>();
 		source.strings.put("1", "spring");
 		source.strings.put("2", "data");
-		source.strings.put("3", "valkey");
+		source.strings.put("3", "redis");
 		assertBackAndForwardMapping(source);
 	}
 
@@ -140,7 +140,7 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 		source.objects = new LinkedHashMap<>();
 		source.objects.put("1", "spring");
 		source.objects.put("2", 100);
-		source.objects.put("3", "valkey");
+		source.objects.put("3", "redis");
 		assertBackAndForwardMapping(source);
 	}
 
@@ -207,7 +207,7 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 	void enumsShouldBeTreatedCorrectly() {
 
 		WithEnumValue source = new WithEnumValue();
-		source.value = SpringDataEnum.VALKEY;
+		source.value = SpringDataEnum.REDIS;
 
 		assertBackAndForwardMapping(source);
 	}
@@ -254,8 +254,8 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 			}
 
 			return Objects.equals(this.getObjects(), that.getObjects())
-				&& Objects.equals(this.getPersons(), that.getPersons())
-				&& Objects.equals(this.getStrings(), that.getStrings());
+					&& Objects.equals(this.getPersons(), that.getPersons())
+					&& Objects.equals(this.getStrings(), that.getStrings());
 		}
 
 		@Override
@@ -306,8 +306,8 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 			}
 
 			return Objects.equals(this.getObjects(), that.getObjects())
-				&& Objects.equals(this.getPersons(), that.getPersons())
-				&& Objects.equals(this.getStrings(), that.getStrings());
+					&& Objects.equals(this.getPersons(), that.getPersons())
+					&& Objects.equals(this.getStrings(), that.getStrings());
 		}
 
 		@Override
@@ -376,10 +376,9 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 			}
 
 			return Objects.equals(this.getString(), that.getString())
-				&& Objects.equals(this.getCalendar(), that.getCalendar())
-				&& Objects.equals(this.getDate(), that.getDate())
-				&& Objects.equals(this.getLocalDate(), that.getLocalDate())
-				&& Objects.equals(this.getLocalDateTime(), that.getLocalDateTime());
+					&& Objects.equals(this.getCalendar(), that.getCalendar()) && Objects.equals(this.getDate(), that.getDate())
+					&& Objects.equals(this.getLocalDate(), that.getLocalDate())
+					&& Objects.equals(this.getLocalDateTime(), that.getLocalDateTime());
 		}
 
 		@Override
@@ -420,8 +419,7 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 				return false;
 			}
 
-			return Objects.equals(this.getBigD(), that.getBigD())
-				&& Objects.equals(this.getBigI(), that.getBigI());
+			return Objects.equals(this.getBigD(), that.getBigD()) && Objects.equals(this.getBigI(), that.getBigI());
 		}
 
 		@Override
@@ -463,7 +461,7 @@ public abstract class Jackson2HashMapperUnitTests extends AbstractHashMapperTest
 	}
 
 	enum SpringDataEnum {
-		COMMONS, VALKEY
+		COMMONS, REDIS
 	}
 
 	static class WithEnumValue {

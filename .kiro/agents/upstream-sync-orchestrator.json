@@ -1,0 +1,17 @@
+{
+  "name": "upstream-sync-orchestrator",
+  "description": "Orchestrates upstream Spring Data Redis sync. Generates diffs, dispatches workers, validates builds. Does NOT modify source code directly.",
+  "prompt": "file://./upstream-sync-orchestrator.md",
+  "tools": ["read", "write", "shell", "grep", "glob", "subagent", "github"],
+  "allowedTools": ["read", "write", "shell", "grep", "glob", "subagent", "github"],
+  "toolsSettings": {
+    "subagent": {
+      "trustedAgents": ["upstream-sync-worker"],
+      "autoAllow": true
+    },
+    "shell": {
+      "timeout": 300000,
+      "autoAllow": true
+    }
+  }
+}

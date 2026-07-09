@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import java.io.ByteArrayOutputStream;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.InitializingBean;
-import org.springframework.lang.Nullable;
 import org.springframework.oxm.Marshaller;
 import org.springframework.oxm.Unmarshaller;
 import org.springframework.util.Assert;
@@ -85,6 +85,7 @@ public class OxmSerializer implements InitializingBean, ValkeySerializer<Object>
 	}
 
 	@Override
+	@SuppressWarnings("NullAway")
 	public byte[] serialize(@Nullable Object value) throws SerializationException {
 
 		if (value == null) {
@@ -102,9 +103,9 @@ public class OxmSerializer implements InitializingBean, ValkeySerializer<Object>
 		return stream.toByteArray();
 	}
 
-	@Nullable
 	@Override
-	public Object deserialize(@Nullable byte[] bytes) throws SerializationException {
+	@SuppressWarnings("NullAway")
+	public @Nullable Object deserialize(byte @Nullable [] bytes) throws SerializationException {
 
 		if (SerializationUtils.isEmpty(bytes)) {
 			return null;
@@ -116,4 +117,5 @@ public class OxmSerializer implements InitializingBean, ValkeySerializer<Object>
 			throw new SerializationException("Cannot deserialize bytes", ex);
 		}
 	}
+
 }

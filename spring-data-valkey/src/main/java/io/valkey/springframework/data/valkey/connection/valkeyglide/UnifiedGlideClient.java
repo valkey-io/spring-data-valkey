@@ -18,7 +18,7 @@ package io.valkey.springframework.data.valkey.connection.valkeyglide;
 import java.util.concurrent.ExecutionException;
 
 import glide.api.models.GlideString;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Unified interface that abstracts both GlideClient and GlideClusterClient

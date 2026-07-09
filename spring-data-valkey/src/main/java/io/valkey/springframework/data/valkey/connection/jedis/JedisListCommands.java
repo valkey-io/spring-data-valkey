@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,41 +16,55 @@
 package io.valkey.springframework.data.valkey.connection.jedis;
 
 import redis.clients.jedis.args.ListDirection;
-import redis.clients.jedis.commands.JedisBinaryCommands;
-import redis.clients.jedis.commands.PipelineBinaryCommands;
+import redis.clients.jedis.commands.ListBinaryCommands;
+import redis.clients.jedis.commands.ListPipelineBinaryCommands;
 import redis.clients.jedis.params.LPosParams;
 
 import java.util.Collections;
 import java.util.List;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
+ * {@link ValkeyListCommands} implementation for Jedis.
+ *
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author dengliming
+ * @author Tihomir Mateev
  * @since 2.0
  */
+@NullUnmarked
 class JedisListCommands implements ValkeyListCommands {
 
 	private final JedisConnection connection;
 
-	JedisListCommands(JedisConnection connection) {
+	JedisListCommands(@NonNull JedisConnection connection) {
 		this.connection = connection;
 	}
 
-	@Override
-	public Long rPush(byte[] key, byte[]... values) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return connection.invoke().just(JedisBinaryCommands::rpush, PipelineBinaryCommands::rpush, key, values);
+	/**
+	 * @return the {@link JedisConnection} used for command execution.
+	 */
+	protected JedisConnection getConnection() {
+		return connection;
 	}
 
 	@Override
-	public List<Long> lPos(byte[] key, byte[] element, @Nullable Integer rank, @Nullable Integer count) {
+	public Long rPush(byte @NonNull [] key, byte @NonNull [] @NonNull... values) {
+
+		Assert.notNull(key, "Key must not be null");
+
+		return connection.invoke().just(ListBinaryCommands::rpush, ListPipelineBinaryCommands::rpush, key, values);
+	}
+
+	@Override
+	public List<Long> lPos(byte @NonNull [] key, byte @NonNull [] element, @Nullable Integer rank,
+			@Nullable Integer count) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(element, "Element must not be null");
@@ -61,159 +75,161 @@ class JedisListCommands implements ValkeyListCommands {
 		}
 
 		if (count != null) {
-			return connection.invoke().just(JedisBinaryCommands::lpos, PipelineBinaryCommands::lpos, key, element, params,
+			return connection.invoke().just(ListBinaryCommands::lpos, ListPipelineBinaryCommands::lpos, key, element, params,
 					count);
 		}
 
-		return connection.invoke().from(JedisBinaryCommands::lpos, PipelineBinaryCommands::lpos, key, element, params)
+		return connection.invoke().from(ListBinaryCommands::lpos, ListPipelineBinaryCommands::lpos, key, element, params)
 				.getOrElse(Collections::singletonList, Collections::emptyList);
 	}
 
 	@Override
-	public Long lPush(byte[] key, byte[]... values) {
+	public Long lPush(byte @NonNull [] key, byte @NonNull [] @NonNull... values) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(values, "Values must not be null");
 		Assert.noNullElements(values, "Values must not contain null elements");
 
-		return connection.invoke().just(JedisBinaryCommands::lpush, PipelineBinaryCommands::lpush, key, values);
+		return connection.invoke().just(ListBinaryCommands::lpush, ListPipelineBinaryCommands::lpush, key, values);
 	}
 
 	@Override
-	public Long rPushX(byte[] key, byte[] value) {
+	public Long rPushX(byte @NonNull [] key, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::rpushx, PipelineBinaryCommands::rpushx, key, value);
+		return connection.invoke().just(ListBinaryCommands::rpushx, ListPipelineBinaryCommands::rpushx, key, value);
 	}
 
 	@Override
-	public Long lPushX(byte[] key, byte[] value) {
+	public Long lPushX(byte @NonNull [] key, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::lpushx, PipelineBinaryCommands::lpushx, key, value);
+		return connection.invoke().just(ListBinaryCommands::lpushx, ListPipelineBinaryCommands::lpushx, key, value);
 	}
 
 	@Override
-	public Long lLen(byte[] key) {
+	public Long lLen(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::llen, PipelineBinaryCommands::llen, key);
+		return connection.invoke().just(ListBinaryCommands::llen, ListPipelineBinaryCommands::llen, key);
 	}
 
 	@Override
-	public List<byte[]> lRange(byte[] key, long start, long end) {
+	public List<byte @NonNull []> lRange(byte @NonNull [] key, long start, long end) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::lrange, PipelineBinaryCommands::lrange, key, start, end);
+		return connection.invoke().just(ListBinaryCommands::lrange, ListPipelineBinaryCommands::lrange, key, start, end);
 	}
 
 	@Override
-	public void lTrim(byte[] key, long start, long end) {
+	public void lTrim(byte @NonNull [] key, long start, long end) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		connection.invokeStatus().just(JedisBinaryCommands::ltrim, PipelineBinaryCommands::ltrim, key, start, end);
+		connection.invokeStatus().just(ListBinaryCommands::ltrim, ListPipelineBinaryCommands::ltrim, key, start, end);
 	}
 
 	@Override
-	public byte[] lIndex(byte[] key, long index) {
+	public byte[] lIndex(byte @NonNull [] key, long index) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::lindex, PipelineBinaryCommands::lindex, key, index);
+		return connection.invoke().just(ListBinaryCommands::lindex, ListPipelineBinaryCommands::lindex, key, index);
 	}
 
 	@Override
-	public Long lInsert(byte[] key, Position where, byte[] pivot, byte[] value) {
+	public Long lInsert(byte @NonNull [] key, @NonNull Position where, byte @NonNull [] pivot, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::linsert, PipelineBinaryCommands::linsert, key,
+		return connection.invoke().just(ListBinaryCommands::linsert, ListPipelineBinaryCommands::linsert, key,
 				JedisConverters.toListPosition(where), pivot, value);
 	}
 
 	@Override
-	public byte[] lMove(byte[] sourceKey, byte[] destinationKey, Direction from, Direction to) {
+	public byte[] lMove(byte @NonNull [] sourceKey, byte @NonNull [] destinationKey, @NonNull Direction from,
+			@NonNull Direction to) {
 
 		Assert.notNull(sourceKey, "Source key must not be null");
 		Assert.notNull(destinationKey, "Destination key must not be null");
 		Assert.notNull(from, "From direction must not be null");
 		Assert.notNull(to, "To direction must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::lmove, PipelineBinaryCommands::lmove, sourceKey,
+		return connection.invoke().just(ListBinaryCommands::lmove, ListPipelineBinaryCommands::lmove, sourceKey,
 				destinationKey, ListDirection.valueOf(from.name()), ListDirection.valueOf(to.name()));
 	}
 
 	@Override
-	public byte[] bLMove(byte[] sourceKey, byte[] destinationKey, Direction from, Direction to, double timeout) {
+	public byte[] bLMove(byte @NonNull [] sourceKey, byte @NonNull [] destinationKey, @NonNull Direction from,
+			@NonNull Direction to, double timeout) {
 
 		Assert.notNull(sourceKey, "Source key must not be null");
 		Assert.notNull(destinationKey, "Destination key must not be null");
 		Assert.notNull(from, "From direction must not be null");
 		Assert.notNull(to, "To direction must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::blmove, PipelineBinaryCommands::blmove, sourceKey,
+		return connection.invoke().just(ListBinaryCommands::blmove, ListPipelineBinaryCommands::blmove, sourceKey,
 				destinationKey, ListDirection.valueOf(from.name()), ListDirection.valueOf(to.name()), timeout);
 	}
 
 	@Override
-	public void lSet(byte[] key, long index, byte[] value) {
+	public void lSet(byte @NonNull [] key, long index, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		connection.invokeStatus().just(JedisBinaryCommands::lset, PipelineBinaryCommands::lset, key, index, value);
+		connection.invokeStatus().just(ListBinaryCommands::lset, ListPipelineBinaryCommands::lset, key, index, value);
 	}
 
 	@Override
-	public Long lRem(byte[] key, long count, byte[] value) {
+	public Long lRem(byte @NonNull [] key, long count, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::lrem, PipelineBinaryCommands::lrem, key, count, value);
+		return connection.invoke().just(ListBinaryCommands::lrem, ListPipelineBinaryCommands::lrem, key, count, value);
 	}
 
 	@Override
-	public byte[] lPop(byte[] key) {
+	public byte[] lPop(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::lpop, PipelineBinaryCommands::lpop, key);
+		return connection.invoke().just(ListBinaryCommands::lpop, ListPipelineBinaryCommands::lpop, key);
 	}
 
 	@Override
-	public List<byte[]> lPop(byte[] key, long count) {
+	public List<byte[]> lPop(byte @NonNull [] key, long count) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::lpop, PipelineBinaryCommands::lpop, key, (int) count);
+		return connection.invoke().just(ListBinaryCommands::lpop, ListPipelineBinaryCommands::lpop, key, (int) count);
 	}
 
 	@Override
-	public byte[] rPop(byte[] key) {
+	public byte[] rPop(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::rpop, PipelineBinaryCommands::rpop, key);
+		return connection.invoke().just(ListBinaryCommands::rpop, ListPipelineBinaryCommands::rpop, key);
 	}
 
 	@Override
-	public List<byte[]> rPop(byte[] key, long count) {
+	public List<byte @NonNull []> rPop(byte @NonNull [] key, long count) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::rpop, PipelineBinaryCommands::rpop, key, (int) count);
+		return connection.invoke().just(ListBinaryCommands::rpop, ListPipelineBinaryCommands::rpop, key, (int) count);
 	}
 
 	@Override
-	public List<byte[]> bLPop(int timeout, byte[]... keys) {
+	public List<byte @NonNull []> bLPop(int timeout, byte @NonNull []... keys) {
 
 		Assert.notNull(keys, "Key must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
@@ -222,7 +238,7 @@ class JedisListCommands implements ValkeyListCommands {
 	}
 
 	@Override
-	public List<byte[]> bRPop(int timeout, byte[]... keys) {
+	public List<byte @NonNull []> bRPop(int timeout, byte @NonNull []... keys) {
 
 		Assert.notNull(keys, "Key must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
@@ -231,21 +247,21 @@ class JedisListCommands implements ValkeyListCommands {
 	}
 
 	@Override
-	public byte[] rPopLPush(byte[] srcKey, byte[] dstKey) {
+	public byte[] rPopLPush(byte @NonNull [] srcKey, byte @NonNull [] dstKey) {
 
 		Assert.notNull(srcKey, "Source key must not be null");
 		Assert.notNull(dstKey, "Destination key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::rpoplpush, PipelineBinaryCommands::rpoplpush, srcKey, dstKey);
+		return connection.invoke().just(ListBinaryCommands::rpoplpush, ListPipelineBinaryCommands::rpoplpush, srcKey, dstKey);
 	}
 
 	@Override
-	public byte[] bRPopLPush(int timeout, byte[] srcKey, byte[] dstKey) {
+	public byte[] bRPopLPush(int timeout, byte @NonNull [] srcKey, byte @NonNull [] dstKey) {
 
 		Assert.notNull(srcKey, "Source key must not be null");
 		Assert.notNull(dstKey, "Destination key must not be null");
 
-		return connection.invoke().just(JedisBinaryCommands::brpoplpush, PipelineBinaryCommands::brpoplpush, srcKey, dstKey,
+		return connection.invoke().just(ListBinaryCommands::brpoplpush, ListPipelineBinaryCommands::brpoplpush, srcKey, dstKey,
 				timeout);
 	}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ import reactor.core.publisher.Mono;
 
 import java.nio.ByteBuffer;
 
+import org.jspecify.annotations.Nullable;
 import org.reactivestreams.Publisher;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.KeyCommand;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.NumericResponse;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -68,7 +68,7 @@ public interface ReactiveNumberCommands {
 
 		private @Nullable T value;
 
-		private IncrByCommand(ByteBuffer key, @Nullable T value) {
+		private IncrByCommand(@Nullable ByteBuffer key, @Nullable T value) {
 
 			super(key);
 			this.value = value;
@@ -104,8 +104,7 @@ public interface ReactiveNumberCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public T getValue() {
+		public @Nullable T getValue() {
 			return value;
 		}
 	}
@@ -148,7 +147,7 @@ public interface ReactiveNumberCommands {
 
 		private @Nullable T value;
 
-		private DecrByCommand(ByteBuffer key, @Nullable T value) {
+		private DecrByCommand(@Nullable ByteBuffer key, @Nullable T value) {
 			super(key);
 			this.value = value;
 		}
@@ -183,8 +182,7 @@ public interface ReactiveNumberCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public T getValue() {
+		public @Nullable T getValue() {
 			return value;
 		}
 	}
@@ -298,8 +296,7 @@ public interface ReactiveNumberCommands {
 		/**
 		 * @return can be {@literal null}.
 		 */
-		@Nullable
-		public T getValue() {
+		public @Nullable T getValue() {
 			return value;
 		}
 

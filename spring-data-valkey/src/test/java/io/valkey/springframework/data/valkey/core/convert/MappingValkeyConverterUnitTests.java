@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,33 +15,9 @@
  */
 package io.valkey.springframework.data.valkey.core.convert;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.when;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.AccountInfo;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.Address;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.AddressWithId;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.AddressWithPostcode;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.Device;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.ExipringPersonWithExplicitProperty;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.ExpiringPerson;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.Gender;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.JustSomeDifferentPropertyTypes;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.KEYSPACE_ACCOUNT;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.KEYSPACE_PERSON;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.Location;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.Outer;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.Person;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.PersonWithConstructorAndAddress;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.RecursiveConstructorPerson;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.Size;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.Species;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.TaVeren;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.TheWheelOfTime;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.TypeWithMaps;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.TypeWithObjectValueTypes;
-import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.WithArrays;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
+import static io.valkey.springframework.data.valkey.core.convert.ConversionTestEntities.*;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -53,22 +29,16 @@ import java.time.LocalTime;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Stream;
 
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledOnJre;
-import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -180,8 +150,7 @@ class MappingValkeyConverterUnitTests {
 
 		ValkeyTestData target = write(rand);
 
-		assertThat(target).containsEntry("nicknames.[0]", "dragon reborn")
-			.containsEntry("nicknames.[1]", "lews therin");
+		assertThat(target).containsEntry("nicknames.[0]", "dragon reborn").containsEntry("nicknames.[1]", "lews therin");
 	}
 
 	@Test // DATAREDIS-425
@@ -216,9 +185,9 @@ class MappingValkeyConverterUnitTests {
 		ValkeyTestData target = write(rand);
 
 		assertThat(target).containsEntry("coworkers.[0].firstname", "mat") //
-			.containsEntry("coworkers.[0].nicknames.[0]", "prince of the ravens") //
-			.containsEntry("coworkers.[1].firstname", "perrin") //
-			.containsEntry("coworkers.[1].address.city", "two rivers");
+				.containsEntry("coworkers.[0].nicknames.[0]", "prince of the ravens") //
+				.containsEntry("coworkers.[1].firstname", "perrin") //
+				.containsEntry("coworkers.[1].address.city", "two rivers");
 	}
 
 	@Test // DATAREDIS-425
@@ -273,7 +242,7 @@ class MappingValkeyConverterUnitTests {
 		map.put("father.lastname", "Simpson");
 
 		RecursiveConstructorPerson target = converter.read(RecursiveConstructorPerson.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(map)));
+				new ValkeyData(Bucket.newBucketFromStringMap(map)));
 
 		assertThat(target.id).isEqualTo("bart");
 		assertThat(target.firstname).isEqualTo("Bart");
@@ -327,7 +296,7 @@ class MappingValkeyConverterUnitTests {
 		ValkeyData rdo = new ValkeyData(Bucket.newBucketFromStringMap(map));
 
 		assertThat(converter.read(Person.class, rdo).nicknames).containsExactly("dragon reborn", "car'a'carn",
-			"lews therin");
+				"lews therin");
 	}
 
 	@Test // DATAREDIS-768
@@ -432,7 +401,7 @@ class MappingValkeyConverterUnitTests {
 		ValkeyTestData target = write(rand);
 
 		assertThat(target).containsEntry("physicalAttributes.[hair-color]", "red") //
-			.containsEntry("physicalAttributes.[eye-color]", "grey");
+				.containsEntry("physicalAttributes.[eye-color]", "grey");
 	}
 
 	@Test // DATAREDIS-425
@@ -449,7 +418,7 @@ class MappingValkeyConverterUnitTests {
 		ValkeyTestData target = write(rand);
 
 		assertThat(target).containsEntry("coworkers.[0].physicalAttributes.[hair-color]", "red") //
-			.containsEntry("coworkers.[0].physicalAttributes.[eye-color]", "grey");
+				.containsEntry("coworkers.[0].physicalAttributes.[eye-color]", "grey");
 	}
 
 	@Test // DATAREDIS-425
@@ -511,7 +480,7 @@ class MappingValkeyConverterUnitTests {
 		ValkeyTestData target = write(source);
 
 		assertThat(target).containsEntry("decimalMapKeyMapping.[1.7]", "2") //
-			.containsEntry("decimalMapKeyMapping.[3.1]", "4");
+				.containsEntry("decimalMapKeyMapping.[3.1]", "4");
 	}
 
 	@Test // DATAREDIS-768
@@ -557,7 +526,7 @@ class MappingValkeyConverterUnitTests {
 		ValkeyTestData target = write(rand);
 
 		assertThat(target).containsEntry("relatives.[father].firstname", "janduin") //
-			.containsEntry("relatives.[step-father].firstname", "tam");
+				.containsEntry("relatives.[step-father].firstname", "tam");
 	}
 
 	@Test // DATAREDIS-425
@@ -641,8 +610,7 @@ class MappingValkeyConverterUnitTests {
 	void readsLocalDateTimeValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(
-				Bucket.newBucketFromStringMap(Collections.singletonMap("localDateTime", "2016-02-19T10:18:01"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("localDateTime", "2016-02-19T10:18:01"))));
 
 		assertThat(target.localDateTime).isEqualTo(LocalDateTime.parse("2016-02-19T10:18:01"));
 	}
@@ -659,7 +627,7 @@ class MappingValkeyConverterUnitTests {
 	void readsLocalDateValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("localDate", "2016-02-19"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("localDate", "2016-02-19"))));
 
 		assertThat(target.localDate).isEqualTo(LocalDate.parse("2016-02-19"));
 	}
@@ -676,7 +644,7 @@ class MappingValkeyConverterUnitTests {
 	void readsLocalTimeValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("localTime", "11:12"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("localTime", "11:12"))));
 
 		assertThat(target.localTime).isEqualTo(LocalTime.parse("11:12:00"));
 	}
@@ -693,8 +661,7 @@ class MappingValkeyConverterUnitTests {
 	void readsZonedDateTimeValuesCorrectly() {
 
 		Person target = converter.read(Person.class, new ValkeyData(Bucket
-			.newBucketFromStringMap(
-				Collections.singletonMap("zonedDateTime", "2007-12-03T10:15:30+01:00[Europe/Paris]"))));
+				.newBucketFromStringMap(Collections.singletonMap("zonedDateTime", "2007-12-03T10:15:30+01:00[Europe/Paris]"))));
 
 		assertThat(target.zonedDateTime).isEqualTo(ZonedDateTime.parse("2007-12-03T10:15:30+01:00[Europe/Paris]"));
 	}
@@ -711,8 +678,7 @@ class MappingValkeyConverterUnitTests {
 	void readsInstantValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(
-				Bucket.newBucketFromStringMap(Collections.singletonMap("instant", "2007-12-03T10:15:30.01Z"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("instant", "2007-12-03T10:15:30.01Z"))));
 
 		assertThat(target.instant).isEqualTo(Instant.parse("2007-12-03T10:15:30.01Z"));
 	}
@@ -749,7 +715,7 @@ class MappingValkeyConverterUnitTests {
 	void readsDurationValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("duration", "PT51H4M"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("duration", "PT51H4M"))));
 
 		assertThat(target.duration).isEqualTo(Duration.parse("P2DT3H4M"));
 	}
@@ -766,7 +732,7 @@ class MappingValkeyConverterUnitTests {
 	void readsPeriodValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("period", "P1Y2M25D"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("period", "P1Y2M25D"))));
 
 		assertThat(target.period).isEqualTo(Period.parse("P1Y2M25D"));
 	}
@@ -783,7 +749,7 @@ class MappingValkeyConverterUnitTests {
 	void readsEnumValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("gender", "FEMALE"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("gender", "FEMALE"))));
 
 		assertThat(target.gender).isEqualTo(Gender.FEMALE);
 	}
@@ -800,7 +766,7 @@ class MappingValkeyConverterUnitTests {
 	void readsBooleanValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("alive", "1"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("alive", "1"))));
 
 		assertThat(target.alive).isEqualTo(Boolean.TRUE);
 	}
@@ -809,7 +775,7 @@ class MappingValkeyConverterUnitTests {
 	void readsStringBooleanValuesCorrectly() {
 
 		Person target = converter.read(Person.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("alive", "true"))));
+				new ValkeyData(Bucket.newBucketFromStringMap(Collections.singletonMap("alive", "true"))));
 
 		assertThat(target.alive).isEqualTo(Boolean.TRUE);
 	}
@@ -834,8 +800,7 @@ class MappingValkeyConverterUnitTests {
 		Date date = cal.getTime();
 
 		Person target = converter.read(Person.class, new ValkeyData(
-			Bucket.newBucketFromStringMap(
-				Collections.singletonMap("birthdate", Long.valueOf(date.getTime()).toString()))));
+				Bucket.newBucketFromStringMap(Collections.singletonMap("birthdate", Long.valueOf(date.getTime()).toString()))));
 
 		assertThat(target.birthdate).isEqualTo(date);
 	}
@@ -852,8 +817,8 @@ class MappingValkeyConverterUnitTests {
 		ValkeyTestData target = write(rand);
 
 		assertThat(target).containsEntry("location", "locations:1") //
-			.without("location.id") //
-			.without("location.name");
+				.without("location.id") //
+				.without("location.name");
 	}
 
 	@Test // DATAREDIS-425
@@ -868,7 +833,7 @@ class MappingValkeyConverterUnitTests {
 		locationMap.put("name", location.name);
 
 		when(resolverMock.resolveReference(eq("1"), eq("locations")))
-			.thenReturn(Bucket.newBucketFromStringMap(locationMap).rawMap());
+				.thenReturn(Bucket.newBucketFromStringMap(locationMap).rawMap());
 
 		Map<String, String> map = new LinkedHashMap<>();
 		map.put("location", "locations:1");
@@ -891,8 +856,8 @@ class MappingValkeyConverterUnitTests {
 		rand.coworkers = Collections.singletonList(egwene);
 
 		assertThat(write(rand)).containsEntry("coworkers.[0].location", "locations:1") //
-			.without("coworkers.[0].location.id") //
-			.without("coworkers.[0].location.name");
+				.without("coworkers.[0].location.id") //
+				.without("coworkers.[0].location.name");
 	}
 
 	@Test // DATAREDIS-425
@@ -907,7 +872,7 @@ class MappingValkeyConverterUnitTests {
 		locationMap.put("name", location.name);
 
 		when(resolverMock.resolveReference(eq("1"), eq("locations")))
-			.thenReturn(Bucket.newBucketFromStringMap(locationMap).rawMap());
+				.thenReturn(Bucket.newBucketFromStringMap(locationMap).rawMap());
 
 		Map<String, String> map = new LinkedHashMap<>();
 		map.put("coworkers.[0].location", "locations:1");
@@ -937,8 +902,8 @@ class MappingValkeyConverterUnitTests {
 		ValkeyTestData target = write(rand);
 
 		assertThat(target).containsEntry("visited.[0]", "locations:1") //
-			.containsEntry("visited.[1]", "locations:2") //
-			.containsEntry("visited.[2]", "locations:3");
+				.containsEntry("visited.[1]", "locations:2") //
+				.containsEntry("visited.[2]", "locations:3");
 	}
 
 	@Test // DATAREDIS-425
@@ -971,11 +936,11 @@ class MappingValkeyConverterUnitTests {
 		Bucket.newBucketFromStringMap(tearMap).rawMap();
 
 		when(resolverMock.resolveReference(eq("1"), eq("locations")))
-			.thenReturn(Bucket.newBucketFromStringMap(tarValonMap).rawMap());
+				.thenReturn(Bucket.newBucketFromStringMap(tarValonMap).rawMap());
 		when(resolverMock.resolveReference(eq("2"), eq("locations")))
-			.thenReturn(Bucket.newBucketFromStringMap(falmeMap).rawMap());
+				.thenReturn(Bucket.newBucketFromStringMap(falmeMap).rawMap());
 		when(resolverMock.resolveReference(eq("3"), eq("locations")))
-			.thenReturn(Bucket.newBucketFromStringMap(tearMap).rawMap());
+				.thenReturn(Bucket.newBucketFromStringMap(tearMap).rawMap());
 
 		Map<String, String> map = new LinkedHashMap<>();
 		map.put("visited.[0]", "locations:1");
@@ -1013,7 +978,7 @@ class MappingValkeyConverterUnitTests {
 	void writeShouldConsiderKeyspaceConfiguration() {
 
 		this.converter.getMappingContext().getMappingConfiguration().getKeyspaceConfiguration()
-			.addKeyspaceSettings(new KeyspaceSettings(Address.class, "o_O"));
+				.addKeyspaceSettings(new KeyspaceSettings(Address.class, "o_O"));
 
 		Address address = new Address();
 		address.city = "Tear";
@@ -1028,7 +993,7 @@ class MappingValkeyConverterUnitTests {
 		assignment.setTimeToLive(5L);
 
 		this.converter.getMappingContext().getMappingConfiguration().getKeyspaceConfiguration()
-			.addKeyspaceSettings(assignment);
+				.addKeyspaceSettings(assignment);
 
 		Address address = new Address();
 		address.city = "Tear";
@@ -1040,7 +1005,7 @@ class MappingValkeyConverterUnitTests {
 	void writeShouldHonorCustomConversionOnRootType() {
 
 		ValkeyCustomConversions customConversions = new ValkeyCustomConversions(
-			Collections.singletonList(new AddressToBytesConverter()));
+				Collections.singletonList(new AddressToBytesConverter()));
 
 		ValkeyMappingContext mappingContext = new ValkeyMappingContext();
 		mappingContext.setSimpleTypeHolder(customConversions.getSimpleTypeHolder());
@@ -1053,14 +1018,14 @@ class MappingValkeyConverterUnitTests {
 		address.country = "Tel'aran'rhiod";
 		address.city = "unknown";
 
-		assertThat(write(address)).containsEntry("_raw", "{\"city\":\"unknown\",\"country\":\"Tel'aran'rhiod\"}");
+		assertThat(write(address).get("_raw")).contains("\"city\":\"unknown\"").contains("\"country\":\"Tel'aran'rhiod\"");
 	}
 
 	@Test // DATAREDIS-425, DATAREDIS-634
 	void writeShouldHonorCustomConversionOnNestedType() {
 
 		ValkeyCustomConversions customConversions = new ValkeyCustomConversions(
-			Collections.singletonList(new AddressToBytesConverter()));
+				Collections.singletonList(new AddressToBytesConverter()));
 
 		ValkeyMappingContext mappingContext = new ValkeyMappingContext();
 		mappingContext.setSimpleTypeHolder(customConversions.getSimpleTypeHolder());
@@ -1074,7 +1039,7 @@ class MappingValkeyConverterUnitTests {
 		address.city = "unknown";
 		rand.address = address;
 
-		assertThat(write(rand)).containsEntry("address", "{\"city\":\"unknown\",\"country\":\"Tel'aran'rhiod\"}");
+		assertThat(write(rand).get("address")).contains("\"city\":\"unknown\"").contains("\"country\":\"Tel'aran'rhiod\"");
 	}
 
 	@Test // DATAREDIS-425
@@ -1082,7 +1047,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(null, null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new AddressToBytesConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new AddressToBytesConverter())));
 		this.converter.afterPropertiesSet();
 
 		Address address = new Address();
@@ -1090,7 +1055,7 @@ class MappingValkeyConverterUnitTests {
 		rand.address = address;
 
 		assertThat(write(rand).getValkeyData().getIndexedData())
-			.contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "address.country", "andor"));
+				.contains(new SimpleIndexedPropertyValue(KEYSPACE_PERSON, "address.country", "andor"));
 	}
 
 	@Test // DATAREDIS-425
@@ -1098,7 +1063,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(new ValkeyMappingContext(), null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new AddressToBytesConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new AddressToBytesConverter())));
 		this.converter.afterPropertiesSet();
 
 		Address address = new Address();
@@ -1114,7 +1079,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(null, null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new BytesToAddressConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new BytesToAddressConverter())));
 		this.converter.afterPropertiesSet();
 
 		Map<String, String> map = new LinkedHashMap<>();
@@ -1131,7 +1096,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(new ValkeyMappingContext(), null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new BytesToAddressConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new BytesToAddressConverter())));
 		this.converter.afterPropertiesSet();
 
 		Map<String, String> map = new LinkedHashMap<>();
@@ -1149,14 +1114,14 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(new ValkeyMappingContext(), null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new BytesToAddressConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new BytesToAddressConverter())));
 		this.converter.afterPropertiesSet();
 
 		Map<String, String> map = new LinkedHashMap<>();
 		map.put("address", "{\"city\":\"unknown\",\"country\":\"Tel'aran'rhiod\"}");
 
 		PersonWithConstructorAndAddress target = converter.read(PersonWithConstructorAndAddress.class,
-			new ValkeyData(Bucket.newBucketFromStringMap(map)));
+				new ValkeyData(Bucket.newBucketFromStringMap(map)));
 
 		assertThat(target.address).isNotNull();
 		assertThat(target.address.city).isEqualTo("unknown");
@@ -1187,7 +1152,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(new ValkeyMappingContext(), null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new SpeciesToMapConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new SpeciesToMapConverter())));
 		this.converter.afterPropertiesSet();
 
 		Species myrddraal = new Species();
@@ -1195,7 +1160,7 @@ class MappingValkeyConverterUnitTests {
 		myrddraal.alsoKnownAs = Arrays.asList("halfmen", "fades", "neverborn");
 
 		assertThat(write(myrddraal)).containsEntry("species-name", "myrddraal").containsEntry("species-nicknames",
-			"halfmen,fades,neverborn");
+				"halfmen,fades,neverborn");
 	}
 
 	@Test // DATAREDIS-425
@@ -1203,7 +1168,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(null, null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new SpeciesToMapConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new SpeciesToMapConverter())));
 		this.converter.afterPropertiesSet();
 
 		rand.species = new Species();
@@ -1217,7 +1182,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(new ValkeyMappingContext(), null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new MapToSpeciesConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new MapToSpeciesConverter())));
 		this.converter.afterPropertiesSet();
 		Map<String, String> map = new LinkedHashMap<>();
 		map.put("species-name", "trolloc");
@@ -1233,7 +1198,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(null, null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new MapToSpeciesConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new MapToSpeciesConverter())));
 		this.converter.afterPropertiesSet();
 
 		Map<String, String> map = new LinkedHashMap<>();
@@ -1250,7 +1215,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(new ValkeyMappingContext(), null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new SpeciesToMapConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new SpeciesToMapConverter())));
 		this.converter.afterPropertiesSet();
 
 		TheWheelOfTime twot = new TheWheelOfTime();
@@ -1262,7 +1227,7 @@ class MappingValkeyConverterUnitTests {
 		twot.species.add(myrddraal);
 
 		assertThat(write(twot)).containsEntry("species.[0].species-name", "myrddraal")
-			.containsEntry("species.[0].species-nicknames", "halfmen,fades,neverborn");
+				.containsEntry("species.[0].species-nicknames", "halfmen,fades,neverborn");
 	}
 
 	@Test // DATAREDIS-425
@@ -1270,7 +1235,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(null, null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new MapToSpeciesConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new MapToSpeciesConverter())));
 		this.converter.afterPropertiesSet();
 
 		Map<String, String> map = new LinkedHashMap<>();
@@ -1291,7 +1256,7 @@ class MappingValkeyConverterUnitTests {
 		source.arrayOfSimpleTypes = new String[] { "rand", "mat", "perrin" };
 
 		assertThat(write(source)).containsEntry("arrayOfSimpleTypes.[0]", "rand")
-			.containsEntry("arrayOfSimpleTypes.[1]", "mat").containsEntry("arrayOfSimpleTypes.[2]", "perrin");
+				.containsEntry("arrayOfSimpleTypes.[1]", "mat").containsEntry("arrayOfSimpleTypes.[2]", "perrin");
 	}
 
 	@Test // DATAREDIS-492
@@ -1356,10 +1321,10 @@ class MappingValkeyConverterUnitTests {
 		source.arrayOfCompexTypes = new Species[] { trolloc, myrddraal };
 
 		assertThat(write(source)).containsEntry("arrayOfCompexTypes.[0].name", "trolloc") //
-			.containsEntry("arrayOfCompexTypes.[1].name", "myrddraal") //
-			.containsEntry("arrayOfCompexTypes.[1].alsoKnownAs.[0]", "halfmen") //
-			.containsEntry("arrayOfCompexTypes.[1].alsoKnownAs.[1]", "fades") //
-			.containsEntry("arrayOfCompexTypes.[1].alsoKnownAs.[2]", "neverborn");
+				.containsEntry("arrayOfCompexTypes.[1].name", "myrddraal") //
+				.containsEntry("arrayOfCompexTypes.[1].alsoKnownAs.[0]", "halfmen") //
+				.containsEntry("arrayOfCompexTypes.[1].alsoKnownAs.[1]", "fades") //
+				.containsEntry("arrayOfCompexTypes.[1].alsoKnownAs.[2]", "neverborn");
 	}
 
 	@Test // DATAREDIS-492
@@ -1391,11 +1356,11 @@ class MappingValkeyConverterUnitTests {
 		source.arrayOfObject = new Object[] { "rand", trolloc, 100L };
 
 		assertThat(write(source)).containsEntry("arrayOfObject.[0]", "rand") //
-			.containsEntry("arrayOfObject.[0]._class", "java.lang.String")
-			.containsEntry("arrayOfObject.[1]._class", Species.class.getName()) //
-			.containsEntry("arrayOfObject.[1].name", "trolloc") //
-			.containsEntry("arrayOfObject.[2]._class", "java.lang.Long") //
-			.containsEntry("arrayOfObject.[2]", "100");
+				.containsEntry("arrayOfObject.[0]._class", "java.lang.String")
+				.containsEntry("arrayOfObject.[1]._class", Species.class.getName()) //
+				.containsEntry("arrayOfObject.[1].name", "trolloc") //
+				.containsEntry("arrayOfObject.[2]._class", "java.lang.Long") //
+				.containsEntry("arrayOfObject.[2]", "100");
 	}
 
 	@Test // DATAREDIS-489
@@ -1452,8 +1417,7 @@ class MappingValkeyConverterUnitTests {
 
 		ValkeyTestData bucket = write(sample);
 
-		assertThat(bucket).containsEntry("map.[string]", "bar")
-			.containsEntry("map.[string]._class", "java.lang.String");
+		assertThat(bucket).containsEntry("map.[string]", "bar").containsEntry("map.[string]._class", "java.lang.String");
 		assertThat(bucket).containsEntry("map.[long]", "1").containsEntry("map.[long]._class", "java.lang.Long");
 		assertThat(bucket).containsEntry("map.[date]._class", "java.util.Date");
 	}
@@ -1537,9 +1501,8 @@ class MappingValkeyConverterUnitTests {
 
 		WithArrays source = new WithArrays();
 		source.arrayOfPrimitives = new int[] { 1, 2, 3 };
-		assertThat(write(source)).containsEntry("arrayOfPrimitives.[0]", "1")
-			.containsEntry("arrayOfPrimitives.[1]", "2")
-			.containsEntry("arrayOfPrimitives.[2]", "3");
+		assertThat(write(source)).containsEntry("arrayOfPrimitives.[0]", "1").containsEntry("arrayOfPrimitives.[1]", "2")
+				.containsEntry("arrayOfPrimitives.[2]", "3");
 	}
 
 	@Test // DATAREDIS-471
@@ -1581,7 +1544,7 @@ class MappingValkeyConverterUnitTests {
 	void writeShouldWritePartialUpdateFromSetByteArrayValueCorrectly() {
 
 		PartialUpdate<WithArrays> update = PartialUpdate.newPartialUpdate(42, WithArrays.class).set("avatar",
-			"foo-bar-baz".getBytes());
+				"foo-bar-baz".getBytes());
 
 		assertThat(write(update)).containsEntry("avatar", "foo-bar-baz");
 	}
@@ -1618,7 +1581,7 @@ class MappingValkeyConverterUnitTests {
 	void writeShouldWritePartialUpdatePathWithSimpleListValueCorrectly() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("nicknames",
-			Arrays.asList("dragon", "lews"));
+				Arrays.asList("dragon", "lews"));
 
 		assertThat(write(update)).containsEntry("nicknames.[0]", "dragon").containsEntry("nicknames.[1]", "lews");
 	}
@@ -1634,11 +1597,10 @@ class MappingValkeyConverterUnitTests {
 		perrin.firstname = "perrin";
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("coworkers",
-			Arrays.asList(mat, perrin));
+				Arrays.asList(mat, perrin));
 
-		assertThat(write(update)).containsEntry("coworkers.[0].firstname", "mat")
-			.containsEntry("coworkers.[0].age", "24")
-			.containsEntry("coworkers.[1].firstname", "perrin");
+		assertThat(write(update)).containsEntry("coworkers.[0].firstname", "mat").containsEntry("coworkers.[0].age", "24")
+				.containsEntry("coworkers.[1].firstname", "perrin");
 	}
 
 	@Test // DATAREDIS-471
@@ -1658,8 +1620,7 @@ class MappingValkeyConverterUnitTests {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("coworkers", mat);
 
-		assertThat(write(update)).containsEntry("coworkers.[0].firstname", "mat")
-			.containsEntry("coworkers.[0].age", "24");
+		assertThat(write(update)).containsEntry("coworkers.[0].firstname", "mat").containsEntry("coworkers.[0].age", "24");
 	}
 
 	@Test // DATAREDIS-471
@@ -1679,15 +1640,14 @@ class MappingValkeyConverterUnitTests {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("coworkers.[5]", mat);
 
-		assertThat(write(update)).containsEntry("coworkers.[5].firstname", "mat")
-			.containsEntry("coworkers.[5].age", "24");
+		assertThat(write(update)).containsEntry("coworkers.[5].firstname", "mat").containsEntry("coworkers.[5].age", "24");
 	}
 
 	@Test // DATAREDIS-471
 	void writeShouldWritePartialUpdatePathWithSimpleMapValueCorrectly() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("physicalAttributes",
-			Collections.singletonMap("eye-color", "grey"));
+				Collections.singletonMap("eye-color", "grey"));
 
 		assertThat(write(update)).containsEntry("physicalAttributes.[eye-color]", "grey");
 	}
@@ -1700,17 +1660,17 @@ class MappingValkeyConverterUnitTests {
 		tam.alive = false;
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("relatives",
-			Collections.singletonMap("father", tam));
+				Collections.singletonMap("father", tam));
 
 		assertThat(write(update)).containsEntry("relatives.[father].firstname", "tam")
-			.containsEntry("relatives.[father].alive", "0");
+				.containsEntry("relatives.[father].alive", "0");
 	}
 
 	@Test // DATAREDIS-471
 	void writeShouldWritePartialUpdatePathWithSimpleMapValueWhenNotPassedInAsCollectionCorrectly() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("physicalAttributes",
-			Collections.singletonMap("eye-color", "grey").entrySet().iterator().next());
+				Collections.singletonMap("eye-color", "grey").entrySet().iterator().next());
 
 		assertThat(write(update)).containsEntry("physicalAttributes.[eye-color]", "grey");
 	}
@@ -1723,17 +1683,17 @@ class MappingValkeyConverterUnitTests {
 		tam.alive = false;
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("relatives",
-			Collections.singletonMap("father", tam).entrySet().iterator().next());
+				Collections.singletonMap("father", tam).entrySet().iterator().next());
 
 		assertThat(write(update)).containsEntry("relatives.[father].firstname", "tam")
-			.containsEntry("relatives.[father].alive", "0");
+				.containsEntry("relatives.[father].alive", "0");
 	}
 
 	@Test // DATAREDIS-471
 	void writeShouldWritePartialUpdatePathWithSimpleMapValueWhenNotPassedInAsCollectionWithPositionalParameterCorrectly() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("physicalAttributes.[eye-color]",
-			"grey");
+				"grey");
 
 		assertThat(write(update)).containsEntry("physicalAttributes.[eye-color]", "grey");
 	}
@@ -1741,8 +1701,7 @@ class MappingValkeyConverterUnitTests {
 	@Test // DATAREDIS-471
 	void writeShouldWritePartialUpdatePathWithSimpleMapValueOnNestedElementCorrectly() {
 
-		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("relatives.[father].firstname",
-			"tam");
+		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("relatives.[father].firstname", "tam");
 
 		assertThat(write(update)).containsEntry("relatives.[father].firstname", "tam");
 	}
@@ -1760,7 +1719,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(null, null, resolverMock);
 		this.converter
-			.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new AddressToBytesConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new AddressToBytesConverter())));
 		this.converter.afterPropertiesSet();
 
 		Address address = new Address();
@@ -1769,7 +1728,8 @@ class MappingValkeyConverterUnitTests {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("address", address);
 
-		assertThat(write(update)).containsEntry("address", "{\"city\":\"unknown\",\"country\":\"Tel'aran'rhiod\"}");
+		assertThat(write(update).get("address")).contains("\"city\":\"unknown\",")
+				.contains("\"country\":\"Tel'aran'rhiod\"");
 	}
 
 	@Test // DATAREDIS-471
@@ -1783,13 +1743,11 @@ class MappingValkeyConverterUnitTests {
 		tear.id = "2";
 		tear.name = "city of tear";
 
-		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("visited",
-			Arrays.asList(tar, tear));
+		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class).set("visited", Arrays.asList(tar, tear));
 
-		assertThat(write(update)).containsEntry("visited.[0]", "locations:1")
-			.containsEntry("visited.[1]", "locations:2") //
-			.without("visited.id") //
-			.without("visited.name");
+		assertThat(write(update)).containsEntry("visited.[0]", "locations:1").containsEntry("visited.[1]", "locations:2") //
+				.without("visited.id") //
+				.without("visited.name");
 	}
 
 	@Test // DATAREDIS-471
@@ -1800,65 +1758,65 @@ class MappingValkeyConverterUnitTests {
 		location.name = "tar valon";
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class) //
-			.set("location", location);
+				.set("location", location);
 
 		assertThat(write(update)).containsEntry("location", "locations:1") //
-			.without("location.id") //
-			.without("location.name");
+				.without("location.id") //
+				.without("location.name");
 	}
 
 	@Test // DATAREDIS-471
 	void writeShouldThrowExceptionForUpdateValueNotAssignableToDomainTypeProperty() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class) //
-			.set("age", "twenty-four");
+				.set("age", "twenty-four");
 
 		assertThatExceptionOfType(MappingException.class).isThrownBy(() -> write(update))
-			.withMessageContaining("java.lang.String cannot be assigned");
+				.withMessageContaining("java.lang.String cannot be assigned");
 	}
 
 	@Test // DATAREDIS-471
 	void writeShouldThrowExceptionForUpdateCollectionValueNotAssignableToDomainTypeProperty() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class) //
-			.set("coworkers.[0]", "buh buh the bear");
+				.set("coworkers.[0]", "buh buh the bear");
 
 		assertThatExceptionOfType(MappingException.class).isThrownBy(() -> write(update))
-			.withMessageContaining("java.lang.String cannot be assigned").withMessageContaining(Person.class.getName())
-			.withMessageContaining("coworkers.[0]");
+				.withMessageContaining("java.lang.String cannot be assigned").withMessageContaining(Person.class.getName())
+				.withMessageContaining("coworkers.[0]");
 	}
 
 	@Test // DATAREDIS-471
 	void writeShouldThrowExceptionForUpdateValueInCollectionNotAssignableToDomainTypeProperty() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class) //
-			.set("coworkers", Collections.singletonList("foo"));
+				.set("coworkers", Collections.singletonList("foo"));
 
 		assertThatExceptionOfType(MappingException.class).isThrownBy(() -> write(update))
-			.withMessageContaining("java.lang.String cannot be assigned").withMessageContaining(Person.class.getName())
-			.withMessageContaining("coworkers");
+				.withMessageContaining("java.lang.String cannot be assigned").withMessageContaining(Person.class.getName())
+				.withMessageContaining("coworkers");
 	}
 
 	@Test // DATAREDIS-471
 	void writeShouldThrowExceptionForUpdateMapValueNotAssignableToDomainTypeProperty() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class) //
-			.set("relatives.[father]", "buh buh the bear");
+				.set("relatives.[father]", "buh buh the bear");
 
 		assertThatExceptionOfType(MappingException.class).isThrownBy(() -> write(update))
-			.withMessageContaining("java.lang.String cannot be assigned").withMessageContaining(Person.class.getName())
-			.withMessageContaining("relatives.[father]");
+				.withMessageContaining("java.lang.String cannot be assigned").withMessageContaining(Person.class.getName())
+				.withMessageContaining("relatives.[father]");
 	}
 
 	@Test // DATAREDIS-471
 	void writeShouldThrowExceptionForUpdateValueInMapNotAssignableToDomainTypeProperty() {
 
 		PartialUpdate<Person> update = new PartialUpdate<>("123", Person.class) //
-			.set("relatives", Collections.singletonMap("father", "buh buh the bear"));
+				.set("relatives", Collections.singletonMap("father", "buh buh the bear"));
 
 		assertThatExceptionOfType(MappingException.class).isThrownBy(() -> write(update))
-			.withMessageContaining("java.lang.String cannot be assigned").withMessageContaining(Person.class.getName())
-			.withMessageContaining("relatives.[father]");
+				.withMessageContaining("java.lang.String cannot be assigned").withMessageContaining(Person.class.getName())
+				.withMessageContaining("relatives.[father]");
 	}
 
 	@Test // DATAREDIS-875
@@ -1931,8 +1889,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(null, null, resolverMock);
 		this.converter
-			.setCustomConversions(
-				new ValkeyCustomConversions(Collections.singletonList(new AccountInfoToBytesConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new AccountInfoToBytesConverter())));
 		this.converter.afterPropertiesSet();
 
 		AccountInfo accountInfo = new AccountInfo();
@@ -1948,8 +1905,7 @@ class MappingValkeyConverterUnitTests {
 
 		this.converter = new MappingValkeyConverter(null, null, resolverMock);
 		this.converter
-			.setCustomConversions(
-				new ValkeyCustomConversions(Collections.singletonList(new BytesToAccountInfoConverter())));
+				.setCustomConversions(new ValkeyCustomConversions(Collections.singletonList(new BytesToAccountInfoConverter())));
 		this.converter.afterPropertiesSet();
 
 		Bucket bucket = new Bucket();
@@ -1972,11 +1928,11 @@ class MappingValkeyConverterUnitTests {
 		generic.entity = new User("hello");
 
 		assertThat(write(generic)).hasSize(3) //
-			.containsEntry("_class",
-				"io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverterUnitTests$WithGenericEntity")
-			.containsEntry("entity.name", "hello") //
-			.containsEntry("entity._class",
-				"io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverterUnitTests$User");
+				.containsEntry("_class",
+						"io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverterUnitTests$WithGenericEntity")
+				.containsEntry("entity.name", "hello") //
+				.containsEntry("entity._class",
+						"io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverterUnitTests$User");
 	}
 
 	@Test // GH-2349
@@ -1985,7 +1941,7 @@ class MappingValkeyConverterUnitTests {
 		Bucket bucket = new Bucket();
 		bucket.put("entity.name", "hello".getBytes());
 		bucket.put("entity._class",
-			"io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverterUnitTests$User".getBytes());
+				"io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverterUnitTests$User".getBytes());
 
 		ValkeyData valkeyData = new ValkeyData(bucket);
 		valkeyData.setKeyspace(KEYSPACE_ACCOUNT);
@@ -1997,18 +1953,20 @@ class MappingValkeyConverterUnitTests {
 		assertThat(generic.entity.name).isEqualTo("hello");
 	}
 
-	@Test // DATAREDIS-1175
-	@EnabledOnJre(JRE.JAVA_8)
-		// FIXME: https://github.com/spring-projects/spring-data-valkey/issues/2168
+	@Test // GH-2168, GH-3179
 	void writePlainList() {
 
 		List<Object> source = Arrays.asList("Hello", "stream", "message", 100L);
 		ValkeyTestData target = write(source);
 
-		assertThat(target).containsEntry("[0]", "Hello") //
-			.containsEntry("[1]", "stream") //
-			.containsEntry("[2]", "message") //
-			.containsEntry("[3]", "100");
+		assertThat(target) //
+				.containsEntry("_class", "java.util.List") //
+				.containsEntry("[0]", "Hello") //
+				.containsEntry("[0]._class", "java.lang.String") //
+				.containsEntry("[1]", "stream") //
+				.containsEntry("[2]", "message") //
+				.containsEntry("[3]", "100") //
+				.containsEntry("[3]._class", "java.lang.Long");
 	}
 
 	@Test // DATAREDIS-1175
@@ -2027,6 +1985,24 @@ class MappingValkeyConverterUnitTests {
 		List target = read(List.class, source);
 
 		assertThat(target).containsExactly("Hello", "stream", "message", 100L);
+	}
+
+	@ParameterizedTest // GH-3179
+	@MethodSource("justCollections")
+	void readsPlainCollectionIfObjectTypeRequested(Class<?> type, Collection<Object> collection) {
+
+		ValkeyTestData source = write(collection);
+
+		Object target = this.converter.read(Object.class, source.getValkeyData());
+
+		assertThat(target).isInstanceOf(type).asInstanceOf(InstanceOfAssertFactories.COLLECTION)
+				.containsExactlyElementsOf(collection);
+	}
+
+	private static Stream<Arguments> justCollections() {
+		return Stream.of(Arguments.of(List.class, Arrays.asList("Hello", "stream", "message", 100L)),
+				Arguments.of(Set.class, Set.of("Hello", "stream", "message", 100L)),
+				Arguments.of(EnumSet.class, EnumSet.allOf(Gender.class)));
 	}
 
 	private ValkeyTestData write(Object source) {
@@ -2050,8 +2026,8 @@ class MappingValkeyConverterUnitTests {
 
 			mapper = new ObjectMapper();
 			mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
-				.withFieldVisibility(Visibility.ANY).withGetterVisibility(Visibility.NONE)
-				.withSetterVisibility(Visibility.NONE).withCreatorVisibility(Visibility.NONE));
+					.withFieldVisibility(Visibility.ANY).withGetterVisibility(Visibility.NONE)
+					.withSetterVisibility(Visibility.NONE).withCreatorVisibility(Visibility.NONE));
 
 			serializer = new Jackson2JsonValkeySerializer<>(Address.class);
 			serializer.setObjectMapper(mapper);
@@ -2078,7 +2054,7 @@ class MappingValkeyConverterUnitTests {
 				map.put("species-name", source.name.getBytes(Charset.forName("UTF-8")));
 			}
 			map.put("species-nicknames",
-				StringUtils.collectionToCommaDelimitedString(source.alsoKnownAs).getBytes(Charset.forName("UTF-8")));
+					StringUtils.collectionToCommaDelimitedString(source.alsoKnownAs).getBytes(Charset.forName("UTF-8")));
 			return map;
 		}
 	}
@@ -2100,8 +2076,7 @@ class MappingValkeyConverterUnitTests {
 			}
 			if (source.containsKey("species-nicknames")) {
 				species.alsoKnownAs = Arrays.asList(StringUtils
-					.commaDelimitedListToStringArray(
-						new String(source.get("species-nicknames"), Charset.forName("UTF-8"))));
+						.commaDelimitedListToStringArray(new String(source.get("species-nicknames"), Charset.forName("UTF-8"))));
 			}
 			return species;
 		}
@@ -2117,8 +2092,8 @@ class MappingValkeyConverterUnitTests {
 
 			mapper = new ObjectMapper();
 			mapper.setVisibility(mapper.getSerializationConfig().getDefaultVisibilityChecker()
-				.withFieldVisibility(Visibility.ANY).withGetterVisibility(Visibility.NONE)
-				.withSetterVisibility(Visibility.NONE).withCreatorVisibility(Visibility.NONE));
+					.withFieldVisibility(Visibility.ANY).withGetterVisibility(Visibility.NONE)
+					.withSetterVisibility(Visibility.NONE).withCreatorVisibility(Visibility.NONE));
 
 			serializer = new Jackson2JsonValkeySerializer<>(Address.class);
 			serializer.setObjectMapper(mapper);
@@ -2137,7 +2112,7 @@ class MappingValkeyConverterUnitTests {
 		public byte[] convert(AccountInfo accountInfo) {
 			StringBuilder resp = new StringBuilder();
 			resp.append(accountInfo.getId()).append("|").append(accountInfo.getAccount()).append("|")
-				.append(accountInfo.getAccountName());
+					.append(accountInfo.getAccountName());
 			return resp.toString().getBytes(StandardCharsets.UTF_8);
 		}
 	}

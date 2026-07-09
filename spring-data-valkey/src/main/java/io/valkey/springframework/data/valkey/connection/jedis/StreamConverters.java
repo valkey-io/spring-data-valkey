@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 the original author or authors.
+ * Copyright 2021-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,13 @@ package io.valkey.springframework.data.valkey.connection.jedis;
 
 import redis.clients.jedis.BuilderFactory;
 import redis.clients.jedis.StreamEntryID;
+import redis.clients.jedis.args.StreamDeletionPolicy;
 import redis.clients.jedis.params.XAddParams;
 import redis.clients.jedis.params.XClaimParams;
 import redis.clients.jedis.params.XPendingParams;
 import redis.clients.jedis.params.XReadGroupParams;
 import redis.clients.jedis.params.XReadParams;
+import redis.clients.jedis.params.XTrimParams;
 import redis.clients.jedis.resps.StreamEntry;
 import redis.clients.jedis.resps.StreamPendingEntry;
 
@@ -34,9 +36,10 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Range;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.*;
 import io.valkey.springframework.data.valkey.connection.stream.ByteRecord;
 import io.valkey.springframework.data.valkey.connection.stream.Consumer;
 import io.valkey.springframework.data.valkey.connection.stream.PendingMessage;
@@ -55,6 +58,8 @@ import io.valkey.springframework.data.valkey.connection.stream.StreamRecords;
  *
  * @author dengliming
  * @author Mark Paluch
+ * @author Jeonggyu Choi
+ * @author Viktoriya Kutsarova
  * @since 2.3
  */
 class StreamConverters {
@@ -160,12 +165,10 @@ class StreamConverters {
 
 		List<Object> objectList = (List<Object>) source;
 		long total = BuilderFactory.LONG.build(objectList.get(0));
-		Range.Bound<String> lower = objectList.get(1) != null
-				? Range.Bound.inclusive(JedisConverters.toString((byte[]) objectList.get(1)))
-				: Range.Bound.unbounded();
-		Range.Bound<String> upper = objectList.get(2) != null
-				? Range.Bound.inclusive(JedisConverters.toString((byte[]) objectList.get(2)))
-				: Range.Bound.unbounded();
+
+		Range.Bound<String> lower = boundOf(objectList.get(1));
+		Range.Bound<String> upper = boundOf(objectList.get(2));
+
 		List<List<Object>> consumerObjList = (List<List<Object>>) objectList.get(3);
 		Map<String, Long> map;
 
@@ -180,6 +183,10 @@ class StreamConverters {
 		}
 
 		return new PendingMessagesSummary(groupName, total, Range.of(lower, upper), map);
+	}
+
+	static Range.Bound<String> boundOf(@Nullable Object o) {
+		return o instanceof byte[] bytes ? Range.Bound.inclusive(JedisConverters.toString(bytes)) : Range.Bound.unbounded();
 	}
 
 	/**
@@ -202,25 +209,68 @@ class StreamConverters {
 		return new PendingMessages(groupName, messages).withinRange(range);
 	}
 
-	public static XAddParams toXAddParams(RecordId recordId, ValkeyStreamCommands.XAddOptions options) {
+	@SuppressWarnings("NullAway")
+	public static XAddParams toXAddParams(RecordId recordId, XAddOptions options) {
 
 		XAddParams params = new XAddParams();
 		params.id(toStreamEntryId(recordId.getValue()));
-
-		if (options.hasMaxlen()) {
-			params.maxLen(options.getMaxlen());
-		}
-
-		if (options.hasMinId()) {
-			params.minId(options.getMinId().getValue());
-		}
 
 		if (options.isNoMkStream()) {
 			params.noMkStream();
 		}
 
-		if (options.isApproximateTrimming()) {
+		if (options.hasTrimOptions()) {
+			TrimOptions trim = options.getTrimOptions();
+			TrimStrategy strategy = trim.getTrimStrategy();
+			if (strategy instanceof MaxLenTrimStrategy max) {
+				params.maxLen(max.threshold());
+			} else if (strategy instanceof MinIdTrimStrategy min) {
+				params.minId(min.threshold().getValue());
+			}
+
+			if (trim.getTrimOperator() == TrimOperator.APPROXIMATE) {
+				params.approximateTrimming();
+			} else {
+				params.exactTrimming();
+			}
+
+			if (trim.hasLimit()) {
+				params.limit(trim.getLimit());
+			}
+
+			if (trim.hasDeletionPolicy()) {
+				params.trimmingMode(toStreamDeletionPolicy(trim.getDeletionPolicy()));
+			}
+		}
+
+		return params;
+	}
+
+	@SuppressWarnings("NullAway")
+	public static XTrimParams toXTrimParams(XTrimOptions options) {
+
+		XTrimParams params = new XTrimParams();
+
+		TrimOptions trim = options.getTrimOptions();
+		TrimStrategy strategy = trim.getTrimStrategy();
+		if (strategy instanceof MaxLenTrimStrategy max) {
+			params.maxLen(max.threshold());
+		} else if (strategy instanceof MinIdTrimStrategy min) {
+			params.minId(min.threshold().getValue());
+		}
+
+		if (trim.getTrimOperator() == TrimOperator.APPROXIMATE) {
 			params.approximateTrimming();
+		} else {
+			params.exactTrimming();
+		}
+
+		if (trim.hasLimit()) {
+			params.limit(trim.getLimit());
+		}
+
+		if (trim.hasDeletionPolicy()) {
+			params.trimmingMode(toStreamDeletionPolicy(trim.getDeletionPolicy()));
 		}
 
 		return params;
@@ -233,17 +283,26 @@ class StreamConverters {
 		}
 
 		if ("$".equals(value)) {
-			return StreamEntryID.LAST_ENTRY;
+			return StreamEntryID.XGROUP_LAST_ENTRY;
 		}
 
 		if (">".equals(value)) {
-			return StreamEntryID.UNRECEIVED_ENTRY;
+			return StreamEntryID.XREADGROUP_UNDELIVERED_ENTRY;
 		}
 
 		return new StreamEntryID(value);
 	}
 
-	public static XClaimParams toXClaimParams(ValkeyStreamCommands.XClaimOptions options) {
+	private static StreamDeletionPolicy toStreamDeletionPolicy(ValkeyStreamCommands.StreamDeletionPolicy deletionPolicy) {
+
+		return switch (deletionPolicy) {
+			case KEEP_REFERENCES -> StreamDeletionPolicy.KEEP_REFERENCES;
+			case DELETE_REFERENCES -> StreamDeletionPolicy.DELETE_REFERENCES;
+			case ACKNOWLEDGED -> StreamDeletionPolicy.ACKNOWLEDGED;
+		};
+	}
+
+	public static XClaimParams toXClaimParams(XClaimOptions options) {
 
 		XClaimParams params = XClaimParams.xClaimParams();
 
@@ -262,6 +321,7 @@ class StreamConverters {
 		return params;
 	}
 
+	@SuppressWarnings("NullAway")
 	public static XReadParams toXReadParams(StreamReadOptions readOptions) {
 
 		XReadParams params = XReadParams.xReadParams();
@@ -277,6 +337,7 @@ class StreamConverters {
 		return params;
 	}
 
+	@SuppressWarnings("NullAway")
 	public static XReadGroupParams toXReadGroupParams(StreamReadOptions readOptions) {
 
 		XReadGroupParams params = XReadGroupParams.xReadGroupParams();
@@ -297,17 +358,56 @@ class StreamConverters {
 
 	}
 
-	public static XPendingParams toXPendingParams(ValkeyStreamCommands.XPendingOptions options) {
+	@SuppressWarnings("NullAway")
+	public static XPendingParams toXPendingParams(XPendingOptions options) {
 
 		Range<String> range = (Range<String>) options.getRange();
 		XPendingParams xPendingParams = XPendingParams.xPendingParams(StreamConverters.getLowerValue(range),
-				StreamConverters.getUpperValue(range), options.getCount().intValue());
+				StreamConverters.getUpperValue(range), options.getCount() != null ? options.getCount().intValue() : 0);
 
 		if (options.hasConsumer()) {
 			xPendingParams.consumer(options.getConsumerName());
 		}
+		if (options.hasMinIdleTime()) {
+			xPendingParams.idle(options.getMinIdleTime().toMillis());
+		}
 
 		return xPendingParams;
+	}
+
+	public static StreamDeletionPolicy toStreamDeletionPolicy(XDelOptions options) {
+		return toStreamDeletionPolicy(options.getDeletionPolicy());
+	}
+
+	/**
+	 * Convert Jedis {@link redis.clients.jedis.resps.StreamEntryDeletionResult} to Spring Data Valkey
+	 * {@link ValkeyStreamCommands.StreamEntryDeletionResult}.
+	 *
+	 * @param result the Jedis deletion result enum
+	 * @return the corresponding Spring Data Valkey enum
+	 * @since 4.1
+	 */
+	public static ValkeyStreamCommands.StreamEntryDeletionResult toStreamEntryDeletionResult(
+			redis.clients.jedis.resps.StreamEntryDeletionResult result) {
+		return switch (result) {
+			case NOT_FOUND -> ValkeyStreamCommands.StreamEntryDeletionResult.NOT_FOUND;
+			case DELETED -> ValkeyStreamCommands.StreamEntryDeletionResult.DELETED;
+			case NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED ->
+					ValkeyStreamCommands.StreamEntryDeletionResult.NOT_DELETED_UNACKNOWLEDGED_OR_STILL_REFERENCED;
+		};
+	}
+
+	/**
+	 * Convert a list of Jedis {@link redis.clients.jedis.resps.StreamEntryDeletionResult} to a {@link List} of Spring Data Valkey
+	 * {@link ValkeyStreamCommands.StreamEntryDeletionResult}.
+	 *
+	 * @param results the list of Jedis deletion result enums
+	 * @return the list of Spring Data Valkey deletion result enums
+	 * @since 4.1
+	 */
+	public static List<StreamEntryDeletionResult> toStreamEntryDeletionResults(
+			List<redis.clients.jedis.resps.StreamEntryDeletionResult> results) {
+		return results.stream().map(StreamConverters::toStreamEntryDeletionResult).collect(Collectors.toList());
 	}
 
 }

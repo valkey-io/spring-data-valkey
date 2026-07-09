@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import org.springframework.dao.InvalidDataAccessResourceUsageException;
 import io.valkey.springframework.data.valkey.ValkeyConnectionFailureException;
 import io.valkey.springframework.data.valkey.ValkeySystemException;
 import org.springframework.dao.QueryTimeoutException;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Converts Valkey-Glide exceptions to Spring DAO exceptions.

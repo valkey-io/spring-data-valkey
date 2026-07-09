@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.KeyScanOptions;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
@@ -35,7 +37,10 @@ import org.springframework.util.ObjectUtils;
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author ihaohong
+ * @author Yordan Tsintsov
+ * @see ValkeyCommands
  */
+@NullUnmarked
 public interface ValkeyKeyCommands {
 
 	/**
@@ -48,8 +53,18 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/copy">Valkey Documentation: COPY</a>
 	 * @since 2.6
 	 */
-	@Nullable
-	Boolean copy(byte[] sourceKey, byte[] targetKey, boolean replace);
+	Boolean copy(byte [] sourceKey, byte [] targetKey, boolean replace);
+
+	/**
+	 * Get the hash digest for the value stored in the specified key as a hexadecimal string. This command is intended to
+	 * be used with string values only.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @return {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/digest">Valkey Documentation: DIGEST</a>
+	 * @since 4.1
+	 */
+	String digest(byte [] key);
 
 	/**
 	 * Determine if given {@code key} exists.
@@ -58,8 +73,7 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal true} if key exists. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/exists">Valkey Documentation: EXISTS</a>
 	 */
-	@Nullable
-	default Boolean exists(byte[] key) {
+	default Boolean exists(byte [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 		Long count = exists(new byte[][] { key });
@@ -75,8 +89,7 @@ public interface ValkeyKeyCommands {
 	 *         transaction.
 	 * @since 2.1
 	 */
-	@Nullable
-	Long exists(byte[]... keys);
+	Long exists(byte [] @NonNull... keys);
 
 	/**
 	 * Delete given {@code keys}.
@@ -85,8 +98,18 @@ public interface ValkeyKeyCommands {
 	 * @return The number of keys that were removed. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/del">Valkey Documentation: DEL</a>
 	 */
-	@Nullable
-	Long del(byte[]... keys);
+	Long del(byte [] @NonNull... keys);
+
+	/**
+	 * Delete a key based on the provided {@link CompareCondition}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param condition must not be {@literal null}.
+	 * @return {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/delex">Valkey Documentation: DELEX</a>
+	 * @since 4.1
+	 */
+	Boolean delex(byte [] key, CompareCondition condition);
 
 	/**
 	 * Unlink the {@code keys} from the keyspace. Unlike with {@link #del(byte[]...)} the actual memory reclaiming here
@@ -97,8 +120,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	Long unlink(byte[]... keys);
+	Long unlink(byte [] @NonNull... keys);
 
 	/**
 	 * Determine the type stored at {@code key}.
@@ -107,8 +129,7 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/type">Valkey Documentation: TYPE</a>
 	 */
-	@Nullable
-	DataType type(byte[] key);
+	DataType type(byte [] key);
 
 	/**
 	 * Alter the last access time of given {@code key(s)}.
@@ -118,18 +139,19 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/touch">Valkey Documentation: TOUCH</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	Long touch(byte[]... keys);
+	Long touch(byte [] @NonNull... keys);
 
 	/**
-	 * Find all keys matching the given {@code pattern}.
+	 * Retrieve all keys matching the given pattern.
+	 * <p>
+	 * <strong>IMPORTANT:</strong> The {@literal KEYS} command is non-interruptible and scans the entire keyspace which
+	 * may cause performance issues. Consider {@link #scan(ScanOptions)} for large datasets.
 	 *
 	 * @param pattern must not be {@literal null}.
 	 * @return empty {@link Set} if no match found. {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/keys">Valkey Documentation: KEYS</a>
 	 */
-	@Nullable
-	Set<byte[]> keys(byte[] pattern);
+	Set<byte []> keys(byte [] pattern);
 
 	/**
 	 * Use a {@link Cursor} to iterate over keys.
@@ -139,19 +161,19 @@ public interface ValkeyKeyCommands {
 	 * @since 2.4
 	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
 	 */
-	default Cursor<byte[]> scan(KeyScanOptions options) {
+	default Cursor<byte []> scan(KeyScanOptions options) {
 		return scan((ScanOptions) options);
 	}
 
 	/**
 	 * Use a {@link Cursor} to iterate over keys.
 	 *
-	 * @param options must not be {@literal null}.
+	 * @param options can be {@literal null}.
 	 * @return never {@literal null}.
 	 * @since 1.4
 	 * @see <a href="https://valkey.io/commands/scan">Valkey Documentation: SCAN</a>
 	 */
-	Cursor<byte[]> scan(ScanOptions options);
+	Cursor<byte []> scan(@Nullable ScanOptions options);
 
 	/**
 	 * Return a random key from the keyspace.
@@ -159,7 +181,6 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal null} if no keys available or when used in pipeline or transaction.
 	 * @see <a href="https://valkey.io/commands/randomkey">Valkey Documentation: RANDOMKEY</a>
 	 */
-	@Nullable
 	byte[] randomKey();
 
 	/**
@@ -169,7 +190,7 @@ public interface ValkeyKeyCommands {
 	 * @param newKey must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/rename">Valkey Documentation: RENAME</a>
 	 */
-	void rename(byte[] oldKey, byte[] newKey);
+	void rename(byte [] oldKey, byte [] newKey);
 
 	/**
 	 * Rename key {@code oldKey} to {@code newKey} only if {@code newKey} does not exist.
@@ -179,8 +200,7 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/renamenx">Valkey Documentation: RENAMENX</a>
 	 */
-	@Nullable
-	Boolean renameNX(byte[] oldKey, byte[] newKey);
+	Boolean renameNX(byte [] oldKey, byte [] newKey);
 
 	/**
 	 * @param key must not be {@literal null}.
@@ -196,16 +216,15 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
 	 * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
 	 */
-	@Nullable
-	default Boolean applyExpiration(byte[] key, io.valkey.springframework.data.valkey.core.types.Expiration expiration,
-			ExpirationOptions options) {
+	default Boolean applyExpiration(byte [] key,
+			io.valkey.springframework.data.valkey.core.types.Expiration expiration, ExpirationOptions options) {
 
 		if (expiration.isPersistent()) {
 			return persist(key);
 		}
 
 		if (ObjectUtils.nullSafeEquals(ExpirationOptions.none(), options)) {
-			if (ObjectUtils.nullSafeEquals(TimeUnit.MILLISECONDS, expiration.getTimeUnit())) {
+			if (expiration.isPrecise()) {
 				if (expiration.isUnixTimestamp()) {
 					return expireAt(key, expiration.getExpirationTimeInMilliseconds());
 				}
@@ -217,7 +236,7 @@ public interface ValkeyKeyCommands {
 			return expire(key, expiration.getExpirationTimeInSeconds());
 		}
 
-		if (ObjectUtils.nullSafeEquals(TimeUnit.MILLISECONDS, expiration.getTimeUnit())) {
+		if (expiration.isPrecise()) {
 			if (expiration.isUnixTimestamp()) {
 				return expireAt(key, expiration.getExpirationTimeInMilliseconds(), options.getCondition());
 			}
@@ -242,8 +261,7 @@ public interface ValkeyKeyCommands {
 	 *         skipped because of the provided arguments.
 	 * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
 	 */
-	@Nullable
-	default Boolean expire(byte[] key, long seconds) {
+	default Boolean expire(byte [] key, long seconds) {
 		return expire(key, seconds, ExpirationOptions.Condition.ALWAYS);
 	}
 
@@ -258,8 +276,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	Boolean expire(byte[] key, long seconds, ExpirationOptions.Condition condition);
+	Boolean expire(byte [] key, long seconds, ExpirationOptions.Condition condition);
 
 	/**
 	 * Set time to live for given {@code key} using {@link Duration#toSeconds() seconds} precision.
@@ -272,8 +289,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/expire">Valkey Documentation: EXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default Boolean expire(byte[] key, Duration duration) {
+	default Boolean expire(byte [] key, Duration duration) {
 		return expire(key, duration.toSeconds());
 	}
 
@@ -287,8 +303,7 @@ public interface ValkeyKeyCommands {
 	 *         skipped because of the provided arguments.
 	 * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
 	 */
-	@Nullable
-	default Boolean pExpire(byte[] key, long millis) {
+	default Boolean pExpire(byte [] key, long millis) {
 		return pExpire(key, millis, ExpirationOptions.Condition.ALWAYS);
 	}
 
@@ -303,8 +318,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	Boolean pExpire(byte[] key, long millis, ExpirationOptions.Condition condition);
+	Boolean pExpire(byte [] key, long millis, ExpirationOptions.Condition condition);
 
 	/**
 	 * Set time to live for given {@code key} using {@link Duration#toMillis() milliseconds} precision.
@@ -317,8 +331,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/pexpire">Valkey Documentation: PEXPIRE</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default Boolean pExpire(byte[] key, Duration duration) {
+	default Boolean pExpire(byte [] key, Duration duration) {
 		return pExpire(key, duration.toMillis());
 	}
 
@@ -332,8 +345,7 @@ public interface ValkeyKeyCommands {
 	 *         skipped because of the provided arguments.
 	 * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
 	 */
-	@Nullable
-	default Boolean expireAt(byte[] key, long unixTime) {
+	default Boolean expireAt(byte [] key, long unixTime) {
 		return expireAt(key, unixTime, ExpirationOptions.Condition.ALWAYS);
 	}
 
@@ -348,8 +360,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	Boolean expireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition);
+	Boolean expireAt(byte [] key, long unixTime, ExpirationOptions.Condition condition);
 
 	/**
 	 * Set the expiration for given {@code key} as a {@literal UNIX} timestamp in {@link Instant#getEpochSecond() seconds}
@@ -363,8 +374,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/expireat">Valkey Documentation: EXPIREAT</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default Boolean expireAt(byte[] key, Instant unixTime) {
+	default Boolean expireAt(byte [] key, Instant unixTime) {
 		return expireAt(key, unixTime.getEpochSecond());
 	}
 
@@ -378,8 +388,7 @@ public interface ValkeyKeyCommands {
 	 *         skipped because of the provided arguments.
 	 * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
 	 */
-	@Nullable
-	default Boolean pExpireAt(byte[] key, long unixTimeInMillis) {
+	default Boolean pExpireAt(byte [] key, long unixTimeInMillis) {
 		return pExpireAt(key, unixTimeInMillis, ExpirationOptions.Condition.ALWAYS);
 	}
 
@@ -394,8 +403,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	Boolean pExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition);
+	Boolean pExpireAt(byte [] key, long unixTimeInMillis, ExpirationOptions.Condition condition);
 
 	/**
 	 * Set the expiration for given {@code key} as a {@literal UNIX} timestamp in {@link Instant#toEpochMilli()
@@ -409,8 +417,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/pexpireat">Valkey Documentation: PEXPIREAT</a>
 	 * @since 3.5
 	 */
-	@Nullable
-	default Boolean pExpireAt(byte[] key, Instant unixTime) {
+	default Boolean pExpireAt(byte [] key, Instant unixTime) {
 		return pExpireAt(key, unixTime.toEpochMilli());
 	}
 
@@ -421,8 +428,7 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/persist">Valkey Documentation: PERSIST</a>
 	 */
-	@Nullable
-	Boolean persist(byte[] key);
+	Boolean persist(byte [] key);
 
 	/**
 	 * Move given {@code key} to database with {@code index}.
@@ -432,8 +438,7 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/move">Valkey Documentation: MOVE</a>
 	 */
-	@Nullable
-	Boolean move(byte[] key, int dbIndex);
+	Boolean move(byte [] key, int dbIndex);
 
 	/**
 	 * Get the time to live for {@code key} in seconds.
@@ -442,8 +447,7 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
 	 */
-	@Nullable
-	Long ttl(byte[] key);
+	Long ttl(byte [] key);
 
 	/**
 	 * Get the time to live for {@code key} in and convert it to the given {@link TimeUnit}.
@@ -454,8 +458,7 @@ public interface ValkeyKeyCommands {
 	 * @since 1.8
 	 * @see <a href="https://valkey.io/commands/ttl">Valkey Documentation: TTL</a>
 	 */
-	@Nullable
-	Long ttl(byte[] key, TimeUnit timeUnit);
+	Long ttl(byte [] key, TimeUnit timeUnit);
 
 	/**
 	 * Get the precise time to live for {@code key} in milliseconds.
@@ -464,8 +467,7 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/pttl">Valkey Documentation: PTTL</a>
 	 */
-	@Nullable
-	Long pTtl(byte[] key);
+	Long pTtl(byte [] key);
 
 	/**
 	 * Get the precise time to live for {@code key} in and convert it to the given {@link TimeUnit}.
@@ -476,31 +478,28 @@ public interface ValkeyKeyCommands {
 	 * @since 1.8
 	 * @see <a href="https://valkey.io/commands/pttl">Valkey Documentation: PTTL</a>
 	 */
-	@Nullable
-	Long pTtl(byte[] key, TimeUnit timeUnit);
+	Long pTtl(byte [] key, TimeUnit timeUnit);
 
 	/**
 	 * Sort the elements for {@code key}.
 	 *
 	 * @param key must not be {@literal null}.
-	 * @param params must not be {@literal null}.
+	 * @param params can be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sort">Valkey Documentation: SORT</a>
 	 */
-	@Nullable
-	List<byte[]> sort(byte[] key, SortParameters params);
+	List<byte []> sort(byte [] key, @Nullable SortParameters params);
 
 	/**
 	 * Sort the elements for {@code key} and store result in {@code storeKey}.
 	 *
 	 * @param key must not be {@literal null}.
-	 * @param params must not be {@literal null}.
+	 * @param params can be {@literal null}.
 	 * @param storeKey must not be {@literal null}.
 	 * @return {@literal null} when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/sort">Valkey Documentation: SORT</a>
 	 */
-	@Nullable
-	Long sort(byte[] key, SortParameters params, byte[] storeKey);
+	Long sort(byte [] key, @Nullable SortParameters params, byte [] storeKey);
 
 	/**
 	 * Retrieve serialized version of the value stored at {@code key}.
@@ -509,8 +508,7 @@ public interface ValkeyKeyCommands {
 	 * @return {@literal null} if key does not exist or when used in pipeline / transaction.
 	 * @see <a href="https://valkey.io/commands/dump">Valkey Documentation: DUMP</a>
 	 */
-	@Nullable
-	byte[] dump(byte[] key);
+	byte[] dump(byte [] key);
 
 	/**
 	 * Create {@code key} using the {@code serializedValue}, previously obtained using {@link #dump(byte[])}.
@@ -520,7 +518,7 @@ public interface ValkeyKeyCommands {
 	 * @param serializedValue must not be {@literal null}.
 	 * @see <a href="https://valkey.io/commands/restore">Valkey Documentation: RESTORE</a>
 	 */
-	default void restore(byte[] key, long ttlInMillis, byte[] serializedValue) {
+	default void restore(byte [] key, long ttlInMillis, byte [] serializedValue) {
 		restore(key, ttlInMillis, serializedValue, false);
 	}
 
@@ -534,7 +532,7 @@ public interface ValkeyKeyCommands {
 	 * @since 2.1
 	 * @see <a href="https://valkey.io/commands/restore">Valkey Documentation: RESTORE</a>
 	 */
-	void restore(byte[] key, long ttlInMillis, byte[] serializedValue, boolean replace);
+	void restore(byte [] key, long ttlInMillis, byte [] serializedValue, boolean replace);
 
 	/**
 	 * Get the type of internal representation used for storing the value at the given {@code key}.
@@ -546,8 +544,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT ENCODING</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	ValueEncoding encodingOf(byte[] key);
+	ValueEncoding encodingOf(byte [] key);
 
 	/**
 	 * Get the {@link Duration} since the object stored at the given {@code key} is idle.
@@ -558,8 +555,7 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT IDLETIME</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	Duration idletime(byte[] key);
+	Duration idletime(byte [] key);
 
 	/**
 	 * Get the number of references of the value associated with the specified {@code key}.
@@ -570,7 +566,6 @@ public interface ValkeyKeyCommands {
 	 * @see <a href="https://valkey.io/commands/object">Valkey Documentation: OBJECT REFCOUNT</a>
 	 * @since 2.1
 	 */
-	@Nullable
-	Long refcount(byte[] key);
+	Long refcount(byte [] key);
 
 }

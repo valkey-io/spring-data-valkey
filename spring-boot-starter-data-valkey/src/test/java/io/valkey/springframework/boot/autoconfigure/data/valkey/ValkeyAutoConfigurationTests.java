@@ -16,6 +16,7 @@
 
 package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
@@ -486,6 +487,36 @@ class ValkeyAutoConfigurationTests {
 
 			});
 	}
+
+	@Test
+	void testValkeyConfigurationWithTimeoutAndConnectTimeout() {
+		this.contextRunner
+			.withPropertyValues("spring.data.valkey.host:foo", "spring.data.valkey.timeout:250",
+					"spring.data.valkey.valkeyglide.connection-timeout:1000")
+			.run((context) -> {
+				ValkeyGlideConnectionFactory cf = context.getBean(ValkeyGlideConnectionFactory.class);
+				assertThat(cf.getHostName()).isEqualTo("foo");
+				ValkeyGlideClientConfiguration config = cf.getClientConfiguration();
+				assertThat(config.getCommandTimeout()).isEqualTo(Duration.ofMillis(250));
+				assertThat(config.getConnectionTimeout()).isEqualTo(Duration.ofMillis(1000));
+			});
+	}
+
+	@Test
+	void testValkeyConfigurationWithDefaultTimeouts() {
+		this.contextRunner.withPropertyValues("spring.data.valkey.host:foo").run((context) -> {
+			ValkeyGlideConnectionFactory cf = context.getBean(ValkeyGlideConnectionFactory.class);
+			assertThat(cf.getHostName()).isEqualTo("foo");
+			ValkeyGlideClientConfiguration config = cf.getClientConfiguration();
+			assertThat(config.getCommandTimeout()).isNull();
+			assertThat(config.getConnectionTimeout()).isNull();
+		});
+	}
+
+	// TODO: Add master-replica tests when ValkeyGlideConnectionFactory supports master-replica configuration
+	// TODO: Add testValkeyConfigurationWithMasterReplica
+	// TODO: Add testValkeyConfigurationWithMasterReplicaAndNoNode
+	// TODO: Add usesMasterReplicaFromCustomConnectionDetails
 
 	private ContextConsumer<AssertableApplicationContext> assertClientOptions(
 			Consumer<ValkeyGlideClientConfiguration> configConsumer) {

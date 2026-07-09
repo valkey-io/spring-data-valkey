@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2025 the original author or authors.
+ * Copyright 2021-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import org.springframework.lang.NonNull;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
-import org.springframework.util.ObjectUtils;
 
 /**
  * Simple {@link NamedNode}.
@@ -26,16 +23,12 @@ import org.springframework.util.ObjectUtils;
  * @author Mark Paluch
  * @since 2.5.3
  */
-class SentinelMasterId implements NamedNode {
+record SentinelMasterId(String name) implements NamedNode {
 
-	private final String name;
-
-	public SentinelMasterId(String name) {
+	SentinelMasterId {
 		Assert.hasText(name, "Sentinel Master Id must not be null or empty");
-		this.name = name;
 	}
 
-	@NonNull
 	@Override
 	public String getName() {
 		return name;
@@ -43,22 +36,7 @@ class SentinelMasterId implements NamedNode {
 
 	@Override
 	public String toString() {
-		return getName();
+		return name();
 	}
 
-	@Override
-	public boolean equals(@Nullable Object o) {
-		if (this == o) {
-			return true;
-		}
-		if (!(o instanceof SentinelMasterId that)) {
-			return false;
-		}
-		return ObjectUtils.nullSafeEquals(name, that.name);
-	}
-
-	@Override
-	public int hashCode() {
-		return ObjectUtils.nullSafeHashCode(name);
-	}
 }

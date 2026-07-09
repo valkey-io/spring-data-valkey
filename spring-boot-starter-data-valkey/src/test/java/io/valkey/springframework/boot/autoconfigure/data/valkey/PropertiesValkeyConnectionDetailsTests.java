@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,10 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.Cluster;
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.MasterReplica;
 import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.Node;
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyConnectionDetails.Sentinel;
 import org.springframework.boot.ssl.DefaultSslBundleRegistry;
 import org.springframework.boot.ssl.SslBundle;
 
@@ -57,6 +60,7 @@ class PropertiesValkeyConnectionDetailsTests {
 		assertThat(standalone.getDatabase()).isEqualTo(0);
 		assertThat(this.connectionDetails.getSentinel()).isNull();
 		assertThat(this.connectionDetails.getCluster()).isNull();
+		assertThat(this.connectionDetails.getMasterReplica()).isNull();
 		assertThat(this.connectionDetails.getUsername()).isNull();
 		assertThat(this.connectionDetails.getPassword()).isNull();
 	}
@@ -119,8 +123,8 @@ class PropertiesValkeyConnectionDetailsTests {
 	void standaloneIsConfiguredFromUrlWithoutDatabase() {
 		this.properties.setUrl("valkey://example.com:1234");
 		this.properties.setDatabase(5);
-		PropertiesValkeyConnectionDetails connectionDetails = new PropertiesValkeyConnectionDetails(this.properties,
-				null);
+		PropertiesValkeyConnectionDetails connectionDetails = new PropertiesValkeyConnectionDetails(
+				this.properties, null);
 		ValkeyConnectionDetails.Standalone standalone = connectionDetails.getStandalone();
 		assertThat(standalone.getHost()).isEqualTo("example.com");
 		assertThat(standalone.getPort()).isEqualTo(1234);
@@ -143,7 +147,20 @@ class PropertiesValkeyConnectionDetailsTests {
 		ValkeyProperties.Cluster cluster = new ValkeyProperties.Cluster();
 		cluster.setNodes(List.of("localhost:1111", "127.0.0.1:2222", "[::1]:3333"));
 		this.properties.setCluster(cluster);
-		assertThat(this.connectionDetails.getCluster().getNodes()).containsExactly(new Node("localhost", 1111),
+		Cluster actualCluster = this.connectionDetails.getCluster();
+		assertThat(actualCluster).isNotNull();
+		assertThat(actualCluster.getNodes()).containsExactly(new Node("localhost", 1111), new Node("127.0.0.1", 2222),
+				new Node("[::1]", 3333));
+	}
+
+	@Test
+	void masterReplicaIsConfigured() {
+		ValkeyProperties.Masterreplica masterReplica = new ValkeyProperties.Masterreplica();
+		masterReplica.setNodes(List.of("localhost:1111", "127.0.0.1:2222", "[::1]:3333"));
+		this.properties.setMasterreplica(masterReplica);
+		MasterReplica actualMasterReplica = this.connectionDetails.getMasterReplica();
+		assertThat(actualMasterReplica).isNotNull();
+		assertThat(actualMasterReplica.getNodes()).containsExactly(new Node("localhost", 1111),
 				new Node("127.0.0.1", 2222), new Node("[::1]", 3333));
 	}
 
@@ -153,11 +170,13 @@ class PropertiesValkeyConnectionDetailsTests {
 		sentinel.setNodes(List.of("localhost:1111", "127.0.0.1:2222", "[::1]:3333"));
 		this.properties.setSentinel(sentinel);
 		this.properties.setDatabase(5);
-		PropertiesValkeyConnectionDetails connectionDetails = new PropertiesValkeyConnectionDetails(this.properties,
-				null);
-		assertThat(connectionDetails.getSentinel().getNodes()).containsExactly(new Node("localhost", 1111),
-				new Node("127.0.0.1", 2222), new Node("[::1]", 3333));
-		assertThat(connectionDetails.getSentinel().getDatabase()).isEqualTo(5);
+		PropertiesValkeyConnectionDetails connectionDetails = new PropertiesValkeyConnectionDetails(
+				this.properties, null);
+		Sentinel actualSentinel = connectionDetails.getSentinel();
+		assertThat(actualSentinel).isNotNull();
+		assertThat(actualSentinel.getNodes()).containsExactly(new Node("localhost", 1111), new Node("127.0.0.1", 2222),
+				new Node("[::1]", 3333));
+		assertThat(actualSentinel.getDatabase()).isEqualTo(5);
 	}
 
 	@Test
@@ -167,9 +186,11 @@ class PropertiesValkeyConnectionDetailsTests {
 		this.properties.setSentinel(sentinel);
 		this.properties.setUrl("valkey://example.com:1234/9999");
 		this.properties.setDatabase(5);
-		PropertiesValkeyConnectionDetails connectionDetails = new PropertiesValkeyConnectionDetails(this.properties,
-				null);
-		assertThat(connectionDetails.getSentinel().getDatabase()).isEqualTo(9999);
+		PropertiesValkeyConnectionDetails connectionDetails = new PropertiesValkeyConnectionDetails(
+				this.properties, null);
+		Sentinel actualSentinel = connectionDetails.getSentinel();
+		assertThat(actualSentinel).isNotNull();
+		assertThat(actualSentinel.getDatabase()).isEqualTo(9999);
 	}
 
 	@Test
@@ -177,21 +198,21 @@ class PropertiesValkeyConnectionDetailsTests {
 		SslBundle bundle1 = mock(SslBundle.class);
 		this.sslBundleRegistry.registerBundle("bundle-1", bundle1);
 		this.properties.getSsl().setBundle("bundle-1");
-		SslBundle sslBundle = this.connectionDetails.getStandalone().getSslBundle();
+		SslBundle sslBundle = this.connectionDetails.getSslBundle();
 		assertThat(sslBundle).isSameAs(bundle1);
 	}
 
 	@Test
 	void shouldReturnSystemBundleIfSslIsEnabledButBundleNotSet() {
 		this.properties.getSsl().setEnabled(true);
-		SslBundle sslBundle = this.connectionDetails.getStandalone().getSslBundle();
+		SslBundle sslBundle = this.connectionDetails.getSslBundle();
 		assertThat(sslBundle).isNotNull();
 	}
 
 	@Test
 	void shouldReturnNullIfSslIsNotEnabled() {
 		this.properties.getSsl().setEnabled(false);
-		SslBundle sslBundle = this.connectionDetails.getStandalone().getSslBundle();
+		SslBundle sslBundle = this.connectionDetails.getSslBundle();
 		assertThat(sslBundle).isNull();
 	}
 

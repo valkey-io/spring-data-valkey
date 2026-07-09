@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +27,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnThreading;
-import org.springframework.boot.autoconfigure.thread.Threading;
 import org.springframework.boot.context.properties.PropertyMapper;
 import org.springframework.boot.ssl.SslBundle;
 import org.springframework.boot.ssl.SslOptions;
+import org.springframework.boot.thread.Threading;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.SimpleAsyncTaskExecutor;
@@ -38,11 +38,13 @@ import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfigurati
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration.JedisClientConfigurationBuilder;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration.JedisSslClientConfigurationBuilder;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnection;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
+import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
 /**
@@ -64,9 +66,11 @@ class JedisConnectionConfiguration extends ValkeyConnectionConfiguration {
 	JedisConnectionConfiguration(ValkeyProperties properties,
 			ObjectProvider<ValkeyStandaloneConfiguration> standaloneConfigurationProvider,
 			ObjectProvider<ValkeySentinelConfiguration> sentinelConfiguration,
-			ObjectProvider<ValkeyClusterConfiguration> clusterConfiguration, ValkeyConnectionDetails connectionDetails) {
+			ObjectProvider<ValkeyClusterConfiguration> clusterConfiguration,
+			ObjectProvider<ValkeyStaticMasterReplicaConfiguration> masterReplicaConfiguration,
+			ValkeyConnectionDetails connectionDetails) {
 		super(properties, connectionDetails, standaloneConfigurationProvider, sentinelConfiguration,
-				clusterConfiguration);
+				clusterConfiguration, masterReplicaConfiguration);
 	}
 
 	@Bean
@@ -92,8 +96,17 @@ class JedisConnectionConfiguration extends ValkeyConnectionConfiguration {
 		JedisClientConfiguration clientConfiguration = getJedisClientConfiguration(builderCustomizers);
 		return switch (this.mode) {
 			case STANDALONE -> new JedisConnectionFactory(getStandaloneConfig(), clientConfiguration);
-			case CLUSTER -> new JedisConnectionFactory(getClusterConfiguration(), clientConfiguration);
-			case SENTINEL -> new JedisConnectionFactory(getSentinelConfig(), clientConfiguration);
+			case CLUSTER -> {
+				ValkeyClusterConfiguration clusterConfiguration = getClusterConfiguration();
+				Assert.state(clusterConfiguration != null, "'clusterConfiguration' must not be null");
+				yield new JedisConnectionFactory(clusterConfiguration, clientConfiguration);
+			}
+			case SENTINEL -> {
+				ValkeySentinelConfiguration sentinelConfig = getSentinelConfig();
+				Assert.state(sentinelConfig != null, "'sentinelConfig' must not be null");
+				yield new JedisConnectionFactory(sentinelConfig, clientConfiguration);
+			}
+			case MASTER_REPLICA -> throw new IllegalStateException("'masterReplicaConfig' is not supported by Jedis");
 		};
 	}
 
@@ -105,15 +118,16 @@ class JedisConnectionConfiguration extends ValkeyConnectionConfiguration {
 		if (isPoolEnabled(pool)) {
 			applyPooling(pool, builder);
 		}
-		if (StringUtils.hasText(getProperties().getUrl())) {
-			customizeConfigurationFromUrl(builder);
+		String url = getProperties().getUrl();
+		if (StringUtils.hasText(url)) {
+			customizeConfigurationFromUrl(builder, url);
 		}
 		builderCustomizers.orderedStream().forEach((customizer) -> customizer.customize(builder));
 		return builder.build();
 	}
 
 	private JedisClientConfigurationBuilder applyProperties(JedisClientConfigurationBuilder builder) {
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+		PropertyMapper map = PropertyMapper.get();
 		map.from(getProperties().getTimeout()).to(builder::readTimeout);
 		map.from(getProperties().getConnectTimeout()).to(builder::connectTimeout);
 		map.from(getProperties().getClientName()).whenHasText().to(builder::clientName);
@@ -129,7 +143,7 @@ class JedisConnectionConfiguration extends ValkeyConnectionConfiguration {
 		sslBuilder.sslSocketFactory(sslBundle.createSslContext().getSocketFactory());
 		SslOptions sslOptions = sslBundle.getOptions();
 		SSLParameters sslParameters = new SSLParameters();
-		PropertyMapper map = PropertyMapper.get().alwaysApplyingWhenNonNull();
+		PropertyMapper map = PropertyMapper.get();
 		map.from(sslOptions.getCiphers()).to(sslParameters::setCipherSuites);
 		map.from(sslOptions.getEnabledProtocols()).to(sslParameters::setProtocols);
 		sslBuilder.sslParameters(sslParameters);
@@ -154,8 +168,9 @@ class JedisConnectionConfiguration extends ValkeyConnectionConfiguration {
 		return config;
 	}
 
-	private void customizeConfigurationFromUrl(JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
-		if (urlUsesSsl()) {
+	private void customizeConfigurationFromUrl(JedisClientConfiguration.JedisClientConfigurationBuilder builder,
+			String url) {
+		if (urlUsesSsl(url)) {
 			builder.useSsl();
 		}
 	}

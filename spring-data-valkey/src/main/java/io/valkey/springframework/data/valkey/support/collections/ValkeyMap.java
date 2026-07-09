@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.core.BoundHashFieldExpirationOperations;
-import org.springframework.lang.Nullable;
 
 /**
  * Map view of a Valkey hash.
@@ -68,8 +68,7 @@ public interface ValkeyMap<K, V> extends ValkeyStore, ConcurrentMap<K, V> {
 	 * @return {@literal null} if the hash does not exist.
 	 * @since 2.6
 	 */
-	@Nullable
-	Map.Entry<K, V> randomEntry();
+	Map.@Nullable Entry<K, V> randomEntry();
 
 	/**
 	 * @since 1.4

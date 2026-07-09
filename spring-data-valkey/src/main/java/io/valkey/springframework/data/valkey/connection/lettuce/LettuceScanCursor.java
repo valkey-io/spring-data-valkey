@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,10 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import java.util.Collection;
 
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.core.ScanCursor;
 import io.valkey.springframework.data.valkey.core.ScanIteration;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 
 /**
  * Lettuce-specific {@link ScanCursor} extension that maintains the cursor state that is required for stateful-scanning
@@ -34,7 +34,7 @@ import org.springframework.lang.Nullable;
  */
 abstract class LettuceScanCursor<T> extends ScanCursor<T> {
 
-	private @Nullable io.lettuce.core.ScanCursor state;
+	private io.lettuce.core.@Nullable ScanCursor state;
 
 	/**
 	 * Creates a new {@link LettuceScanCursor} given {@link ScanOptions}.
@@ -59,7 +59,7 @@ abstract class LettuceScanCursor<T> extends ScanCursor<T> {
 			}
 		}
 
-		throw new IllegalArgumentException("Current scan %s state and cursor %d do not match"
+		throw new IllegalArgumentException("Current scan %s state and cursor %s do not match"
 				.formatted(state != null ? state.getCursor() : "(none)", cursorId));
 	}
 

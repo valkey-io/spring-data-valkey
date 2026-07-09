@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -74,8 +74,7 @@ class LettuceReactiveClusterHyperLogLogCommands extends LettuceReactiveHyperLogL
 
 			Assert.notEmpty(command.getKeys(), "Keys must be null or empty for PFCOUNT");
 
-			if (ClusterSlotHashUtil
-					.isSameSlotForAllKeys(command.getKeys().toArray(new ByteBuffer[command.getKeys().size()]))) {
+			if (ClusterSlotHashUtil.isSameSlotForAllKeys(command.getKeys())) {
 				return super.pfCount(Mono.just(command));
 			}
 

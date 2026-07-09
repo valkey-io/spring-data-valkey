@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,8 +45,8 @@ class IndexConfigurationUnitTests {
 	void valkeyIndexSettingIndexNameUsedInEquals() {
 
 		SimpleIndexDefinition setting1 = new SimpleIndexDefinition("keyspace", "path", "indexName1");
-		SimpleIndexDefinition setting2 = new SimpleIndexDefinition(setting1.getKeyspace(), "path", setting1.getIndexName()
-				+ "other");
+		SimpleIndexDefinition setting2 = new SimpleIndexDefinition(setting1.getKeyspace(), "path",
+				setting1.getIndexName() + "other");
 
 		assertThat(setting1).isNotEqualTo(setting2);
 	}
@@ -55,8 +55,8 @@ class IndexConfigurationUnitTests {
 	void valkeyIndexSettingIndexNameUsedInHashCode() {
 
 		SimpleIndexDefinition setting1 = new SimpleIndexDefinition("keyspace", "path", "indexName1");
-		SimpleIndexDefinition setting2 = new SimpleIndexDefinition(setting1.getKeyspace(), "path", setting1.getIndexName()
-				+ "other");
+		SimpleIndexDefinition setting2 = new SimpleIndexDefinition(setting1.getKeyspace(), "path",
+				setting1.getIndexName() + "other");
 
 		assertThat(setting1.hashCode()).isNotEqualTo(setting2.hashCode());
 	}

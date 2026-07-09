@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2025 the original author or authors.
+ * Copyright 2022-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package io.valkey.springframework.data.valkey.connection.zset;
 
 import java.util.Arrays;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * Default implementation for {@link Tuple} interface.
@@ -60,10 +60,7 @@ public class DefaultTuple implements Tuple {
 			return false;
 		if (!(obj instanceof DefaultTuple other))
 			return false;
-		if (score == null) {
-			if (other.score != null)
-				return false;
-		} else if (!score.equals(other.score))
+		if (!score.equals(other.score))
 			return false;
 		if (!Arrays.equals(value, other.value))
 			return false;
@@ -73,13 +70,13 @@ public class DefaultTuple implements Tuple {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((score == null) ? 0 : score.hashCode());
+		result = prime * result + score.hashCode();
 		result = prime * result + Arrays.hashCode(value);
 		return result;
 	}
 
 	public int compareTo(Double o) {
-		Double d = (score == null ? Double.valueOf(0.0d) : score);
+		Double d = score;
 		Double a = (o == null ? Double.valueOf(0.0d) : o);
 		return d.compareTo(a);
 	}

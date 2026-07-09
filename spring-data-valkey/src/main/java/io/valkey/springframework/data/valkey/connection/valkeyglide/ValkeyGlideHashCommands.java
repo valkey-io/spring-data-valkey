@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,9 +31,10 @@ import javax.xml.transform.Result;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 import glide.api.models.GlideString;
@@ -59,8 +60,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Boolean hSet(byte[] key, byte[] field, byte[] value) {
+    public @Nullable Boolean hSet(byte[] key, byte[] field, byte[] value) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         Assert.notNull(value, "Value must not be null");
@@ -77,8 +77,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Boolean hSetNX(byte[] key, byte[] field, byte[] value) {
+    public @Nullable Boolean hSetNX(byte[] key, byte[] field, byte[] value) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         Assert.notNull(value, "Value must not be null");
@@ -95,8 +94,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public byte[] hGet(byte[] key, byte[] field) {
+    public @Nullable byte[] hGet(byte[] key, byte[] field) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         
@@ -111,8 +109,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<byte[]> hMGet(byte[] key, byte[]... fields) {
+    public @Nullable List<byte[]> hMGet(byte[] key, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -152,8 +149,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Long hIncrBy(byte[] key, byte[] field, long delta) {
+    public @Nullable Long hIncrBy(byte[] key, byte[] field, long delta) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         
@@ -169,8 +165,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Double hIncrBy(byte[] key, byte[] field, double delta) {
+    public @Nullable Double hIncrBy(byte[] key, byte[] field, double delta) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         
@@ -186,8 +181,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Boolean hExists(byte[] key, byte[] field) {
+    public @Nullable Boolean hExists(byte[] key, byte[] field) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         
@@ -201,8 +195,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Long hDel(byte[] key, byte[]... fields) {
+    public @Nullable Long hDel(byte[] key, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -221,8 +214,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Long hLen(byte[] key) {
+    public @Nullable Long hLen(byte[] key) {
         Assert.notNull(key, "Key must not be null");
         
         try {
@@ -235,8 +227,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Set<byte[]> hKeys(byte[] key) {
+    public @Nullable Set<byte[]> hKeys(byte[] key) {
         Assert.notNull(key, "Key must not be null");
         
         try {
@@ -249,8 +240,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<byte[]> hVals(byte[] key) {
+    public @Nullable List<byte[]> hVals(byte[] key) {
         Assert.notNull(key, "Key must not be null");
         
         try {
@@ -263,8 +253,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Map<byte[], byte[]> hGetAll(byte[] key) {
+    public @Nullable Map<byte[], byte[]> hGetAll(byte[] key) {
         Assert.notNull(key, "Key must not be null");
         
         try {
@@ -278,8 +267,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public byte[] hRandField(byte[] key) {
+    public @Nullable byte[] hRandField(byte[] key) {
         Assert.notNull(key, "Key must not be null");
         
         try {
@@ -292,7 +280,6 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
     public Map.Entry<byte[], byte[]> hRandFieldWithValues(byte[] key) {
         Assert.notNull(key, "Key must not be null");
         
@@ -308,8 +295,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<byte[]> hRandField(byte[] key, long count) {
+    public @Nullable List<byte[]> hRandField(byte[] key, long count) {
         Assert.notNull(key, "Key must not be null");
         
         try {
@@ -323,8 +309,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Map.Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count) {
+    public @Nullable List<Map.Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count) {
         Assert.notNull(key, "Key must not be null");
 
         try {
@@ -466,8 +451,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public Long hStrLen(byte[] key, byte[] field) {
+    public @Nullable Long hStrLen(byte[] key, byte[] field) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(field, "Field must not be null");
         
@@ -482,8 +466,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Long> hExpire(byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields) {
+    public @Nullable List<Long> hExpire(byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -516,8 +499,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Long> hpExpire(byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields) {
+    public @Nullable List<Long> hpExpire(byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -550,8 +532,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields) {
+    public @Nullable List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -584,8 +565,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition, byte[]... fields) {
+    public @Nullable List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -618,8 +598,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Long> hTtl(byte[] key, byte[]... fields) {
+    public @Nullable List<Long> hTtl(byte[] key, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -642,8 +621,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Long> hTtl(byte[] key, TimeUnit timeUnit, byte[]... fields) {
+    public @Nullable List<Long> hTtl(byte[] key, TimeUnit timeUnit, byte[]... fields) {
         List<Long> ttls = hTtl(key, fields);
         if (ttls == null) {
             return null;
@@ -661,8 +639,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Long> hpTtl(byte[] key, byte[]... fields) {
+    public @Nullable List<Long> hpTtl(byte[] key, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -685,8 +662,7 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
     }
 
     @Override
-    @Nullable
-    public List<Long> hPersist(byte[] key, byte[]... fields) {
+    public @Nullable List<Long> hPersist(byte[] key, byte[]... fields) {
         Assert.notNull(key, "Key must not be null");
         Assert.notNull(fields, "Fields must not be null");
         Assert.noNullElements(fields, "Fields must not contain null elements");
@@ -707,4 +683,135 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
             throw new ValkeyGlideExceptionConverter().convert(ex);
         }
     }
+
+	@Override
+	public Boolean hSetEx(byte[] key, Map<byte[], byte[]> fieldValueMap, ValkeyHashCommands.HashFieldSetOption option, Expiration expiration) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(fieldValueMap, "FieldValueMap must not be null");
+		Assert.notNull(option, "Option must not be null");
+		try {
+			List<Object> args = new ArrayList<>();
+			args.add(key);
+			// Add expiration
+			if (expiration != null && !expiration.isPersistent()) {
+				if (expiration.isKeepTtl()) {
+					args.add("KEEPTTL");
+				} else if (expiration.isUnixTimestamp()) {
+					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
+						args.add("PXAT");
+					} else {
+						args.add("EXAT");
+					}
+					args.add(expiration.getExpirationTime());
+				} else {
+					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
+						args.add("PX");
+					} else {
+						args.add("EX");
+					}
+					args.add(expiration.getExpirationTime());
+				}
+			}
+			// Add condition
+			switch (option) {
+				case IF_NONE_EXIST -> args.add("FNX");
+				case IF_ALL_EXIST -> args.add("FXX");
+				case UPSERT -> {} // no additional argument
+			}
+			// Add fields
+			args.add("FIELDS");
+			args.add(String.valueOf(fieldValueMap.size()));
+			for (Map.Entry<byte[], byte[]> entry : fieldValueMap.entrySet()) {
+				args.add(entry.getKey());
+				args.add(entry.getValue());
+			}
+			return connection.execute("HSETEX",
+				(Object glideResult) -> {
+					if (glideResult instanceof String s) {
+						return "OK".equals(s);
+					}
+					if (glideResult instanceof Long l) {
+						return l > 0;
+					}
+					return Boolean.FALSE;
+				},
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public List<byte[]> hGetEx(byte[] key, Expiration expiration, byte[]... fields) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(fields, "Fields must not be null");
+		try {
+			List<Object> args = new ArrayList<>();
+			args.add(key);
+			// Add expiration args
+			if (expiration != null && !expiration.isPersistent()) {
+				if (expiration.isKeepTtl()) {
+					args.add("PERSIST");
+				} else if (expiration.isUnixTimestamp()) {
+					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
+						args.add("PXAT");
+					} else {
+						args.add("EXAT");
+					}
+					args.add(expiration.getExpirationTime());
+				} else {
+					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
+						args.add("PX");
+					} else {
+						args.add("EX");
+					}
+					args.add(expiration.getExpirationTime());
+				}
+			} else if (expiration != null && expiration.isPersistent()) {
+				args.add("PERSIST");
+			}
+			args.add("FIELDS");
+			args.add(String.valueOf(fields.length));
+			for (byte[] field : fields) {
+				args.add(field);
+			}
+			return connection.execute("HGETEX",
+				(Object[] glideResult) -> {
+					List<byte[]> result = new ArrayList<>(glideResult.length);
+					for (Object item : glideResult) {
+						result.add(item instanceof GlideString gs ? gs.getBytes() : (byte[]) item);
+					}
+					return result;
+				},
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public List<byte[]> hGetDel(byte[] key, byte[]... fields) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(fields, "Fields must not be null");
+		try {
+			List<Object> args = new ArrayList<>();
+			args.add(key);
+			args.add("FIELDS");
+			args.add(String.valueOf(fields.length));
+			for (byte[] field : fields) {
+				args.add(field);
+			}
+			return connection.execute("HGETDEL",
+				(Object[] glideResult) -> {
+					List<byte[]> result = new ArrayList<>(glideResult.length);
+					for (Object item : glideResult) {
+						result.add(item instanceof GlideString gs ? gs.getBytes() : (byte[]) item);
+					}
+					return result;
+				},
+				args.toArray());
+		} catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
 }

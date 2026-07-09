@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,8 +35,12 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.awaitility.Awaitility;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import io.valkey.springframework.data.valkey.connection.Message;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
@@ -51,15 +55,13 @@ import io.valkey.springframework.data.valkey.core.ReactiveValkeyTemplate;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializationContext.SerializationPair;
 import io.valkey.springframework.data.valkey.serializer.ValkeySerializer;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.ParameterizedValkeyTest;
-import org.springframework.lang.Nullable;
 
 /**
  * Integration tests for {@link ReactiveValkeyMessageListenerContainer} via Lettuce.
  *
  * @author Mark Paluch
  */
+@ParameterizedClass
 @MethodSource("testParams")
 public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 
@@ -102,7 +104,8 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 		}
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-612, GH-1622
+	@Test
+	// DATAREDIS-612, GH-1622
 	void shouldReceiveChannelMessages() {
 
 		ReactiveValkeyMessageListenerContainer container = new ReactiveValkeyMessageListenerContainer(connectionFactory);
@@ -121,7 +124,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 		container.destroy();
 	}
 
-	@ParameterizedValkeyTest // GH-1622
+	@Test // GH-1622
 	void receiveChannelShouldNotifySubscriptionListener() throws Exception {
 
 		ReactiveValkeyMessageListenerContainer container = new ReactiveValkeyMessageListenerContainer(connectionFactory);
@@ -133,7 +136,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 
 		CompositeListener listener = new CompositeListener() {
 			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
+			public void onMessage(Message message, byte @Nullable [] pattern) {
 
 			}
 
@@ -169,7 +172,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 		container.destroy();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-612, GH-1622
+	@Test // DATAREDIS-612, GH-1622
 	void shouldReceivePatternMessages() {
 
 		ReactiveValkeyMessageListenerContainer container = new ReactiveValkeyMessageListenerContainer(connectionFactory);
@@ -188,7 +191,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 		container.destroy();
 	}
 
-	@ParameterizedValkeyTest // GH-1622
+	@Test // GH-1622
 	void receivePatternShouldNotifySubscriptionListener() throws Exception {
 
 		ReactiveValkeyMessageListenerContainer container = new ReactiveValkeyMessageListenerContainer(connectionFactory);
@@ -200,7 +203,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 
 		CompositeListener listener = new CompositeListener() {
 			@Override
-			public void onMessage(Message message, @Nullable byte[] pattern) {
+			public void onMessage(Message message, byte @Nullable [] pattern) {
 
 			}
 
@@ -238,7 +241,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 		container.destroy();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-612, GH-1622
+	@Test // DATAREDIS-612, GH-1622
 	void shouldPublishAndReceiveMessage() throws Exception {
 
 		ReactiveValkeyMessageListenerContainer container = new ReactiveValkeyMessageListenerContainer(connectionFactory);
@@ -267,7 +270,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 		container.destroy();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-612
+	@Test // DATAREDIS-612
 	void listenToChannelShouldReceiveChannelMessagesCorrectly() throws InterruptedException {
 
 		ReactiveValkeyTemplate<String, String> template = new ReactiveValkeyTemplate<>(connectionFactory,
@@ -286,7 +289,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 				.verify();
 	}
 
-	@ParameterizedValkeyTest // DATAREDIS-612
+	@Test // DATAREDIS-612
 	void listenToPatternShouldReceiveMessagesCorrectly() {
 
 		ReactiveValkeyTemplate<String, String> template = new ReactiveValkeyTemplate<>(connectionFactory,
@@ -306,7 +309,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 				.verify();
 	}
 
-	@ParameterizedValkeyTest // GH-2386
+	@Test // GH-2386
 	void multipleListenShouldTrackSubscriptions() throws Exception {
 
 		ReactiveValkeyMessageListenerContainer container = new ReactiveValkeyMessageListenerContainer(connectionFactory);
@@ -335,7 +338,7 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 		c2Subscription.dispose();
 
 		Thread.sleep(500);
-		
+
 		// Clear any remaining messages after disposal (which is async)
 		int drainCount = 0;
 		while (c2Collector.poll() != null && drainCount++ < 100) {
@@ -348,6 +351,8 @@ public class ReactiveValkeyMessageListenerContainerIntegrationTests {
 		assertThat(c2Collector.poll(100, TimeUnit.MILLISECONDS)).isNull();
 
 		c1Subscription.dispose();
+
+		Thread.sleep(500);
 
 		doPublish(CHANNEL1.getBytes(), MESSAGE.getBytes());
 

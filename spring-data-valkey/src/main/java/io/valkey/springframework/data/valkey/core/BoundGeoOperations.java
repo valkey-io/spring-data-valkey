@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,9 @@ import static io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands
 import java.util.List;
 import java.util.Map;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+
 import org.springframework.data.geo.Circle;
 import org.springframework.data.geo.Distance;
 import org.springframework.data.geo.GeoResults;
@@ -28,7 +31,6 @@ import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.domain.geo.BoundingBox;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
-import org.springframework.lang.Nullable;
 
 /**
  * {@link GeoOperations} bound to a certain key.
@@ -38,6 +40,7 @@ import org.springframework.lang.Nullable;
  * @author Mark Paluch
  * @since 1.8
  */
+@NullUnmarked
 public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 
 	/**
@@ -49,7 +52,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/geoadd">Valkey Documentation: GEOADD</a>
 	 */
-	@Nullable
 	Long add(Point point, M member);
 
 	/**
@@ -60,7 +62,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/geoadd">Valkey Documentation: GEOADD</a>
 	 */
-	@Nullable
 	Long add(GeoLocation<M> location);
 
 	/**
@@ -71,7 +72,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/geoadd">Valkey Documentation: GEOADD</a>
 	 */
-	@Nullable
 	Long add(Map<M, Point> memberCoordinateMap);
 
 	/**
@@ -82,7 +82,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/geoadd">Valkey Documentation: GEOADD</a>
 	 */
-	@Nullable
 	Long add(Iterable<GeoLocation<M>> locations);
 
 	/**
@@ -94,7 +93,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/geodist">Valkey Documentation: GEODIST</a>
 	 */
-	@Nullable
 	Distance distance(M member1, M member2);
 
 	/**
@@ -107,7 +105,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/geodist">Valkey Documentation: GEODIST</a>
 	 */
-	@Nullable
 	Distance distance(M member1, M member2, Metric metric);
 
 	/**
@@ -118,8 +115,7 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/geohash">Valkey Documentation: GEOHASH</a>
 	 */
-	@Nullable
-	List<String> hash(M... members);
+	List<String> hash(M @NonNull... members);
 
 	/**
 	 * Get the {@link Point} representation of positions for one or more {@literal member}s.
@@ -129,9 +125,7 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/geopos">Valkey Documentation: GEOPOS</a>
 	 */
-	@Nullable
-	List<Point> position(M... members);
-
+	List<Point> position(M @NonNull... members);
 
 	/**
 	 * Get the {@literal member}s within the boundaries of a given {@link Circle}.
@@ -141,7 +135,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/georadius">Valkey Documentation: GEORADIUS</a>
 	 */
-	@Nullable
 	GeoResults<GeoLocation<M>> radius(Circle within);
 
 	/**
@@ -153,7 +146,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/georadius">Valkey Documentation: GEORADIUS</a>
 	 */
-	@Nullable
 	GeoResults<GeoLocation<M>> radius(Circle within, GeoRadiusCommandArgs args);
 
 	/**
@@ -166,7 +158,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/georadiusbymember">Valkey Documentation: GEORADIUSBYMEMBER</a>
 	 */
-	@Nullable
 	GeoResults<GeoLocation<M>> radius(M member, double radius);
 
 	/**
@@ -179,7 +170,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/georadiusbymember">Valkey Documentation: GEORADIUSBYMEMBER</a>
 	 */
-	@Nullable
 	GeoResults<GeoLocation<M>> radius(M member, Distance distance);
 
 	/**
@@ -193,7 +183,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.0
 	 * @see <a href="https://valkey.io/commands/georadiusbymember">Valkey Documentation: GEORADIUSBYMEMBER</a>
 	 */
-	@Nullable
 	GeoResults<GeoLocation<M>> radius(M member, Distance distance, GeoRadiusCommandArgs args);
 
 	/**
@@ -203,8 +192,7 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @return Number of elements removed. {@literal null} when used in pipeline / transaction.
 	 * @since 2.0
 	 */
-	@Nullable
-	Long remove(M... members);
+	Long remove(M @NonNull... members);
 
 	/**
 	 * Get the {@literal member}s within the boundaries of a given {@link Circle}.
@@ -214,7 +202,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearch">Valkey Documentation: GEOSEARCH</a>
 	 */
-	@Nullable
 	default GeoResults<GeoLocation<M>> search(Circle within) {
 		return search(GeoReference.fromCircle(within), GeoShape.byRadius(within.getRadius()),
 				GeoSearchCommandArgs.newGeoSearchArgs());
@@ -230,7 +217,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearch">Valkey Documentation: GEOSEARCH</a>
 	 */
-	@Nullable
 	default GeoResults<GeoLocation<M>> search(GeoReference<M> reference, Distance radius) {
 		return search(reference, radius, GeoSearchCommandArgs.newGeoSearchArgs());
 	}
@@ -246,7 +232,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearch">Valkey Documentation: GEOSEARCH</a>
 	 */
-	@Nullable
 	default GeoResults<GeoLocation<M>> search(GeoReference<M> reference, Distance radius,
 			GeoSearchCommandArgs args) {
 		return search(reference, GeoShape.byRadius(radius), args);
@@ -262,7 +247,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearch">Valkey Documentation: GEOSEARCH</a>
 	 */
-	@Nullable
 	default GeoResults<GeoLocation<M>> search(GeoReference<M> reference, BoundingBox boundingBox) {
 		return search(reference, boundingBox, GeoSearchCommandArgs.newGeoSearchArgs());
 	}
@@ -278,7 +262,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearch">Valkey Documentation: GEOSEARCH</a>
 	 */
-	@Nullable
 	default GeoResults<GeoLocation<M>> search(GeoReference<M> reference, BoundingBox boundingBox,
 			GeoSearchCommandArgs args) {
 		return search(reference, GeoShape.byBox(boundingBox), args);
@@ -295,7 +278,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearch">Valkey Documentation: GEOSEARCH</a>
 	 */
-	@Nullable
 	GeoResults<GeoLocation<M>> search(GeoReference<M> reference, GeoShape geoPredicate,
 			GeoSearchCommandArgs args);
 
@@ -307,7 +289,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearchstore">Valkey Documentation: GEOSEARCHSTORE</a>
 	 */
-	@Nullable
 	default Long searchAndStore(K destKey, Circle within) {
 		return searchAndStore(destKey, GeoReference.fromCircle(within), GeoShape.byRadius(within.getRadius()),
 				GeoSearchStoreCommandArgs.newGeoSearchStoreArgs());
@@ -323,7 +304,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearchstore">Valkey Documentation: GEOSEARCHSTORE</a>
 	 */
-	@Nullable
 	default Long searchAndStore(K destKey, GeoReference<M> reference, Distance radius) {
 		return searchAndStore(destKey, reference, radius, GeoSearchStoreCommandArgs.newGeoSearchStoreArgs());
 	}
@@ -339,7 +319,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearchstore">Valkey Documentation: GEOSEARCHSTORE</a>
 	 */
-	@Nullable
 	default Long searchAndStore(K destKey, GeoReference<M> reference, Distance radius,
 			GeoSearchStoreCommandArgs args) {
 		return searchAndStore(destKey, reference, GeoShape.byRadius(radius), args);
@@ -355,8 +334,8 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearchstore">Valkey Documentation: GEOSEARCHSTORE</a>
 	 */
-	@Nullable
-	default Long searchAndStore(K destKey, GeoReference<M> reference, BoundingBox boundingBox) {
+	default Long searchAndStore(K destKey, GeoReference<M> reference,
+			BoundingBox boundingBox) {
 		return searchAndStore(destKey, reference, boundingBox, GeoSearchStoreCommandArgs.newGeoSearchStoreArgs());
 	}
 
@@ -371,7 +350,6 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearchstore">Valkey Documentation: GEOSEARCHSTORE</a>
 	 */
-	@Nullable
 	default Long searchAndStore(K destKey, GeoReference<M> reference, BoundingBox boundingBox,
 			GeoSearchStoreCommandArgs args) {
 		return searchAndStore(destKey, reference, GeoShape.byBox(boundingBox), args);
@@ -388,8 +366,13 @@ public interface BoundGeoOperations<K, M> extends BoundKeyOperations<K> {
 	 * @since 2.6
 	 * @see <a href="https://valkey.io/commands/geosearchstore">Valkey Documentation: GEOSEARCHSTORE</a>
 	 */
-	@Nullable
 	Long searchAndStore(K destKey, GeoReference<M> reference, GeoShape geoPredicate,
 			GeoSearchStoreCommandArgs args);
+
+	/**
+	 * @return the underlying {@link ValkeyOperations} used to execute commands.
+	 * @since 4.0
+	 */
+	ValkeyOperations<K, ?> getOperations();
 
 }

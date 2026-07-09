@@ -1,5 +1,5 @@
 /*
- * Copyright 2012-2023 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,10 +33,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class ValkeyReactiveAutoConfigurationTests {
 
-	// Valkey GLIDE does not support reactive, so test with Lettuce
-	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class, ValkeyReactiveAutoConfiguration.class))
-		.withPropertyValues("spring.data.valkey.client-type:lettuce");
+	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner().withConfiguration(
+			AutoConfigurations.of(ValkeyAutoConfiguration.class, ValkeyReactiveAutoConfiguration.class))
+		.withPropertyValues("spring.data.valkey.client-type=lettuce");
 
 	@Test
 	void testDefaultValkeyConfiguration() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,61 +15,64 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.args.ExpiryOption;
-import redis.clients.jedis.params.RestoreParams;
+import redis.clients.jedis.commands.JedisBinaryCommands;
 import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.resps.ScanResult;
 
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
 
-import org.springframework.dao.DataAccessException;
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
-import io.valkey.springframework.data.valkey.connection.DataType;
-import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
 import io.valkey.springframework.data.valkey.connection.ValkeyNode;
 import io.valkey.springframework.data.valkey.connection.SortParameters;
-import io.valkey.springframework.data.valkey.connection.ValueEncoding;
-import io.valkey.springframework.data.valkey.connection.convert.Converters;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClusterConnection.JedisClusterCommandCallback;
 import io.valkey.springframework.data.valkey.connection.jedis.JedisClusterConnection.JedisMultiKeyClusterCommandCallback;
 import io.valkey.springframework.data.valkey.core.Cursor;
 import io.valkey.springframework.data.valkey.core.ScanCursor;
 import io.valkey.springframework.data.valkey.core.ScanIteration;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 
 /**
+ * Cluster {@link ValkeyKeyCommands} implementation for Jedis.
+ * <p>
+ * This class can be used to override only methods that require cluster-specific handling.
+ * <p>
+ * Pipeline and transaction modes are not supported in cluster mode.
+ *
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author ihaohong
  * @author Dan Smith
+ * @author Yordan Tsintsov
+ * @author Tihomir Mateev
  * @since 2.0
  */
-class JedisClusterKeyCommands implements ValkeyKeyCommands {
+@NullUnmarked
+class JedisClusterKeyCommands extends JedisKeyCommands {
 
 	private final JedisClusterConnection connection;
 
 	JedisClusterKeyCommands(JedisClusterConnection connection) {
+		super(connection);
 		this.connection = connection;
 	}
 
 	@Override
-	public Boolean copy(byte[] sourceKey, byte[] targetKey, boolean replace) {
+	public Boolean copy(byte @NonNull [] sourceKey, byte @NonNull [] targetKey, boolean replace) {
 
 		Assert.notNull(sourceKey, "source key must not be null");
 		Assert.notNull(targetKey, "target key must not be null");
@@ -78,59 +81,50 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 	}
 
 	@Override
-	public Long del(byte[]... keys) {
+	public Long del(byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
 
 		if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
-			try {
-				return connection.getCluster().del(keys);
-			} catch (Exception ex) {
-				throw convertJedisAccessException(ex);
-			}
+			return super.del(keys);
 		}
 
 		return (long) connection.getClusterCommandExecutor()
-				.executeMultiKeyCommand((JedisMultiKeyClusterCommandCallback<Long>) (client, key) -> client.del(key),
-						Arrays.asList(keys))
+				.executeMultiKeyCommand((JedisMultiKeyClusterCommandCallback<Long>) JedisBinaryCommands::del, Arrays.asList(keys))
 				.resultsAsList().size();
 	}
 
-	@Nullable
 	@Override
-	public Long unlink(byte[]... keys) {
+	public Long unlink(byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
 
-		return connection.<Long> execute("UNLINK", Arrays.asList(keys), Collections.emptyList()).stream()
-				.mapToLong(val -> val).sum();
-	}
-
-	@Override
-	public DataType type(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return JedisConverters.toDataType(connection.getCluster().type(key));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
+		if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
+			return super.unlink(keys);
 		}
+
+		return connection.getClusterCommandExecutor()
+				.executeMultiKeyCommand((JedisMultiKeyClusterCommandCallback<Long>) JedisBinaryCommands::unlink, Arrays.asList(keys))
+				.resultsAsList().stream().mapToLong(val -> val).sum();
 	}
 
-	@Nullable
 	@Override
-	public Long touch(byte[]... keys) {
+	public Long touch(byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
 
-		return connection.<Long> execute("TOUCH", Arrays.asList(keys), Collections.emptyList()).stream()
-				.mapToLong(val -> val).sum();
+		if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
+			return super.touch(keys);
+		}
+
+		return connection.getClusterCommandExecutor()
+				.executeMultiKeyCommand((JedisMultiKeyClusterCommandCallback<Long>) JedisBinaryCommands::touch, Arrays.asList(keys))
+				.resultsAsList().stream().mapToLong(val -> val).sum();
 	}
 
 	@Override
-	public Set<byte[]> keys(byte[] pattern) {
+	public Set<byte @NonNull []> keys(byte @NonNull [] pattern) {
 
 		Assert.notNull(pattern, "Pattern must not be null");
 
@@ -145,7 +139,14 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 		return keys;
 	}
 
-	public Set<byte[]> keys(ValkeyClusterNode node, byte[] pattern) {
+	/**
+	 * Get keys matching pattern from specific cluster node.
+	 *
+	 * @param node must not be {@literal null}.
+	 * @param pattern must not be {@literal null}.
+	 * @return never {@literal null}.
+	 */
+	public Set<byte @NonNull []> keys(@NonNull ValkeyClusterNode node, byte @NonNull [] pattern) {
 
 		Assert.notNull(node, "ValkeyClusterNode must not be null");
 		Assert.notNull(pattern, "Pattern must not be null");
@@ -156,7 +157,7 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 	}
 
 	@Override
-	public Cursor<byte[]> scan(ScanOptions options) {
+	public Cursor<byte @NonNull []> scan(@Nullable ScanOptions options) {
 		throw new InvalidDataAccessApiUsageException("Scan is not supported across multiple nodes within a cluster");
 	}
 
@@ -168,7 +169,7 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 	 * @return never {@literal null}.
 	 * @since 2.1
 	 */
-	Cursor<byte[]> scan(ValkeyClusterNode node, ScanOptions options) {
+	Cursor<byte @NonNull []> scan(@NonNull ValkeyClusterNode node, @NonNull ScanOptions options) {
 
 		Assert.notNull(node, "ValkeyClusterNode must not be null");
 		Assert.notNull(options, "Options must not be null");
@@ -176,10 +177,10 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 		return connection.getClusterCommandExecutor()
 				.executeCommandOnSingleNode((JedisClusterCommandCallback<Cursor<byte[]>>) client -> {
 
-					return new ScanCursor<byte[]>(0, options) {
+					return new ScanCursor<byte @NonNull []>(0, options) {
 
 						@Override
-						protected ScanIteration<byte[]> doScan(CursorId cursorId, ScanOptions options) {
+						protected ScanIteration<byte @NonNull []> doScan(@NonNull CursorId cursorId, @NonNull ScanOptions options) {
 
 							ScanParams params = JedisConverters.toScanParams(options);
 							ScanResult<String> result = client.scan(cursorId.getCursorId(), params);
@@ -215,29 +216,29 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 		return null;
 	}
 
-	public byte[] randomKey(ValkeyClusterNode node) {
+	/**
+	 * Get a random key from a specific cluster node.
+	 *
+	 * @param node must not be {@literal null}.
+	 * @return the random key or {@literal null}.
+	 */
+	public byte[] randomKey(@NonNull ValkeyClusterNode node) {
 
 		Assert.notNull(node, "ValkeyClusterNode must not be null");
 
 		return connection.getClusterCommandExecutor()
-				.executeCommandOnSingleNode((JedisClusterCommandCallback<byte[]>) client -> client.randomBinaryKey(), node)
-				.getValue();
+				.executeCommandOnSingleNode((JedisClusterCommandCallback<byte[]>) JedisBinaryCommands::randomBinaryKey, node).getValue();
 	}
 
 	@Override
-	public void rename(byte[] oldKey, byte[] newKey) {
+	public void rename(byte @NonNull [] oldKey, byte @NonNull [] newKey) {
 
 		Assert.notNull(oldKey, "Old key must not be null");
 		Assert.notNull(newKey, "New key must not be null");
 
 		if (ClusterSlotHashUtil.isSameSlotForAllKeys(oldKey, newKey)) {
-
-			try {
-				connection.getCluster().rename(oldKey, newKey);
-				return;
-			} catch (Exception ex) {
-				throw convertJedisAccessException(ex);
-			}
+			super.rename(oldKey, newKey);
+			return;
 		}
 
 		byte[] value = dump(oldKey);
@@ -250,18 +251,13 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 	}
 
 	@Override
-	public Boolean renameNX(byte[] sourceKey, byte[] targetKey) {
+	public Boolean renameNX(byte @NonNull [] sourceKey, byte @NonNull [] targetKey) {
 
 		Assert.notNull(sourceKey, "Source key must not be null");
 		Assert.notNull(targetKey, "Target key must not be null");
 
 		if (ClusterSlotHashUtil.isSameSlotForAllKeys(sourceKey, targetKey)) {
-
-			try {
-				return JedisConverters.toBoolean(connection.getCluster().renamenx(sourceKey, targetKey));
-			} catch (Exception ex) {
-				throw convertJedisAccessException(ex);
-			}
+			return super.renameNX(sourceKey, targetKey);
 		}
 
 		byte[] value = dump(sourceKey);
@@ -276,190 +272,17 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 	}
 
 	@Override
-	public Boolean expire(byte[] key, long seconds, ExpirationOptions.Condition condition) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			if (condition == ExpirationOptions.Condition.ALWAYS) {
-				return JedisConverters.toBoolean(connection.getCluster().expire(key, seconds));
-			}
-
-			return JedisConverters
-					.toBoolean(connection.getCluster().expire(key, seconds, ExpiryOption.valueOf(condition.name())));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Boolean pExpire(byte[] key, long millis, ExpirationOptions.Condition condition) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			if (condition == ExpirationOptions.Condition.ALWAYS) {
-				return JedisConverters.toBoolean(connection.getCluster().pexpire(key, millis));
-			}
-			return JedisConverters
-					.toBoolean(connection.getCluster().pexpire(key, millis, ExpiryOption.valueOf(condition.name())));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Boolean expireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			if (condition == ExpirationOptions.Condition.ALWAYS) {
-				return JedisConverters.toBoolean(connection.getCluster().expireAt(key, unixTime));
-			}
-
-			return JedisConverters
-					.toBoolean(connection.getCluster().expireAt(key, unixTime, ExpiryOption.valueOf(condition.name())));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Boolean pExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			if (condition == ExpirationOptions.Condition.ALWAYS) {
-				return JedisConverters.toBoolean(connection.getCluster().pexpireAt(key, unixTimeInMillis));
-			}
-
-			return JedisConverters
-					.toBoolean(connection.getCluster().pexpireAt(key, unixTimeInMillis, ExpiryOption.valueOf(condition.name())));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Boolean persist(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return JedisConverters.toBoolean(connection.getCluster().persist(key));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Boolean move(byte[] key, int dbIndex) {
+	public Boolean move(byte @NonNull [] key, int dbIndex) {
 		throw new InvalidDataAccessApiUsageException("Cluster mode does not allow moving keys");
 	}
 
 	@Override
-	public Long ttl(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return connection.getCluster().ttl(key);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Long ttl(byte[] key, TimeUnit timeUnit) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return Converters.secondsToTimeUnit(connection.getCluster().ttl(key), timeUnit);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Long pTtl(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return connection.getCluster().pttl(key);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Long pTtl(byte[] key, TimeUnit timeUnit) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return Converters.millisecondsToTimeUnit(connection.getCluster().pttl(key), timeUnit);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public byte[] dump(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return connection.getCluster().dump(key);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public void restore(byte[] key, long ttlInMillis, byte[] serializedValue, boolean replace) {
-
-		Assert.notNull(key, "Key must not be null");
-		Assert.notNull(serializedValue, "Serialized value must not be null");
-
-		RestoreParams restoreParams = RestoreParams.restoreParams();
-
-		if (replace) {
-			restoreParams = restoreParams.replace();
-		}
-		try {
-			connection.getCluster().restore(key, ttlInMillis, serializedValue, restoreParams);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public List<byte[]> sort(byte[] key, SortParameters params) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return connection.getCluster().sort(key, JedisConverters.toSortingParams(params));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Override
-	public Long sort(byte[] key, SortParameters params, byte[] storeKey) {
+	public Long sort(byte @NonNull [] key, @Nullable SortParameters params, byte @NonNull [] storeKey) {
 
 		Assert.notNull(key, "Key must not be null");
 
 		if (ClusterSlotHashUtil.isSameSlotForAllKeys(key, storeKey)) {
-			try {
-				return connection.getCluster().sort(key, JedisConverters.toSortingParams(params), storeKey);
-			} catch (Exception ex) {
-				throw convertJedisAccessException(ex);
-			}
+			return super.sort(key, params, storeKey);
 		}
 
 		List<byte[]> sorted = sort(key, params);
@@ -469,67 +292,18 @@ class JedisClusterKeyCommands implements ValkeyKeyCommands {
 		return (long) sorted.size();
 	}
 
-	@Nullable
 	@Override
-	public Long exists(byte[]... keys) {
+	public Long exists(byte @NonNull [] @NonNull... keys) {
 
 		Assert.notNull(keys, "Keys must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
 
 		if (ClusterSlotHashUtil.isSameSlotForAllKeys(keys)) {
-			try {
-				return connection.getCluster().exists(keys);
-			} catch (Exception ex) {
-				throw convertJedisAccessException(ex);
-			}
+			return super.exists(keys);
 		}
 
 		return connection.getClusterCommandExecutor()
-				.executeMultiKeyCommand((JedisMultiKeyClusterCommandCallback<Boolean>) Jedis::exists, Arrays.asList(keys))
+				.executeMultiKeyCommand((JedisMultiKeyClusterCommandCallback<Boolean>) JedisBinaryCommands::exists, Arrays.asList(keys))
 				.resultsAsList().stream().mapToLong(val -> ObjectUtils.nullSafeEquals(val, Boolean.TRUE) ? 1 : 0).sum();
-	}
-
-	@Nullable
-	@Override
-	public ValueEncoding encodingOf(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return JedisConverters.toEncoding(connection.getCluster().objectEncoding(key));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Nullable
-	@Override
-	public Duration idletime(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return Converters.secondsToDuration(connection.getCluster().objectIdletime(key));
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-	}
-
-	@Nullable
-	@Override
-	public Long refcount(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		try {
-			return connection.getCluster().objectRefcount(key);
-		} catch (Exception ex) {
-			throw convertJedisAccessException(ex);
-		}
-
-	}
-
-	private DataAccessException convertJedisAccessException(Exception ex) {
-		return connection.convertJedisAccessException(ex);
 	}
 }

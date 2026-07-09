@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean id="standalone"
+	      class="io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration">
+		<property name="hostName">
+			<bean class="io.valkey.springframework.data.valkey.SettingsUtils"
+			      factory-method="getHost"/>
+		</property>
+		<property name="port">
+			<bean class="io.valkey.springframework.data.valkey.SettingsUtils"
+			      factory-method="getPort"/>
+		</property>
+	</bean>
+
+	<bean id="jedisConnectionFactory"
+	      class="io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory">
+		<constructor-arg index="0" ref="standalone"
+		                 type="io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration"/>
+		<constructor-arg index="1"
+		                 type="io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration">
+			<bean class="io.valkey.springframework.data.valkey.connection.jedis.JedisClientConfiguration"
+			      factory-method="defaultConfiguration"/>
+		</constructor-arg>
+	</bean>
+
+</beans>

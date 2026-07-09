@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.connection.jedis;
 
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.args.ExpiryOption;
+import redis.clients.jedis.commands.JedisBinaryCommands;
 import redis.clients.jedis.commands.PipelineBinaryCommands;
 import redis.clients.jedis.params.ScanParams;
 import redis.clients.jedis.resps.ScanResult;
@@ -28,6 +28,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullUnmarked;
+import org.jspecify.annotations.Nullable;
+
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import io.valkey.springframework.data.valkey.connection.ExpirationOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyHashCommands;
@@ -37,7 +41,7 @@ import io.valkey.springframework.data.valkey.core.Cursor.CursorId;
 import io.valkey.springframework.data.valkey.core.KeyBoundCursor;
 import io.valkey.springframework.data.valkey.core.ScanIteration;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 import org.springframework.util.Assert;
 
 /**
@@ -49,6 +53,7 @@ import org.springframework.util.Assert;
  * @author Tihomir Mateev
  * @since 2.0
  */
+@NullUnmarked
 class JedisHashCommands implements ValkeyHashCommands {
 
 	private final JedisConnection connection;
@@ -57,99 +62,106 @@ class JedisHashCommands implements ValkeyHashCommands {
 		this.connection = connection;
 	}
 
+	/**
+	 * @return the {@link JedisConnection} used for command execution.
+	 */
+	protected JedisConnection getConnection() {
+		return connection;
+	}
+
 	@Override
-	public Boolean hSet(byte[] key, byte[] field, byte[] value) {
+	public Boolean hSet(byte @NonNull [] key, byte @NonNull [] field, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().from(Jedis::hset, PipelineBinaryCommands::hset, key, field, value)
+		return connection.invoke().from(JedisBinaryCommands::hset, PipelineBinaryCommands::hset, key, field, value)
 				.get(JedisConverters.longToBoolean());
 	}
 
 	@Override
-	public Boolean hSetNX(byte[] key, byte[] field, byte[] value) {
+	public Boolean hSetNX(byte @NonNull [] key, byte @NonNull [] field, byte @NonNull [] value) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
 		Assert.notNull(value, "Value must not be null");
 
-		return connection.invoke().from(Jedis::hsetnx, PipelineBinaryCommands::hsetnx, key, field, value)
+		return connection.invoke().from(JedisBinaryCommands::hsetnx, PipelineBinaryCommands::hsetnx, key, field, value)
 				.get(JedisConverters.longToBoolean());
 	}
 
 	@Override
-	public Long hDel(byte[] key, byte[]... fields) {
+	public Long hDel(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(fields, "Fields must not be null");
 
-		return connection.invoke().just(Jedis::hdel, PipelineBinaryCommands::hdel, key, fields);
+		return connection.invoke().just(JedisBinaryCommands::hdel, PipelineBinaryCommands::hdel, key, fields);
 	}
 
 	@Override
-	public Boolean hExists(byte[] key, byte[] field) {
+	public Boolean hExists(byte @NonNull [] key, byte @NonNull [] field) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Fields must not be null");
 
-		return connection.invoke().just(Jedis::hexists, PipelineBinaryCommands::hexists, key, field);
+		return connection.invoke().just(JedisBinaryCommands::hexists, PipelineBinaryCommands::hexists, key, field);
 	}
 
 	@Override
-	public byte[] hGet(byte[] key, byte[] field) {
+	public byte[] hGet(byte @NonNull [] key, byte @NonNull [] field) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
 
-		return connection.invoke().just(Jedis::hget, PipelineBinaryCommands::hget, key, field);
+		return connection.invoke().just(JedisBinaryCommands::hget, PipelineBinaryCommands::hget, key, field);
 	}
 
 	@Override
-	public Map<byte[], byte[]> hGetAll(byte[] key) {
+	public Map<byte @NonNull [], byte @NonNull []> hGetAll(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::hgetAll, PipelineBinaryCommands::hgetAll, key);
+		return connection.invoke().just(JedisBinaryCommands::hgetAll, PipelineBinaryCommands::hgetAll, key);
+	}
+
+	@Override
+	public byte[] hRandField(byte @NonNull [] key) {
+
+		Assert.notNull(key, "Key must not be null");
+
+		return connection.invoke().just(JedisBinaryCommands::hrandfield, PipelineBinaryCommands::hrandfield, key);
 	}
 
 	@Nullable
 	@Override
-	public byte[] hRandField(byte[] key) {
+	public Entry<byte @NonNull [], byte @NonNull []> hRandFieldWithValues(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::hrandfield, PipelineBinaryCommands::hrandfield, key);
-	}
-
-	@Nullable
-	@Override
-	public Entry<byte[], byte[]> hRandFieldWithValues(byte[] key) {
-
-		Assert.notNull(key, "Key must not be null");
-
-		return connection.invoke().from(Jedis::hrandfieldWithValues, PipelineBinaryCommands::hrandfieldWithValues, key, 1L)
+		return connection.invoke().from(JedisBinaryCommands::hrandfieldWithValues, PipelineBinaryCommands::hrandfieldWithValues, key, 1L)
 				.get(mapEntryList -> mapEntryList.isEmpty() ? null : mapEntryList.get(0));
 	}
 
 	@Nullable
 	@Override
-	public List<byte[]> hRandField(byte[] key, long count) {
+	public List<byte @NonNull []> hRandField(byte @NonNull [] key, long count) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::hrandfield, PipelineBinaryCommands::hrandfield, key, count);
+		return connection.invoke().just(JedisBinaryCommands::hrandfield, PipelineBinaryCommands::hrandfield, key, count);
 	}
 
 	@Nullable
 	@Override
-	public List<Entry<byte[], byte[]>> hRandFieldWithValues(byte[] key, long count) {
+	public List<@NonNull Entry<byte @NonNull [], byte @NonNull []>> hRandFieldWithValues(byte @NonNull [] key,
+			long count) {
 
 		Assert.notNull(key, "Key must not be null");
 
 		return connection.invoke()
-				.from(Jedis::hrandfieldWithValues, PipelineBinaryCommands::hrandfieldWithValues, key, count)
+				.from(JedisBinaryCommands::hrandfieldWithValues, PipelineBinaryCommands::hrandfieldWithValues, key, count)
 				.get(mapEntryList -> {
 
 					List<Entry<byte[], byte[]>> convertedMapEntryList = new ArrayList<>(mapEntryList.size());
@@ -163,71 +175,73 @@ class JedisHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public Long hIncrBy(byte[] key, byte[] field, long delta) {
+	public Long hIncrBy(byte @NonNull [] key, byte @NonNull [] field, long delta) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
 
-		return connection.invoke().just(Jedis::hincrBy, PipelineBinaryCommands::hincrBy, key, field, delta);
+		return connection.invoke().just(JedisBinaryCommands::hincrBy, PipelineBinaryCommands::hincrBy, key, field, delta);
 	}
 
 	@Override
-	public Double hIncrBy(byte[] key, byte[] field, double delta) {
+	public Double hIncrBy(byte @NonNull [] key, byte @NonNull [] field, double delta) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
 
-		return connection.invoke().just(Jedis::hincrByFloat, PipelineBinaryCommands::hincrByFloat, key, field, delta);
+		return connection.invoke().just(JedisBinaryCommands::hincrByFloat, PipelineBinaryCommands::hincrByFloat, key, field, delta);
 	}
 
 	@Override
-	public Set<byte[]> hKeys(byte[] key) {
+	public Set<byte @NonNull []> hKeys(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::hkeys, PipelineBinaryCommands::hkeys, key);
+		return connection.invoke().just(JedisBinaryCommands::hkeys, PipelineBinaryCommands::hkeys, key);
 	}
 
 	@Override
-	public Long hLen(byte[] key) {
+	public Long hLen(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::hlen, PipelineBinaryCommands::hlen, key);
+		return connection.invoke().just(JedisBinaryCommands::hlen, PipelineBinaryCommands::hlen, key);
 	}
 
 	@Override
-	public List<byte[]> hMGet(byte[] key, byte[]... fields) {
+	public List<byte[]> hMGet(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(fields, "Fields must not be null");
 
-		return connection.invoke().just(Jedis::hmget, PipelineBinaryCommands::hmget, key, fields);
+		return connection.invoke().just(JedisBinaryCommands::hmget, PipelineBinaryCommands::hmget, key, fields);
 	}
 
 	@Override
-	public void hMSet(byte[] key, Map<byte[], byte[]> hashes) {
+	public void hMSet(byte @NonNull [] key, @NonNull Map<byte @NonNull [], byte @NonNull []> hashes) {
 
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(hashes, "Hashes must not be null");
 
-		connection.invokeStatus().just(Jedis::hmset, PipelineBinaryCommands::hmset, key, hashes);
+		connection.invokeStatus().just(JedisBinaryCommands::hmset, PipelineBinaryCommands::hmset, key, hashes);
 	}
 
 	@Override
-	public List<byte[]> hVals(byte[] key) {
+	public List<byte @NonNull []> hVals(byte @NonNull [] key) {
 
 		Assert.notNull(key, "Key must not be null");
 
-		return connection.invoke().just(Jedis::hvals, PipelineBinaryCommands::hvals, key);
+		return connection.invoke().just(JedisBinaryCommands::hvals, PipelineBinaryCommands::hvals, key);
 	}
 
 	@Override
-	public Cursor<Entry<byte[], byte[]>> hScan(byte[] key, ScanOptions options) {
+	public Cursor<@NonNull Entry<byte @NonNull [], byte @NonNull []>> hScan(byte @NonNull [] key,
+			@NonNull ScanOptions options) {
 		return hScan(key, CursorId.initial(), options);
 	}
 
-	public Cursor<Entry<byte[], byte[]>> hScan(byte[] key, CursorId cursorId, ScanOptions options) {
+	public Cursor<@NonNull Entry<byte @NonNull [], byte @NonNull []>> hScan(byte @NonNull [] key,
+			@NonNull CursorId cursorId, @NonNull ScanOptions options) {
 
 		Assert.notNull(key, "Key must not be null");
 
@@ -236,7 +250,7 @@ class JedisHashCommands implements ValkeyHashCommands {
 			@Override
 			protected ScanIteration<Entry<byte[], byte[]>> doScan(byte[] key, CursorId cursorId, ScanOptions options) {
 
-				if (isQueueing() || isPipelined()) {
+				if (connection.isQueueing() || connection.isPipelined()) {
 					throw new InvalidDataAccessApiUsageException("'HSCAN' cannot be called in pipeline / transaction mode");
 				}
 
@@ -256,71 +270,107 @@ class JedisHashCommands implements ValkeyHashCommands {
 	}
 
 	@Override
-	public List<Long> hExpire(byte[] key, long seconds, ExpirationOptions.Condition condition, byte[]... fields) {
+	public List<@NonNull Long> hExpire(byte @NonNull [] key, long seconds, ExpirationOptions.@NonNull Condition condition,
+			byte @NonNull [] @NonNull... fields) {
 
 		if (condition == ExpirationOptions.Condition.ALWAYS) {
-			return connection.invoke().just(Jedis::hexpire, PipelineBinaryCommands::hexpire, key, seconds, fields);
+			return connection.invoke().just(JedisBinaryCommands::hexpire, PipelineBinaryCommands::hexpire, key, seconds, fields);
 		}
 
 		ExpiryOption option = ExpiryOption.valueOf(condition.name());
-		return connection.invoke().just(Jedis::hexpire, PipelineBinaryCommands::hexpire, key, seconds, option, fields);
+		return connection.invoke().just(JedisBinaryCommands::hexpire, PipelineBinaryCommands::hexpire, key, seconds, option, fields);
 	}
 
 	@Override
-	public List<Long> hpExpire(byte[] key, long millis, ExpirationOptions.Condition condition, byte[]... fields) {
+	public List<@NonNull Long> hpExpire(byte @NonNull [] key, long millis, ExpirationOptions.@NonNull Condition condition,
+			byte @NonNull [] @NonNull... fields) {
 
 		if (condition == ExpirationOptions.Condition.ALWAYS) {
-			return connection.invoke().just(Jedis::hpexpire, PipelineBinaryCommands::hpexpire, key, millis, fields);
+			return connection.invoke().just(JedisBinaryCommands::hpexpire, PipelineBinaryCommands::hpexpire, key, millis, fields);
 		}
 
 		ExpiryOption option = ExpiryOption.valueOf(condition.name());
-		return connection.invoke().just(Jedis::hpexpire, PipelineBinaryCommands::hpexpire, key, millis, option, fields);
+		return connection.invoke().just(JedisBinaryCommands::hpexpire, PipelineBinaryCommands::hpexpire, key, millis, option, fields);
 	}
 
 	@Override
-	public List<Long> hExpireAt(byte[] key, long unixTime, ExpirationOptions.Condition condition, byte[]... fields) {
+	public List<@NonNull Long> hExpireAt(byte @NonNull [] key, long unixTime,
+			ExpirationOptions.@NonNull Condition condition, byte @NonNull [] @NonNull... fields) {
 
 		if (condition == ExpirationOptions.Condition.ALWAYS) {
-			return connection.invoke().just(Jedis::hexpireAt, PipelineBinaryCommands::hexpireAt, key, unixTime, fields);
+			return connection.invoke().just(JedisBinaryCommands::hexpireAt, PipelineBinaryCommands::hexpireAt, key, unixTime, fields);
 		}
 
 		ExpiryOption option = ExpiryOption.valueOf(condition.name());
-		return connection.invoke().just(Jedis::hexpireAt, PipelineBinaryCommands::hexpireAt, key, unixTime, option, fields);
+		return connection.invoke().just(JedisBinaryCommands::hexpireAt, PipelineBinaryCommands::hexpireAt, key, unixTime, option, fields);
 	}
 
 	@Override
-	public List<Long> hpExpireAt(byte[] key, long unixTimeInMillis, ExpirationOptions.Condition condition,
-			byte[]... fields) {
+	public List<@NonNull Long> hpExpireAt(byte @NonNull [] key, long unixTimeInMillis,
+			ExpirationOptions.@NonNull Condition condition, byte @NonNull [] @NonNull... fields) {
 
 		if (condition == ExpirationOptions.Condition.ALWAYS) {
-			return connection.invoke().just(Jedis::hpexpireAt, PipelineBinaryCommands::hpexpireAt, key, unixTimeInMillis,
+			return connection.invoke().just(JedisBinaryCommands::hpexpireAt, PipelineBinaryCommands::hpexpireAt, key, unixTimeInMillis,
 					fields);
 		}
 
 		ExpiryOption option = ExpiryOption.valueOf(condition.name());
-		return connection.invoke().just(Jedis::hpexpireAt, PipelineBinaryCommands::hpexpireAt, key, unixTimeInMillis,
-				fields);
+		return connection.invoke().just(JedisBinaryCommands::hpexpireAt, PipelineBinaryCommands::hpexpireAt, key, unixTimeInMillis,
+				option, fields);
 	}
 
 	@Override
-	public List<Long> hPersist(byte[] key, byte[]... fields) {
-		return connection.invoke().just(Jedis::hpersist, PipelineBinaryCommands::hpersist, key, fields);
+	public List<@NonNull Long> hPersist(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
+		return connection.invoke().just(JedisBinaryCommands::hpersist, PipelineBinaryCommands::hpersist, key, fields);
 	}
 
 	@Override
-	public List<Long> hTtl(byte[] key, byte[]... fields) {
-		return connection.invoke().just(Jedis::httl, PipelineBinaryCommands::httl, key, fields);
+	public List<@NonNull Long> hTtl(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
+		return connection.invoke().just(JedisBinaryCommands::httl, PipelineBinaryCommands::httl, key, fields);
 	}
 
 	@Override
-	public List<Long> hTtl(byte[] key, TimeUnit timeUnit, byte[]... fields) {
-		return connection.invoke().fromMany(Jedis::httl, PipelineBinaryCommands::httl, key, fields)
+	public List<@NonNull Long> hTtl(byte @NonNull [] key, @NonNull TimeUnit timeUnit,
+			byte @NonNull [] @NonNull... fields) {
+		return connection.invoke().fromMany(JedisBinaryCommands::httl, PipelineBinaryCommands::httl, key, fields)
 				.toList(Converters.secondsToTimeUnit(timeUnit));
 	}
 
 	@Override
-	public List<Long> hpTtl(byte[] key, byte[]... fields) {
-		return connection.invoke().just(Jedis::hpttl, PipelineBinaryCommands::hpttl, key, fields);
+	public List<@NonNull Long> hpTtl(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
+		return connection.invoke().just(JedisBinaryCommands::hpttl, PipelineBinaryCommands::hpttl, key, fields);
+	}
+
+	@Override
+	public List<byte[]> hGetDel(byte @NonNull [] key, byte @NonNull [] @NonNull... fields) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(fields, "Fields must not be null");
+
+		return connection.invoke().just(JedisBinaryCommands::hgetdel, PipelineBinaryCommands::hgetdel, key, fields);
+	}
+
+	@Override
+	public List<byte[]> hGetEx(byte @NonNull [] key, @Nullable Expiration expiration,
+			byte @NonNull [] @NonNull... fields) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(fields, "Fields must not be null");
+
+		return connection.invoke().just(JedisBinaryCommands::hgetex, PipelineBinaryCommands::hgetex, key,
+				JedisConverters.toHGetExParams(expiration), fields);
+	}
+
+	@Override
+	public Boolean hSetEx(byte @NonNull [] key, @NonNull Map<byte[], byte[]> hashes,
+			@NonNull HashFieldSetOption condition, @Nullable Expiration expiration) {
+
+		Assert.notNull(key, "Key must not be null");
+		Assert.notNull(hashes, "Hashes must not be null");
+		Assert.notNull(condition, "Condition must not be null");
+
+		return connection.invoke().from(JedisBinaryCommands::hsetex, PipelineBinaryCommands::hsetex, key,
+				JedisConverters.toHSetExParams(condition, expiration), hashes).get(Converters::toBoolean);
 	}
 
 	@Nullable
@@ -330,15 +380,7 @@ class JedisHashCommands implements ValkeyHashCommands {
 		Assert.notNull(key, "Key must not be null");
 		Assert.notNull(field, "Field must not be null");
 
-		return connection.invoke().just(Jedis::hstrlen, PipelineBinaryCommands::hstrlen, key, field);
-	}
-
-	private boolean isPipelined() {
-		return connection.isPipelined();
-	}
-
-	private boolean isQueueing() {
-		return connection.isQueueing();
+		return connection.invoke().just(JedisBinaryCommands::hstrlen, PipelineBinaryCommands::hstrlen, key, field);
 	}
 
 }

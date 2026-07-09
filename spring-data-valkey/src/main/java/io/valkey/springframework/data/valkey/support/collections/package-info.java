@@ -11,6 +11,5 @@
  * Lastly, for key/value associations {@link io.valkey.springframework.data.valkey.support.collections.ValkeyMap} providing a
  * Map-like abstraction on top of a Valkey hash.
  */
-@org.springframework.lang.NonNullApi
-@org.springframework.lang.NonNullFields
+@org.jspecify.annotations.NullUnmarked
 package io.valkey.springframework.data.valkey.support.collections;

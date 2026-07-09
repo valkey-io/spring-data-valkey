@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package io.valkey.springframework.data.valkey.core;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.context.ApplicationEvent;
 import io.valkey.springframework.data.valkey.core.convert.MappingValkeyConverter.BinaryKeyspaceIdentifier;
-import org.springframework.lang.Nullable;
 
 /**
  * {@link ValkeyKeyExpiredEvent} is a Valkey specific {@link ApplicationEvent} published when a particular key in Valkey
@@ -37,7 +37,7 @@ public class ValkeyKeyExpiredEvent<T> extends ValkeyKeyspaceEvent {
 	 */
 	private static final Charset CHARSET = StandardCharsets.UTF_8;
 
-	private final BinaryKeyspaceIdentifier objectId;
+	private final @Nullable BinaryKeyspaceIdentifier objectId;
 	private final @Nullable Object value;
 
 	/**
@@ -84,7 +84,7 @@ public class ValkeyKeyExpiredEvent<T> extends ValkeyKeyspaceEvent {
 	 *
 	 * @return {@literal null} if it could not be determined.
 	 */
-	public String getKeyspace() {
+	public @Nullable String getKeyspace() {
 		return objectId != null ? new String(objectId.getKeyspace(), CHARSET) : null;
 	}
 
@@ -102,8 +102,7 @@ public class ValkeyKeyExpiredEvent<T> extends ValkeyKeyspaceEvent {
 	 *
 	 * @return {@literal null} if not present.
 	 */
-	@Nullable
-	public Object getValue() {
+	public @Nullable Object getValue() {
 		return value;
 	}
 

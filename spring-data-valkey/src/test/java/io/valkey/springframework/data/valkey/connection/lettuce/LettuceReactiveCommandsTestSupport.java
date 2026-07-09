@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,11 +36,12 @@ import java.util.List;
 import org.assertj.core.api.Assumptions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.provider.MethodSource;
+
 import org.springframework.beans.factory.DisposableBean;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceReactiveValkeyConnection.ByteBufferCodec;
 import io.valkey.springframework.data.valkey.test.condition.ValkeyDetector;
 import io.valkey.springframework.data.valkey.test.extension.LettuceExtension;
-import io.valkey.springframework.data.valkey.test.extension.parametrized.MethodSource;
 
 /**
  * @author Christoph Strobl
@@ -175,9 +176,9 @@ public abstract class LettuceReactiveCommandsTestSupport {
 	@BeforeEach
 	public void setUp() {
 
-		AbstractRedisClient valkeyClient = ((ValkeyClientProvider) nativeConnectionProvider).getValkeyClient();
+		AbstractRedisClient redisClient = ((ValkeyClientProvider) nativeConnectionProvider).getValkeyClient();
 
-		if (valkeyClient instanceof RedisClient) {
+		if (redisClient instanceof RedisClient) {
 
 			nativeCommands = nativeConnectionProvider.getConnection(StatefulRedisConnection.class).sync();
 			nativeBinaryCommands = nativeBinaryConnectionProvider.getConnection(StatefulRedisConnection.class).sync();
@@ -188,7 +189,7 @@ public abstract class LettuceReactiveCommandsTestSupport {
 
 			nativeCommands = nativeConnectionProvider.getConnection(StatefulRedisClusterConnection.class).sync();
 			nativeBinaryCommands = nativeBinaryConnectionProvider.getConnection(StatefulRedisClusterConnection.class).sync();
-			this.connection = new LettuceReactiveValkeyClusterConnection(connectionProvider, (RedisClusterClient) valkeyClient);
+			this.connection = new LettuceReactiveValkeyClusterConnection(connectionProvider, (RedisClusterClient) redisClient);
 		}
 	}
 
@@ -198,21 +199,20 @@ public abstract class LettuceReactiveCommandsTestSupport {
 		if (nativeCommands != null) {
 			flushAll();
 
-			if (nativeCommands instanceof RedisCommands valkeyCommands) {
-				nativeConnectionProvider.release((valkeyCommands).getStatefulConnection());
+			if (nativeCommands instanceof RedisCommands redisCommands) {
+				nativeConnectionProvider.release((redisCommands).getStatefulConnection());
 			}
 
-			if (nativeCommands instanceof RedisAdvancedClusterCommands valkeyAdvancedClusterCommands) {
-				nativeConnectionProvider.release((valkeyAdvancedClusterCommands).getStatefulConnection());
+			if (nativeCommands instanceof RedisAdvancedClusterCommands redisAdvancedClusterCommands) {
+				nativeConnectionProvider.release((redisAdvancedClusterCommands).getStatefulConnection());
 			}
 
-			if (nativeBinaryCommands instanceof RedisCommands valkeyCommands) {
-				nativeBinaryConnectionProvider.release((valkeyCommands).getStatefulConnection());
+			if (nativeBinaryCommands instanceof RedisCommands redisCommands) {
+				nativeBinaryConnectionProvider.release((redisCommands).getStatefulConnection());
 			}
 
-			if (nativeBinaryCommands instanceof RedisAdvancedClusterCommands valkeyAdvancedClusterCommands) {
-				nativeBinaryConnectionProvider
-						.release((valkeyAdvancedClusterCommands).getStatefulConnection());
+			if (nativeBinaryCommands instanceof RedisAdvancedClusterCommands redisAdvancedClusterCommands) {
+				nativeBinaryConnectionProvider.release((redisAdvancedClusterCommands).getStatefulConnection());
 			}
 		}
 

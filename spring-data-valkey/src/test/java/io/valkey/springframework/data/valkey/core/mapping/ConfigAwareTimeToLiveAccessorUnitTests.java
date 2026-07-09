@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -148,8 +148,7 @@ class ConfigAwareTimeToLiveAccessorUnitTests {
 	@Test // DATAREDIS-471
 	void getTimeToLiveShouldReturnDefaultValue() {
 
-		Long ttl = accessor
-				.getTimeToLive(new PartialUpdate<>("123", new TypeWithValkeyHashAnnotation()));
+		Long ttl = accessor.getTimeToLive(new PartialUpdate<>("123", new TypeWithValkeyHashAnnotation()));
 
 		assertThat(ttl).isEqualTo(5L);
 	}
@@ -158,8 +157,7 @@ class ConfigAwareTimeToLiveAccessorUnitTests {
 	void getTimeToLiveShouldReturnValueWhenUpdateModifiesTtlProperty() {
 
 		Long ttl = accessor
-				.getTimeToLive(new PartialUpdate<>("123", new SimpleTypeWithTTLProperty())
-						.set("ttl", 100).refreshTtl(true));
+				.getTimeToLive(new PartialUpdate<>("123", new SimpleTypeWithTTLProperty()).set("ttl", 100).refreshTtl(true));
 
 		assertThat(ttl).isEqualTo(100L);
 	}
@@ -168,8 +166,7 @@ class ConfigAwareTimeToLiveAccessorUnitTests {
 	void getTimeToLiveShouldReturnPropertyValueWhenUpdateModifiesTtlProperty() {
 
 		Long ttl = accessor.getTimeToLive(
-				new PartialUpdate<>("123",
-				new TypeWithValkeyHashAnnotationAndTTLProperty()).set("ttl", 100).refreshTtl(true));
+				new PartialUpdate<>("123", new TypeWithValkeyHashAnnotationAndTTLProperty()).set("ttl", 100).refreshTtl(true));
 
 		assertThat(ttl).isEqualTo(100L);
 	}
@@ -178,8 +175,7 @@ class ConfigAwareTimeToLiveAccessorUnitTests {
 	void getTimeToLiveShouldReturnDefaultValueWhenUpdateDoesNotModifyTtlProperty() {
 
 		Long ttl = accessor
-				.getTimeToLive(new PartialUpdate<>("123",
-				new TypeWithValkeyHashAnnotationAndTTLProperty()).refreshTtl(true));
+				.getTimeToLive(new PartialUpdate<>("123", new TypeWithValkeyHashAnnotationAndTTLProperty()).refreshTtl(true));
 
 		assertThat(ttl).isEqualTo(10L);
 	}

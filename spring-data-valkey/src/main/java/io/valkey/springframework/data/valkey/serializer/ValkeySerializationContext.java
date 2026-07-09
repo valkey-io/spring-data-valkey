@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package io.valkey.springframework.data.valkey.serializer;
 
 import java.nio.ByteBuffer;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -126,8 +126,8 @@ public interface ValkeySerializationContext<K, V> {
 	 * Creates a new {@link ValkeySerializationContext} using a {@link JdkSerializationValkeySerializer} with given
 	 * {@link ClassLoader} to resolves {@link Class type} of the keys and values stored in Valkey.
 	 *
-	 * @param classLoader {@link ClassLoader} used to resolve {@link Class types} of keys and value stored in Valkey
-	 * during deserialization; can be {@literal null}.
+	 * @param classLoader {@link ClassLoader} used to resolve {@link Class types} of keys and value stored in Valkey during
+	 *          deserialization; can be {@literal null}.
 	 * @return a new {@link ValkeySerializationContext} using JDK Serializaton.
 	 * @since 2.1
 	 */
@@ -148,8 +148,8 @@ public interface ValkeySerializationContext<K, V> {
 	 * Creates a new {@link ValkeySerializationContext} using the given {@link ValkeySerializer}.
 	 *
 	 * @param <T> {@link Class Type} of {@link Object} being de/serialized by the {@link ValkeySerializer}.
-	 * @param serializer {@link ValkeySerializer} used to de/serialize keys and value stored in Valkey;
-	 * must not be {@literal null}.
+	 * @param serializer {@link ValkeySerializer} used to de/serialize keys and value stored in Valkey; must not be
+	 *          {@literal null}.
 	 * @return a new {@link ValkeySerializationContext} using the given {@link ValkeySerializer}.
 	 */
 	static <T> ValkeySerializationContext<T, T> fromSerializer(ValkeySerializer<T> serializer) {
@@ -160,8 +160,8 @@ public interface ValkeySerializationContext<K, V> {
 	 * Creates a new {@link ValkeySerializationContext} using the given {@link SerializationPair}.
 	 *
 	 * @param <T> {@link Class Type} of {@link Object} de/serialized by the {@link SerializationPair}.
-	 * @param serializationPair {@link SerializationPair} used to de/serialize keys and values stored in Valkey;
-	 * must not be {@literal null}.
+	 * @param serializationPair {@link SerializationPair} used to de/serialize keys and values stored in Valkey; must not
+	 *          be {@literal null}.
 	 * @return a new {@link ValkeySerializationContext} using the given {@link SerializationPair}.
 	 */
 	static <T> ValkeySerializationContext<T, T> just(SerializationPair<T> serializationPair) {
@@ -272,8 +272,7 @@ public interface ValkeySerializationContext<K, V> {
 		 * @param buffer must not be {@literal null}.
 		 * @return the deserialized value. Can be {@literal null}.
 		 */
-		@Nullable
-		default T read(ByteBuffer buffer) {
+		default @Nullable T read(ByteBuffer buffer) {
 			return getReader().read(buffer);
 		}
 
@@ -386,8 +385,7 @@ public interface ValkeySerializationContext<K, V> {
 		 * @param writer must not be {@literal null}.
 		 * @return {@literal this} builder.
 		 */
-		default ValkeySerializationContextBuilder<K, V> hashKey(ValkeyElementReader<?> reader,
-				ValkeyElementWriter<?> writer) {
+		default ValkeySerializationContextBuilder<K, V> hashKey(ValkeyElementReader<?> reader, ValkeyElementWriter<?> writer) {
 
 			hashKey(SerializationPair.just(reader, writer));
 
@@ -487,4 +485,5 @@ public interface ValkeySerializationContext<K, V> {
 		ValkeySerializationContext<K, V> build();
 
 	}
+
 }

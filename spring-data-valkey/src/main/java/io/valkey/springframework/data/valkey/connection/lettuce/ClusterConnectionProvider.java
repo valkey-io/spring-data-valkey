@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -47,8 +47,7 @@ class ClusterConnectionProvider implements LettuceConnectionProvider, ValkeyClie
 
 	private final Lock lock = new ReentrantLock();
 
-	@Nullable
-	private final ReadFrom readFrom;
+	private @Nullable final ReadFrom readFrom;
 
 	private final RedisClusterClient client;
 
@@ -115,9 +114,9 @@ class ClusterConnectionProvider implements LettuceConnectionProvider, ValkeyClie
 				|| connectionType.equals(StatefulConnection.class)) {
 
 			return client.connectAsync(codec).thenApply(connection -> {
-						getReadFrom().ifPresent(connection::setReadFrom);
-						return connectionType.cast(connection);
-					});
+				getReadFrom().ifPresent(connection::setReadFrom);
+				return connectionType.cast(connection);
+			});
 		}
 
 		return LettuceFutureUtils

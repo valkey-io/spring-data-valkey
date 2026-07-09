@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2025 the original author or authors.
+ * Copyright 2017-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.reactivestreams.Publisher;
 
@@ -55,6 +56,7 @@ import org.springframework.util.Assert;
  * @author Mark Paluch
  * @author Christoph Strobl
  * @author Dahye Anne Lee
+ * @author Yordan Tsintsov
  * @since 2.0
  */
 public interface ReactiveValkeyOperations<K, V> {
@@ -236,6 +238,17 @@ public interface ReactiveValkeyOperations<K, V> {
 	Mono<Boolean> copy(K sourceKey, K targetKey, boolean replace);
 
 	/**
+	 * Get the hash digest for the value stored in the specified key as a hexadecimal string. This command is intended to
+	 * be used with string values only.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @return string of the hash digest.
+	 * @see <a href="https://valkey.io/commands/digest">Valkey Documentation: DIGEST</a>
+	 * @since 4.1
+	 */
+	Mono<String> getDigest(K key);
+
+	/**
 	 * Determine if given {@code key} exists.
 	 *
 	 * @param key must not be {@literal null}.
@@ -248,7 +261,7 @@ public interface ReactiveValkeyOperations<K, V> {
 	 * Get the number of given {@code keys} that exists.
 	 *
 	 * @param keys must not be {@literal null} or {@literal empty}.
-	 * @return the number of existing keys in valkey. 0 if there are no existing keys.
+	 * @return the number of existing keys in Valkey. 0 if there are no existing keys.
 	 * @see <a href="https://valkey.io/docs/commands/exists/">Valkey Documentation: EXISTS</a>
 	 * @since 3.5
 	 */
@@ -264,9 +277,10 @@ public interface ReactiveValkeyOperations<K, V> {
 	Mono<DataType> type(K key);
 
 	/**
-	 * Find all keys matching the given {@code pattern}. <br />
-	 * <strong>IMPORTANT:</strong> It is recommended to use {@link #scan()} to iterate over the keyspace as
-	 * {@link #keys(Object)} is a non-interruptible and expensive Valkey operation.
+	 * Retrieve all keys matching the given pattern via {@code KEYS} command.
+	 * <p>
+	 * <strong>IMPORTANT:</strong> This command is non-interruptible and scans the entire keyspace which may cause
+	 * performance issues. Consider {@link #scan(ScanOptions)} for large datasets.
 	 *
 	 * @param pattern must not be {@literal null}.
 	 * @return the {@link Flux} emitting matching keys one by one.
@@ -348,11 +362,37 @@ public interface ReactiveValkeyOperations<K, V> {
 	Mono<Long> delete(Publisher<K> keys);
 
 	/**
+	 * Delete given {@code key} and customize the operation through {@link DeleteSpec}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param deleteConsumer a function that consumes the {@link DeleteSpec} to configure the delete operation, must not
+	 *          be {@literal null}.
+	 * @return {@literal true} if the key was removed.
+	 * @see <a href="https://valkey.io/commands/delex">Valkey Documentation: DELEX</a>
+	 * @since 4.1
+	 */
+	Mono<Boolean> delete(K key, Consumer<DeleteSpec<K, V>> deleteConsumer);
+
+	/**
+	 * Delete the key if the value at {@code key} equals {@code expectedValue}. Use {@link #delete(Object, Consumer)} to
+	 * customize the delete operation using e.g. a different value comparison strategy.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param expectedValue the expected value, must not be {@literal null}.
+	 * @return {@code true} if successful. {@code false} return indicates that the actual value was not equal to the
+	 *         expected value or the key does not exist. {@literal null} when used in pipeline / transaction.
+	 * @see <a href="https://valkey.io/commands/delex">Valkey Documentation: DELEX</a>
+	 * @see #delete(Object, Consumer)
+	 * @since 4.1
+	 */
+	Mono<Boolean> compareAndDelete(K key, V expectedValue);
+
+	/**
 	 * Unlink the {@code key} from the keyspace. Unlike with {@link #delete(Object[])} the actual memory reclaiming here
 	 * happens asynchronously.
 	 *
 	 * @param key must not be {@literal null}.
-	 * @return The number of keys that were removed. {@literal null} when used in pipeline / transaction.
+	 * @return The number of keys that were removed.
 	 * @see <a href="https://valkey.io/commands/unlink">Valkey Documentation: UNLINK</a>
 	 * @since 2.1
 	 */

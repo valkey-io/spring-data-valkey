@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,30 +15,10 @@
  */
 package io.valkey.springframework.data.valkey.connection.lettuce;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyMap;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-import io.lettuce.core.KeyScanCursor;
-import io.lettuce.core.MapScanCursor;
-import io.lettuce.core.RedisClient;
-import io.lettuce.core.RedisFuture;
-import io.lettuce.core.ScanArgs;
-import io.lettuce.core.ScanCursor;
-import io.lettuce.core.ScoredValue;
-import io.lettuce.core.ScoredValueScanCursor;
-import io.lettuce.core.ValueScanCursor;
-import io.lettuce.core.XAddArgs;
-import io.lettuce.core.XClaimArgs;
+import io.lettuce.core.*;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.api.sync.RedisCommands;
@@ -65,12 +45,18 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+
 import org.springframework.dao.InvalidDataAccessResourceUsageException;
+import org.springframework.dao.QueryTimeoutException;
 import io.valkey.springframework.data.valkey.connection.AbstractConnectionUnitTestBase;
+import io.valkey.springframework.data.valkey.connection.ValkeyPipelineException;
 import io.valkey.springframework.data.valkey.connection.ValkeyServerCommands.ShutdownOption;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.TrimOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XAddOptions;
 import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XClaimOptions;
+import io.valkey.springframework.data.valkey.connection.ValkeyStreamCommands.XTrimOptions;
 import io.valkey.springframework.data.valkey.connection.stream.MapRecord;
 import io.valkey.springframework.data.valkey.connection.zset.Tuple;
 import io.valkey.springframework.data.valkey.core.Cursor;
@@ -78,6 +64,8 @@ import io.valkey.springframework.data.valkey.core.KeyScanOptions;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
+ * Unit tests for {@link LettuceConnection}.
+ *
  * @author Christoph Strobl
  * @author Mark Paluch
  */
@@ -113,7 +101,7 @@ class LettuceConnectionUnitTests {
 
 		when(statefulConnectionMock.async()).thenReturn(asyncCommandsMock);
 		when(statefulConnectionMock.sync()).thenReturn(commandsMock);
-		connection = new LettuceConnection(0, clientMock);
+		connection = new LettuceConnection(1, clientMock);
 	}
 
 	@Nested
@@ -216,15 +204,48 @@ class LettuceConnectionUnitTests {
 		}
 
 		@Test // DATAREDIS-1122
-		void xaddShouldHonorMaxlen() {
+		void xaddShouldPassArgsFromConverterToCommands() {
 
 			MapRecord<byte[], byte[], byte[]> record = MapRecord.create("key".getBytes(), Collections.emptyMap());
+			XAddOptions options = XAddOptions.maxlen(100);
+			XAddArgs args = new XAddArgs();
+			args.maxlen(100);
 
-			connection.streamCommands().xAdd(record, XAddOptions.maxlen(100));
-			ArgumentCaptor<XAddArgs> args = ArgumentCaptor.forClass(XAddArgs.class);
-			verify(asyncCommandsMock).xadd(any(), args.capture(), anyMap());
+			try (MockedStatic<StreamConverters> streamConvertersMockedStatic = Mockito.mockStatic(StreamConverters.class)) {
+				streamConvertersMockedStatic.when(() -> StreamConverters.toXAddArgs(any(), any())).thenReturn(args);
 
-			assertThat(args.getValue()).extracting("maxlen").isEqualTo(100L);
+				connection.streamCommands().xAdd(record, options);
+
+				// StreamConverters called to convert options to args
+				streamConvertersMockedStatic.verify(() -> StreamConverters.toXAddArgs(record.getId(), options));
+
+				// Converted args are passed to commands
+				ArgumentCaptor<XAddArgs> actualArgsCaptor = ArgumentCaptor.captor();
+				verify(asyncCommandsMock).xadd(any(), actualArgsCaptor.capture(), anyMap());
+				assertThat(actualArgsCaptor.getValue()).isSameAs(args);
+			}
+		}
+
+		@Test // GH-3232
+		void xtrimShouldPassArgsFromConverterToCommands() {
+
+			XTrimOptions options = XTrimOptions.trim(TrimOptions.maxLen(100));
+			XTrimArgs args = new XTrimArgs();
+			args.maxlen(100);
+
+			try (MockedStatic<StreamConverters> streamConvertersMockedStatic = Mockito.mockStatic(StreamConverters.class)) {
+				streamConvertersMockedStatic.when(() -> StreamConverters.toXTrimArgs(any())).thenReturn(args);
+
+				connection.streamCommands().xTrim("key".getBytes(), options);
+
+				// StreamConverters called to convert options to args
+				streamConvertersMockedStatic.verify(() -> StreamConverters.toXTrimArgs(options));
+
+				// Converted args are passed to commands
+				ArgumentCaptor<XTrimArgs> actualArgsCaptor = ArgumentCaptor.captor();
+				verify(asyncCommandsMock).xtrim(any(), actualArgsCaptor.capture());
+				assertThat(actualArgsCaptor.getValue()).isSameAs(args);
+			}
 		}
 
 		@Test // DATAREDIS-1226
@@ -264,18 +285,6 @@ class LettuceConnectionUnitTests {
 			connection.execute("foo.bar", command.getOutput());
 
 			verify(asyncCommandsMock).dispatch(eq(command.getType()), eq(command.getOutput()), any(CommandArgs.class));
-		}
-
-		@Test // GH-2047
-		void xaddShouldHonorNoMkStream() {
-
-			MapRecord<byte[], byte[], byte[]> record = MapRecord.create("key".getBytes(), Collections.emptyMap());
-
-			connection.streamCommands().xAdd(record, XAddOptions.makeNoStream());
-			ArgumentCaptor<XAddArgs> args = ArgumentCaptor.forClass(XAddArgs.class);
-			verify(asyncCommandsMock).xadd(any(), args.capture(), anyMap());
-
-			assertThat(args.getValue()).extracting("nomkstream").isEqualTo(true);
 		}
 
 		@Test // GH-2796
@@ -341,7 +350,7 @@ class LettuceConnectionUnitTests {
 
 			Cursor<byte[]> cursor = connection.setCommands().sScan("key".getBytes(), KeyScanOptions.NONE);
 			cursor.next(); // initial
-			assertThat(cursor.getCursorId()).isEqualTo(Long.parseUnsignedLong(cursorId));
+			assertThat(cursor.getId()).isEqualTo(Cursor.CursorId.of(cursorId));
 
 			cursor.next(); // fetch next
 			ArgumentCaptor<ScanCursor> captor = ArgumentCaptor.forClass(ScanCursor.class);
@@ -429,6 +438,37 @@ class LettuceConnectionUnitTests {
 		@BeforeEach
 		public void setUp() throws InvocationTargetException, IllegalAccessException {
 			connection.openPipeline();
+		}
+
+		@Test // GH-3346
+		void closePipelineShouldNotDoubleWrapTimeoutException() {
+
+			Command<?, ?, ?> cmd = new Command<>(CommandType.SET, new StatusOutput<>(ByteArrayCodec.INSTANCE));
+			AsyncCommand<?, ?, ?> future = new AsyncCommand<>(cmd);
+
+			when(asyncCommandsMock.set(any(byte[].class), any(byte[].class))).thenReturn((RedisFuture) future);
+			connection.openPipeline();
+			connection.set("foo".getBytes(), "bar".getBytes());
+
+			assertThatThrownBy(() -> connection.closePipeline()).isInstanceOf(ValkeyPipelineException.class)
+					.hasCauseInstanceOf(QueryTimeoutException.class);
+		}
+
+		@SuppressWarnings({ "rawtypes", "unchecked" })
+		@Test // GH-3346
+		void closePipelineShouldNotDoubleWrapCommandException() {
+
+			Command<?, ?, ?> cmd = new Command<>(CommandType.SET, new StatusOutput<>(ByteArrayCodec.INSTANCE));
+			AsyncCommand<?, ?, ?> future = new AsyncCommand<>(cmd);
+			future.completeExceptionally(new RuntimeException("ERR some error"));
+
+			when(asyncCommandsMock.set(any(byte[].class), any(byte[].class))).thenReturn((RedisFuture) future);
+
+			connection.openPipeline();
+			connection.set("foo".getBytes(), "bar".getBytes());
+
+			assertThatThrownBy(() -> connection.closePipeline()).isInstanceOf(ValkeyPipelineException.class)
+					.hasCauseExactlyInstanceOf(RedisException.class);
 		}
 
 		@Test // DATAREDIS-528

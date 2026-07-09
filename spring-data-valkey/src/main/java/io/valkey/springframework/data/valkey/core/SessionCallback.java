@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
  */
 package io.valkey.springframework.data.valkey.core;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
-import org.springframework.lang.Nullable;
 
 /**
  * Callback executing all operations against a surrogate 'session' (basically against the same underlying Valkey
@@ -24,7 +24,7 @@ import org.springframework.lang.Nullable;
  *
  * @author Costin Leau
  */
-public interface SessionCallback<T> {
+public interface SessionCallback<T extends @Nullable Object> {
 
 	/**
 	 * Executes all the given operations inside the same session.
@@ -32,6 +32,5 @@ public interface SessionCallback<T> {
 	 * @param operations Valkey operations
 	 * @return return value
 	 */
-	@Nullable
 	<K, V> T execute(ValkeyOperations<K, V> operations) throws DataAccessException;
 }

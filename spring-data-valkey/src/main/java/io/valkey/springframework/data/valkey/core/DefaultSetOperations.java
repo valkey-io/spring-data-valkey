@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import org.springframework.util.Assert;
  * @author Christoph Strobl
  * @author Mark Paluch
  * @author Roman Bezpalko
+ * @author Mingi Lee
  */
 class DefaultSetOperations<K, V> extends AbstractOperations<K, V> implements SetOperations<K, V> {
 
@@ -141,6 +142,25 @@ class DefaultSetOperations<K, V> extends AbstractOperations<K, V> implements Set
 	}
 
 	@Override
+	public Long intersectSize(K key, K otherKey) {
+		return intersectSize(Arrays.asList(key, otherKey));
+	}
+
+	@Override
+	public Long intersectSize(K key, Collection<K> otherKeys) {
+
+		byte[][] rawKeys = rawKeys(key, otherKeys);
+		return execute(connection -> connection.sInterCard(rawKeys));
+	}
+
+	@Override
+	public Long intersectSize(Collection<K> keys) {
+
+		byte[][] rawKeys = rawKeys(keys);
+		return execute(connection -> connection.sInterCard(rawKeys));
+	}
+
+	@Override
 	public Boolean isMember(K key, Object o) {
 
 		byte[] rawKey = rawKey(key);
@@ -158,12 +178,11 @@ class DefaultSetOperations<K, V> extends AbstractOperations<K, V> implements Set
 		return execute(connection -> {
 
 			List<Boolean> result = connection.sMIsMember(rawKey, rawValues);
+			Map<Object, Boolean> isMember = new LinkedHashMap<>(result.size());
 
 			if (result == null || result.size() != objects.length) {
-				return null;
+				return isMember;
 			}
-
-			Map<Object, Boolean> isMember = new LinkedHashMap<>(result.size());
 
 			for (int i = 0; i < objects.length; i++) {
 				isMember.put(objects[i], result.get(i));
@@ -219,8 +238,7 @@ class DefaultSetOperations<K, V> extends AbstractOperations<K, V> implements Set
 	@Override
 	public List<V> randomMembers(K key, long count) {
 
-		Assert.isTrue(count >= 0,
-				"Use a positive number for count; This method is already allowing duplicate elements");
+		Assert.isTrue(count >= 0, "Use a positive number for count; This method is already allowing duplicate elements");
 
 		byte[] rawKey = rawKey(key);
 		List<byte[]> rawValues = execute(connection -> connection.sRandMember(rawKey, -count));

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2025 the original author or authors.
+ * Copyright 2015-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,7 +121,7 @@ public class LettuceSentinelIntegrationTests extends AbstractConnectionIntegrati
 		connectionFactory.afterPropertiesSet();
 		connectionFactory.start();
 
-		try(ValkeyConnection directConnection = connectionFactory.getConnection()) {
+		try (ValkeyConnection directConnection = connectionFactory.getConnection()) {
 
 			assertThat(directConnection.exists("foo".getBytes())).isFalse();
 			directConnection.select(0);
@@ -130,7 +130,6 @@ public class LettuceSentinelIntegrationTests extends AbstractConnectionIntegrati
 		} finally {
 			connectionFactory.destroy();
 		}
-
 
 	}
 
@@ -150,7 +149,7 @@ public class LettuceSentinelIntegrationTests extends AbstractConnectionIntegrati
 		connectionFactory.afterPropertiesSet();
 		connectionFactory.start();
 
-		try(LettuceReactiveValkeyConnection reactiveConnection = connectionFactory.getReactiveConnection()) {
+		try (LettuceReactiveValkeyConnection reactiveConnection = connectionFactory.getReactiveConnection()) {
 
 			reactiveConnection.keyCommands().exists(ByteBuffer.wrap("foo".getBytes())) //
 					.as(StepVerifier::create) //
@@ -262,7 +261,7 @@ public class LettuceSentinelIntegrationTests extends AbstractConnectionIntegrati
 		factory.afterPropertiesSet();
 		factory.start();
 
-		try(ValkeyConnection connection = factory.getConnection()) {
+		try (ValkeyConnection connection = factory.getConnection()) {
 
 			assertThat(connection.ping()).isEqualTo("PONG");
 			assertThat(connection.info().getProperty("role")).isEqualTo("slave");

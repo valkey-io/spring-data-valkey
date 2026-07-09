@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,9 @@ package io.valkey.springframework.data.valkey.core;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.InitializingBean;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 /**
@@ -46,14 +46,13 @@ public abstract class ValkeyAccessor implements InitializingBean {
 	 * @return the configured {@link ValkeyConnectionFactory}. Can be {@literal null}.
 	 * @see ValkeyConnectionFactory
 	 */
-	@Nullable
-	public ValkeyConnectionFactory getConnectionFactory() {
+	public @Nullable ValkeyConnectionFactory getConnectionFactory() {
 		return this.connectionFactory;
 	}
 
 	/**
-	 * Returns the required {@link ValkeyConnectionFactory}, throwing an {@link IllegalStateException}
-	 * if the {@link ValkeyConnectionFactory} is not set.
+	 * Returns the required {@link ValkeyConnectionFactory}, throwing an {@link IllegalStateException} if the
+	 * {@link ValkeyConnectionFactory} is not set.
 	 *
 	 * @return the configured {@link ValkeyConnectionFactory}.
 	 * @throws IllegalStateException if the {@link ValkeyConnectionFactory} is not set.
@@ -76,4 +75,5 @@ public abstract class ValkeyAccessor implements InitializingBean {
 	public void setConnectionFactory(@Nullable ValkeyConnectionFactory connectionFactory) {
 		this.connectionFactory = connectionFactory;
 	}
+
 }

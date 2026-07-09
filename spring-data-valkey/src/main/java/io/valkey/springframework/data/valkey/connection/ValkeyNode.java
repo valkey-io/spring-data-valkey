@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2025 the original author or authors.
+ * Copyright 2014-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.connection;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
@@ -192,8 +192,25 @@ public class ValkeyNode implements NamedNode {
 	/**
 	 * @return can be {@literal null}.
 	 */
-	@Nullable
-	public String getHost() {
+	public @Nullable String getHost() {
+		return host;
+	}
+
+	/**
+	 * Returns the required host of this Valkey Node or throws {@link IllegalStateException} if no host is set.
+	 *
+	 * @return
+	 * @since 4.0
+	 * @throws IllegalStateException if no host is associated with this Valkey Node.
+	 */
+	public String getRequiredHost() {
+
+		String host = getHost();
+
+		if (host == null) {
+			throw new IllegalStateException("No host associated with this Valkey Node");
+		}
+
 		return host;
 	}
 
@@ -208,8 +225,38 @@ public class ValkeyNode implements NamedNode {
 	/**
 	 * @return can be {@literal null}.
 	 */
-	@Nullable
-	public Integer getPort() {
+	public @Nullable Integer getPort() {
+		return port;
+	}
+
+	/**
+	 * Returns the port of this Valkey Node the {@code defaultPort} if no port is set.
+	 *
+	 * @return
+	 * @since 4.0
+	 */
+	public int getPortOr(int defaultPort) {
+
+		Integer port = getPort();
+
+		return port == null ? defaultPort : port;
+	}
+
+	/**
+	 * Returns the required port of this Valkey Node or throws {@link IllegalStateException} if no port is set.
+	 *
+	 * @return
+	 * @since 4.0
+	 * @throws IllegalStateException if no host is associated with this Valkey Node.
+	 */
+	public int getRequiredPort() {
+
+		Integer port = getPort();
+
+		if (port == null) {
+			throw new IllegalStateException("No port associated with this Valkey Node");
+		}
+
 		return port;
 	}
 
@@ -223,12 +270,11 @@ public class ValkeyNode implements NamedNode {
 	}
 
 	@Override
-	@Nullable
-	public String getName() {
+	public @Nullable String getName() {
 		return this.name;
 	}
 
-	public void setName(String name) {
+	public void setName(@Nullable String name) {
 		this.name = name;
 	}
 
@@ -236,8 +282,7 @@ public class ValkeyNode implements NamedNode {
 	 * @return can be {@literal null}.
 	 * @since 1.7
 	 */
-	@Nullable
-	public String getMasterId() {
+	public @Nullable String getMasterId() {
 		return masterId;
 	}
 
@@ -245,8 +290,7 @@ public class ValkeyNode implements NamedNode {
 	 * @return can be {@literal null}.
 	 * @since 1.7
 	 */
-	@Nullable
-	public String getId() {
+	public @Nullable String getId() {
 		return id;
 	}
 
@@ -262,8 +306,7 @@ public class ValkeyNode implements NamedNode {
 	 * @return can be {@literal null}.
 	 * @since 1.7
 	 */
-	@Nullable
-	public NodeType getType() {
+	public @Nullable NodeType getType() {
 		return type;
 	}
 

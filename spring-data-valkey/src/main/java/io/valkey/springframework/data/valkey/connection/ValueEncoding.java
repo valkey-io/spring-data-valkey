@@ -1,5 +1,5 @@
 /*
- * Copyright 2018-2025 the original author or authors.
+ * Copyright 2018-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package io.valkey.springframework.data.valkey.connection;
 
 import java.util.Optional;
 
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 import org.springframework.util.ObjectUtils;
 
 /**
@@ -93,7 +93,7 @@ public interface ValueEncoding {
 		 */
 		SKIPLIST("skiplist"), //
 		/**
-		 * No encoding present due to non existing key.
+		 * No encoding present due to non-existing key.
 		 */
 		VACANT(null);
 
@@ -104,11 +104,10 @@ public interface ValueEncoding {
 		}
 
 		@Override
-		public String raw() {
+		public @Nullable String raw() {
 			return raw;
 		}
 
-		@Nullable
 		static Optional<ValueEncoding> lookup(@Nullable String encoding) {
 
 			for (ValueEncoding valueEncoding : values()) {

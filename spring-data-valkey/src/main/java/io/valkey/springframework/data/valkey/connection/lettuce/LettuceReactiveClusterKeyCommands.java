@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2025 the original author or authors.
+ * Copyright 2016-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,8 @@ import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.ReactiveClusterKeyCommands;
 import io.valkey.springframework.data.valkey.connection.ReactiveValkeyConnection.BooleanResponse;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterNode;
+import io.valkey.springframework.data.valkey.connection.convert.Converters;
+import io.valkey.springframework.data.valkey.util.ByteUtils;
 import org.springframework.util.Assert;
 
 /**
@@ -61,7 +63,7 @@ class LettuceReactiveClusterKeyCommands extends LettuceReactiveKeyCommands imple
 
 			Assert.notNull(pattern, "Pattern must not be null");
 
-			return cmd.keys(pattern).collectList();
+			return cmd.keys(ByteUtils.toString(pattern)).collectList();
 		}).next();
 	}
 
@@ -87,7 +89,7 @@ class LettuceReactiveClusterKeyCommands extends LettuceReactiveKeyCommands imple
 					.switchIfEmpty(Mono.error(new ValkeySystemException("Cannot rename key that does not exist",
 							new RedisException("ERR no such key."))))
 					.flatMap(value -> cmd.restore(command.getNewKey(), 0, value).flatMap(res -> cmd.del(command.getKey())))
-					.map(LettuceConverters.longToBooleanConverter()::convert);
+					.map(Converters::toBoolean);
 
 			return result.map(val -> new BooleanResponse<>(command, val));
 		}));
@@ -115,7 +117,7 @@ class LettuceReactiveClusterKeyCommands extends LettuceReactiveKeyCommands imple
 						.switchIfEmpty(Mono.error(new ValkeySystemException("Cannot rename key that does not exist",
 								new RedisException("ERR no such key."))))
 						.flatMap(value -> cmd.restore(command.getNewKey(), 0, value).flatMap(res -> cmd.del(command.getKey())))
-						.map(LettuceConverters::toBoolean);
+						.map(Converters::toBoolean);
 			});
 
 			return result.map(val -> new BooleanResponse<>(command, val));

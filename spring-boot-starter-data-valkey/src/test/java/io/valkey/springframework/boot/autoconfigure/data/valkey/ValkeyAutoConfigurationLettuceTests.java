@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2012-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,64 +37,80 @@ import io.lettuce.core.models.role.RedisNodeDescription;
 import io.lettuce.core.resource.DefaultClientResources;
 import io.lettuce.core.tracing.Tracing;
 import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.autoconfigure.ssl.SslAutoConfiguration;
+import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.Pool;
 import org.springframework.boot.test.context.assertj.AssertableApplicationContext;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.boot.test.context.runner.ContextConsumer;
+import io.valkey.springframework.boot.testsupport.classpath.resources.WithPackageResources;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.util.StringUtils;
-
-import io.valkey.springframework.boot.autoconfigure.data.valkey.ValkeyProperties.Pool;
-import io.valkey.springframework.boot.testsupport.classpath.ClassPathExclusions;
-import io.valkey.springframework.boot.testsupport.classpath.resources.WithPackageResources;
+import io.valkey.springframework.data.valkey.connection.NamedNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyClusterConfiguration;
 import io.valkey.springframework.data.valkey.connection.ValkeyConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.ValkeyNode;
 import io.valkey.springframework.data.valkey.connection.ValkeyPassword;
 import io.valkey.springframework.data.valkey.connection.ValkeySentinelConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyStandaloneConfiguration;
+import io.valkey.springframework.data.valkey.connection.ValkeyStaticMasterReplicaConfiguration;
+import io.valkey.springframework.data.valkey.connection.jedis.JedisConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientConfiguration;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceClientConfiguration.LettuceClientConfigurationBuilder;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettuceConnectionFactory;
 import io.valkey.springframework.data.valkey.connection.lettuce.LettucePoolingClientConfiguration;
+import io.valkey.springframework.data.valkey.core.ValkeyOperations;
+import io.valkey.springframework.data.valkey.core.StringValkeyTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.util.StringUtils;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.mockito.Mockito.mock;
 
 /**
- * Tests for {@link ValkeyAutoConfiguration} when Valkey GLIDE is not on the classpath.
+ * Tests for {@link ValkeyAutoConfiguration} with Lettuce as the selected client.
  *
- * @author Jeremy Parr-Pearson
+ * @author Dave Syer
+ * @author Christian Dupuis
+ * @author Christoph Strobl
+ * @author Eddú Meléndez
+ * @author Marco Aust
+ * @author Mark Paluch
+ * @author Stephane Nicoll
+ * @author Alen Turkovic
+ * @author Scott Frederick
+ * @author Weix Sun
+ * @author Moritz Halbritter
+ * @author Andy Wilkinson
+ * @author Phillip Webb
  */
-@ClassPathExclusions("valkey-glide-*.jar")
 class ValkeyAutoConfigurationLettuceTests {
 
 	private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class, SslAutoConfiguration.class));
+		.withConfiguration(AutoConfigurations.of(ValkeyAutoConfiguration.class, SslAutoConfiguration.class))
+		.withPropertyValues("spring.data.valkey.client-type=lettuce");
 
 	@Test
-	void connectionFactoryDefaultsToLettuce() {
-		this.contextRunner.run((context) -> assertThat(context.getBean("valkeyConnectionFactory"))
-			.isInstanceOf(LettuceConnectionFactory.class));
+	void testDefaultLettuceConfiguration() {
+		this.contextRunner.run((context) -> {
+			assertThat(context.getBean("valkeyTemplate")).isInstanceOf(ValkeyOperations.class);
+			assertThat(context).hasSingleBean(StringValkeyTemplate.class);
+			assertThat(context).hasSingleBean(ValkeyConnectionFactory.class);
+			assertThat(context.getBean(ValkeyConnectionFactory.class)).isInstanceOf(LettuceConnectionFactory.class);
+		});
 	}
 
 	@Test
-	void connectionFactoryIsNotCreatedWhenValkeyGlideIsSelected() {
-		this.contextRunner.withPropertyValues("spring.data.valkey.client-type=valkeyglide")
-			.run((context) -> assertThat(context).doesNotHaveBean(ValkeyConnectionFactory.class));
-	}
-
-	@Test
-	void testOverrideValkeyConfiguration() {
+	void testOverrideLettuceConfiguration() {
 		this.contextRunner
 			.withPropertyValues("spring.data.valkey.host:foo", "spring.data.valkey.database:1",
 					"spring.data.valkey.lettuce.shutdown-timeout:500")
@@ -107,14 +123,6 @@ class ValkeyAutoConfigurationLettuceTests {
 				assertThat(cf.isUseSsl()).isFalse();
 				assertThat(cf.getShutdownTimeout()).isEqualTo(500);
 			});
-	}
-
-	@Test
-	void usesConnectionDetailsIfAvailable() {
-		this.contextRunner.withUserConfiguration(ConnectionDetailsConfiguration.class).run((context) -> {
-			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
-			assertThat(cf.isUseSsl()).isFalse();
-		});
 	}
 
 	@ParameterizedTest(name = "{0}")
@@ -182,10 +190,12 @@ class ValkeyAutoConfigurationLettuceTests {
 	}
 
 	@Test
-	void testCustomizeValkeyConfiguration() {
+	void testCustomizeLettuceConfiguration() {
 		this.contextRunner.withUserConfiguration(CustomConfiguration.class).run((context) -> {
 			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
 			assertThat(cf.isUseSsl()).isTrue();
+			assertThat(cf.getClientConfiguration().getClientOptions())
+				.hasValueSatisfying((options) -> assertThat(options.isAutoReconnect()).isFalse());
 		});
 	}
 
@@ -206,7 +216,7 @@ class ValkeyAutoConfigurationLettuceTests {
 	@Test
 	void testOverrideUrlValkeyConfiguration() {
 		this.contextRunner
-			.withPropertyValues("spring.data.valkey.host:foo", "spring.valkey.data.user:alice",
+			.withPropertyValues("spring.data.valkey.host:foo", "spring.redis.data.user:alice",
 					"spring.data.valkey.password:xyz", "spring.data.valkey.port:1000",
 					"spring.data.valkey.ssl.enabled:false", "spring.data.valkey.url:valkeys://user:password@example:33")
 			.run((context) -> {
@@ -322,6 +332,14 @@ class ValkeyAutoConfigurationLettuceTests {
 	}
 
 	@Test
+	void testValkeyConfigurationWithCustomBean() {
+		this.contextRunner.withUserConfiguration(ValkeyStandaloneConfig.class).run((context) -> {
+			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
+			assertThat(cf.getHostName()).isEqualTo("foo");
+		});
+	}
+
+	@Test
 	void testValkeyConfigurationWithClientName() {
 		this.contextRunner.withPropertyValues("spring.data.valkey.host:foo", "spring.data.valkey.client-name:spring-boot")
 			.run((context) -> {
@@ -329,6 +347,22 @@ class ValkeyAutoConfigurationLettuceTests {
 				assertThat(cf.getHostName()).isEqualTo("foo");
 				assertThat(cf.getClientName()).isEqualTo("spring-boot");
 			});
+	}
+
+	@Test
+	void connectionFactoryWithJedisClientType() {
+		this.contextRunner.withPropertyValues("spring.data.valkey.client-type:jedis").run((context) -> {
+			assertThat(context).hasSingleBean(ValkeyConnectionFactory.class);
+			assertThat(context.getBean(ValkeyConnectionFactory.class)).isInstanceOf(JedisConnectionFactory.class);
+		});
+	}
+
+	@Test
+	void connectionFactoryWithLettuceClientType() {
+		this.contextRunner.withPropertyValues("spring.data.valkey.client-type:lettuce").run((context) -> {
+			assertThat(context).hasSingleBean(ValkeyConnectionFactory.class);
+			assertThat(context.getBean(ValkeyConnectionFactory.class)).isInstanceOf(LettuceConnectionFactory.class);
+		});
 	}
 
 	@Test
@@ -350,7 +384,9 @@ class ValkeyAutoConfigurationLettuceTests {
 			.run((context) -> {
 				LettuceConnectionFactory connectionFactory = context.getBean(LettuceConnectionFactory.class);
 				assertThat(connectionFactory.isValkeySentinelAware()).isTrue();
-				assertThat(connectionFactory.getSentinelConfiguration().getSentinels()).isNotNull()
+				ValkeySentinelConfiguration sentinelConfiguration = connectionFactory.getSentinelConfiguration();
+				assertThat(sentinelConfiguration).isNotNull();
+				assertThat(sentinelConfiguration.getSentinels()).isNotNull()
 					.containsExactlyInAnyOrder(new ValkeyNode("[0:0:0:0:0:0:0:1]", 26379),
 							new ValkeyNode("[0:0:0:0:0:0:0:1]", 26380));
 			});
@@ -413,8 +449,8 @@ class ValkeyAutoConfigurationLettuceTests {
 			}));
 	}
 
-	private ContextConsumer<AssertableApplicationContext> assertSentinelConfiguration(String userName, String password,
-			Consumer<ValkeySentinelConfiguration> sentinelConfiguration) {
+	private ContextConsumer<AssertableApplicationContext> assertSentinelConfiguration(@Nullable String userName,
+			String password, Consumer<ValkeySentinelConfiguration> sentinelConfiguration) {
 		return (context) -> {
 			LettuceConnectionFactory connectionFactory = context.getBean(LettuceConnectionFactory.class);
 			assertThat(getUserName(connectionFactory)).isEqualTo(userName);
@@ -427,13 +463,13 @@ class ValkeyAutoConfigurationLettuceTests {
 	void testValkeySentinelUrlConfiguration() {
 		this.contextRunner
 			.withPropertyValues(
-					"spring.data.valkey.url=valkey-sentinel://username:password@127.0.0.1:26379,127.0.0.1:26380/mymaster")
+					"spring.data.valkey.url=redis-sentinel://username:password@127.0.0.1:26379,127.0.0.1:26380/mymaster")
 			.run((context) -> assertThatIllegalStateException()
 				.isThrownBy(() -> context.getBean(LettuceConnectionFactory.class))
 				.withRootCauseInstanceOf(ValkeyUrlSyntaxException.class)
 				.havingRootCause()
 				.withMessageContaining(
-						"Invalid Valkey URL 'valkey-sentinel://username:password@127.0.0.1:26379,127.0.0.1:26380/mymaster'"));
+						"Invalid Valkey URL 'redis-sentinel://username:password@127.0.0.1:26379,127.0.0.1:26380/mymaster'"));
 	}
 
 	@Test
@@ -446,6 +482,7 @@ class ValkeyAutoConfigurationLettuceTests {
 			.run((context) -> {
 				ValkeyClusterConfiguration clusterConfiguration = context.getBean(LettuceConnectionFactory.class)
 					.getClusterConfiguration();
+				assertThat(clusterConfiguration).isNotNull();
 				assertThat(clusterConfiguration.getClusterNodes()).hasSize(3);
 				assertThat(clusterConfiguration.getClusterNodes()).containsExactlyInAnyOrder(
 						new ValkeyNode("127.0.0.1", 27379), new ValkeyNode("127.0.0.1", 27380),
@@ -464,9 +501,48 @@ class ValkeyAutoConfigurationLettuceTests {
 				LettuceConnectionFactory connectionFactory = context.getBean(LettuceConnectionFactory.class);
 				assertThat(getUserName(connectionFactory)).isEqualTo("user");
 				assertThat(connectionFactory.getPassword()).isEqualTo("password");
-			}
+			});
+	}
 
-			);
+	@Test
+	void testValkeyConfigurationWithMasterReplicaAndNoNode() {
+		this.contextRunner.withPropertyValues("spring.data.valkey.masterreplica.nodes=")
+			.run((context) -> assertThat(context).hasFailed()
+				.getFailure()
+				.rootCause()
+				.hasMessage("At least one node is required for master-replica configuration"));
+	}
+
+	@Test
+	void testValkeyConfigurationWithMasterReplica() {
+		this.contextRunner
+			.withPropertyValues("spring.data.valkey.masterreplica.nodes=127.0.0.1:28319,127.0.0.1:28320,[::1]:28321")
+			.run((context) -> {
+				LettuceConnectionFactory connectionFactory = context.getBean(LettuceConnectionFactory.class);
+				assertThat(connectionFactory.getSentinelConfiguration()).isNull();
+				assertThat(connectionFactory.getClusterConfiguration()).isNull();
+				assertThat(connectionFactory).extracting("configuration")
+					.isInstanceOfSatisfying(ValkeyStaticMasterReplicaConfiguration.class,
+							(masterReplicaConfiguration) -> assertThat(masterReplicaConfiguration.getNodes()
+								.stream()
+								.map((config) -> new ValkeyNode(config.getHostName(), config.getPort())))
+								.containsExactly(new ValkeyNode("127.0.0.1", 28319), new ValkeyNode("127.0.0.1", 28320),
+										new ValkeyNode("[::1]", 28321)));
+			});
+	}
+
+	@Test
+	void testValkeyConfigurationWithMasterAndAuthentication() {
+		this.contextRunner
+			.withPropertyValues("spring.data.valkey.username=user", "spring.data.valkey.password=password",
+					"spring.data.valkey.masterreplica.nodes=127.0.0.1:28319,127.0.0.1:28320")
+			.run((context) -> {
+				LettuceConnectionFactory connectionFactory = context.getBean(LettuceConnectionFactory.class);
+				assertThat(getUserName(connectionFactory)).isEqualTo("user");
+				assertThat(connectionFactory.getPassword()).isEqualTo("password");
+				assertThat(connectionFactory).extracting("configuration")
+					.isInstanceOf(ValkeyStaticMasterReplicaConfiguration.class);
+			});
 	}
 
 	@Test
@@ -540,6 +616,28 @@ class ValkeyAutoConfigurationLettuceTests {
 	}
 
 	@Test
+	void definesPropertiesBasedConnectionDetailsByDefault() {
+		this.contextRunner
+			.run((context) -> assertThat(context).hasSingleBean(PropertiesValkeyConnectionDetails.class));
+	}
+
+	@Test
+	void usesStandaloneFromCustomConnectionDetails() {
+		this.contextRunner.withUserConfiguration(ConnectionDetailsStandaloneConfiguration.class).run((context) -> {
+			assertThat(context).hasSingleBean(ValkeyConnectionDetails.class)
+				.doesNotHaveBean(PropertiesValkeyConnectionDetails.class);
+			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
+			assertThat(cf.isUseSsl()).isFalse();
+			ValkeyStandaloneConfiguration configuration = cf.getStandaloneConfiguration();
+			assertThat(configuration.getHostName()).isEqualTo("valkey.example.com");
+			assertThat(configuration.getPort()).isEqualTo(16379);
+			assertThat(configuration.getDatabase()).isOne();
+			assertThat(configuration.getUsername()).isEqualTo("user-1");
+			assertThat(configuration.getPassword()).isEqualTo(ValkeyPassword.of("password-1"));
+		});
+	}
+
+	@Test
 	void usesSentinelFromCustomConnectionDetails() {
 		this.contextRunner.withUserConfiguration(ConnectionDetailsSentinelConfiguration.class).run((context) -> {
 			assertThat(context).hasSingleBean(ValkeyConnectionDetails.class)
@@ -554,7 +652,46 @@ class ValkeyAutoConfigurationLettuceTests {
 			assertThat(configuration.getUsername()).isEqualTo("user-1");
 			assertThat(configuration.getPassword()).isEqualTo(ValkeyPassword.of("password-1"));
 			assertThat(configuration.getDatabase()).isOne();
-			assertThat(configuration.getMaster().getName()).isEqualTo("master.valkey.example.com");
+			NamedNode master = configuration.getMaster();
+			assertThat(master).isNotNull();
+			assertThat(master.getName()).isEqualTo("master.valkey.example.com");
+		});
+	}
+
+	@Test
+	void usesClusterFromCustomConnectionDetails() {
+		this.contextRunner.withUserConfiguration(ConnectionDetailsClusterConfiguration.class).run((context) -> {
+			assertThat(context).hasSingleBean(ValkeyConnectionDetails.class)
+				.doesNotHaveBean(PropertiesValkeyConnectionDetails.class);
+			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
+			assertThat(cf.isUseSsl()).isFalse();
+			ValkeyClusterConfiguration configuration = cf.getClusterConfiguration();
+			assertThat(configuration).isNotNull();
+			assertThat(configuration.getUsername()).isEqualTo("user-1");
+			assertThat(configuration.getPassword().get()).isEqualTo("password-1".toCharArray());
+			assertThat(configuration.getClusterNodes()).containsExactly(new ValkeyNode("node-1", 12345),
+					new ValkeyNode("node-2", 23456));
+		});
+	}
+
+	@Test
+	void usesMasterReplicaFromCustomConnectionDetails() {
+		this.contextRunner.withUserConfiguration(ConnectionDetailsMasterReplicaConfiguration.class).run((context) -> {
+			assertThat(context).hasSingleBean(ValkeyConnectionDetails.class)
+				.doesNotHaveBean(PropertiesValkeyConnectionDetails.class);
+			LettuceConnectionFactory cf = context.getBean(LettuceConnectionFactory.class);
+			assertThat(cf.isUseSsl()).isFalse();
+			assertThat(cf).extracting("configuration")
+				.isInstanceOfSatisfying(ValkeyStaticMasterReplicaConfiguration.class,
+						(masterReplicationConfiguration) -> {
+							assertThat(masterReplicationConfiguration.getUsername()).isEqualTo("user-1");
+							assertThat(masterReplicationConfiguration.getPassword().get())
+								.isEqualTo("password-1".toCharArray());
+							assertThat(masterReplicationConfiguration.getNodes())
+								.map((nodeConfiguration) -> new ValkeyNode(nodeConfiguration.getHostName(),
+										nodeConfiguration.getPort()))
+								.containsExactly(new ValkeyNode("node-1", 12345), new ValkeyNode("node-2", 23456));
+						});
 		});
 	}
 
@@ -581,7 +718,7 @@ class ValkeyAutoConfigurationLettuceTests {
 	}
 
 	@Test
-	void testValkeyConfigurationWithSslDisabledAndBundle() {
+	void testValkeyConfigurationWithSslDisabledBundle() {
 		this.contextRunner
 			.withPropertyValues("spring.data.valkey.ssl.enabled:false", "spring.data.valkey.ssl.bundle:test-bundle")
 			.run((context) -> {
@@ -594,7 +731,7 @@ class ValkeyAutoConfigurationLettuceTests {
 	void shouldUsePlatformThreadsByDefault() {
 		this.contextRunner.run((context) -> {
 			LettuceConnectionFactory factory = context.getBean(LettuceConnectionFactory.class);
-			assertThat(factory).isNotNull();
+			assertThat(factory).isNotNull(); // TODO: test executor with Boot 4 API
 		});
 	}
 
@@ -603,7 +740,7 @@ class ValkeyAutoConfigurationLettuceTests {
 	void shouldUseVirtualThreadsIfEnabled() {
 		this.contextRunner.withPropertyValues("spring.threads.virtual.enabled=true").run((context) -> {
 			LettuceConnectionFactory factory = context.getBean(LettuceConnectionFactory.class);
-			assertThat(factory).isNotNull();
+			assertThat(factory).isNotNull(); // TODO: test executor
 		});
 	}
 
@@ -623,7 +760,7 @@ class ValkeyAutoConfigurationLettuceTests {
 		return (LettucePoolingClientConfiguration) factory.getClientConfiguration();
 	}
 
-	private String getUserName(LettuceConnectionFactory factory) {
+	private @Nullable String getUserName(LettuceConnectionFactory factory) {
 		return ReflectionTestUtils.invokeMethod(factory, "getValkeyUsername");
 	}
 
@@ -669,24 +806,51 @@ class ValkeyAutoConfigurationLettuceTests {
 	}
 
 	@Configuration(proxyBeanMethods = false)
-	static class ConnectionDetailsConfiguration {
+	static class ValkeyStandaloneConfig {
+
+		@Bean
+		ValkeyStandaloneConfiguration standaloneConfiguration() {
+			ValkeyStandaloneConfiguration config = new ValkeyStandaloneConfiguration();
+			config.setHostName("foo");
+			return config;
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ConnectionDetailsStandaloneConfiguration {
 
 		@Bean
 		ValkeyConnectionDetails valkeyConnectionDetails() {
 			return new ValkeyConnectionDetails() {
 
 				@Override
+				public String getUsername() {
+					return "user-1";
+				}
+
+				@Override
+				public String getPassword() {
+					return "password-1";
+				}
+
+				@Override
 				public Standalone getStandalone() {
 					return new Standalone() {
 
 						@Override
+						public int getDatabase() {
+							return 1;
+						}
+
+						@Override
 						public String getHost() {
-							return "localhost";
+							return "valkey.example.com";
 						}
 
 						@Override
 						public int getPort() {
-							return 6379;
+							return 16379;
 						}
 
 					};
@@ -741,6 +905,74 @@ class ValkeyAutoConfigurationLettuceTests {
 						@Override
 						public String getPassword() {
 							return "secret-1";
+						}
+
+					};
+				}
+
+			};
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ConnectionDetailsClusterConfiguration {
+
+		@Bean
+		ValkeyConnectionDetails valkeyConnectionDetails() {
+			return new ValkeyConnectionDetails() {
+
+				@Override
+				public String getUsername() {
+					return "user-1";
+				}
+
+				@Override
+				public String getPassword() {
+					return "password-1";
+				}
+
+				@Override
+				public Cluster getCluster() {
+					return new Cluster() {
+
+						@Override
+						public List<Node> getNodes() {
+							return List.of(new Node("node-1", 12345), new Node("node-2", 23456));
+						}
+
+					};
+				}
+
+			};
+		}
+
+	}
+
+	@Configuration(proxyBeanMethods = false)
+	static class ConnectionDetailsMasterReplicaConfiguration {
+
+		@Bean
+		ValkeyConnectionDetails valkeyConnectionDetails() {
+			return new ValkeyConnectionDetails() {
+
+				@Override
+				public String getUsername() {
+					return "user-1";
+				}
+
+				@Override
+				public String getPassword() {
+					return "password-1";
+				}
+
+				@Override
+				public MasterReplica getMasterReplica() {
+					return new MasterReplica() {
+
+						@Override
+						public List<Node> getNodes() {
+							return List.of(new Node("node-1", 12345), new Node("node-2", 23456));
 						}
 
 					};

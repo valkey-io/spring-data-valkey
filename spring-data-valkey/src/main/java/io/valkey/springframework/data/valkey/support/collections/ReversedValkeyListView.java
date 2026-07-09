@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2025 the original author or authors.
+ * Copyright 2023-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.support.collections;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -24,10 +25,12 @@ import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.connection.ValkeyListCommands.Direction;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
-import org.springframework.lang.Nullable;
+import io.valkey.springframework.data.valkey.core.types.Expiration;
 
 /**
  * Implementation and view of an existing {@link ValkeyList} where the elements in the list (deque) are returned in
@@ -60,6 +63,11 @@ class ReversedValkeyListView<E> implements ValkeyList<E> {
 	}
 
 	@Override
+	public Boolean expire(@NonNull Expiration expiration) {
+		return this.base.expire(expiration);
+	}
+
+	@Override
 	public ValkeyOperations<String, ?> getOperations() {
 		return this.base.getOperations();
 	}
@@ -71,6 +79,7 @@ class ReversedValkeyListView<E> implements ValkeyList<E> {
 	}
 
 	@Nullable
+	@Deprecated
 	@Override
 	public Boolean expire(long timeout, TimeUnit unit) {
 		return this.base.expire(timeout, unit);
@@ -96,6 +105,13 @@ class ReversedValkeyListView<E> implements ValkeyList<E> {
 
 	@Nullable
 	@Override
+	public E moveFirstTo(ValkeyList<E> destination, Direction destinationPosition, Duration timeout) {
+		return base.moveLastTo(destination, destinationPosition, timeout);
+	}
+
+	@Nullable
+	@Deprecated
+	@Override
 	public E moveFirstTo(ValkeyList<E> destination, Direction destinationPosition, long timeout, TimeUnit unit) {
 		return base.moveLastTo(destination, destinationPosition, timeout, unit);
 	}
@@ -107,6 +123,13 @@ class ReversedValkeyListView<E> implements ValkeyList<E> {
 	}
 
 	@Nullable
+	@Override
+	public E moveLastTo(ValkeyList<E> destination, Direction destinationPosition, Duration timeout) {
+		return base.moveFirstTo(destination, destinationPosition, timeout);
+	}
+
+	@Nullable
+	@Deprecated
 	@Override
 	public E moveLastTo(ValkeyList<E> destination, Direction destinationPosition, long timeout, TimeUnit unit) {
 		return base.moveFirstTo(destination, destinationPosition, timeout, unit);

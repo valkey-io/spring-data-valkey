@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2025 the original author or authors.
+ * Copyright 2011-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package io.valkey.springframework.data.valkey.support.collections;
 
 import java.util.function.Supplier;
 
+import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.SmartFactoryBean;
@@ -24,7 +25,6 @@ import io.valkey.springframework.data.valkey.connection.DataType;
 import io.valkey.springframework.data.valkey.core.ValkeyOperations;
 import io.valkey.springframework.data.valkey.core.ValkeyTemplate;
 import org.springframework.data.util.Lazy;
-import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
