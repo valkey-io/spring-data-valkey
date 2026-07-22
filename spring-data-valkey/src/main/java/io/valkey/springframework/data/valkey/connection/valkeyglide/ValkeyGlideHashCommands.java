@@ -749,26 +749,26 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 			List<Object> args = new ArrayList<>();
 			args.add(key);
 			// Add expiration args
-			if (expiration != null && !expiration.isPersistent()) {
-				if (expiration.isKeepTtl()) {
+			if (expiration != null) {
+				if (expiration.isPersistent()) {
 					args.add("PERSIST");
-				} else if (expiration.isUnixTimestamp()) {
-					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
-						args.add("PXAT");
+				} else if (!expiration.isKeepTtl()) {
+					if (expiration.isUnixTimestamp()) {
+						if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
+							args.add("PXAT");
+						} else {
+							args.add("EXAT");
+						}
 					} else {
-						args.add("EXAT");
-					}
-					args.add(expiration.getExpirationTime());
-				} else {
-					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
-						args.add("PX");
-					} else {
-						args.add("EX");
+						if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
+							args.add("PX");
+						} else {
+							args.add("EX");
+						}
 					}
 					args.add(expiration.getExpirationTime());
 				}
-			} else if (expiration != null && expiration.isPersistent()) {
-				args.add("PERSIST");
+				// keepTtl() → no TTL arg (leave existing TTL unchanged)
 			}
 			args.add("FIELDS");
 			args.add(String.valueOf(fields.length));

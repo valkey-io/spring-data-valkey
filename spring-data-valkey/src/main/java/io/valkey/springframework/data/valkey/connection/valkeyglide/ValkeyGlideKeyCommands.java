@@ -719,11 +719,21 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
 					} else {
 						args.add("IFDNE");
 					}
-					args.add(condition.getValue().toString());
+					args.add(condition.getValue().asBytes());
 				}
 			}
 			return connection.execute("DELEX",
-				(Long glideResult) -> glideResult != null && glideResult > 0,
+				(Object glideResult) -> {
+					if (glideResult == null) return false;
+					if (glideResult instanceof Long l) return l > 0;
+					if (glideResult instanceof GlideString gs) {
+						throw new InvalidDataAccessApiUsageException(gs.getString());
+					}
+					if (glideResult instanceof String s) {
+						throw new InvalidDataAccessApiUsageException(s);
+					}
+					throw new IllegalStateException("Unexpected DELEX reply: " + glideResult);
+				},
 				args.toArray());
 		} catch (Exception ex) {
 			throw new ValkeyGlideExceptionConverter().convert(ex);

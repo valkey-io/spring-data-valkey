@@ -1070,7 +1070,9 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
 				case DELETE_REFERENCES -> args.add("DELREF");
 				case ACKNOWLEDGED -> args.add("ACKED");
 			}
-			// Add record IDs
+			// Add IDS token block with count, then record IDs
+			args.add("IDS");
+			args.add(String.valueOf(recordIds.length));
 			for (RecordId id : recordIds) {
 				args.add(id.getValue());
 			}
@@ -1103,7 +1105,9 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
 				case DELETE_REFERENCES -> args.add("DELREF");
 				case ACKNOWLEDGED -> args.add("ACKED");
 			}
-			// Add record IDs
+			// Add IDS token block with count, then record IDs
+			args.add("IDS");
+			args.add(String.valueOf(recordIds.length));
 			for (RecordId id : recordIds) {
 				args.add(id.getValue());
 			}
