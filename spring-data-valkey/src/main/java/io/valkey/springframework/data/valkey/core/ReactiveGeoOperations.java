@@ -33,9 +33,7 @@ import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.domain.geo.BoundingBox;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
-import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
-import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.GeoLocation;
 
 /**
  * Reactive Valkey operations for Geo Commands.

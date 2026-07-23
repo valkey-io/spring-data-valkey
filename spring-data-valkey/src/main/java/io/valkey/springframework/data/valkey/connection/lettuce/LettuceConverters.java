@@ -17,7 +17,6 @@ package io.valkey.springframework.data.valkey.connection.lettuce;
 
 import static io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.*;
 
-import static io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands.*;
 import static io.valkey.springframework.data.valkey.domain.geo.GeoReference.*;
 
 import io.lettuce.core.*;

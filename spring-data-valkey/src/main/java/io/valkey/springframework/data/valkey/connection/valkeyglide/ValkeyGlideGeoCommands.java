@@ -28,15 +28,11 @@ import org.springframework.data.geo.Metric;
 import org.springframework.data.geo.Point;
 import io.valkey.springframework.data.valkey.connection.ValkeyGeoCommands;
 import io.valkey.springframework.data.valkey.domain.geo.BoundingBox;
-import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.BoxShape;
 import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.GeoReference;
-import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.GeoShape;
-import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import io.valkey.springframework.data.valkey.domain.geo.RadiusShape;
-import io.valkey.springframework.data.valkey.domain.geo.GeoLocation;
 import org.jspecify.annotations.Nullable;
 import org.springframework.util.Assert;
 
