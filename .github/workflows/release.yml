@@ -4,6 +4,10 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -87,3 +91,74 @@ jobs:
             spring-data-valkey/target/*.jar
             spring-boot-starter-data-valkey/target/*.jar
           generate_release_notes: true
+
+  publish:
+    needs: release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: maven-publish
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: "temurin"
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/spring-data-valkey
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Configure GPG for non-interactive signing
+        run: |
+          mkdir -p ~/.gnupg
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo "pinentry-mode loopback" >> ~/.gnupg/gpg.conf
+          chmod 700 ~/.gnupg
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Fetch Maven Central credentials
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id spring-data-valkey-maven-token \
+            --query SecretString --output text)
+          echo "OSSRH_USERNAME=$(echo "$SECRET" | jq -r '.["maven-central-username"]')" >> $GITHUB_ENV
+          echo "OSSRH_PASSWORD=$(echo "$SECRET" | jq -r '.["maven-central-password"]')" >> $GITHUB_ENV
+
+      - name: Fetch GPG passphrase
+        run: |
+          GPG_PASSPHRASE=$(aws secretsmanager get-secret-value \
+            --secret-id GPGPassword \
+            --query SecretString --output text)
+          echo "GPG_PASSPHRASE=$GPG_PASSPHRASE" >> $GITHUB_ENV
+
+      - name: Import GPG private key
+        run: |
+          SECRET=$(aws secretsmanager get-secret-value \
+            --secret-id PGPASCFile \
+            --query SecretString --output text)
+          echo "$SECRET" | jq -r '.PGP_SECRET_KEY' | gpg --batch --import
+          GPG_KEYNAME=$(gpg --list-secret-keys --keyid-format short 2>/dev/null | grep 'sec' | head -1 | sed 's/.*\///' | awk '{print $1}')
+          echo "GPG_KEYNAME=$GPG_KEYNAME" >> $GITHUB_ENV
+
+      - name: Deploy to Maven Central (staging)
+        run: |
+          ./mvnw -s settings.xml \
+            -Ddevelocity.storage.directory=$HOME/.develocity-root \
+            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
+            deploy -DskipTests \
+            -pl spring-data-valkey,spring-boot-starter-data-valkey \
+            -Dmaven.deploy.skip=false \
+            -U -B
