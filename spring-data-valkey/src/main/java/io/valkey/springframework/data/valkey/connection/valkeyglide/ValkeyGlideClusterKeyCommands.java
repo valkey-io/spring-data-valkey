@@ -15,6 +15,7 @@
  */
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -24,6 +25,7 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 import glide.api.models.GlideString;
 import glide.api.models.commands.scan.ClusterScanCursor;
+import glide.api.models.configuration.RequestRoutingConfiguration.Route;
 import io.valkey.springframework.data.valkey.connection.ClusterSlotHashUtil;
 import io.valkey.springframework.data.valkey.connection.ValkeyKeyCommands;
 import io.valkey.springframework.data.valkey.connection.SortParameters;
@@ -60,12 +62,138 @@ public class ValkeyGlideClusterKeyCommands extends ValkeyGlideKeyCommands {
         ScanOptions scanOptions = options != null ? options : ScanOptions.NONE;
 
         // Node-scoped cluster scan sets a one-shot route before calling this method.
-        // Keep using the SCAN command path so routing semantics remain unchanged.
+        // Capture the route and pin it for the lifetime of the scan cursor so that
+        // all pages go to the same node.
         if (connection.getClusterAdapter().hasOneShotRouteForNextCommand()) {
-            return super.scan(scanOptions);
+            return new NodeScopedScanCursor(connection, scanOptions);
         }
 
         return new ValkeyGlideClusterScanCursor(connection, scanOptions);
+    }
+
+    /**
+     * Scan cursor that pins a specific node route for all pages.
+     * Used when a node-scoped scan is requested via the cluster connection.
+     */
+    private static class NodeScopedScanCursor implements Cursor<byte[]> {
+
+        private final ValkeyGlideClusterConnection connection;
+        private final ScanOptions scanOptions;
+        private final Route pinnedRoute;
+        private String cursor = "0";
+        private Iterator<byte[]> currentBatch = Collections.emptyIterator();
+        private boolean finished = false;
+        private boolean closed = false;
+        private long position = 0;
+
+        NodeScopedScanCursor(ValkeyGlideClusterConnection connection, ScanOptions scanOptions) {
+            this.connection = connection;
+            this.scanOptions = scanOptions;
+            // Capture and consume the one-shot route so it doesn't leak
+            this.pinnedRoute = connection.getClusterAdapter().consumeOneShotRoute();
+        }
+
+        @Override
+        public long getCursorId() {
+            try {
+                return Long.parseLong(cursor);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
+
+        @Override
+        public CursorId getId() {
+            return CursorId.of(cursor);
+        }
+
+        @Override
+        public boolean hasNext() {
+            if (closed) return false;
+            if (currentBatch.hasNext()) return true;
+            if (finished) return false;
+            loadNextBatch();
+            return currentBatch.hasNext();
+        }
+
+        @Override
+        public byte[] next() {
+            if (!hasNext()) throw new NoSuchElementException();
+            position++;
+            return currentBatch.next();
+        }
+
+        @Override
+        public void close() {
+            closed = true;
+            finished = true;
+            currentBatch = Collections.emptyIterator();
+        }
+
+        @Override
+        public long getPosition() {
+            return position;
+        }
+
+        @Override
+        public boolean isClosed() {
+            return closed;
+        }
+
+        private void loadNextBatch() {
+            try {
+                List<Object> args = new ArrayList<>();
+                args.add(cursor);
+
+                if (scanOptions.getPattern() != null) {
+                    args.add("MATCH");
+                    args.add(scanOptions.getPattern());
+                } else if (scanOptions.getBytePattern() != null) {
+                    args.add("MATCH");
+                    args.add(scanOptions.getBytePattern());
+                }
+
+                if (scanOptions.getCount() != null) {
+                    args.add("COUNT");
+                    args.add(scanOptions.getCount());
+                }
+
+                if (scanOptions instanceof io.valkey.springframework.data.valkey.core.KeyScanOptions kso && kso.getType() != null) {
+                    args.add("TYPE");
+                    args.add(kso.getType());
+                }
+
+                // Re-set the pinned route before each page
+                connection.getClusterAdapter().setOneShotRouteForNextCommand(pinnedRoute);
+
+                Object[] scanResult = connection.execute("SCAN",
+                    (Object[] glideResult) -> glideResult,
+                    args.toArray());
+
+                if (scanResult != null && scanResult.length >= 2) {
+                    Object nextCursor = scanResult[0];
+                    if (nextCursor instanceof GlideString gs) {
+                        cursor = gs.getString();
+                    } else if (nextCursor instanceof byte[] b) {
+                        cursor = new String(b, java.nio.charset.StandardCharsets.UTF_8);
+                    } else {
+                        cursor = nextCursor.toString();
+                    }
+
+                    if ("0".equals(cursor)) {
+                        finished = true;
+                    }
+
+                    List<byte[]> keys = ValkeyGlideConverters.toBytesList(scanResult[1]);
+                    currentBatch = keys.iterator();
+                } else {
+                    finished = true;
+                    currentBatch = Collections.emptyIterator();
+                }
+            } catch (Exception ex) {
+                throw new ValkeyGlideExceptionConverter().convert(ex);
+            }
+        }
     }
 
     private static class ValkeyGlideClusterScanCursor implements Cursor<byte[]> {
@@ -154,7 +282,9 @@ public class ValkeyGlideClusterKeyCommands extends ValkeyGlideKeyCommands {
                     return;
                 }
 
+                ClusterScanCursor previousCursor = cursorState;
                 cursorState = (ClusterScanCursor) scanResult[0];
+                previousCursor.releaseCursorHandle();
                 finished = cursorState.isFinished();
 
                 List<byte[]> keys = ValkeyGlideConverters.toBytesList(scanResult[1]);
@@ -169,7 +299,9 @@ public class ValkeyGlideClusterKeyCommands extends ValkeyGlideKeyCommands {
         }
 
         private static boolean hasScanOptions(ScanOptions options) {
-            return options.getCount() != null || options.getPattern() != null || options.getBytePattern() != null;
+            return options.getCount() != null || options.getPattern() != null
+                    || options.getBytePattern() != null
+                    || (options instanceof io.valkey.springframework.data.valkey.core.KeyScanOptions kso && kso.getType() != null);
         }
 
         private static glide.api.models.commands.scan.ScanOptions toGlideScanOptions(ScanOptions options) {
@@ -183,6 +315,10 @@ public class ValkeyGlideClusterKeyCommands extends ValkeyGlideKeyCommands {
 
             if (options.getCount() != null) {
                 builder.count(options.getCount());
+            }
+
+            if (options instanceof io.valkey.springframework.data.valkey.core.KeyScanOptions kso && kso.getType() != null) {
+                builder.type(glide.api.models.commands.scan.ScanOptions.ObjectType.valueOf(kso.getType().toUpperCase(java.util.Locale.ROOT)));
             }
 
             return builder.build();
@@ -205,6 +341,11 @@ public class ValkeyGlideClusterKeyCommands extends ValkeyGlideKeyCommands {
             return;
         }
 
+        if (connection.isPipelined() || connection.isQueueing()) {
+            throw new InvalidDataAccessApiUsageException(
+                    "Cross-slot RENAME cannot be used in pipeline or transaction mode");
+        }
+
         byte[] value = dump(oldKey);
 
         if (value != null && value.length > 0) {
@@ -222,6 +363,11 @@ public class ValkeyGlideClusterKeyCommands extends ValkeyGlideKeyCommands {
 
         if (ClusterSlotHashUtil.isSameSlotForAllKeys(sourceKey, targetKey)) {
             return super.renameNX(sourceKey, targetKey);
+        }
+
+        if (connection.isPipelined() || connection.isQueueing()) {
+            throw new InvalidDataAccessApiUsageException(
+                    "Cross-slot RENAMENX cannot be used in pipeline or transaction mode");
         }
 
         byte[] value = dump(sourceKey);
@@ -247,9 +393,15 @@ public class ValkeyGlideClusterKeyCommands extends ValkeyGlideKeyCommands {
             return super.sort(key, params, storeKey);
         }
 
+        if (connection.isPipelined() || connection.isQueueing()) {
+            throw new InvalidDataAccessApiUsageException(
+                    "Cross-slot SORT STORE cannot be used in pipeline or transaction mode");
+        }
+
         // Cross-slot path: sort without store, then manually store results
         List<byte[]> sorted = sort(key, params);
         if (sorted == null || sorted.isEmpty()) {
+            connection.keyCommands().unlink(storeKey);
             return 0L;
         }
 

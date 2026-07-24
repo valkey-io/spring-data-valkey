@@ -622,20 +622,37 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 
     @Override
     public @Nullable List<Long> hTtl(byte[] key, TimeUnit timeUnit, byte[]... fields) {
-        List<Long> ttls = hTtl(key, fields);
-        if (ttls == null) {
-            return null;
-        }
-       
-        List<Long> converted = new ArrayList<>(ttls.size());
-        for (Long ttl : ttls) {
-            if (ttl < 0) {
-                converted.add(ttl);
-            } else {
-                converted.add(timeUnit.convert(ttl, TimeUnit.SECONDS));
+        Assert.notNull(key, "Key must not be null");
+        Assert.notNull(timeUnit, "TimeUnit must not be null");
+        Assert.notNull(fields, "Fields must not be null");
+        Assert.noNullElements(fields, "Fields must not contain null elements");
+
+        try {
+            List<Object> args = new ArrayList<>();
+            args.add(key);
+            args.add("FIELDS");
+            args.add(fields.length);
+            for (byte[] field : fields) {
+                args.add(field);
             }
+
+            return connection.execute("HTTL",
+                (Object[] glideResult) -> {
+                    List<Long> ttls = ValkeyGlideConverters.toLongsList(glideResult);
+                    List<Long> converted = new ArrayList<>(ttls.size());
+                    for (Long ttl : ttls) {
+                        if (ttl < 0) {
+                            converted.add(ttl);
+                        } else {
+                            converted.add(timeUnit.convert(ttl, TimeUnit.SECONDS));
+                        }
+                    }
+                    return converted;
+                },
+                args.toArray());
+        } catch (Exception ex) {
+            throw new ValkeyGlideExceptionConverter().convert(ex);
         }
-        return converted;
     }
 
     @Override
@@ -699,17 +716,19 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 				} else if (expiration.isUnixTimestamp()) {
 					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
 						args.add("PXAT");
+						args.add(expiration.getExpirationTimeInMilliseconds());
 					} else {
 						args.add("EXAT");
+						args.add(expiration.getExpirationTimeInSeconds());
 					}
-					args.add(expiration.getExpirationTime());
 				} else {
 					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
 						args.add("PX");
+						args.add(expiration.getExpirationTimeInMilliseconds());
 					} else {
 						args.add("EX");
+						args.add(expiration.getExpirationTimeInSeconds());
 					}
-					args.add(expiration.getExpirationTime());
 				}
 			}
 			// Add condition
@@ -756,17 +775,20 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 					if (expiration.isUnixTimestamp()) {
 						if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
 							args.add("PXAT");
+							args.add(expiration.getExpirationTimeInMilliseconds());
 						} else {
 							args.add("EXAT");
+							args.add(expiration.getExpirationTimeInSeconds());
 						}
 					} else {
 						if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
 							args.add("PX");
+							args.add(expiration.getExpirationTimeInMilliseconds());
 						} else {
 							args.add("EX");
+							args.add(expiration.getExpirationTimeInSeconds());
 						}
 					}
-					args.add(expiration.getExpirationTime());
 				}
 				// keepTtl() → no TTL arg (leave existing TTL unchanged)
 			}

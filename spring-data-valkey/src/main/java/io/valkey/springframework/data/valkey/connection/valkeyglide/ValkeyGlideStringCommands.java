@@ -195,20 +195,25 @@ public class ValkeyGlideStringCommands implements ValkeyStringCommands {
             args.add(value);
             
             if (expiration != null && !expiration.isPersistent()) {
-                if (expiration.isUnixTimestamp()) {
-                    if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
-                        args.add("EXAT");
-                    } else {
+                if (expiration.isKeepTtl()) {
+                    args.add("KEEPTTL");
+                } else if (expiration.isUnixTimestamp()) {
+                    if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
                         args.add("PXAT");
+                        args.add(expiration.getExpirationTimeInMilliseconds());
+                    } else {
+                        args.add("EXAT");
+                        args.add(expiration.getExpirationTimeInSeconds());
                     }
                 } else {
-                    if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
-                        args.add("EX");
-                    } else {
+                    if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
                         args.add("PX");
+                        args.add(expiration.getExpirationTimeInMilliseconds());
+                    } else {
+                        args.add("EX");
+                        args.add(expiration.getExpirationTimeInSeconds());
                     }
                 }
-                args.add(expiration.getExpirationTime());
             }
             
             final boolean hasConditionalOption;
@@ -709,19 +714,21 @@ public class ValkeyGlideStringCommands implements ValkeyStringCommands {
 				if (expiration.isKeepTtl()) {
 					args.add("KEEPTTL");
 				} else if (expiration.isUnixTimestamp()) {
-					if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
-						args.add("EXAT");
-					} else {
+					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
 						args.add("PXAT");
-					}
-					args.add(expiration.getExpirationTime());
-				} else {
-					if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
-						args.add("EX");
+						args.add(expiration.getExpirationTimeInMilliseconds());
 					} else {
-						args.add("PX");
+						args.add("EXAT");
+						args.add(expiration.getExpirationTimeInSeconds());
 					}
-					args.add(expiration.getExpirationTime());
+				} else {
+					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
+						args.add("PX");
+						args.add(expiration.getExpirationTimeInMilliseconds());
+					} else {
+						args.add("EX");
+						args.add(expiration.getExpirationTimeInSeconds());
+					}
 				}
 			}
 
@@ -773,19 +780,21 @@ public class ValkeyGlideStringCommands implements ValkeyStringCommands {
 				if (expiration.isKeepTtl()) {
 					args.add("KEEPTTL");
 				} else if (expiration.isUnixTimestamp()) {
-					if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
-						args.add("EXAT");
-					} else {
+					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
 						args.add("PXAT");
-					}
-					args.add(expiration.getExpirationTime());
-				} else {
-					if (expiration.getTimeUnit() == TimeUnit.SECONDS) {
-						args.add("EX");
+						args.add(expiration.getExpirationTimeInMilliseconds());
 					} else {
-						args.add("PX");
+						args.add("EXAT");
+						args.add(expiration.getExpirationTimeInSeconds());
 					}
-					args.add(expiration.getExpirationTime());
+				} else {
+					if (expiration.getTimeUnit() == TimeUnit.MILLISECONDS) {
+						args.add("PX");
+						args.add(expiration.getExpirationTimeInMilliseconds());
+					} else {
+						args.add("EX");
+						args.add(expiration.getExpirationTimeInSeconds());
+					}
 				}
 			}
 

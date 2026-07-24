@@ -143,6 +143,11 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 		// Apply IAM authentication configuration if configured
 		ValkeyProperties.ValkeyGlide.IamAuthentication iamProperties = valkeyGlideProperties.getIamAuthentication();
 		if (iamProperties != null) {
+			if (!isSslEnabled()) {
+				throw new IllegalArgumentException(
+					"IAM authentication requires TLS/SSL to be enabled. "
+					+ "Please set spring.data.valkey.ssl.enabled=true or use a valkeys:// URL.");
+			}
 			if (!StringUtils.hasText(iamProperties.getClusterName())
 					|| !StringUtils.hasText(iamProperties.getService())
 					|| !StringUtils.hasText(iamProperties.getRegion())) {
@@ -153,7 +158,7 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 					+ "spring.data.valkey.valkey-glide.iam-authentication.region");
 			}
 			ValkeyGlideClientConfiguration.AwsServiceType serviceType =
-				ValkeyGlideClientConfiguration.AwsServiceType.valueOf(iamProperties.getService().toUpperCase());
+				ValkeyGlideClientConfiguration.AwsServiceType.valueOf(iamProperties.getService().toUpperCase(java.util.Locale.ROOT));
 			ValkeyGlideClientConfiguration.IamAuthenticationForGlide iamConfig =
 				new ValkeyGlideClientConfiguration.IamAuthenticationForGlide(
 					iamProperties.getClusterName(),

@@ -118,6 +118,12 @@ public class ValkeyGlideStreamCommands implements ValkeyStreamCommands {
                 params.add(options.getMinId().getValue());
             }
 
+            // Add LIMIT if present (valid with approximate trimming)
+            if (options.getTrimOptions() != null && options.getTrimOptions().hasLimit()) {
+                params.add("LIMIT");
+                params.add(String.valueOf(options.getTrimOptions().getLimit()));
+            }
+
             if (recordId == null || recordId.equals(RecordId.autoGenerate())) {
                 params.add("*");
             } else {
