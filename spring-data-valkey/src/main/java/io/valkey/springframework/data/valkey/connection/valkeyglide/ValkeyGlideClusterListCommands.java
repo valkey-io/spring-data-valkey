@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,24 +49,22 @@ class ValkeyGlideClusterListCommands extends ValkeyGlideListCommands {
 	}
 
 	/**
-	 * Executes a blocking pop command across multiple cluster nodes in parallel.
-	 * Returns the first available result from any node. The timeout is enforced
-	 * by the Valkey server, not by this method.
-	 * 
+	 * Executes a blocking pop command across multiple cluster nodes in parallel. Returns
+	 * the first available result from any node. The timeout is enforced by the Valkey
+	 * server, not by this method.
 	 * @param command the command name ("BLPOP" or "BRPOP")
 	 * @param timeout the Valkey server timeout in seconds
 	 * @param keys the keys to pop from
 	 * @return the first available [key, value] pair, or empty list if all nodes timeout
 	 */
-	private List<byte[]> executeBlockingPopOnMultipleNodes(
-			String command, int timeout, byte[]... keys) {
-		
+	private List<byte[]> executeBlockingPopOnMultipleNodes(String command, int timeout, byte[]... keys) {
+
 		Assert.notNull(keys, "Keys must not be null");
 		Assert.noNullElements(keys, "Keys must not contain null elements");
 
 		Map<ValkeyClusterNode, List<byte[]>> nodeKeyMap = connection.buildNodeKeyMap(keys);
 		List<CompletableFuture<?>> futures = new ArrayList<>();
-		
+
 		for (Map.Entry<ValkeyClusterNode, List<byte[]>> entry : nodeKeyMap.entrySet()) {
 			ValkeyClusterNode node = entry.getKey();
 			List<byte[]> nodeKeys = entry.getValue();
@@ -79,29 +77,30 @@ class ValkeyGlideClusterListCommands extends ValkeyGlideListCommands {
 			args[args.length - 1] = GlideString.of(String.valueOf(timeout));
 
 			GlideClusterClient nativeConn = (GlideClusterClient) connection.getNativeConnection();
-			futures.add(nativeConn.customCommand(args, 
-				new ByAddressRoute(node.getHost(), node.getPort())));
+			futures.add(nativeConn.customCommand(args, new ByAddressRoute(node.getHost(), node.getPort())));
 		}
 
 		try {
-			CompletableFuture<Object> anyResult = CompletableFuture.anyOf(
-				futures.toArray(new CompletableFuture[0]));
-			
+			CompletableFuture<Object> anyResult = CompletableFuture.anyOf(futures.toArray(new CompletableFuture[0]));
+
 			@SuppressWarnings("unchecked")
 			ClusterValue<Object> glideResult = (ClusterValue<Object>) anyResult.get();
-			
+
 			Object result = glideResult.getSingleValue();
 			if (result == null) {
 				return Collections.emptyList();
 			}
 			return ValkeyGlideConverters.toBytesList((Object[]) result);
-			
-		} catch (InterruptedException ex) {
+
+		}
+		catch (InterruptedException ex) {
 			Thread.currentThread().interrupt();
 			throw new RuntimeException("Interrupted while waiting for " + command, ex);
-		} catch (ExecutionException ex) {
+		}
+		catch (ExecutionException ex) {
 			throw new RuntimeException("Error executing " + command + " on cluster", ex);
-		} finally {
+		}
+		finally {
 			futures.forEach(f -> f.cancel(true));
 		}
 	}
@@ -151,4 +150,5 @@ class ValkeyGlideClusterListCommands extends ValkeyGlideListCommands {
 
 		return null;
 	}
+
 }

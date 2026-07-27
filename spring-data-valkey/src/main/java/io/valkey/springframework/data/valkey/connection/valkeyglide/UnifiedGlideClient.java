@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,39 +21,46 @@ import glide.api.models.GlideString;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Unified interface that abstracts both GlideClient and GlideClusterClient
- * to enable code reuse between standalone and cluster modes.
- * 
+ * Unified interface that abstracts both GlideClient and GlideClusterClient to enable code
+ * reuse between standalone and cluster modes.
+ *
  * @author Ilia Kolominsky
  * @since 2.0
  */
 interface UnifiedGlideClient extends AutoCloseable {
-    public enum BatchStatus {
-        None,
-        Pipeline,
-        Transaction,
-    }
 
-    BatchStatus getBatchStatus();
-    int getBatchCount();
-    void startNewBatch(boolean atomic);
-    Object[] execBatch() throws InterruptedException, ExecutionException;
-    void discardBatch();
-    Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException;
-    Object getNativeClient();
+	public enum BatchStatus {
 
-    /**
-     * Resets the adapter's mutable state so it can be safely reused from the pool.
-     * Must be called before returning the adapter to the pool.
-     */
-    void reset();
-    
-    /**
-     * Returns the {@link DelegatingPubSubListener} associated with this client.
-     * The listener is pre-associated at creation time to avoid per-command map lookups.
-     *
-     * @return the delegating pub/sub listener, or {@literal null} if pub/sub is not configured
-     */
-    @Nullable
-    DelegatingPubSubListener getDelegatingListener();
+		None, Pipeline, Transaction,
+
+	}
+
+	BatchStatus getBatchStatus();
+
+	int getBatchCount();
+
+	void startNewBatch(boolean atomic);
+
+	Object[] execBatch() throws InterruptedException, ExecutionException;
+
+	void discardBatch();
+
+	Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException;
+
+	Object getNativeClient();
+
+	/**
+	 * Resets the adapter's mutable state so it can be safely reused from the pool. Must
+	 * be called before returning the adapter to the pool.
+	 */
+	void reset();
+
+	/**
+	 * Returns the {@link DelegatingPubSubListener} associated with this client. The
+	 * listener is pre-associated at creation time to avoid per-command map lookups.
+	 * @return the delegating pub/sub listener, or {@literal null} if pub/sub is not
+	 * configured
+	 */
+	@Nullable DelegatingPubSubListener getDelegatingListener();
+
 }

@@ -291,6 +291,11 @@
 				<artifactId>versions-maven-plugin</artifactId>
 				<version>2.16.2</version>
 			</plugin>
+			<plugin>
+				<groupId>io.spring.javaformat</groupId>
+				<artifactId>spring-javaformat-maven-plugin</artifactId>
+				<version>0.0.47</version>
+			</plugin>
 		</plugins>
 	</build>
 

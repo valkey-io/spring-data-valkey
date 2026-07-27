@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,335 +30,301 @@ import org.springframework.util.Assert;
  * @since 2.0
  */
 public interface ValkeyGlideClientConfiguration {
-    
-    /**
-     * Creates a new {@link ValkeyGlideClientConfigurationBuilder} to build {@link ValkeyGlideClientConfiguration}.
-     *
-     * @return a new {@link ValkeyGlideClientConfigurationBuilder}.
-     */
-    static ValkeyGlideClientConfigurationBuilder builder() {
-        return new ValkeyGlideClientConfigurationBuilder();
-    }
-    
-    /**
-     * Creates a default {@link ValkeyGlideClientConfiguration} with default settings.
-     *
-     * @return a {@link ValkeyGlideClientConfiguration} with defaults.
-     */
-    static ValkeyGlideClientConfiguration defaultConfiguration() {
-        return builder().build();
-    }
-    
-    /**
-     * Get the command timeout for Valkey-Glide client operations.
-     * 
-     * @return The command timeout duration. May be {@literal null} if not set.
-     */
-    @Nullable
-    Duration getCommandTimeout();
 
-    /**
-     * Get the connection timeout for Valkey-Glide client operations.
-     * 
-     * @return The connection timeout duration. May be {@literal null} if not set.
-     */
-    @Nullable
-    Duration getConnectionTimeout();
+	/**
+	 * Creates a new {@link ValkeyGlideClientConfigurationBuilder} to build
+	 * {@link ValkeyGlideClientConfiguration}.
+	 * @return a new {@link ValkeyGlideClientConfigurationBuilder}.
+	 */
+	static ValkeyGlideClientConfigurationBuilder builder() {
+		return new ValkeyGlideClientConfigurationBuilder();
+	}
 
-    /**
-     * Check if SSL is enabled.
-     * 
-     * @return {@literal true} if SSL is enabled.
-     */
-    boolean isUseSsl();
-    
-    /**
-     * Get the read from strategy for the client.
-     * 
-     * @return The {@link ReadFrom} strategy. May be {@literal null} if not set.
-     */
-    @Nullable
-    ReadFrom getReadFrom();
-    
-    /**
-     * Get the maximum number of concurrent in-flight requests.
-     * 
-     * @return The inflight requests limit. May be {@literal null} if not set.
-     */
-    @Nullable
-    Integer getInflightRequestsLimit();
-    
-    /**
-     * Get the client availability zone.
-     * 
-     * @return The client AZ. May be {@literal null} if not set.
-     */
-    @Nullable
-    String getClientAZ();
-    
-    /**
-     * Get the reconnection strategy.
-     * 
-     * @return The {@link BackoffStrategy}. May be {@literal null} if not set.
-     */
-    @Nullable
-    BackoffStrategy getReconnectStrategy();
+	/**
+	 * Creates a default {@link ValkeyGlideClientConfiguration} with default settings.
+	 * @return a {@link ValkeyGlideClientConfiguration} with defaults.
+	 */
+	static ValkeyGlideClientConfiguration defaultConfiguration() {
+		return builder().build();
+	}
 
-    /**
-     * Get the maximum pool size for client pooling.
-     * 
-     * @return The maximum pool size. Default is 8.
-     */
-    int getMaxPoolSize();
+	/**
+	 * Get the command timeout for Valkey-Glide client operations.
+	 * @return The command timeout duration. May be {@literal null} if not set.
+	 */
+	@Nullable Duration getCommandTimeout();
 
-    /**
-     * Get OpenTelemetry configuration for Valkey-Glide client.
-     * 
-     * @return The {@link OpenTelemetryForGlide} configuration. May be {@literal null} if not set.
-     */
-    @Nullable
-    OpenTelemetryForGlide getOpenTelemetryForGlide();
+	/**
+	 * Get the connection timeout for Valkey-Glide client operations.
+	 * @return The connection timeout duration. May be {@literal null} if not set.
+	 */
+	@Nullable Duration getConnectionTimeout();
 
-    /**
-     * Get IAM authentication configuration for Valkey-Glide client connecting to
-     * AWS ElastiCache or MemoryDB.
-     *
-     * @return The {@link IamAuthenticationForGlide} configuration. May be {@literal null} if not set.
-     */
-    @Nullable
-    IamAuthenticationForGlide getIamAuthentication();
+	/**
+	 * Check if SSL is enabled.
+	 * @return {@literal true} if SSL is enabled.
+	 */
+	boolean isUseSsl();
 
-    /**
-     * Get client options for mode-specific configurations.
-     * Placeholder for future mode-specific extensions.
-     * 
-     * @return Optional containing client options if configured.
-     */
-    Optional<GlideClientOptions> getClientOptions();
+	/**
+	 * Get the read from strategy for the client.
+	 * @return The {@link ReadFrom} strategy. May be {@literal null} if not set.
+	 */
+	@Nullable ReadFrom getReadFrom();
 
-    /**
-     * Supported AWS service types for IAM authentication with ElastiCache and MemoryDB.
-     */
-    enum AwsServiceType {
-        /** Amazon ElastiCache service. */
-        ELASTICACHE,
-        /** Amazon MemoryDB service. */
-        MEMORYDB
-    }
+	/**
+	 * Get the maximum number of concurrent in-flight requests.
+	 * @return The inflight requests limit. May be {@literal null} if not set.
+	 */
+	@Nullable Integer getInflightRequestsLimit();
 
-    /**
-     * IAM authentication configuration for GLIDE client connecting to AWS ElastiCache or MemoryDB.
-     *
-     * <p>When IAM authentication is configured, the GLIDE client will automatically generate and
-     * refresh IAM authentication tokens. This is mutually exclusive with password-based authentication.
-     *
-     * @param clusterName            the name of the ElastiCache/MemoryDB cluster (required)
-     * @param serviceType            the AWS service type — {@link AwsServiceType#ELASTICACHE} or
-     *                               {@link AwsServiceType#MEMORYDB} (required)
-     * @param region                 the AWS region where the cluster is located (required)
-     * @param refreshIntervalSeconds optional refresh interval in seconds for renewing IAM tokens;
-     *                               if {@code null}, defaults to 300 seconds (5 minutes)
-     */
-    record IamAuthenticationForGlide(
-            String clusterName,
-            AwsServiceType serviceType,
-            String region,
-            @Nullable Integer refreshIntervalSeconds
-    ) {
-        /**
-         * Creates a new IAM authentication configuration.
-         *
-         * @throws IllegalArgumentException if {@code clusterName}, {@code serviceType}, or
-         *                                  {@code region} is {@code null}
-         */
-        public IamAuthenticationForGlide {
-            Assert.notNull(clusterName, "clusterName must not be null");
-            Assert.notNull(serviceType, "serviceType must not be null");
-            Assert.notNull(region, "region must not be null");
-        }
-    }
+	/**
+	 * Get the client availability zone.
+	 * @return The client AZ. May be {@literal null} if not set.
+	 */
+	@Nullable String getClientAZ();
 
-    /**
-     * Record representing OpenTelemetry configuration for Valkey-Glide client.
-     *
-     * @param tracesEndpoint     the OTLP endpoint for traces, or {@code null} if not set.
-     * @param metricsEndpoint    the OTLP endpoint for metrics, or {@code null} if not set.
-     * @param samplePercentage   the sampling percentage for traces, or {@code null} if not set.
-     * @param flushIntervalMs    the flush interval in milliseconds, or {@code null} if not set.
-     */
-    public record OpenTelemetryForGlide(
-            @Nullable String tracesEndpoint,
-            @Nullable String metricsEndpoint,
-            @Nullable Integer samplePercentage,
-            @Nullable Long flushIntervalMs
-    ) {
+	/**
+	 * Get the reconnection strategy.
+	 * @return The {@link BackoffStrategy}. May be {@literal null} if not set.
+	 */
+	@Nullable BackoffStrategy getReconnectStrategy();
 
-        /**
-         * Default OpenTelemetry configuration for Valkey-Glide.
-         */
-        public static OpenTelemetryForGlide defaults() {
-            return new OpenTelemetryForGlide(
-                    "http://localhost:4318/v1/traces",
-                    "http://localhost:4318/v1/metrics",
-                    1,
-                    5000L
-            );
-        }
-    }
+	/**
+	 * Get the maximum pool size for client pooling.
+	 * @return The maximum pool size. Default is 8.
+	 */
+	int getMaxPoolSize();
 
-    /**
-     * Builder for {@link ValkeyGlideClientConfiguration}.
-     */
-    class ValkeyGlideClientConfigurationBuilder {
-        
-        private @Nullable Duration commandTimeout;
-        private @Nullable Duration connectionTimeout;
-        private boolean useSsl = false;
-        private @Nullable ReadFrom readFrom;
-        private @Nullable Integer inflightRequestsLimit;
-        private @Nullable String clientAZ;
-        private @Nullable BackoffStrategy reconnectStrategy;
-        private int maxPoolSize = 8; // Default pool size
-        private @Nullable OpenTelemetryForGlide openTelemetryForGlide;
-        private @Nullable IamAuthenticationForGlide iamAuthentication;
-        
-        
-        ValkeyGlideClientConfigurationBuilder() {}
-        
-        /**
-         * Set the command timeout.
-         * 
-         * @param commandTimeout the command timeout duration.
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder commandTimeout(Duration commandTimeout) {
-            this.commandTimeout = commandTimeout;
-            return this;
-        }
-        
-        /**
-         * Set the connection timeout.
-         * 
-         * @param connectionTimeout the connection timeout duration.
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder connectionTimeout(Duration connectionTimeout) {
-            this.connectionTimeout = connectionTimeout;
-            return this;
-        }
-        
-        /**
-         * Enable SSL for the connection.
-         * 
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder useSsl() {
-            this.useSsl = true;
-            return this;
-        }
-        
-        /**
-         * Set the read from strategy.
-         * 
-         * @param readFrom the {@link ReadFrom} strategy.
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder readFrom(ReadFrom readFrom) {
-            this.readFrom = readFrom;
-            return this;
-        }
-        
-        /**
-         * Set the maximum number of concurrent in-flight requests.
-         * 
-         * @param inflightRequestsLimit the inflight requests limit.
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder inflightRequestsLimit(Integer inflightRequestsLimit) {
-            this.inflightRequestsLimit = inflightRequestsLimit;
-            return this;
-        }
-        
-        /**
-         * Set the client availability zone.
-         * 
-         * @param clientAZ the client AZ.
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder clientAZ(String clientAZ) {
-            this.clientAZ = clientAZ;
-            return this;
-        }
-        
-        /**
-         * Set the reconnection strategy.
-         * 
-         * @param reconnectStrategy the {@link BackoffStrategy}.
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder reconnectStrategy(BackoffStrategy reconnectStrategy) {
-            this.reconnectStrategy = reconnectStrategy;
-            return this;
-        }
+	/**
+	 * Get OpenTelemetry configuration for Valkey-Glide client.
+	 * @return The {@link OpenTelemetryForGlide} configuration. May be {@literal null} if
+	 * not set.
+	 */
+	@Nullable OpenTelemetryForGlide getOpenTelemetryForGlide();
 
-        /**
-         * Initialize GLIDE OpenTelemetry with OTLP endpoints.
-         *
-         * If at least one endpoint (traces or metrics) is provided, this will initialize
-         * OpenTelemetry once per JVM.
-         */
-        public ValkeyGlideClientConfigurationBuilder useOpenTelemetry(
-            OpenTelemetryForGlide openTelemetryForGlide
-        ) {
-            this.openTelemetryForGlide = openTelemetryForGlide;
-            return this;
-        }
+	/**
+	 * Get IAM authentication configuration for Valkey-Glide client connecting to AWS
+	 * ElastiCache or MemoryDB.
+	 * @return The {@link IamAuthenticationForGlide} configuration. May be {@literal null}
+	 * if not set.
+	 */
+	@Nullable IamAuthenticationForGlide getIamAuthentication();
 
-        /**
-         * Set the maximum pool size for client pooling.
-         * 
-         * @param maxPoolSize the maximum number of clients in the pool.
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder maxPoolSize(int maxPoolSize) {
-            this.maxPoolSize = maxPoolSize;
-            return this;
-        }
+	/**
+	 * Get client options for mode-specific configurations. Placeholder for future
+	 * mode-specific extensions.
+	 * @return Optional containing client options if configured.
+	 */
+	Optional<GlideClientOptions> getClientOptions();
 
-        /**
-         * Configure IAM authentication for connecting to AWS ElastiCache or MemoryDB.
-         *
-         * <p>When IAM authentication is enabled, the GLIDE client will automatically generate and
-         * refresh IAM authentication tokens. This is mutually exclusive with password-based
-         * authentication.
-         *
-         * @param iamAuthentication the IAM authentication configuration.
-         * @return {@literal this} builder.
-         */
-        public ValkeyGlideClientConfigurationBuilder useIamAuthentication(
-                IamAuthenticationForGlide iamAuthentication) {
-            this.iamAuthentication = iamAuthentication;
-            return this;
-        }
-        
-        /**
-         * Build the {@link ValkeyGlideClientConfiguration}.
-         * 
-         * @return a new {@link ValkeyGlideClientConfiguration} instance.
-         */
-        public ValkeyGlideClientConfiguration build() {
-            return new DefaultValkeyGlideClientConfiguration(
-                commandTimeout, 
-                useSsl, 
-                connectionTimeout,
-                readFrom,
-                inflightRequestsLimit,
-                clientAZ,
-                reconnectStrategy,
-                maxPoolSize,
-                openTelemetryForGlide,
-                iamAuthentication
-            );
-        }
-    }
+	/**
+	 * Supported AWS service types for IAM authentication with ElastiCache and MemoryDB.
+	 */
+	enum AwsServiceType {
+
+		/** Amazon ElastiCache service. */
+		ELASTICACHE,
+		/** Amazon MemoryDB service. */
+		MEMORYDB
+
+	}
+
+	/**
+	 * IAM authentication configuration for GLIDE client connecting to AWS ElastiCache or
+	 * MemoryDB.
+	 *
+	 * <p>
+	 * When IAM authentication is configured, the GLIDE client will automatically generate
+	 * and refresh IAM authentication tokens. This is mutually exclusive with
+	 * password-based authentication.
+	 *
+	 * @param clusterName the name of the ElastiCache/MemoryDB cluster (required)
+	 * @param serviceType the AWS service type — {@link AwsServiceType#ELASTICACHE} or
+	 * {@link AwsServiceType#MEMORYDB} (required)
+	 * @param region the AWS region where the cluster is located (required)
+	 * @param refreshIntervalSeconds optional refresh interval in seconds for renewing IAM
+	 * tokens; if {@code null}, defaults to 300 seconds (5 minutes)
+	 */
+	record IamAuthenticationForGlide(String clusterName, AwsServiceType serviceType, String region,
+			@Nullable Integer refreshIntervalSeconds) {
+		/**
+		 * Creates a new IAM authentication configuration.
+		 * @throws IllegalArgumentException if {@code clusterName}, {@code serviceType},
+		 * or {@code region} is {@code null}
+		 */
+		public IamAuthenticationForGlide {
+			Assert.notNull(clusterName, "clusterName must not be null");
+			Assert.notNull(serviceType, "serviceType must not be null");
+			Assert.notNull(region, "region must not be null");
+		}
+	}
+
+	/**
+	 * Record representing OpenTelemetry configuration for Valkey-Glide client.
+	 *
+	 * @param tracesEndpoint the OTLP endpoint for traces, or {@code null} if not set.
+	 * @param metricsEndpoint the OTLP endpoint for metrics, or {@code null} if not set.
+	 * @param samplePercentage the sampling percentage for traces, or {@code null} if not
+	 * set.
+	 * @param flushIntervalMs the flush interval in milliseconds, or {@code null} if not
+	 * set.
+	 */
+	public record OpenTelemetryForGlide(@Nullable String tracesEndpoint, @Nullable String metricsEndpoint,
+			@Nullable Integer samplePercentage, @Nullable Long flushIntervalMs) {
+
+		/**
+		 * Default OpenTelemetry configuration for Valkey-Glide.
+		 */
+		public static OpenTelemetryForGlide defaults() {
+			return new OpenTelemetryForGlide("http://localhost:4318/v1/traces", "http://localhost:4318/v1/metrics", 1,
+					5000L);
+		}
+	}
+
+	/**
+	 * Builder for {@link ValkeyGlideClientConfiguration}.
+	 */
+	class ValkeyGlideClientConfigurationBuilder {
+
+		private @Nullable Duration commandTimeout;
+
+		private @Nullable Duration connectionTimeout;
+
+		private boolean useSsl = false;
+
+		private @Nullable ReadFrom readFrom;
+
+		private @Nullable Integer inflightRequestsLimit;
+
+		private @Nullable String clientAZ;
+
+		private @Nullable BackoffStrategy reconnectStrategy;
+
+		private int maxPoolSize = 8; // Default pool size
+
+		private @Nullable OpenTelemetryForGlide openTelemetryForGlide;
+
+		private @Nullable IamAuthenticationForGlide iamAuthentication;
+
+		ValkeyGlideClientConfigurationBuilder() {
+		}
+
+		/**
+		 * Set the command timeout.
+		 * @param commandTimeout the command timeout duration.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder commandTimeout(Duration commandTimeout) {
+			this.commandTimeout = commandTimeout;
+			return this;
+		}
+
+		/**
+		 * Set the connection timeout.
+		 * @param connectionTimeout the connection timeout duration.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder connectionTimeout(Duration connectionTimeout) {
+			this.connectionTimeout = connectionTimeout;
+			return this;
+		}
+
+		/**
+		 * Enable SSL for the connection.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder useSsl() {
+			this.useSsl = true;
+			return this;
+		}
+
+		/**
+		 * Set the read from strategy.
+		 * @param readFrom the {@link ReadFrom} strategy.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder readFrom(ReadFrom readFrom) {
+			this.readFrom = readFrom;
+			return this;
+		}
+
+		/**
+		 * Set the maximum number of concurrent in-flight requests.
+		 * @param inflightRequestsLimit the inflight requests limit.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder inflightRequestsLimit(Integer inflightRequestsLimit) {
+			this.inflightRequestsLimit = inflightRequestsLimit;
+			return this;
+		}
+
+		/**
+		 * Set the client availability zone.
+		 * @param clientAZ the client AZ.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder clientAZ(String clientAZ) {
+			this.clientAZ = clientAZ;
+			return this;
+		}
+
+		/**
+		 * Set the reconnection strategy.
+		 * @param reconnectStrategy the {@link BackoffStrategy}.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder reconnectStrategy(BackoffStrategy reconnectStrategy) {
+			this.reconnectStrategy = reconnectStrategy;
+			return this;
+		}
+
+		/**
+		 * Initialize GLIDE OpenTelemetry with OTLP endpoints.
+		 *
+		 * If at least one endpoint (traces or metrics) is provided, this will initialize
+		 * OpenTelemetry once per JVM.
+		 */
+		public ValkeyGlideClientConfigurationBuilder useOpenTelemetry(OpenTelemetryForGlide openTelemetryForGlide) {
+			this.openTelemetryForGlide = openTelemetryForGlide;
+			return this;
+		}
+
+		/**
+		 * Set the maximum pool size for client pooling.
+		 * @param maxPoolSize the maximum number of clients in the pool.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder maxPoolSize(int maxPoolSize) {
+			this.maxPoolSize = maxPoolSize;
+			return this;
+		}
+
+		/**
+		 * Configure IAM authentication for connecting to AWS ElastiCache or MemoryDB.
+		 *
+		 * <p>
+		 * When IAM authentication is enabled, the GLIDE client will automatically
+		 * generate and refresh IAM authentication tokens. This is mutually exclusive with
+		 * password-based authentication.
+		 * @param iamAuthentication the IAM authentication configuration.
+		 * @return {@literal this} builder.
+		 */
+		public ValkeyGlideClientConfigurationBuilder useIamAuthentication(IamAuthenticationForGlide iamAuthentication) {
+			this.iamAuthentication = iamAuthentication;
+			return this;
+		}
+
+		/**
+		 * Build the {@link ValkeyGlideClientConfiguration}.
+		 * @return a new {@link ValkeyGlideClientConfiguration} instance.
+		 */
+		public ValkeyGlideClientConfiguration build() {
+			return new DefaultValkeyGlideClientConfiguration(commandTimeout, useSsl, connectionTimeout, readFrom,
+					inflightRequestsLimit, clientAZ, reconnectStrategy, maxPoolSize, openTelemetryForGlide,
+					iamAuthentication);
+		}
+
+	}
+
 }

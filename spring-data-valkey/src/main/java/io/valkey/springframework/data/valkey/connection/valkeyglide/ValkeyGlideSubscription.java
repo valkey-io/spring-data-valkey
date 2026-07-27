@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,125 +29,130 @@ import org.springframework.util.Assert;
  */
 class ValkeyGlideSubscription extends AbstractSubscription {
 
-    private final UnifiedGlideClient client;
-    private final DelegatingPubSubListener pubSubListener;
-    private final SubscriptionListener subscriptionListener;
+	private final UnifiedGlideClient client;
 
-    ValkeyGlideSubscription(MessageListener listener, UnifiedGlideClient client,
-            DelegatingPubSubListener pubSubListener) {
-        super(listener);
-        
-        Assert.notNull(client, "UnifiedGlideClient must not be null");
-        Assert.notNull(pubSubListener, "DelegatingPubSubListener must not be null");
-        
-        this.client = client;
-        this.pubSubListener = pubSubListener;
-        this.subscriptionListener = listener instanceof SubscriptionListener
-            ? (SubscriptionListener) listener
-            : SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER;
-    }
+	private final DelegatingPubSubListener pubSubListener;
 
-    @Override
-    protected void doSubscribe(byte[]... channels) {
-        sendPubsubCommand("SUBSCRIBE_BLOCKING", channels);
+	private final SubscriptionListener subscriptionListener;
 
-        for (byte[] channel : channels) {
-            subscriptionListener.onChannelSubscribed(channel, getChannels().size());
-        }
-    }
+	ValkeyGlideSubscription(MessageListener listener, UnifiedGlideClient client,
+			DelegatingPubSubListener pubSubListener) {
+		super(listener);
 
-    @Override
-    protected void doPsubscribe(byte[]... patterns) {
-        sendPubsubCommand("PSUBSCRIBE_BLOCKING", patterns);
+		Assert.notNull(client, "UnifiedGlideClient must not be null");
+		Assert.notNull(pubSubListener, "DelegatingPubSubListener must not be null");
 
-        for (byte[] pattern : patterns) {
-            subscriptionListener.onPatternSubscribed(pattern, getPatterns().size());
-        }
-    }
+		this.client = client;
+		this.pubSubListener = pubSubListener;
+		this.subscriptionListener = listener instanceof SubscriptionListener ? (SubscriptionListener) listener
+				: SubscriptionListener.NO_OP_SUBSCRIPTION_LISTENER;
+	}
 
-    @Override
-    protected void doUnsubscribe(boolean all, byte[]... channels) {
-        byte[][] toNotify;
-        
-        if (all) {
-            toNotify = getChannels().toArray(new byte[0][]);
-            sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
-        } else {
-            toNotify = channels;
-            sendPubsubCommand("UNSUBSCRIBE_BLOCKING", channels);
-        }
+	@Override
+	protected void doSubscribe(byte[]... channels) {
+		sendPubsubCommand("SUBSCRIBE_BLOCKING", channels);
 
-        for (byte[] channel : toNotify) {
-            subscriptionListener.onChannelUnsubscribed(channel, getChannels().size());
-        }
-    }
+		for (byte[] channel : channels) {
+			subscriptionListener.onChannelSubscribed(channel, getChannels().size());
+		}
+	}
 
-    @Override
-    protected void doPUnsubscribe(boolean all, byte[]... patterns) {
-        byte[][] toNotify;
-        
-        if (all) {
-            toNotify = getPatterns().toArray(new byte[0][]);
-            sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
-        } else {
-            toNotify = patterns;
-            sendPubsubCommand("PUNSUBSCRIBE_BLOCKING", patterns);
-        }
+	@Override
+	protected void doPsubscribe(byte[]... patterns) {
+		sendPubsubCommand("PSUBSCRIBE_BLOCKING", patterns);
 
-        for (byte[] pattern : toNotify) {
-            subscriptionListener.onPatternUnsubscribed(pattern, getPatterns().size());
-        }
-    }
+		for (byte[] pattern : patterns) {
+			subscriptionListener.onPatternSubscribed(pattern, getPatterns().size());
+		}
+	}
 
-    @Override
-    protected void doClose() {
-        // Clear listener first to prevent stale messages
-        pubSubListener.clearListener();
-        
-        // Capture channels/patterns BEFORE unsubscribing (they get cleared by parent)
-        byte[][] channelsToNotify = getChannels().toArray(new byte[0][]);
-        byte[][] patternsToNotify = getPatterns().toArray(new byte[0][]);
-        
-        // Unsubscribe from SPECIFIC channels we subscribed to, not ALL
-        if (channelsToNotify.length > 0) {
-            sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
-        }
-        
-        if (patternsToNotify.length > 0) {
-            sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
-        }
-        
-        // Notify subscription callbacks
-        for (byte[] channel : channelsToNotify) {
-            subscriptionListener.onChannelUnsubscribed(channel, 0);
-        }
-        for (byte[] pattern : patternsToNotify) {
-            subscriptionListener.onPatternUnsubscribed(pattern, 0);
-        }
-    }
+	@Override
+	protected void doUnsubscribe(boolean all, byte[]... channels) {
+		byte[][] toNotify;
 
-    /**
-     * Send a pub/sub command directly to the client using GlideString.
-     */
-    private void sendPubsubCommand(String command, byte[]... channels) {
-        GlideString[] cmd = new GlideString[channels.length + 2];
+		if (all) {
+			toNotify = getChannels().toArray(new byte[0][]);
+			sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
+		}
+		else {
+			toNotify = channels;
+			sendPubsubCommand("UNSUBSCRIBE_BLOCKING", channels);
+		}
 
-        int i = 0;
-        cmd[i++] = GlideString.of(command);
-        for (byte[] channel : channels) {
-            cmd[i++] = GlideString.of(channel);
-        }
+		for (byte[] channel : toNotify) {
+			subscriptionListener.onChannelUnsubscribed(channel, getChannels().size());
+		}
+	}
 
-        // Always append timeout = 0
-        cmd[i] = GlideString.of("0");
+	@Override
+	protected void doPUnsubscribe(boolean all, byte[]... patterns) {
+		byte[][] toNotify;
 
-        try {
-            client.customCommand(cmd);
-        } catch (Exception e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
-            throw new ValkeyGlideExceptionConverter().convert(e);
-        }
-    }
+		if (all) {
+			toNotify = getPatterns().toArray(new byte[0][]);
+			sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
+		}
+		else {
+			toNotify = patterns;
+			sendPubsubCommand("PUNSUBSCRIBE_BLOCKING", patterns);
+		}
+
+		for (byte[] pattern : toNotify) {
+			subscriptionListener.onPatternUnsubscribed(pattern, getPatterns().size());
+		}
+	}
+
+	@Override
+	protected void doClose() {
+		// Clear listener first to prevent stale messages
+		pubSubListener.clearListener();
+
+		// Capture channels/patterns BEFORE unsubscribing (they get cleared by parent)
+		byte[][] channelsToNotify = getChannels().toArray(new byte[0][]);
+		byte[][] patternsToNotify = getPatterns().toArray(new byte[0][]);
+
+		// Unsubscribe from SPECIFIC channels we subscribed to, not ALL
+		if (channelsToNotify.length > 0) {
+			sendPubsubCommand("UNSUBSCRIBE_BLOCKING");
+		}
+
+		if (patternsToNotify.length > 0) {
+			sendPubsubCommand("PUNSUBSCRIBE_BLOCKING");
+		}
+
+		// Notify subscription callbacks
+		for (byte[] channel : channelsToNotify) {
+			subscriptionListener.onChannelUnsubscribed(channel, 0);
+		}
+		for (byte[] pattern : patternsToNotify) {
+			subscriptionListener.onPatternUnsubscribed(pattern, 0);
+		}
+	}
+
+	/**
+	 * Send a pub/sub command directly to the client using GlideString.
+	 */
+	private void sendPubsubCommand(String command, byte[]... channels) {
+		GlideString[] cmd = new GlideString[channels.length + 2];
+
+		int i = 0;
+		cmd[i++] = GlideString.of(command);
+		for (byte[] channel : channels) {
+			cmd[i++] = GlideString.of(channel);
+		}
+
+		// Always append timeout = 0
+		cmd[i] = GlideString.of("0");
+
+		try {
+			client.customCommand(cmd);
+		}
+		catch (Exception e) {
+			if (e instanceof InterruptedException) {
+				Thread.currentThread().interrupt();
+			}
+			throw new ValkeyGlideExceptionConverter().convert(e);
+		}
+	}
+
 }

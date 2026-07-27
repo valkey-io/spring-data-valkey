@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,12 @@ import org.springframework.beans.factory.DisposableBean;
 public class TemplatePerformanceTest {
 
 	private static final int OPERATIONS = 10000;
+
 	private static final String KEY_PREFIX = "perf:test:";
 
 	public static void main(String[] args) throws Exception {
 		String clientType = System.getProperty("client", "valkeyglide");
-		
+
 		System.out.println("Running ValkeyTemplate Performance Test");
 		System.out.println("Client: " + clientType);
 		System.out.println("Operations: " + OPERATIONS);
@@ -47,7 +48,8 @@ public class TemplatePerformanceTest {
 		try {
 			StringValkeyTemplate template = new StringValkeyTemplate(factory);
 			runPerformanceTest(template);
-		} finally {
+		}
+		finally {
 			if (factory instanceof DisposableBean) {
 				((DisposableBean) factory).destroy();
 			}
@@ -91,7 +93,8 @@ public class TemplatePerformanceTest {
 
 	private static void printResult(String operation, long durationNanos) {
 		long durationMs = durationNanos / 1_000_000;
-		System.out.printf("%s:    %,d ops/sec (%.2f ms total)%n", 
-			operation, (long) (OPERATIONS * 1000.0 / durationMs), durationMs / 1.0);
+		System.out.printf("%s:    %,d ops/sec (%.2f ms total)%n", operation, (long) (OPERATIONS * 1000.0 / durationMs),
+				durationMs / 1.0);
 	}
+
 }

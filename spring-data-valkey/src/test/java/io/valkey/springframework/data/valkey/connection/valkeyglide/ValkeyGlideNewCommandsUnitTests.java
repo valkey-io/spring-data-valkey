@@ -37,17 +37,21 @@ import io.valkey.springframework.data.valkey.core.types.Expiration;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 
 /**
- * Wire-level unit tests for GLIDE commands that require Valkey 8.2+ or Redis 8.4+.
- * These validate the correct command serialization without needing a running server.
+ * Wire-level unit tests for GLIDE commands that require Valkey 8.2+ or Redis 8.4+. These
+ * validate the correct command serialization without needing a running server.
  *
  * @author Jeremy Parr-Pearson
  */
 class ValkeyGlideNewCommandsUnitTests {
 
 	private UnifiedGlideClient client;
+
 	private ValkeyGlideConnection connection;
+
 	private ValkeyGlideStreamCommands streamCommands;
+
 	private ValkeyGlideKeyCommands keyCommands;
+
 	private ValkeyGlideHashCommands hashCommands;
 
 	@BeforeEach
@@ -68,8 +72,7 @@ class ValkeyGlideNewCommandsUnitTests {
 		when(client.customCommand(any(GlideString[].class))).thenReturn(mockResult);
 
 		XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.DELETE_REFERENCES);
-		streamCommands.xAckDel("stream".getBytes(), "group", options,
-				RecordId.of("1-1"), RecordId.of("2-2"));
+		streamCommands.xAckDel("stream".getBytes(), "group", options, RecordId.of("1-1"), RecordId.of("2-2"));
 
 		ArgumentCaptor<GlideString[]> captor = ArgumentCaptor.forClass(GlideString[].class);
 		verify(client).customCommand(captor.capture());
@@ -115,8 +118,7 @@ class ValkeyGlideNewCommandsUnitTests {
 		when(client.customCommand(any(GlideString[].class))).thenReturn(mockResult);
 
 		XDelOptions options = XDelOptions.deletionPolicy(StreamDeletionPolicy.DELETE_REFERENCES);
-		streamCommands.xDelEx("stream".getBytes(), options,
-				RecordId.of("1-1"), RecordId.of("2-2"), RecordId.of("3-3"));
+		streamCommands.xDelEx("stream".getBytes(), options, RecordId.of("1-1"), RecordId.of("2-2"), RecordId.of("3-3"));
 
 		ArgumentCaptor<GlideString[]> captor = ArgumentCaptor.forClass(GlideString[].class);
 		verify(client).customCommand(captor.capture());
@@ -246,8 +248,8 @@ class ValkeyGlideNewCommandsUnitTests {
 		CompareCondition condition = CompareCondition.ifEquals("value".getBytes());
 
 		assertThatThrownBy(() -> keyCommands.delex("key".getBytes(), condition))
-				.isInstanceOf(InvalidDataAccessApiUsageException.class)
-				.hasMessageContaining("WRONGTYPE");
+			.isInstanceOf(InvalidDataAccessApiUsageException.class)
+			.hasMessageContaining("WRONGTYPE");
 	}
 
 	@Test
@@ -271,4 +273,5 @@ class ValkeyGlideNewCommandsUnitTests {
 
 		assertThat(result).isFalse();
 	}
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,104 +29,109 @@ import org.jspecify.annotations.Nullable;
  * @since 2.0
  */
 public class DefaultValkeyGlideClientConfiguration implements ValkeyGlideClientConfiguration {
-    private final @Nullable Duration commandTimeout;
-    private final boolean useSsl;
-    private final @Nullable Duration connectionTimeout;
-    private final @Nullable ReadFrom readFrom;
-    private final @Nullable Integer inflightRequestsLimit;
-    private final @Nullable String clientAZ;
-    private final @Nullable BackoffStrategy reconnectStrategy;
-    private final int maxPoolSize;
-    private final @Nullable OpenTelemetryForGlide openTelemetryForGlide;
-    private final @Nullable IamAuthenticationForGlide iamAuthentication;
 
-    DefaultValkeyGlideClientConfiguration() {
-        this(null, false, null, null, null, null, null, 8, null, null);
-    }
+	private final @Nullable Duration commandTimeout;
 
-    public DefaultValkeyGlideClientConfiguration(
-            @Nullable Duration commandTimeout,
-            boolean useSsl,
-            @Nullable Duration connectionTimeout,
-            @Nullable ReadFrom readFrom,
-            @Nullable Integer inflightRequestsLimit,
-            @Nullable String clientAZ,
-            @Nullable BackoffStrategy reconnectStrategy,
-            int maxPoolSize, 
-            @Nullable OpenTelemetryForGlide openTelemetryForGlide,
-            @Nullable IamAuthenticationForGlide iamAuthentication) {
-        this.commandTimeout = commandTimeout;
-        this.useSsl = useSsl;
-        this.connectionTimeout = connectionTimeout;
-        this.readFrom = readFrom;
-        this.inflightRequestsLimit = inflightRequestsLimit;
-        this.clientAZ = clientAZ;
-        this.reconnectStrategy = reconnectStrategy;
-        this.maxPoolSize = maxPoolSize;
-        this.openTelemetryForGlide = openTelemetryForGlide;
-        this.iamAuthentication = iamAuthentication;
-    }
+	private final boolean useSsl;
 
-    @Nullable
-    @Override
-    public Duration getCommandTimeout() {
-        return commandTimeout;
-    }
+	private final @Nullable Duration connectionTimeout;
 
-    @Override
-    public boolean isUseSsl() {
-        return useSsl;
-    }
+	private final @Nullable ReadFrom readFrom;
 
-    @Nullable
-    @Override
-    public Duration getConnectionTimeout() {
-        return connectionTimeout;
-    }
+	private final @Nullable Integer inflightRequestsLimit;
 
-    @Nullable
-    @Override
-    public ReadFrom getReadFrom() {
-        return readFrom;
-    }
+	private final @Nullable String clientAZ;
 
-    @Nullable
-    @Override
-    public Integer getInflightRequestsLimit() {
-        return inflightRequestsLimit;
-    }
+	private final @Nullable BackoffStrategy reconnectStrategy;
 
-    @Nullable
-    @Override
-    public String getClientAZ() {
-        return clientAZ;
-    }
+	private final int maxPoolSize;
 
-    @Nullable
-    @Override
-    public BackoffStrategy getReconnectStrategy() {
-        return reconnectStrategy;
-    }
+	private final @Nullable OpenTelemetryForGlide openTelemetryForGlide;
 
-    @Override
-    public int getMaxPoolSize() {
-        return maxPoolSize;
-    }
+	private final @Nullable IamAuthenticationForGlide iamAuthentication;
 
-    @Nullable
-    @Override
-    public OpenTelemetryForGlide getOpenTelemetryForGlide() {
-        return openTelemetryForGlide;
-    }
+	DefaultValkeyGlideClientConfiguration() {
+		this(null, false, null, null, null, null, null, 8, null, null);
+	}
 
-    @Nullable
-    @Override
-    public IamAuthenticationForGlide getIamAuthentication() {
-        return iamAuthentication;
-    }
+	public DefaultValkeyGlideClientConfiguration(@Nullable Duration commandTimeout, boolean useSsl,
+			@Nullable Duration connectionTimeout, @Nullable ReadFrom readFrom, @Nullable Integer inflightRequestsLimit,
+			@Nullable String clientAZ, @Nullable BackoffStrategy reconnectStrategy, int maxPoolSize,
+			@Nullable OpenTelemetryForGlide openTelemetryForGlide,
+			@Nullable IamAuthenticationForGlide iamAuthentication) {
+		this.commandTimeout = commandTimeout;
+		this.useSsl = useSsl;
+		this.connectionTimeout = connectionTimeout;
+		this.readFrom = readFrom;
+		this.inflightRequestsLimit = inflightRequestsLimit;
+		this.clientAZ = clientAZ;
+		this.reconnectStrategy = reconnectStrategy;
+		this.maxPoolSize = maxPoolSize;
+		this.openTelemetryForGlide = openTelemetryForGlide;
+		this.iamAuthentication = iamAuthentication;
+	}
 
-    @Override
-    public Optional<GlideClientOptions> getClientOptions() {
-        return Optional.empty();
-    }
+	@Nullable
+	@Override
+	public Duration getCommandTimeout() {
+		return commandTimeout;
+	}
+
+	@Override
+	public boolean isUseSsl() {
+		return useSsl;
+	}
+
+	@Nullable
+	@Override
+	public Duration getConnectionTimeout() {
+		return connectionTimeout;
+	}
+
+	@Nullable
+	@Override
+	public ReadFrom getReadFrom() {
+		return readFrom;
+	}
+
+	@Nullable
+	@Override
+	public Integer getInflightRequestsLimit() {
+		return inflightRequestsLimit;
+	}
+
+	@Nullable
+	@Override
+	public String getClientAZ() {
+		return clientAZ;
+	}
+
+	@Nullable
+	@Override
+	public BackoffStrategy getReconnectStrategy() {
+		return reconnectStrategy;
+	}
+
+	@Override
+	public int getMaxPoolSize() {
+		return maxPoolSize;
+	}
+
+	@Nullable
+	@Override
+	public OpenTelemetryForGlide getOpenTelemetryForGlide() {
+		return openTelemetryForGlide;
+	}
+
+	@Nullable
+	@Override
+	public IamAuthenticationForGlide getIamAuthentication() {
+		return iamAuthentication;
+	}
+
+	@Override
+	public Optional<GlideClientOptions> getClientOptions() {
+		return Optional.empty();
+	}
+
 }

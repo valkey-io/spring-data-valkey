@@ -42,17 +42,17 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
  * @author Jeremy Parr-Pearson
  */
 @Configuration(proxyBeanMethods = false)
-@ConditionalOnClass({ValkeyGlideConnectionFactory.class, glide.api.GlideClient.class})
+@ConditionalOnClass({ ValkeyGlideConnectionFactory.class, glide.api.GlideClient.class })
 @ConditionalOnProperty(name = "spring.data.valkey.client-type", havingValue = "valkeyglide", matchIfMissing = true)
 class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 
-	ValkeyGlideConnectionConfiguration(ValkeyProperties properties,
-			ValkeyConnectionDetails connectionDetails,
+	ValkeyGlideConnectionConfiguration(ValkeyProperties properties, ValkeyConnectionDetails connectionDetails,
 			ObjectProvider<ValkeyStandaloneConfiguration> standaloneConfigurationProvider,
 			ObjectProvider<ValkeySentinelConfiguration> sentinelConfigurationProvider,
 			ObjectProvider<ValkeyClusterConfiguration> clusterConfigurationProvider,
 			ObjectProvider<ValkeyStaticMasterReplicaConfiguration> masterReplicaConfiguration) {
-		super(properties, connectionDetails, standaloneConfigurationProvider, sentinelConfigurationProvider, clusterConfigurationProvider, masterReplicaConfiguration);
+		super(properties, connectionDetails, standaloneConfigurationProvider, sentinelConfigurationProvider,
+				clusterConfigurationProvider, masterReplicaConfiguration);
 	}
 
 	@Bean
@@ -85,11 +85,14 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 				Assert.state(clusterConfiguration != null, "'clusterConfiguration' must not be null");
 				yield new ValkeyGlideConnectionFactory(clusterConfiguration, clientConfiguration);
 			}
-			case SENTINEL -> throw new IllegalStateException("Valkey GLIDE does not support Sentinel. Use Lettuce or Jedis.");
-			case MASTER_REPLICA -> throw new IllegalStateException("Valkey GLIDE does not support Master/Replica topology configuration. Use Lettuce.");
+			case SENTINEL ->
+				throw new IllegalStateException("Valkey GLIDE does not support Sentinel. Use Lettuce or Jedis.");
+			case MASTER_REPLICA -> throw new IllegalStateException(
+					"Valkey GLIDE does not support Master/Replica topology configuration. Use Lettuce.");
 		};
 
-		// Disable early startup for Spring Boot to avoid connection attempts during bean creation
+		// Disable early startup for Spring Boot to avoid connection attempts during bean
+		// creation
 		factory.setEarlyStartup(false);
 		return factory;
 	}
@@ -97,7 +100,7 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 	private ValkeyGlideClientConfiguration getValkeyGlideClientConfiguration(
 			ObjectProvider<ValkeyGlideClientConfigurationBuilderCustomizer> builderCustomizers) {
 		ValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder builder = ValkeyGlideClientConfiguration
-				.builder();
+			.builder();
 
 		if (getProperties().getTimeout() != null) {
 			builder.commandTimeout(getProperties().getTimeout());
@@ -130,13 +133,9 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 		// Apply OpenTelemetry configuration if enabled
 		ValkeyProperties.ValkeyGlide.OpenTelemetry otelProperties = valkeyGlideProperties.getOpenTelemetry();
 		if (otelProperties != null && otelProperties.isEnabled()) {
-			ValkeyGlideClientConfiguration.OpenTelemetryForGlide otelConfig =
-				new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
-					otelProperties.getTracesEndpoint(),
-					otelProperties.getMetricsEndpoint(),
-					otelProperties.getSamplePercentage(),
-					otelProperties.getFlushIntervalMs()
-				);
+			ValkeyGlideClientConfiguration.OpenTelemetryForGlide otelConfig = new ValkeyGlideClientConfiguration.OpenTelemetryForGlide(
+					otelProperties.getTracesEndpoint(), otelProperties.getMetricsEndpoint(),
+					otelProperties.getSamplePercentage(), otelProperties.getFlushIntervalMs());
 			builder.useOpenTelemetry(otelConfig);
 		}
 
@@ -144,28 +143,22 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 		ValkeyProperties.ValkeyGlide.IamAuthentication iamProperties = valkeyGlideProperties.getIamAuthentication();
 		if (iamProperties != null) {
 			if (!isSslEnabled()) {
-				throw new IllegalArgumentException(
-					"IAM authentication requires TLS/SSL to be enabled. "
-					+ "Please set spring.data.valkey.ssl.enabled=true or use a valkeys:// URL.");
+				throw new IllegalArgumentException("IAM authentication requires TLS/SSL to be enabled. "
+						+ "Please set spring.data.valkey.ssl.enabled=true or use a valkeys:// URL.");
 			}
-			if (!StringUtils.hasText(iamProperties.getClusterName())
-					|| !StringUtils.hasText(iamProperties.getService())
+			if (!StringUtils.hasText(iamProperties.getClusterName()) || !StringUtils.hasText(iamProperties.getService())
 					|| !StringUtils.hasText(iamProperties.getRegion())) {
 				throw new IllegalArgumentException(
-					"IAM authentication requires all of: cluster-name, service, and region. "
-					+ "Please set spring.data.valkey.valkey-glide.iam-authentication.cluster-name, "
-					+ "spring.data.valkey.valkey-glide.iam-authentication.service, and "
-					+ "spring.data.valkey.valkey-glide.iam-authentication.region");
+						"IAM authentication requires all of: cluster-name, service, and region. "
+								+ "Please set spring.data.valkey.valkey-glide.iam-authentication.cluster-name, "
+								+ "spring.data.valkey.valkey-glide.iam-authentication.service, and "
+								+ "spring.data.valkey.valkey-glide.iam-authentication.region");
 			}
-			ValkeyGlideClientConfiguration.AwsServiceType serviceType =
-				ValkeyGlideClientConfiguration.AwsServiceType.valueOf(iamProperties.getService().toUpperCase(java.util.Locale.ROOT));
-			ValkeyGlideClientConfiguration.IamAuthenticationForGlide iamConfig =
-				new ValkeyGlideClientConfiguration.IamAuthenticationForGlide(
-					iamProperties.getClusterName(),
-					serviceType,
-					iamProperties.getRegion(),
-					iamProperties.getRefreshIntervalSeconds()
-				);
+			ValkeyGlideClientConfiguration.AwsServiceType serviceType = ValkeyGlideClientConfiguration.AwsServiceType
+				.valueOf(iamProperties.getService().toUpperCase(java.util.Locale.ROOT));
+			ValkeyGlideClientConfiguration.IamAuthenticationForGlide iamConfig = new ValkeyGlideClientConfiguration.IamAuthenticationForGlide(
+					iamProperties.getClusterName(), serviceType, iamProperties.getRegion(),
+					iamProperties.getRefreshIntervalSeconds());
 			builder.useIamAuthentication(iamConfig);
 		}
 
@@ -173,7 +166,8 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 		return builder.build();
 	}
 
-	private void customizeConfigurationFromUrl(ValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder builder) {
+	private void customizeConfigurationFromUrl(
+			ValkeyGlideClientConfiguration.ValkeyGlideClientConfigurationBuilder builder) {
 		if (urlUsesSsl(getProperties().getUrl())) {
 			builder.useSsl();
 		}
@@ -182,7 +176,8 @@ class ValkeyGlideConnectionConfiguration extends ValkeyConnectionConfiguration {
 	private ReadFrom getReadFrom(String readFrom) {
 		try {
 			return ReadFrom.valueOf(readFrom.toUpperCase());
-		} catch (IllegalArgumentException ex) {
+		}
+		catch (IllegalArgumentException ex) {
 			throw new IllegalArgumentException("Invalid readFrom value: " + readFrom, ex);
 		}
 	}

@@ -142,6 +142,46 @@ For non-Spring Boot applications, configure logging via `logback.xml` in your cl
 </configuration>
 ```
 
+## Code Style
+
+This project follows the [Spring Framework Code Style](https://github.com/spring-projects/spring-framework/wiki/Code-Style) conventions. Key points:
+
+- **Indentation**: Tabs (not spaces)
+- **Line endings**: Unix (LF)
+- **Trailing whitespace**: None
+- **Line length**: 90 characters preferred, 120 max
+- **Braces**: K&R style (opening brace on same line)
+- **Copyright header**: `Copyright 2025-present the original author or authors.`
+
+### Formatting with spring-javaformat
+
+The project includes the [spring-javaformat-maven-plugin](https://github.com/spring-io/spring-javaformat) for automated code formatting.
+
+**Recommended: IDE Plugin (formats only the file you're editing)**
+
+Install the Spring Java Format plugin for real-time formatting:
+
+- **IntelliJ IDEA**: Install "Spring Java Format" from the JetBrains Marketplace
+- **Eclipse**: Install from the [spring-javaformat releases](https://github.com/spring-io/spring-javaformat/releases)
+
+This is the recommended approach because upstream-synced classes (Lettuce, Jedis, common) do not follow spring-javaformat conventions. The IDE plugin lets you format only the files you're actively working on.
+
+**CLI (formats all sources in the module)**
+
+```bash
+# Format all sources — only commit changes to GLIDE classes you authored
+$ ./mvnw spring-javaformat:apply
+
+# Check formatting without modifying files
+$ ./mvnw spring-javaformat:validate
+```
+
+Note: The Maven command formats all Java files in the module, including upstream-synced classes that don't follow these conventions. If you use the CLI, only stage and commit changes to files in the `valkeyglide` packages or other classes you authored.
+
+### Scope
+
+The formatter is enforced (by convention) for classes in the `valkeyglide` packages and other classes we author. Upstream-synced classes (Lettuce, Jedis, common) follow their original formatting to minimize diff noise during future syncs.
+
 ## Redis Source Alignment
 
 This repository is forked from Spring Data Redis and related projects. This section documents the source repositories to help with future upgrades, patches, and alignment.

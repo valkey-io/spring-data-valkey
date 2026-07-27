@@ -159,10 +159,11 @@ git rebase -i HEAD~n --signoff
 ### Code Style & Spring Conventions
 
 - Follow existing Spring Data conventions and formatting in the codebase
+- Use the `spring-javaformat-maven-plugin` to format code: `./mvnw spring-javaformat:apply`
+- **Important:** Upstream-synced classes (Lettuce, Jedis, common packages) do NOT follow spring-javaformat conventions. Only apply formatting to classes in the `valkeyglide` packages or other classes we authored. Do not reformat upstream-synced files.
 - Use constructor injection over field injection for Spring beans
 - Use `@Configuration` classes for bean definitions, not XML
-- Amend the Apache license header date range if needed
-- For new types, copy the license header from an existing file with the current year
+- Copyright header format: `Copyright 2025-present the original author or authors.`
 - Submit test cases (unit or integration) that back your changes
 - Use `@DataValkeyTest` slice test annotation for focused Valkey component tests
 - New Spring Boot auto-configuration must be registered in `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports`

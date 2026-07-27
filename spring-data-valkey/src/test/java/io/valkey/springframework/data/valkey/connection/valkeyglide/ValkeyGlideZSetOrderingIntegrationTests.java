@@ -29,8 +29,8 @@ import io.valkey.springframework.data.valkey.test.extension.ValkeyCluster;
 import io.valkey.springframework.data.valkey.test.extension.ValkeyStandalone;
 
 /**
- * Integration tests verifying that ZSet rangeWithScores operations maintain
- * score-based ordering for both standalone and cluster connections.
+ * Integration tests verifying that ZSet rangeWithScores operations maintain score-based
+ * ordering for both standalone and cluster connections.
  *
  * @see <a href="https://github.com/valkey-io/spring-data-valkey/issues/36">Issue #36</a>
  * @see <a href="https://github.com/valkey-io/valkey-glide/issues/4963">Glide #4963</a>
@@ -57,12 +57,14 @@ class ValkeyGlideZSetOrderingIntegrationTests {
 			assertThat(rangeArray[3]).isEqualTo("value3");
 
 			Set<ZSetOperations.TypedTuple<String>> rangeWithScoresResult = opsForZSet.rangeWithScores("testKey", 0, 3);
-			ZSetOperations.TypedTuple<String>[] tuplesArray = rangeWithScoresResult.toArray(new ZSetOperations.TypedTuple[0]);
+			ZSetOperations.TypedTuple<String>[] tuplesArray = rangeWithScoresResult
+				.toArray(new ZSetOperations.TypedTuple[0]);
 			assertThat(tuplesArray[0].getValue()).isEqualTo("value2");
 			assertThat(tuplesArray[1].getValue()).isEqualTo("value1");
 			assertThat(tuplesArray[2].getValue()).isEqualTo("value4");
 			assertThat(tuplesArray[3].getValue()).isEqualTo("value3");
-		} finally {
+		}
+		finally {
 			template.delete("testKey");
 		}
 	}
@@ -88,13 +90,16 @@ class ValkeyGlideZSetOrderingIntegrationTests {
 			assertThat(rangeArray[3]).isEqualTo("value3");
 
 			Set<ZSetOperations.TypedTuple<String>> rangeWithScoresResult = opsForZSet.rangeWithScores("testKey", 0, 3);
-			ZSetOperations.TypedTuple<String>[] tuplesArray = rangeWithScoresResult.toArray(new ZSetOperations.TypedTuple[0]);
+			ZSetOperations.TypedTuple<String>[] tuplesArray = rangeWithScoresResult
+				.toArray(new ZSetOperations.TypedTuple[0]);
 			assertThat(tuplesArray[0].getValue()).isEqualTo("value2");
 			assertThat(tuplesArray[1].getValue()).isEqualTo("value1");
 			assertThat(tuplesArray[2].getValue()).isEqualTo("value4");
 			assertThat(tuplesArray[3].getValue()).isEqualTo("value3");
-		} finally {
+		}
+		finally {
 			template.delete("testKey");
 		}
 	}
+
 }

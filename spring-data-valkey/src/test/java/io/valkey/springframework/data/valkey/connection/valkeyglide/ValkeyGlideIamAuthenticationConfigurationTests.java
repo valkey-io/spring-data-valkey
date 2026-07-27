@@ -14,124 +14,125 @@ import io.valkey.springframework.data.valkey.connection.valkeyglide.ValkeyGlideC
  */
 class ValkeyGlideIamAuthenticationConfigurationTests {
 
-    @Test
-    void shouldCreateIamAuthConfigWithAllFields() {
+	@Test
+	void shouldCreateIamAuthConfigWithAllFields() {
 
-        IamAuthenticationForGlide config = new IamAuthenticationForGlide(
-                "my-cluster", AwsServiceType.ELASTICACHE, "us-east-1", 600);
+		IamAuthenticationForGlide config = new IamAuthenticationForGlide("my-cluster", AwsServiceType.ELASTICACHE,
+				"us-east-1", 600);
 
-        assertThat(config.clusterName()).isEqualTo("my-cluster");
-        assertThat(config.serviceType()).isEqualTo(AwsServiceType.ELASTICACHE);
-        assertThat(config.region()).isEqualTo("us-east-1");
-        assertThat(config.refreshIntervalSeconds()).isEqualTo(600);
-    }
+		assertThat(config.clusterName()).isEqualTo("my-cluster");
+		assertThat(config.serviceType()).isEqualTo(AwsServiceType.ELASTICACHE);
+		assertThat(config.region()).isEqualTo("us-east-1");
+		assertThat(config.refreshIntervalSeconds()).isEqualTo(600);
+	}
 
-    @Test
-    void shouldCreateIamAuthConfigWithMemoryDb() {
+	@Test
+	void shouldCreateIamAuthConfigWithMemoryDb() {
 
-        IamAuthenticationForGlide config = new IamAuthenticationForGlide(
-                "memdb-cluster", AwsServiceType.MEMORYDB, "eu-west-1", null);
+		IamAuthenticationForGlide config = new IamAuthenticationForGlide("memdb-cluster", AwsServiceType.MEMORYDB,
+				"eu-west-1", null);
 
-        assertThat(config.clusterName()).isEqualTo("memdb-cluster");
-        assertThat(config.serviceType()).isEqualTo(AwsServiceType.MEMORYDB);
-        assertThat(config.region()).isEqualTo("eu-west-1");
-        assertThat(config.refreshIntervalSeconds()).isNull();
-    }
+		assertThat(config.clusterName()).isEqualTo("memdb-cluster");
+		assertThat(config.serviceType()).isEqualTo(AwsServiceType.MEMORYDB);
+		assertThat(config.region()).isEqualTo("eu-west-1");
+		assertThat(config.refreshIntervalSeconds()).isNull();
+	}
 
-    @Test
-    void shouldThrowWhenClusterNameIsNull() {
+	@Test
+	void shouldThrowWhenClusterNameIsNull() {
 
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> new IamAuthenticationForGlide(null, AwsServiceType.ELASTICACHE, "us-east-1", null))
-                .withMessageContaining("clusterName must not be null");
-    }
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new IamAuthenticationForGlide(null, AwsServiceType.ELASTICACHE, "us-east-1", null))
+			.withMessageContaining("clusterName must not be null");
+	}
 
-    @Test
-    void shouldThrowWhenServiceTypeIsNull() {
+	@Test
+	void shouldThrowWhenServiceTypeIsNull() {
 
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> new IamAuthenticationForGlide("my-cluster", null, "us-east-1", null))
-                .withMessageContaining("serviceType must not be null");
-    }
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new IamAuthenticationForGlide("my-cluster", null, "us-east-1", null))
+			.withMessageContaining("serviceType must not be null");
+	}
 
-    @Test
-    void shouldThrowWhenRegionIsNull() {
+	@Test
+	void shouldThrowWhenRegionIsNull() {
 
-        assertThatIllegalArgumentException()
-                .isThrownBy(() -> new IamAuthenticationForGlide("my-cluster", AwsServiceType.ELASTICACHE, null, null))
-                .withMessageContaining("region must not be null");
-    }
+		assertThatIllegalArgumentException()
+			.isThrownBy(() -> new IamAuthenticationForGlide("my-cluster", AwsServiceType.ELASTICACHE, null, null))
+			.withMessageContaining("region must not be null");
+	}
 
-    @Test
-    void shouldAllowNullRefreshIntervalSeconds() {
+	@Test
+	void shouldAllowNullRefreshIntervalSeconds() {
 
-        IamAuthenticationForGlide config = new IamAuthenticationForGlide(
-                "my-cluster", AwsServiceType.ELASTICACHE, "us-east-1", null);
+		IamAuthenticationForGlide config = new IamAuthenticationForGlide("my-cluster", AwsServiceType.ELASTICACHE,
+				"us-east-1", null);
 
-        assertThat(config.refreshIntervalSeconds()).isNull();
-    }
+		assertThat(config.refreshIntervalSeconds()).isNull();
+	}
 
-    @Test
-    void builderShouldStoreIamAuthConfiguration() {
+	@Test
+	void builderShouldStoreIamAuthConfiguration() {
 
-        IamAuthenticationForGlide iamConfig = new IamAuthenticationForGlide(
-                "my-cluster", AwsServiceType.ELASTICACHE, "us-east-1", 300);
+		IamAuthenticationForGlide iamConfig = new IamAuthenticationForGlide("my-cluster", AwsServiceType.ELASTICACHE,
+				"us-east-1", 300);
 
-        ValkeyGlideClientConfiguration config = ValkeyGlideClientConfiguration.builder()
-                .useIamAuthentication(iamConfig)
-                .build();
+		ValkeyGlideClientConfiguration config = ValkeyGlideClientConfiguration.builder()
+			.useIamAuthentication(iamConfig)
+			.build();
 
-        assertThat(config.getIamAuthentication()).isNotNull();
-        assertThat(config.getIamAuthentication().clusterName()).isEqualTo("my-cluster");
-        assertThat(config.getIamAuthentication().serviceType()).isEqualTo(AwsServiceType.ELASTICACHE);
-        assertThat(config.getIamAuthentication().region()).isEqualTo("us-east-1");
-        assertThat(config.getIamAuthentication().refreshIntervalSeconds()).isEqualTo(300);
-    }
+		assertThat(config.getIamAuthentication()).isNotNull();
+		assertThat(config.getIamAuthentication().clusterName()).isEqualTo("my-cluster");
+		assertThat(config.getIamAuthentication().serviceType()).isEqualTo(AwsServiceType.ELASTICACHE);
+		assertThat(config.getIamAuthentication().region()).isEqualTo("us-east-1");
+		assertThat(config.getIamAuthentication().refreshIntervalSeconds()).isEqualTo(300);
+	}
 
-    @Test
-    void builderShouldDefaultToNullIamAuth() {
+	@Test
+	void builderShouldDefaultToNullIamAuth() {
 
-        ValkeyGlideClientConfiguration config = ValkeyGlideClientConfiguration.builder().build();
+		ValkeyGlideClientConfiguration config = ValkeyGlideClientConfiguration.builder().build();
 
-        assertThat(config.getIamAuthentication()).isNull();
-    }
+		assertThat(config.getIamAuthentication()).isNull();
+	}
 
-    @Test
-    void defaultConfigurationShouldHaveNullIamAuth() {
+	@Test
+	void defaultConfigurationShouldHaveNullIamAuth() {
 
-        ValkeyGlideClientConfiguration config = ValkeyGlideClientConfiguration.defaultConfiguration();
+		ValkeyGlideClientConfiguration config = ValkeyGlideClientConfiguration.defaultConfiguration();
 
-        assertThat(config.getIamAuthentication()).isNull();
-    }
+		assertThat(config.getIamAuthentication()).isNull();
+	}
 
-    @Test
-    void builderShouldCombineIamAuthWithOtherSettings() {
+	@Test
+	void builderShouldCombineIamAuthWithOtherSettings() {
 
-        IamAuthenticationForGlide iamConfig = new IamAuthenticationForGlide(
-                "my-cluster", AwsServiceType.MEMORYDB, "ap-southeast-1", 120);
+		IamAuthenticationForGlide iamConfig = new IamAuthenticationForGlide("my-cluster", AwsServiceType.MEMORYDB,
+				"ap-southeast-1", 120);
 
-        ValkeyGlideClientConfiguration config = ValkeyGlideClientConfiguration.builder()
-                .useSsl()
-                .useIamAuthentication(iamConfig)
-                .maxPoolSize(16)
-                .build();
+		ValkeyGlideClientConfiguration config = ValkeyGlideClientConfiguration.builder()
+			.useSsl()
+			.useIamAuthentication(iamConfig)
+			.maxPoolSize(16)
+			.build();
 
-        assertThat(config.isUseSsl()).isTrue();
-        assertThat(config.getMaxPoolSize()).isEqualTo(16);
-        assertThat(config.getIamAuthentication()).isNotNull();
-        assertThat(config.getIamAuthentication().serviceType()).isEqualTo(AwsServiceType.MEMORYDB);
-    }
+		assertThat(config.isUseSsl()).isTrue();
+		assertThat(config.getMaxPoolSize()).isEqualTo(16);
+		assertThat(config.getIamAuthentication()).isNotNull();
+		assertThat(config.getIamAuthentication().serviceType()).isEqualTo(AwsServiceType.MEMORYDB);
+	}
 
-    @Test
-    void awsServiceTypeEnumShouldHaveExpectedValues() {
+	@Test
+	void awsServiceTypeEnumShouldHaveExpectedValues() {
 
-        assertThat(AwsServiceType.values()).containsExactly(AwsServiceType.ELASTICACHE, AwsServiceType.MEMORYDB);
-    }
+		assertThat(AwsServiceType.values()).containsExactly(AwsServiceType.ELASTICACHE, AwsServiceType.MEMORYDB);
+	}
 
-    @Test
-    void awsServiceTypeShouldBeResolvableFromString() {
+	@Test
+	void awsServiceTypeShouldBeResolvableFromString() {
 
-        assertThat(AwsServiceType.valueOf("ELASTICACHE")).isEqualTo(AwsServiceType.ELASTICACHE);
-        assertThat(AwsServiceType.valueOf("MEMORYDB")).isEqualTo(AwsServiceType.MEMORYDB);
-    }
+		assertThat(AwsServiceType.valueOf("ELASTICACHE")).isEqualTo(AwsServiceType.ELASTICACHE);
+		assertThat(AwsServiceType.valueOf("MEMORYDB")).isEqualTo(AwsServiceType.MEMORYDB);
+	}
+
 }

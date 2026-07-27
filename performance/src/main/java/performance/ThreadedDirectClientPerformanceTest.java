@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,13 +36,16 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ThreadedDirectClientPerformanceTest {
 
 	private static final int THREADS = 100;
+
 	private static final int OPERATIONS_PER_THREAD = 100;
+
 	private static final int TOTAL_OPERATIONS = THREADS * OPERATIONS_PER_THREAD;
+
 	private static final String KEY_PREFIX = "threaded:test:";
 
 	public static void main(String[] args) throws Exception {
 		String clientType = System.getProperty("client", "valkeyglide");
-		
+
 		System.out.println("Running Multi-Threaded Direct Client Performance Test");
 		System.out.println("Client: " + clientType);
 		System.out.println("Threads: " + THREADS);
@@ -62,13 +65,13 @@ public class ThreadedDirectClientPerformanceTest {
 		GlideClientConfiguration config = GlideClientConfiguration.builder()
 			.address(NodeAddress.builder().host("localhost").port(6379).build())
 			.build();
-		
+
 		try (GlideClient client = GlideClient.createClient(config).get()) {
 			ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
 			AtomicInteger setSuccess = new AtomicInteger(0);
 			AtomicInteger getSuccess = new AtomicInteger(0);
 			AtomicInteger deleteSuccess = new AtomicInteger(0);
-			
+
 			try {
 				// SET operations
 				long start = System.nanoTime();
@@ -78,12 +81,13 @@ public class ThreadedDirectClientPerformanceTest {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							client.set(GlideString.of(KEY_PREFIX + id), GlideString.of("value" + id)).get();
 							setSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				};
-				
+
 				for (int i = 0; i < THREADS; i++) {
 					executorService.submit(setTask);
 				}
@@ -101,12 +105,13 @@ public class ThreadedDirectClientPerformanceTest {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							client.get(GlideString.of(KEY_PREFIX + id)).get();
 							getSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				};
-				
+
 				for (int i = 0; i < THREADS; i++) {
 					executorService.submit(getTask);
 				}
@@ -122,14 +127,15 @@ public class ThreadedDirectClientPerformanceTest {
 					for (int i = 0; i < OPERATIONS_PER_THREAD; i++) {
 						try {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
-							client.del(new GlideString[]{GlideString.of(KEY_PREFIX + id)}).get();
+							client.del(new GlideString[] { GlideString.of(KEY_PREFIX + id) }).get();
 							deleteSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				};
-				
+
 				for (int i = 0; i < THREADS; i++) {
 					executorService.submit(deleteTask);
 				}
@@ -137,7 +143,8 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long deleteTime = System.nanoTime() - start;
 				printResult("DELETE", deleteTime, deleteSuccess.get());
-			} finally {
+			}
+			finally {
 				if (!executorService.isShutdown()) {
 					executorService.shutdown();
 				}
@@ -147,14 +154,14 @@ public class ThreadedDirectClientPerformanceTest {
 
 	private static void testLettuce() throws Exception {
 		RedisClient client = RedisClient.create(RedisURI.create("redis://localhost:6379"));
-		
+
 		try (StatefulRedisConnection<String, String> connection = client.connect()) {
 			RedisCommands<String, String> commands = connection.sync();
 			ExecutorService executorService = Executors.newFixedThreadPool(THREADS);
 			AtomicInteger setSuccess = new AtomicInteger(0);
 			AtomicInteger getSuccess = new AtomicInteger(0);
 			AtomicInteger deleteSuccess = new AtomicInteger(0);
-			
+
 			try {
 				// SET operations
 				long start = System.nanoTime();
@@ -164,12 +171,13 @@ public class ThreadedDirectClientPerformanceTest {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							commands.set(KEY_PREFIX + id, "value" + id);
 							setSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				};
-				
+
 				for (int i = 0; i < THREADS; i++) {
 					executorService.submit(setTask);
 				}
@@ -187,12 +195,13 @@ public class ThreadedDirectClientPerformanceTest {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							commands.get(KEY_PREFIX + id);
 							getSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				};
-				
+
 				for (int i = 0; i < THREADS; i++) {
 					executorService.submit(getTask);
 				}
@@ -210,12 +219,13 @@ public class ThreadedDirectClientPerformanceTest {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							commands.del(KEY_PREFIX + id);
 							deleteSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				};
-				
+
 				for (int i = 0; i < THREADS; i++) {
 					executorService.submit(deleteTask);
 				}
@@ -223,12 +233,14 @@ public class ThreadedDirectClientPerformanceTest {
 				executorService.awaitTermination(10, TimeUnit.SECONDS);
 				long deleteTime = System.nanoTime() - start;
 				printResult("DELETE", deleteTime, deleteSuccess.get());
-			} finally {
+			}
+			finally {
 				if (!executorService.isShutdown()) {
 					executorService.shutdown();
 				}
 			}
-		} finally {
+		}
+		finally {
 			client.shutdown();
 		}
 	}
@@ -239,7 +251,7 @@ public class ThreadedDirectClientPerformanceTest {
 		AtomicInteger setSuccess = new AtomicInteger(0);
 		AtomicInteger getSuccess = new AtomicInteger(0);
 		AtomicInteger deleteSuccess = new AtomicInteger(0);
-		
+
 		try {
 			// SET operations
 			long start = System.nanoTime();
@@ -250,13 +262,14 @@ public class ThreadedDirectClientPerformanceTest {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							jedis.set(KEY_PREFIX + id, "value" + id);
 							setSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				}
 			};
-			
+
 			for (int i = 0; i < THREADS; i++) {
 				executorService.submit(setTask);
 			}
@@ -275,13 +288,14 @@ public class ThreadedDirectClientPerformanceTest {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							jedis.get(KEY_PREFIX + id);
 							getSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				}
 			};
-			
+
 			for (int i = 0; i < THREADS; i++) {
 				executorService.submit(getTask);
 			}
@@ -300,13 +314,14 @@ public class ThreadedDirectClientPerformanceTest {
 							int id = Thread.currentThread().hashCode() * OPERATIONS_PER_THREAD + i;
 							jedis.del(KEY_PREFIX + id);
 							deleteSuccess.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							// Ignore
 						}
 					}
 				}
 			};
-			
+
 			for (int i = 0; i < THREADS; i++) {
 				executorService.submit(deleteTask);
 			}
@@ -314,7 +329,8 @@ public class ThreadedDirectClientPerformanceTest {
 			executorService.awaitTermination(10, TimeUnit.SECONDS);
 			long deleteTime = System.nanoTime() - start;
 			printResult("DELETE", deleteTime, deleteSuccess.get());
-		} finally {
+		}
+		finally {
 			if (!executorService.isShutdown()) {
 				executorService.shutdown();
 			}
@@ -322,8 +338,9 @@ public class ThreadedDirectClientPerformanceTest {
 	}
 
 	private static void printResult(String operation, long duration, int successful) {
-		System.out.printf("%s:    %,d ops/sec (%.2f ms total), %.1f%% successful%n",
-			operation, (long) (TOTAL_OPERATIONS / (duration / 1_000_000_000.0)), duration / 1_000_000.0,
-			(successful * 100.0 / TOTAL_OPERATIONS));
+		System.out.printf("%s:    %,d ops/sec (%.2f ms total), %.1f%% successful%n", operation,
+				(long) (TOTAL_OPERATIONS / (duration / 1_000_000_000.0)), duration / 1_000_000.0,
+				(successful * 100.0 / TOTAL_OPERATIONS));
 	}
+
 }

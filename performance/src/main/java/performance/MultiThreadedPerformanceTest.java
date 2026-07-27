@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,12 +35,14 @@ import org.springframework.beans.factory.InitializingBean;
 public class MultiThreadedPerformanceTest {
 
 	private static final int THREADS = 100;
+
 	private static final int OPERATIONS_PER_THREAD = 100;
+
 	private static final int TOTAL_OPERATIONS = THREADS * OPERATIONS_PER_THREAD;
 
 	public static void main(String[] args) throws Exception {
 		String clientType = System.getProperty("client", "valkeyglide");
-		
+
 		System.out.println("Running Multi-Threaded Performance Test");
 		System.out.println("Client: " + clientType);
 		System.out.println("Threads: " + THREADS);
@@ -55,7 +57,8 @@ public class MultiThreadedPerformanceTest {
 
 		try {
 			runMultiThreadedTest(factory);
-		} finally {
+		}
+		finally {
 			if (factory instanceof DisposableBean) {
 				((DisposableBean) factory).destroy();
 			}
@@ -91,34 +94,38 @@ public class MultiThreadedPerformanceTest {
 					IntStream.range(0, OPERATIONS_PER_THREAD).forEach(i -> {
 						String key = Thread.currentThread().getName() + ":" + i;
 						String value = "value" + i;
-						
+
 						// SET operation
 						try {
 							template.opsForValue().set(key, value);
 							setOperations.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							setFailures.incrementAndGet();
 						}
-						
+
 						// GET operation
 						try {
 							String result = template.opsForValue().get(key);
 							if (result != null) {
 								getOperations.incrementAndGet();
 							}
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							getFailures.incrementAndGet();
 						}
-						
+
 						// DELETE operation
 						try {
 							template.delete(key);
 							deleteOperations.incrementAndGet();
-						} catch (Exception e) {
+						}
+						catch (Exception e) {
 							deleteFailures.incrementAndGet();
 						}
 					});
-				} catch (Exception e) {
+				}
+				catch (Exception e) {
 					System.err.println("Thread failed: " + e.getMessage());
 					setFailures.addAndGet(OPERATIONS_PER_THREAD);
 					getFailures.addAndGet(OPERATIONS_PER_THREAD);
@@ -135,13 +142,15 @@ public class MultiThreadedPerformanceTest {
 			printResult("SET", duration, setOperations.get(), setFailures.get());
 			printResult("GET", duration, getOperations.get(), getFailures.get());
 			printResult("DELETE", duration, deleteOperations.get(), deleteFailures.get());
-		} finally {
+		}
+		finally {
 			executorService.shutdown();
 		}
 	}
 
 	private static void printResult(String operation, long duration, int successful, int failed) {
-		System.out.printf("%s:    %,d ops/sec (%.2f ms total), %.1f%% successful%n", 
-			operation, (long) (successful * 1000.0 / duration), duration / 1.0, (successful * 100.0 / TOTAL_OPERATIONS));
+		System.out.printf("%s:    %,d ops/sec (%.2f ms total), %.1f%% successful%n", operation,
+				(long) (successful * 1000.0 / duration), duration / 1.0, (successful * 100.0 / TOTAL_OPERATIONS));
 	}
+
 }

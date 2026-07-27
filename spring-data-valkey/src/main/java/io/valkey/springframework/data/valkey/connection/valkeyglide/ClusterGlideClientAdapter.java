@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -50,497 +50,529 @@ import glide.api.GlideClusterClient;
 import glide.api.models.ClusterBatch;
 
 /**
- * Unified interface that abstracts both GlideClient and GlideClusterClient
- * to enable code reuse between standalone and cluster modes.
- * 
+ * Unified interface that abstracts both GlideClient and GlideClusterClient to enable code
+ * reuse between standalone and cluster modes.
+ *
  * @author Ilia Kolominsky
  * @since 2.0
  */
 class ClusterGlideClientAdapter implements UnifiedGlideClient {
 
-    private final GlideClusterClient glideClusterClient;
-    private final @Nullable DelegatingPubSubListener listener;
-    @Nullable private Route nextCommandRoute = null;
-    private ClusterBatch currentBatch;
-    private BatchStatus batchStatus = BatchStatus.None;
+	private final GlideClusterClient glideClusterClient;
 
-    ClusterGlideClientAdapter(ValkeyClusterConfiguration clusterConfig, ValkeyGlideClientConfiguration valkeyGlideConfiguration) {
-        // Build GlideClusterClientConfiguration using Glide's API
-        var configBuilder = 
-            GlideClusterClientConfiguration.builder();
-        
-        // CONNECTION PROPERTIES from driver-agnostic configuration
-        // Add all cluster nodes
-        clusterConfig.getClusterNodes().forEach(node -> {
-            configBuilder.address(NodeAddress.builder()
-                .host(node.getHost())
-                .port(node.getPort())
-                .build());
-        });
-        
-        // Set credentials from driver-agnostic configuration
-        IamAuthenticationForGlide iamAuth = valkeyGlideConfiguration.getIamAuthentication();
-        ValkeyPassword password = clusterConfig.getPassword();
+	private final @Nullable DelegatingPubSubListener listener;
 
-        if (iamAuth != null) {
-            // IAM authentication — mutually exclusive with password
-            String username = clusterConfig.getUsername();
-            if (!StringUtils.hasText(username)) {
-                throw new IllegalArgumentException(
-                    "Username is required for IAM authentication. "
-                    + "Set spring.data.valkey.username or configure username in ValkeyClusterConfiguration.");
-            }
+	@Nullable private Route nextCommandRoute = null;
 
-            IamAuthConfig.IamAuthConfigBuilder iamConfigBuilder = IamAuthConfig.builder()
-                .clusterName(iamAuth.clusterName())
-                .service(mapServiceType(iamAuth.serviceType()))
-                .region(iamAuth.region());
+	private ClusterBatch currentBatch;
 
-            if (iamAuth.refreshIntervalSeconds() != null) {
-                iamConfigBuilder.refreshIntervalSeconds(iamAuth.refreshIntervalSeconds());
-            }
+	private BatchStatus batchStatus = BatchStatus.None;
 
-            configBuilder.credentials(
-                glide.api.models.configuration.ServerCredentials.builder()
-                    .username(username)
-                    .iamConfig(iamConfigBuilder.build())
-                    .build());
-        } else if (!password.equals(ValkeyPassword.none())) {
-            String username = clusterConfig.getUsername();
-            
-            if (StringUtils.hasText(username)) {
-                configBuilder.credentials(
-                    glide.api.models.configuration.ServerCredentials.builder()
-                        .username(username)
-                        .password(String.valueOf(password.get()))
-                        .build());
-            } else {
-                configBuilder.credentials(
-                    glide.api.models.configuration.ServerCredentials.builder()
-                        .password(String.valueOf(password.get()))
-                        .build());
-            }
-        }
-        
-        // DRIVER-SPECIFIC PROPERTIES from ValkeyGlideClientConfiguration
-        
-        // Request timeout
-        Duration commandTimeout = valkeyGlideConfiguration.getCommandTimeout();
-        if (commandTimeout != null) {
-            configBuilder.requestTimeout((int) commandTimeout.toMillis());
-        }
+	ClusterGlideClientAdapter(ValkeyClusterConfiguration clusterConfig,
+			ValkeyGlideClientConfiguration valkeyGlideConfiguration) {
+		// Build GlideClusterClientConfiguration using Glide's API
+		var configBuilder = GlideClusterClientConfiguration.builder();
 
-        // Connection timeout
-        Duration connectionTimeout = valkeyGlideConfiguration.getConnectionTimeout();
-        if (connectionTimeout != null) {
-            var advancedConfigBuilder = AdvancedGlideClusterClientConfiguration.builder();
-            advancedConfigBuilder.connectionTimeout((int) connectionTimeout.toMillis());
-            configBuilder.advancedConfiguration(advancedConfigBuilder.build());
-        }
+		// CONNECTION PROPERTIES from driver-agnostic configuration
+		// Add all cluster nodes
+		clusterConfig.getClusterNodes().forEach(node -> {
+			configBuilder.address(NodeAddress.builder().host(node.getHost()).port(node.getPort()).build());
+		});
 
-        // SSL/TLS
-        if (valkeyGlideConfiguration.isUseSsl()) {
-            configBuilder.useTLS(true);
-        }
-        
-        // Read from strategy
-        ReadFrom readFrom = valkeyGlideConfiguration.getReadFrom();
-        if (readFrom != null) {
-            configBuilder.readFrom(readFrom);
-        }
-        
-        // Inflight requests limit
-        Integer inflightRequestsLimit = valkeyGlideConfiguration.getInflightRequestsLimit();
-        if (inflightRequestsLimit != null) {
-            configBuilder.inflightRequestsLimit(inflightRequestsLimit);
-        }
-        
-        // Client AZ
-        String clientAZ = valkeyGlideConfiguration.getClientAZ();
-        if (clientAZ != null) {
-            configBuilder.clientAZ(clientAZ);
-        }
-        
-        // Reconnect strategy
-        BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
-        if (reconnectStrategy != null) {
-            configBuilder.reconnectStrategy(reconnectStrategy);
-        }
+		// Set credentials from driver-agnostic configuration
+		IamAuthenticationForGlide iamAuth = valkeyGlideConfiguration.getIamAuthentication();
+		ValkeyPassword password = clusterConfig.getPassword();
 
-        this.listener = new DelegatingPubSubListener();
+		if (iamAuth != null) {
+			// IAM authentication — mutually exclusive with password
+			String username = clusterConfig.getUsername();
+			if (!StringUtils.hasText(username)) {
+				throw new IllegalArgumentException("Username is required for IAM authentication. "
+						+ "Set spring.data.valkey.username or configure username in ValkeyClusterConfiguration.");
+			}
 
-        // Configure pub/sub with callback for event-driven message delivery
-        var subConfigBuilder = ClusterSubscriptionConfiguration.builder();
-        
-        // Set callback that delegates to our listener holder
-        subConfigBuilder.callback((msg, context) -> this.listener.onMessage(msg, context));
-        configBuilder.subscriptionConfiguration(subConfigBuilder.build());
+			IamAuthConfig.IamAuthConfigBuilder iamConfigBuilder = IamAuthConfig.builder()
+				.clusterName(iamAuth.clusterName())
+				.service(mapServiceType(iamAuth.serviceType()))
+				.region(iamAuth.region());
 
-        // Set library name for server-side client identification
-        configBuilder.libName("GlideSpringDataValkey");
+			if (iamAuth.refreshIntervalSeconds() != null) {
+				iamConfigBuilder.refreshIntervalSeconds(iamAuth.refreshIntervalSeconds());
+			}
 
-        // Build and create cluster client
-        GlideClusterClientConfiguration config = configBuilder.build();
-        try {
-            this.glideClusterClient = GlideClusterClient.createClient(config).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted creating GlideClusterClient", e);
-        } catch (ExecutionException e) {
-            throw new IllegalStateException("Failed creating GlideClusterClient", e);
-        }
-    }
+			configBuilder.credentials(glide.api.models.configuration.ServerCredentials.builder()
+				.username(username)
+				.iamConfig(iamConfigBuilder.build())
+				.build());
+		}
+		else if (!password.equals(ValkeyPassword.none())) {
+			String username = clusterConfig.getUsername();
 
-    @Override
-    @Nullable
-    public DelegatingPubSubListener getDelegatingListener() {
-        return listener;
-    }
+			if (StringUtils.hasText(username)) {
+				configBuilder.credentials(glide.api.models.configuration.ServerCredentials.builder()
+					.username(username)
+					.password(String.valueOf(password.get()))
+					.build());
+			}
+			else {
+				configBuilder.credentials(glide.api.models.configuration.ServerCredentials.builder()
+					.password(String.valueOf(password.get()))
+					.build());
+			}
+		}
 
-    /**
-     * A zero-copy map view that reconstructs GlideString keys from String keys while preserving value types.
-     * This avoids copying values when working around ClusterValue.of() bug.
-     * 
-     * <p>ClusterValue.ofMultiValueBinary() incorrectly converts Map<GlideString, V> to
-     * Map<String, V> by calling getString() on the keys. This view reverses that
-     * transformation without copying the values.
-     * 
-     * @param <V> The value type (e.g., GlideString for HASH commands, Double for Z commands with scores)
-     */
-    private static class ReconstructedKeyMap<V> extends AbstractMap<GlideString, V> {
-        private final Map<String, V> sourceMap;
-        
-        ReconstructedKeyMap(Map<String, V> sourceMap) {
-            this.sourceMap = sourceMap;
-        }
-        
-        @Override
-        public Set<Entry<GlideString, V>> entrySet() {
-            return new AbstractSet<Entry<GlideString, V>>() {
-                @Override
-                public Iterator<Entry<GlideString, V>> iterator() {
-                    Iterator<? extends Entry<String, V>> sourceIterator = sourceMap.entrySet().iterator();
-                    return new Iterator<Entry<GlideString, V>>() {
-                        @Override
-                        public boolean hasNext() {
-                            return sourceIterator.hasNext();
-                        }
-                        
-                        @Override
-                        public Entry<GlideString, V> next() {
-                            Entry<String, V> sourceEntry = sourceIterator.next();
-                            // Reconstruct GlideString key, preserve original value type
-                            return new SimpleEntry<>(
-                                GlideString.of(sourceEntry.getKey()),
-                                sourceEntry.getValue()
-                            );
-                        }
-                    };
-                }
-                
-                @Override
-                public int size() {
-                    return sourceMap.size();
-                }
-            };
-        }
-        
-        @Override
-        public int size() {
-            return sourceMap.size();
-        }
-    }
+		// DRIVER-SPECIFIC PROPERTIES from ValkeyGlideClientConfiguration
 
-    private boolean needToAggregateResult(@Nullable Route route) {
-        // TODO: implement more sophisticated logic to determine if aggregation is needed based on command and route type
-        if (route == null) {
-            // we need to look at the valkey-glide default route for the command
-            // for now, assume no aggregation is needed
-            return false;
-        } else if (route instanceof SimpleMultiNodeRoute) {
-            return true;
-        }
-        return false;
-    }
+		// Request timeout
+		Duration commandTimeout = valkeyGlideConfiguration.getCommandTimeout();
+		if (commandTimeout != null) {
+			configBuilder.requestTimeout((int) commandTimeout.toMillis());
+		}
 
-    /**
-     * Determines if a command returns a nested Map structure that should bypass ReconstructedKeyMap.
-     * 
-     * <p>Stream commands (XREAD, XRANGE, etc.) return nested Maps where the outer map keys are stream keys
-     * and the values are LinkedHashMap objects containing the actual stream records. These should not go
-     * through ReconstructedKeyMap because:
-     * <ul>
-     *   <li>The outer map is just a container, not the actual data to be returned</li>
-     *   <li>The GlideString types are preserved in the nested field-value arrays</li>
-     *   <li>The parseByteRecords() method already handles the nested structure correctly</li>
-     * </ul>
-     *
-     * @param args The command arguments, where args[0] is the command name
-     * @return true if this command returns nested Maps that should bypass ReconstructedKeyMap
-     */
-    private boolean isNestedMapCommand(GlideString[] args) {
-        if (args == null || args.length == 0) return false;
-        
-        String cmd = args[0].getString().toUpperCase();
-        
-        // Stream commands that return nested Map structures
-        switch (cmd) {
-            case "XREAD":
-            case "XREADGROUP":
-            case "XRANGE":
-            case "XREVRANGE":
-            case "XCLAIM":
-            case "XAUTOCLAIM":
-            case "XPENDING": // detailed form
-                return true;
-            default:
-                return false;
-        }
-    }
+		// Connection timeout
+		Duration connectionTimeout = valkeyGlideConfiguration.getConnectionTimeout();
+		if (connectionTimeout != null) {
+			var advancedConfigBuilder = AdvancedGlideClusterClientConfiguration.builder();
+			advancedConfigBuilder.connectionTimeout((int) connectionTimeout.toMillis());
+			configBuilder.advancedConfiguration(advancedConfigBuilder.build());
+		}
 
-    /**
-     * Determines if a command has a default multi-node route in Valkey Glide's cluster routing.
-     * 
-     * <p>This method identifies commands that Glide routes to multiple nodes by default (when no explicit
-     * route is provided). The routing rules are defined in Glide's Rust implementation at:
-     * <code>valkey-glide/glide-core/redis-rs/redis/src/cluster_routing.rs</code> in the <code>base_routing()</code> function.
-     * 
-     * <p><b>Background:</b> Glide has a bug where <code>ClusterValue.of()</code> incorrectly treats any Map result
-     * as a multi-node response (where keys = node addresses). For commands returning Map results (like HGETALL),
-     * this causes the Map to be placed in <code>multiValue</code> instead of <code>singleValue</code>.
-     * 
-     * <p>To work around this bug, we need to distinguish between:
-     * <ul>
-     *   <li><b>True multi-node results:</b> Commands that Glide routes to multiple nodes by default,
-     *       where <code>multiValue</code> IS a map of {node-address → result}</li>
-     *   <li><b>False-positive multiValue:</b> Single-node commands returning Map results (like HGETALL),
-     *       where <code>multiValue</code> contains the actual result incorrectly</li>
-     * </ul>
-     *
-     * @param args The command arguments, where args[0] is the command name
-     * @return true if this command routes to multiple nodes by default in Glide's implementation
-     * 
-     * @see <a href="https://github.com/valkey-io/valkey-glide/blob/main/glide-core/redis-rs/redis/src/cluster_routing.rs">
-     *      Valkey Glide cluster_routing.rs</a>
-     */
-    private boolean isDefaultMultiNodeCommand(GlideString[] args) {
-        if (args == null || args.length == 0) return false;
-        
-        String cmd = args[0].getString().toUpperCase();
-        
-        // Commands from RouteBy::AllNodes in cluster_routing.rs
-        // These are routed to ALL cluster nodes (primaries and replicas)
-        if (cmd.startsWith("ACL ")) {
-            return cmd.matches("ACL (SETUSER|DELUSER|SAVE)");
-        }
-        if (cmd.startsWith("CLIENT ")) {
-            return cmd.matches("CLIENT (SETNAME|SETINFO)");
-        }
-        if (cmd.startsWith("SLOWLOG ")) {
-            return cmd.matches("SLOWLOG (GET|LEN|RESET)");
-        }
-        if (cmd.startsWith("CONFIG ")) {
-            return cmd.matches("CONFIG (SET|RESETSTAT|REWRITE)");
-        }
-        if (cmd.startsWith("SCRIPT ")) {
-            return cmd.matches("SCRIPT (FLUSH|LOAD|KILL)");
-        }
-        if (cmd.startsWith("LATENCY ")) {
-            return cmd.matches("LATENCY (RESET|GRAPH|HISTOGRAM|HISTORY|DOCTOR|LATEST)");
-        }
-        if (cmd.startsWith("PUBSUB ")) {
-            return cmd.matches("PUBSUB (NUMPAT|CHANNELS|NUMSUB|SHARDCHANNELS|SHARDNUMSUB)");
-        }
-        if (cmd.startsWith("FUNCTION ")) {
-            return cmd.matches("FUNCTION (KILL|STATS)");
-        }
-        
-        // Commands from RouteBy::AllPrimaries in cluster_routing.rs
-        // These are routed to all PRIMARY nodes in the cluster
-        switch (cmd) {
-            case "DBSIZE":
-            case "DEBUG":
-            case "FLUSHALL":
-            case "FLUSHDB":
-            case "FT._ALIASLIST":
-            case "FT._LIST":
-            case "INFO":
-            case "KEYS":
-            case "PING":
-            case "SCRIPT EXISTS":
-            case "UNWATCH":
-            case "WAIT":
-            case "RANDOMKEY":
-            case "WAITAOF":
-                return true;
-        }
-        
-        if (cmd.startsWith("FUNCTION ")) {
-            return cmd.matches("FUNCTION (DELETE|FLUSH|LOAD|RESTORE)");
-        }
-        if (cmd.startsWith("MEMORY ")) {
-            return cmd.matches("MEMORY (DOCTOR|MALLOC-STATS|PURGE|STATS)");
-        }
-        
-        return false;
-    }
+		// SSL/TLS
+		if (valkeyGlideConfiguration.isUseSsl()) {
+			configBuilder.useTLS(true);
+		}
 
-    @Override
-    public Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException {
-        if (currentBatch != null) {
-            currentBatch.customCommand(args);
-            nextCommandRoute = null; // Clear route even in batch mode to prevent leaking to post-batch commands
-            return null;
-        }
-        try {
-            ClusterValue<?> clusterValue = nextCommandRoute == null
-                ? glideClusterClient.customCommand(args).get()
-                : glideClusterClient.customCommand(args, nextCommandRoute).get();
+		// Read from strategy
+		ReadFrom readFrom = valkeyGlideConfiguration.getReadFrom();
+		if (readFrom != null) {
+			configBuilder.readFrom(readFrom);
+		}
 
-            // Case 1: Explicit multi-node route - return multiValue for aggregation
-            if (needToAggregateResult(nextCommandRoute)) {
-                return clusterValue.getMultiValue();
-            }
-            
-            // Case 2: Default multi-node command (route is null but command routes to multiple nodes)
-            // These commands need special handling by the framework, so return multiValue
-            if (nextCommandRoute == null && isDefaultMultiNodeCommand(args)) {
-                // For default multi-node commands, check if we actually got multi-value data
-                if (clusterValue.hasMultiData()) {
-                    return clusterValue.getMultiValue();
-                }
-                // If not, fall through to single-value handling
-            }
-            
-            // Case 3: Single-node command, but ClusterValue.of() bug placed result in multiValue
-            // This happens for commands that return Map<GlideString, V> where V can be:
-            //   - GlideString for HASH commands (HGETALL)
-            //   - Double for Z commands with scores (ZRANGE WITHSCORES, ZDIFF WITHSCORES, etc.)
-            // ClusterValue.ofMultiValueBinary() converts GlideString keys to Strings:
-            //   Original: Map<GlideString, V> { GlideString("field1"): value1, ... }
-            //   Becomes:  Map<String, V> { "field1": value1, ... }
-            // Use ReconstructedKeyMap to convert keys back while preserving value types
-            // https://github.com/valkey-io/valkey-glide/issues/4963
-            //
-            // EXCEPTION: Stream commands return nested Maps and should NOT go through ReconstructedKeyMap
-            if (clusterValue.hasMultiData() && !isDefaultMultiNodeCommand(args) && !isNestedMapCommand(args)) {
-                Map<String, ?> multiValue = clusterValue.getMultiValue();
-                // Return a zero-copy view that reconstructs GlideString keys while preserving value types
-                return new ReconstructedKeyMap<>(multiValue);
-            }
-            
-            // Case 3b: Nested map commands (like streams) that have multiData but should return it as-is
-            if (clusterValue.hasMultiData() && isNestedMapCommand(args)) {
-                return clusterValue.getMultiValue();
-            }
-            
-            // Case 4: Normal single-value result
-            Object singleValue = clusterValue.getSingleValue();
-            return singleValue;
-        } finally {
-            nextCommandRoute = null; // ensure route is reset even on exception
-        }
-    }
+		// Inflight requests limit
+		Integer inflightRequestsLimit = valkeyGlideConfiguration.getInflightRequestsLimit();
+		if (inflightRequestsLimit != null) {
+			configBuilder.inflightRequestsLimit(inflightRequestsLimit);
+		}
 
-    @Override
-    public Object[] execBatch() throws InterruptedException, ExecutionException {
-        if (currentBatch == null) {
-            throw new IllegalStateException("No batch in progress");
-        }
-        return glideClusterClient.exec(currentBatch, false).get();
-    }
+		// Client AZ
+		String clientAZ = valkeyGlideConfiguration.getClientAZ();
+		if (clientAZ != null) {
+			configBuilder.clientAZ(clientAZ);
+		}
 
-    @Override
-    public Object getNativeClient() {
-        return glideClusterClient;
-    }
+		// Reconnect strategy
+		BackoffStrategy reconnectStrategy = valkeyGlideConfiguration.getReconnectStrategy();
+		if (reconnectStrategy != null) {
+			configBuilder.reconnectStrategy(reconnectStrategy);
+		}
 
-    @Override
-    public void close() throws ExecutionException {
-        // The native client might be pooled - dont close
-    }
+		this.listener = new DelegatingPubSubListener();
 
-    @Override
-    public BatchStatus getBatchStatus() {
-        return batchStatus;
-    }
+		// Configure pub/sub with callback for event-driven message delivery
+		var subConfigBuilder = ClusterSubscriptionConfiguration.builder();
 
-    @Override
-    public int getBatchCount() {
-        if (currentBatch == null) {
-            throw new IllegalStateException("No batch in progress");
-        }
-        return currentBatch.getProtobufBatch().getCommandsCount();
-    }
+		// Set callback that delegates to our listener holder
+		subConfigBuilder.callback((msg, context) -> this.listener.onMessage(msg, context));
+		configBuilder.subscriptionConfiguration(subConfigBuilder.build());
 
-    @Override
-    public void startNewBatch(boolean atomic) {
-        currentBatch = new ClusterBatch(atomic).withBinaryOutput();
-        batchStatus = atomic ? BatchStatus.Transaction : BatchStatus.Pipeline;
-    }
+		// Set library name for server-side client identification
+		configBuilder.libName("GlideSpringDataValkey");
 
-    @Override
-    public void discardBatch() {
-        currentBatch = null;
-        batchStatus = BatchStatus.None;
-    }
+		// Build and create cluster client
+		GlideClusterClientConfiguration config = configBuilder.build();
+		try {
+			this.glideClusterClient = GlideClusterClient.createClient(config).get();
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException("Interrupted creating GlideClusterClient", e);
+		}
+		catch (ExecutionException e) {
+			throw new IllegalStateException("Failed creating GlideClusterClient", e);
+		}
+	}
 
-    @Override
-    public void reset() {
-        nextCommandRoute = null;
-        currentBatch = null;
-        batchStatus = BatchStatus.None;
-        if (getDelegatingListener() != null) {
-            getDelegatingListener().clearListener();
-        }
-    }
+	@Override
+	@Nullable public DelegatingPubSubListener getDelegatingListener() {
+		return listener;
+	}
 
-    public void setOneShotRouteForNextCommand(Route glideRoute) {
-        nextCommandRoute = glideRoute;
-    }
+	/**
+	 * A zero-copy map view that reconstructs GlideString keys from String keys while
+	 * preserving value types. This avoids copying values when working around
+	 * ClusterValue.of() bug.
+	 *
+	 * <p>
+	 * ClusterValue.ofMultiValueBinary() incorrectly converts Map<GlideString, V> to
+	 * Map<String, V> by calling getString() on the keys. This view reverses that
+	 * transformation without copying the values.
+	 *
+	 * @param <V> The value type (e.g., GlideString for HASH commands, Double for Z
+	 * commands with scores)
+	 */
+	private static class ReconstructedKeyMap<V> extends AbstractMap<GlideString, V> {
 
-    /**
-     * Consumes and returns the current one-shot route, clearing it.
-     * Used to capture the route for long-lived operations like multi-page SCAN.
-     */
-    @Nullable
-    Route consumeOneShotRoute() {
-        Route route = nextCommandRoute;
-        nextCommandRoute = null;
-        return route;
-    }
+		private final Map<String, V> sourceMap;
 
-    boolean hasOneShotRouteForNextCommand() {
-        return nextCommandRoute != null;
-    }
+		ReconstructedKeyMap(Map<String, V> sourceMap) {
+			this.sourceMap = sourceMap;
+		}
 
-    Object[] scan(ClusterScanCursor cursor) throws InterruptedException, ExecutionException {
-        try {
-            return glideClusterClient.scanBinary(cursor).get();
-        } finally {
-            nextCommandRoute = null;
-        }
-    }
+		@Override
+		public Set<Entry<GlideString, V>> entrySet() {
+			return new AbstractSet<Entry<GlideString, V>>() {
+				@Override
+				public Iterator<Entry<GlideString, V>> iterator() {
+					Iterator<? extends Entry<String, V>> sourceIterator = sourceMap.entrySet().iterator();
+					return new Iterator<Entry<GlideString, V>>() {
+						@Override
+						public boolean hasNext() {
+							return sourceIterator.hasNext();
+						}
 
-    Object[] scan(ClusterScanCursor cursor, ScanOptions options) throws InterruptedException, ExecutionException {
-        try {
-            return glideClusterClient.scanBinary(cursor, options).get();
-        } finally {
-            nextCommandRoute = null;
-        }
-    }
-    
-    public Object customCommand(GlideString[] args, ValkeyClusterNode node) throws InterruptedException, ExecutionException {
-        return glideClusterClient.customCommand(args, new ByAddressRoute(node.getHost(), node.getPort())).get().getSingleValue();
-    }
+						@Override
+						public Entry<GlideString, V> next() {
+							Entry<String, V> sourceEntry = sourceIterator.next();
+							// Reconstruct GlideString key, preserve original value type
+							return new SimpleEntry<>(GlideString.of(sourceEntry.getKey()), sourceEntry.getValue());
+						}
+					};
+				}
 
-    /**
-     * Maps the Spring Data Valkey {@link AwsServiceType} enum to the Glide-native {@link ServiceType} enum.
-     */
-    private static ServiceType mapServiceType(AwsServiceType serviceType) {
-        return switch (serviceType) {
-            case ELASTICACHE -> ServiceType.ELASTICACHE;
-            case MEMORYDB -> ServiceType.MEMORYDB;
-        };
-    }
+				@Override
+				public int size() {
+					return sourceMap.size();
+				}
+			};
+		}
+
+		@Override
+		public int size() {
+			return sourceMap.size();
+		}
+
+	}
+
+	private boolean needToAggregateResult(@Nullable Route route) {
+		// TODO: implement more sophisticated logic to determine if aggregation is needed
+		// based on command and route type
+		if (route == null) {
+			// we need to look at the valkey-glide default route for the command
+			// for now, assume no aggregation is needed
+			return false;
+		}
+		else if (route instanceof SimpleMultiNodeRoute) {
+			return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Determines if a command returns a nested Map structure that should bypass
+	 * ReconstructedKeyMap.
+	 *
+	 * <p>
+	 * Stream commands (XREAD, XRANGE, etc.) return nested Maps where the outer map keys
+	 * are stream keys and the values are LinkedHashMap objects containing the actual
+	 * stream records. These should not go through ReconstructedKeyMap because:
+	 * <ul>
+	 * <li>The outer map is just a container, not the actual data to be returned</li>
+	 * <li>The GlideString types are preserved in the nested field-value arrays</li>
+	 * <li>The parseByteRecords() method already handles the nested structure
+	 * correctly</li>
+	 * </ul>
+	 * @param args The command arguments, where args[0] is the command name
+	 * @return true if this command returns nested Maps that should bypass
+	 * ReconstructedKeyMap
+	 */
+	private boolean isNestedMapCommand(GlideString[] args) {
+		if (args == null || args.length == 0)
+			return false;
+
+		String cmd = args[0].getString().toUpperCase();
+
+		// Stream commands that return nested Map structures
+		switch (cmd) {
+			case "XREAD":
+			case "XREADGROUP":
+			case "XRANGE":
+			case "XREVRANGE":
+			case "XCLAIM":
+			case "XAUTOCLAIM":
+			case "XPENDING": // detailed form
+				return true;
+			default:
+				return false;
+		}
+	}
+
+	/**
+	 * Determines if a command has a default multi-node route in Valkey Glide's cluster
+	 * routing.
+	 *
+	 * <p>
+	 * This method identifies commands that Glide routes to multiple nodes by default
+	 * (when no explicit route is provided). The routing rules are defined in Glide's Rust
+	 * implementation at:
+	 * <code>valkey-glide/glide-core/redis-rs/redis/src/cluster_routing.rs</code> in the
+	 * <code>base_routing()</code> function.
+	 *
+	 * <p>
+	 * <b>Background:</b> Glide has a bug where <code>ClusterValue.of()</code> incorrectly
+	 * treats any Map result as a multi-node response (where keys = node addresses). For
+	 * commands returning Map results (like HGETALL), this causes the Map to be placed in
+	 * <code>multiValue</code> instead of <code>singleValue</code>.
+	 *
+	 * <p>
+	 * To work around this bug, we need to distinguish between:
+	 * <ul>
+	 * <li><b>True multi-node results:</b> Commands that Glide routes to multiple nodes by
+	 * default, where <code>multiValue</code> IS a map of {node-address → result}</li>
+	 * <li><b>False-positive multiValue:</b> Single-node commands returning Map results
+	 * (like HGETALL), where <code>multiValue</code> contains the actual result
+	 * incorrectly</li>
+	 * </ul>
+	 * @param args The command arguments, where args[0] is the command name
+	 * @return true if this command routes to multiple nodes by default in Glide's
+	 * implementation
+	 *
+	 * @see <a href=
+	 * "https://github.com/valkey-io/valkey-glide/blob/main/glide-core/redis-rs/redis/src/cluster_routing.rs">
+	 * Valkey Glide cluster_routing.rs</a>
+	 */
+	private boolean isDefaultMultiNodeCommand(GlideString[] args) {
+		if (args == null || args.length == 0)
+			return false;
+
+		String cmd = args[0].getString().toUpperCase();
+
+		// Commands from RouteBy::AllNodes in cluster_routing.rs
+		// These are routed to ALL cluster nodes (primaries and replicas)
+		if (cmd.startsWith("ACL ")) {
+			return cmd.matches("ACL (SETUSER|DELUSER|SAVE)");
+		}
+		if (cmd.startsWith("CLIENT ")) {
+			return cmd.matches("CLIENT (SETNAME|SETINFO)");
+		}
+		if (cmd.startsWith("SLOWLOG ")) {
+			return cmd.matches("SLOWLOG (GET|LEN|RESET)");
+		}
+		if (cmd.startsWith("CONFIG ")) {
+			return cmd.matches("CONFIG (SET|RESETSTAT|REWRITE)");
+		}
+		if (cmd.startsWith("SCRIPT ")) {
+			return cmd.matches("SCRIPT (FLUSH|LOAD|KILL)");
+		}
+		if (cmd.startsWith("LATENCY ")) {
+			return cmd.matches("LATENCY (RESET|GRAPH|HISTOGRAM|HISTORY|DOCTOR|LATEST)");
+		}
+		if (cmd.startsWith("PUBSUB ")) {
+			return cmd.matches("PUBSUB (NUMPAT|CHANNELS|NUMSUB|SHARDCHANNELS|SHARDNUMSUB)");
+		}
+		if (cmd.startsWith("FUNCTION ")) {
+			return cmd.matches("FUNCTION (KILL|STATS)");
+		}
+
+		// Commands from RouteBy::AllPrimaries in cluster_routing.rs
+		// These are routed to all PRIMARY nodes in the cluster
+		switch (cmd) {
+			case "DBSIZE":
+			case "DEBUG":
+			case "FLUSHALL":
+			case "FLUSHDB":
+			case "FT._ALIASLIST":
+			case "FT._LIST":
+			case "INFO":
+			case "KEYS":
+			case "PING":
+			case "SCRIPT EXISTS":
+			case "UNWATCH":
+			case "WAIT":
+			case "RANDOMKEY":
+			case "WAITAOF":
+				return true;
+		}
+
+		if (cmd.startsWith("FUNCTION ")) {
+			return cmd.matches("FUNCTION (DELETE|FLUSH|LOAD|RESTORE)");
+		}
+		if (cmd.startsWith("MEMORY ")) {
+			return cmd.matches("MEMORY (DOCTOR|MALLOC-STATS|PURGE|STATS)");
+		}
+
+		return false;
+	}
+
+	@Override
+	public Object customCommand(GlideString[] args) throws InterruptedException, ExecutionException {
+		if (currentBatch != null) {
+			currentBatch.customCommand(args);
+			nextCommandRoute = null; // Clear route even in batch mode to prevent leaking
+										// to post-batch commands
+			return null;
+		}
+		try {
+			ClusterValue<?> clusterValue = nextCommandRoute == null ? glideClusterClient.customCommand(args).get()
+					: glideClusterClient.customCommand(args, nextCommandRoute).get();
+
+			// Case 1: Explicit multi-node route - return multiValue for aggregation
+			if (needToAggregateResult(nextCommandRoute)) {
+				return clusterValue.getMultiValue();
+			}
+
+			// Case 2: Default multi-node command (route is null but command routes to
+			// multiple nodes)
+			// These commands need special handling by the framework, so return multiValue
+			if (nextCommandRoute == null && isDefaultMultiNodeCommand(args)) {
+				// For default multi-node commands, check if we actually got multi-value
+				// data
+				if (clusterValue.hasMultiData()) {
+					return clusterValue.getMultiValue();
+				}
+				// If not, fall through to single-value handling
+			}
+
+			// Case 3: Single-node command, but ClusterValue.of() bug placed result in
+			// multiValue
+			// This happens for commands that return Map<GlideString, V> where V can be:
+			// - GlideString for HASH commands (HGETALL)
+			// - Double for Z commands with scores (ZRANGE WITHSCORES, ZDIFF WITHSCORES,
+			// etc.)
+			// ClusterValue.ofMultiValueBinary() converts GlideString keys to Strings:
+			// Original: Map<GlideString, V> { GlideString("field1"): value1, ... }
+			// Becomes: Map<String, V> { "field1": value1, ... }
+			// Use ReconstructedKeyMap to convert keys back while preserving value types
+			// https://github.com/valkey-io/valkey-glide/issues/4963
+			//
+			// EXCEPTION: Stream commands return nested Maps and should NOT go through
+			// ReconstructedKeyMap
+			if (clusterValue.hasMultiData() && !isDefaultMultiNodeCommand(args) && !isNestedMapCommand(args)) {
+				Map<String, ?> multiValue = clusterValue.getMultiValue();
+				// Return a zero-copy view that reconstructs GlideString keys while
+				// preserving value types
+				return new ReconstructedKeyMap<>(multiValue);
+			}
+
+			// Case 3b: Nested map commands (like streams) that have multiData but should
+			// return it as-is
+			if (clusterValue.hasMultiData() && isNestedMapCommand(args)) {
+				return clusterValue.getMultiValue();
+			}
+
+			// Case 4: Normal single-value result
+			Object singleValue = clusterValue.getSingleValue();
+			return singleValue;
+		}
+		finally {
+			nextCommandRoute = null; // ensure route is reset even on exception
+		}
+	}
+
+	@Override
+	public Object[] execBatch() throws InterruptedException, ExecutionException {
+		if (currentBatch == null) {
+			throw new IllegalStateException("No batch in progress");
+		}
+		return glideClusterClient.exec(currentBatch, false).get();
+	}
+
+	@Override
+	public Object getNativeClient() {
+		return glideClusterClient;
+	}
+
+	@Override
+	public void close() throws ExecutionException {
+		// The native client might be pooled - dont close
+	}
+
+	@Override
+	public BatchStatus getBatchStatus() {
+		return batchStatus;
+	}
+
+	@Override
+	public int getBatchCount() {
+		if (currentBatch == null) {
+			throw new IllegalStateException("No batch in progress");
+		}
+		return currentBatch.getProtobufBatch().getCommandsCount();
+	}
+
+	@Override
+	public void startNewBatch(boolean atomic) {
+		currentBatch = new ClusterBatch(atomic).withBinaryOutput();
+		batchStatus = atomic ? BatchStatus.Transaction : BatchStatus.Pipeline;
+	}
+
+	@Override
+	public void discardBatch() {
+		currentBatch = null;
+		batchStatus = BatchStatus.None;
+	}
+
+	@Override
+	public void reset() {
+		nextCommandRoute = null;
+		currentBatch = null;
+		batchStatus = BatchStatus.None;
+		if (getDelegatingListener() != null) {
+			getDelegatingListener().clearListener();
+		}
+	}
+
+	public void setOneShotRouteForNextCommand(Route glideRoute) {
+		nextCommandRoute = glideRoute;
+	}
+
+	/**
+	 * Consumes and returns the current one-shot route, clearing it. Used to capture the
+	 * route for long-lived operations like multi-page SCAN.
+	 */
+	@Nullable Route consumeOneShotRoute() {
+		Route route = nextCommandRoute;
+		nextCommandRoute = null;
+		return route;
+	}
+
+	boolean hasOneShotRouteForNextCommand() {
+		return nextCommandRoute != null;
+	}
+
+	Object[] scan(ClusterScanCursor cursor) throws InterruptedException, ExecutionException {
+		try {
+			return glideClusterClient.scanBinary(cursor).get();
+		}
+		finally {
+			nextCommandRoute = null;
+		}
+	}
+
+	Object[] scan(ClusterScanCursor cursor, ScanOptions options) throws InterruptedException, ExecutionException {
+		try {
+			return glideClusterClient.scanBinary(cursor, options).get();
+		}
+		finally {
+			nextCommandRoute = null;
+		}
+	}
+
+	public Object customCommand(GlideString[] args, ValkeyClusterNode node)
+			throws InterruptedException, ExecutionException {
+		return glideClusterClient.customCommand(args, new ByAddressRoute(node.getHost(), node.getPort()))
+			.get()
+			.getSingleValue();
+	}
+
+	/**
+	 * Maps the Spring Data Valkey {@link AwsServiceType} enum to the Glide-native
+	 * {@link ServiceType} enum.
+	 */
+	private static ServiceType mapServiceType(AwsServiceType serviceType) {
+		return switch (serviceType) {
+			case ELASTICACHE -> ServiceType.ELASTICACHE;
+			case MEMORYDB -> ServiceType.MEMORYDB;
+		};
+	}
+
 }

@@ -17,441 +17,435 @@ import io.valkey.springframework.data.valkey.connection.SubscriptionListener;
 
 class ValkeyGlideSubscriptionUnitTests {
 
-    private ValkeyGlideSubscription subscription;
-    private UnifiedGlideClient client;
-    private DelegatingPubSubListener pubSubListener;
-    private MessageListener messageListener;
+	private ValkeyGlideSubscription subscription;
 
-    @BeforeEach
-    void setUp() throws Exception {
-        client = mock(UnifiedGlideClient.class);
-        pubSubListener = mock(DelegatingPubSubListener.class);
-        messageListener = mock(MessageListener.class);
-
-        // Mock customCommand to return null (no exception)
-        when(client.customCommand(any(GlideString[].class))).thenReturn(null);
-
-        subscription = new ValkeyGlideSubscription(messageListener, client, pubSubListener);
-    }
+	private UnifiedGlideClient client;
 
-    @Test
-    void testUnsubscribeAllAndClose() {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.unsubscribe();
-
-        verify(pubSubListener).clearListener();
-
-        assertThat(subscription.isAlive()).isFalse();
-        assertThat(subscription.getChannels()).isEmpty();
-        assertThat(subscription.getPatterns()).isEmpty();
-    }
+	private DelegatingPubSubListener pubSubListener;
 
-    @Test
-    void testUnsubscribeAllChannelsWithPatterns() {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-        subscription.unsubscribe();
+	private MessageListener messageListener;
 
-        assertThat(subscription.isAlive()).isTrue();
-        assertThat(subscription.getChannels()).isEmpty();
-
-        Collection<byte[]> patterns = subscription.getPatterns();
-        assertThat(patterns).hasSize(1);
-        assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
-    }
+	@BeforeEach
+	void setUp() throws Exception {
+		client = mock(UnifiedGlideClient.class);
+		pubSubListener = mock(DelegatingPubSubListener.class);
+		messageListener = mock(MessageListener.class);
 
-    @Test
-    void testUnsubscribeChannelAndClose() {
-        byte[][] channel = new byte[][] { "a".getBytes() };
+		// Mock customCommand to return null (no exception)
+		when(client.customCommand(any(GlideString[].class))).thenReturn(null);
 
-        subscription.subscribe(channel);
-        subscription.unsubscribe(channel);
+		subscription = new ValkeyGlideSubscription(messageListener, client, pubSubListener);
+	}
 
-        verify(pubSubListener).clearListener();
+	@Test
+	void testUnsubscribeAllAndClose() {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.unsubscribe();
 
-        assertThat(subscription.isAlive()).isFalse();
-        assertThat(subscription.getChannels()).isEmpty();
-        assertThat(subscription.getPatterns()).isEmpty();
-    }
+		verify(pubSubListener).clearListener();
 
-    @Test
-    void testUnsubscribeChannelSomeLeft() {
-        byte[][] channels = new byte[][] { "a".getBytes(), "b".getBytes() };
+		assertThat(subscription.isAlive()).isFalse();
+		assertThat(subscription.getChannels()).isEmpty();
+		assertThat(subscription.getPatterns()).isEmpty();
+	}
 
-        subscription.subscribe(channels);
-        subscription.unsubscribe(new byte[][] { "a".getBytes() });
+	@Test
+	void testUnsubscribeAllChannelsWithPatterns() {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
+		subscription.unsubscribe();
 
-        assertThat(subscription.isAlive()).isTrue();
+		assertThat(subscription.isAlive()).isTrue();
+		assertThat(subscription.getChannels()).isEmpty();
 
-        Collection<byte[]> subChannels = subscription.getChannels();
-        assertThat(subChannels).hasSize(1);
-        assertThat(subChannels.iterator().next()).isEqualTo("b".getBytes());
-        assertThat(subscription.getPatterns()).isEmpty();
-    }
+		Collection<byte[]> patterns = subscription.getPatterns();
+		assertThat(patterns).hasSize(1);
+		assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
+	}
 
-    @Test
-    void testUnsubscribeChannelWithPatterns() {
-        byte[][] channel = new byte[][] { "a".getBytes() };
+	@Test
+	void testUnsubscribeChannelAndClose() {
+		byte[][] channel = new byte[][] { "a".getBytes() };
 
-        subscription.subscribe(channel);
-        subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-        subscription.unsubscribe(channel);
+		subscription.subscribe(channel);
+		subscription.unsubscribe(channel);
 
-        assertThat(subscription.isAlive()).isTrue();
-        assertThat(subscription.getChannels()).isEmpty();
+		verify(pubSubListener).clearListener();
 
-        Collection<byte[]> patterns = subscription.getPatterns();
-        assertThat(patterns).hasSize(1);
-        assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
-    }
+		assertThat(subscription.isAlive()).isFalse();
+		assertThat(subscription.getChannels()).isEmpty();
+		assertThat(subscription.getPatterns()).isEmpty();
+	}
 
-    @Test
-    void testUnsubscribeChannelWithPatternsSomeLeft() {
-        byte[][] channel = new byte[][] { "a".getBytes() };
+	@Test
+	void testUnsubscribeChannelSomeLeft() {
+		byte[][] channels = new byte[][] { "a".getBytes(), "b".getBytes() };
 
-        subscription.subscribe("a".getBytes(), "b".getBytes());
-        subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-        subscription.unsubscribe(channel);
+		subscription.subscribe(channels);
+		subscription.unsubscribe(new byte[][] { "a".getBytes() });
 
-        assertThat(subscription.isAlive()).isTrue();
-
-        Collection<byte[]> channels = subscription.getChannels();
-        assertThat(channels).hasSize(1);
-        assertThat(channels.iterator().next()).isEqualTo("b".getBytes());
-
-        Collection<byte[]> patterns = subscription.getPatterns();
-        assertThat(patterns).hasSize(1);
-        assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
-    }
+		assertThat(subscription.isAlive()).isTrue();
 
-    @Test
-    void testUnsubscribeAllNoChannels() {
-        subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-        subscription.unsubscribe();
+		Collection<byte[]> subChannels = subscription.getChannels();
+		assertThat(subChannels).hasSize(1);
+		assertThat(subChannels.iterator().next()).isEqualTo("b".getBytes());
+		assertThat(subscription.getPatterns()).isEmpty();
+	}
 
-        assertThat(subscription.isAlive()).isTrue();
-        assertThat(subscription.getChannels()).isEmpty();
+	@Test
+	void testUnsubscribeChannelWithPatterns() {
+		byte[][] channel = new byte[][] { "a".getBytes() };
 
-        Collection<byte[]> patterns = subscription.getPatterns();
-        assertThat(patterns).hasSize(1);
-        assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
-    }
+		subscription.subscribe(channel);
+		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
+		subscription.unsubscribe(channel);
 
-    @Test
-    void testUnsubscribeNotAlive() {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.unsubscribe();
+		assertThat(subscription.isAlive()).isTrue();
+		assertThat(subscription.getChannels()).isEmpty();
 
-        verify(pubSubListener).clearListener();
+		Collection<byte[]> patterns = subscription.getPatterns();
+		assertThat(patterns).hasSize(1);
+		assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
+	}
 
-        assertThat(subscription.isAlive()).isFalse();
+	@Test
+	void testUnsubscribeChannelWithPatternsSomeLeft() {
+		byte[][] channel = new byte[][] { "a".getBytes() };
 
-        // Calling unsubscribe again should not throw
-        subscription.unsubscribe();
-    }
+		subscription.subscribe("a".getBytes(), "b".getBytes());
+		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
+		subscription.unsubscribe(channel);
 
-    @Test
-    void testSubscribeNotAlive() {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.unsubscribe();
-
-        assertThat(subscription.isAlive()).isFalse();
+		assertThat(subscription.isAlive()).isTrue();
 
-        assertThatExceptionOfType(ValkeyInvalidSubscriptionException.class)
-                .isThrownBy(() -> subscription.subscribe(new byte[][] { "s".getBytes() }));
-    }
+		Collection<byte[]> channels = subscription.getChannels();
+		assertThat(channels).hasSize(1);
+		assertThat(channels.iterator().next()).isEqualTo("b".getBytes());
 
-    @Test
-    void testPUnsubscribeAllAndClose() {
-        subscription.pSubscribe(new byte[][] { "a*".getBytes() });
-        subscription.pUnsubscribe();
+		Collection<byte[]> patterns = subscription.getPatterns();
+		assertThat(patterns).hasSize(1);
+		assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
+	}
 
-        verify(pubSubListener).clearListener();
-
-        assertThat(subscription.isAlive()).isFalse();
-        assertThat(subscription.getChannels()).isEmpty();
-        assertThat(subscription.getPatterns()).isEmpty();
-    }
+	@Test
+	void testUnsubscribeAllNoChannels() {
+		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
+		subscription.unsubscribe();
 
-    @Test
-    void testPUnsubscribeAllPatternsWithChannels() {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.pSubscribe(new byte[][] { "s*".getBytes() });
-        subscription.pUnsubscribe();
+		assertThat(subscription.isAlive()).isTrue();
+		assertThat(subscription.getChannels()).isEmpty();
 
-        assertThat(subscription.isAlive()).isTrue();
-        assertThat(subscription.getPatterns()).isEmpty();
+		Collection<byte[]> patterns = subscription.getPatterns();
+		assertThat(patterns).hasSize(1);
+		assertThat(patterns.iterator().next()).isEqualTo("s*".getBytes());
+	}
 
-        Collection<byte[]> channels = subscription.getChannels();
-        assertThat(channels).hasSize(1);
-        assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
-    }
+	@Test
+	void testUnsubscribeNotAlive() {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.unsubscribe();
 
-    @Test
-    void testPUnsubscribeAndClose() {
-        byte[][] pattern = new byte[][] { "a*".getBytes() };
+		verify(pubSubListener).clearListener();
 
-        subscription.pSubscribe(pattern);
-        subscription.pUnsubscribe(pattern);
+		assertThat(subscription.isAlive()).isFalse();
 
-        verify(pubSubListener).clearListener();
+		// Calling unsubscribe again should not throw
+		subscription.unsubscribe();
+	}
 
-        assertThat(subscription.isAlive()).isFalse();
-        assertThat(subscription.getChannels()).isEmpty();
-        assertThat(subscription.getPatterns()).isEmpty();
-    }
+	@Test
+	void testSubscribeNotAlive() {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.unsubscribe();
 
-    @Test
-    void testPUnsubscribePatternSomeLeft() {
-        byte[][] patterns = new byte[][] { "a*".getBytes(), "b*".getBytes() };
-        subscription.pSubscribe(patterns);
-        subscription.pUnsubscribe(new byte[][] { "a*".getBytes() });
-
-        assertThat(subscription.isAlive()).isTrue();
+		assertThat(subscription.isAlive()).isFalse();
 
-        Collection<byte[]> subPatterns = subscription.getPatterns();
-        assertThat(subPatterns).hasSize(1);
-        assertThat(subPatterns.iterator().next()).isEqualTo("b*".getBytes());
-        assertThat(subscription.getChannels()).isEmpty();
-    }
-
-    @Test
-    void testPUnsubscribePatternWithChannels() {
-        byte[][] pattern = new byte[][] { "s*".getBytes() };
-
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.pSubscribe(pattern);
-        subscription.pUnsubscribe(pattern);
-
-        assertThat(subscription.isAlive()).isTrue();
-        assertThat(subscription.getPatterns()).isEmpty();
-
-        Collection<byte[]> channels = subscription.getChannels();
-        assertThat(channels).hasSize(1);
-        assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
-    }
-
-    @Test
-    void testUnsubscribePatternWithChannelsSomeLeft() {
-        byte[][] pattern = new byte[][] { "a*".getBytes() };
-
-        subscription.pSubscribe("a*".getBytes(), "b*".getBytes());
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.pUnsubscribe(pattern);
-
-        assertThat(subscription.isAlive()).isTrue();
-
-        Collection<byte[]> channels = subscription.getChannels();
-        assertThat(channels).hasSize(1);
-        assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
-
-        Collection<byte[]> patterns = subscription.getPatterns();
-        assertThat(patterns).hasSize(1);
-        assertThat(patterns.iterator().next()).isEqualTo("b*".getBytes());
-    }
-
-    @Test
-    void testPUnsubscribeAllNoPatterns() {
-        subscription.subscribe(new byte[][] { "s".getBytes() });
-        subscription.pUnsubscribe();
-
-        assertThat(subscription.isAlive()).isTrue();
-        assertThat(subscription.getPatterns()).isEmpty();
-
-        Collection<byte[]> channels = subscription.getChannels();
-        assertThat(channels).hasSize(1);
-        assertThat(channels.iterator().next()).isEqualTo("s".getBytes());
-    }
-
-    @Test
-    void testPUnsubscribeNotAlive() {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.unsubscribe();
-
-        assertThat(subscription.isAlive()).isFalse();
-
-        // Calling pUnsubscribe when not alive should not throw
-        subscription.pUnsubscribe();
-
-        verify(pubSubListener).clearListener();
-    }
-
-    @Test
-    void testPSubscribeNotAlive() {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.unsubscribe();
-
-        assertThat(subscription.isAlive()).isFalse();
-
-        assertThatExceptionOfType(ValkeyInvalidSubscriptionException.class)
-                .isThrownBy(() -> subscription.pSubscribe(new byte[][] { "s*".getBytes() }));
-    }
-
-    @Test
-    void testDoCloseNotSubscribed() {
-        subscription.doClose();
-
-        verify(pubSubListener).clearListener();
-    }
-
-    @Test
-    void testDoCloseSubscribedChannels() throws Exception {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.doClose();
-
-        verify(pubSubListener).clearListener();
-        verify(client).customCommand(argThat(args ->
-            args.length >= 2 &&
-            "UNSUBSCRIBE_BLOCKING".equals(args[0].getString()) &&
-            "0".equals(args[args.length - 1].getString())
-        ));
-    }
-
-    @Test
-    void testDoCloseSubscribedPatterns() throws Exception {
-        subscription.pSubscribe(new byte[][] { "a*".getBytes() });
-        subscription.doClose();
+		assertThatExceptionOfType(ValkeyInvalidSubscriptionException.class)
+			.isThrownBy(() -> subscription.subscribe(new byte[][] { "s".getBytes() }));
+	}
 
-        verify(pubSubListener).clearListener();
-        verify(client).customCommand(argThat(args ->
-            args.length >= 2 &&
-            "PUNSUBSCRIBE_BLOCKING".equals(args[0].getString()) &&
-            "0".equals(args[args.length - 1].getString())
-        ));
-    }
+	@Test
+	void testPUnsubscribeAllAndClose() {
+		subscription.pSubscribe(new byte[][] { "a*".getBytes() });
+		subscription.pUnsubscribe();
 
-    @Test
-    void testDoCloseSubscribedChannelsAndPatterns() throws Exception {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
-        subscription.pSubscribe(new byte[][] { "a*".getBytes() });
-        subscription.doClose();
+		verify(pubSubListener).clearListener();
+
+		assertThat(subscription.isAlive()).isFalse();
+		assertThat(subscription.getChannels()).isEmpty();
+		assertThat(subscription.getPatterns()).isEmpty();
+	}
 
-        verify(pubSubListener).clearListener();
-    }
+	@Test
+	void testPUnsubscribeAllPatternsWithChannels() {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.pSubscribe(new byte[][] { "s*".getBytes() });
+		subscription.pUnsubscribe();
 
-    @Test
-    void testSubscribeCallsCustomCommand() throws Exception {
-        subscription.subscribe(new byte[][] { "channel1".getBytes() });
+		assertThat(subscription.isAlive()).isTrue();
+		assertThat(subscription.getPatterns()).isEmpty();
 
-        verify(client).customCommand(argThat(args ->
-            args.length == 3 &&
-            "SUBSCRIBE_BLOCKING".equals(args[0].getString()) &&
-            "channel1".equals(args[1].getString()) &&
-            "0".equals(args[2].getString())
-        ));
-    }
+		Collection<byte[]> channels = subscription.getChannels();
+		assertThat(channels).hasSize(1);
+		assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
+	}
 
-    @Test
-    void testPSubscribeCallsCustomCommand() throws Exception {
-        subscription.pSubscribe(new byte[][] { "pattern*".getBytes() });
+	@Test
+	void testPUnsubscribeAndClose() {
+		byte[][] pattern = new byte[][] { "a*".getBytes() };
 
-        verify(client).customCommand(argThat(args ->
-            args.length == 3 &&
-            "PSUBSCRIBE_BLOCKING".equals(args[0].getString()) &&
-            "pattern*".equals(args[1].getString()) &&
-            "0".equals(args[2].getString())
-        ));
-    }
+		subscription.pSubscribe(pattern);
+		subscription.pUnsubscribe(pattern);
 
-    @Test
-    void testSubscribeCallsSubscriptionListener() {
-        MessageListener compositeListener = mock(MessageListener.class,
-                withSettings().extraInterfaces(SubscriptionListener.class));
+		verify(pubSubListener).clearListener();
 
-        ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+		assertThat(subscription.isAlive()).isFalse();
+		assertThat(subscription.getChannels()).isEmpty();
+		assertThat(subscription.getPatterns()).isEmpty();
+	}
 
-        sub.subscribe(new byte[][] { "channel1".getBytes() });
+	@Test
+	void testPUnsubscribePatternSomeLeft() {
+		byte[][] patterns = new byte[][] { "a*".getBytes(), "b*".getBytes() };
+		subscription.pSubscribe(patterns);
+		subscription.pUnsubscribe(new byte[][] { "a*".getBytes() });
 
-        verify((SubscriptionListener) compositeListener).onChannelSubscribed(eq("channel1".getBytes()), anyLong());
-    }
+		assertThat(subscription.isAlive()).isTrue();
 
-    @Test
-    void testSubscribeMultipleChannelsCallsSubscriptionListener() {
-        MessageListener compositeListener = mock(MessageListener.class,
-                withSettings().extraInterfaces(SubscriptionListener.class));
+		Collection<byte[]> subPatterns = subscription.getPatterns();
+		assertThat(subPatterns).hasSize(1);
+		assertThat(subPatterns.iterator().next()).isEqualTo("b*".getBytes());
+		assertThat(subscription.getChannels()).isEmpty();
+	}
 
-        ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+	@Test
+	void testPUnsubscribePatternWithChannels() {
+		byte[][] pattern = new byte[][] { "s*".getBytes() };
 
-        sub.subscribe(new byte[][] { "channel1".getBytes(), "channel2".getBytes() });
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.pSubscribe(pattern);
+		subscription.pUnsubscribe(pattern);
 
-        verify((SubscriptionListener) compositeListener).onChannelSubscribed(eq("channel1".getBytes()), anyLong());
-        verify((SubscriptionListener) compositeListener).onChannelSubscribed(eq("channel2".getBytes()), anyLong());
-    }
+		assertThat(subscription.isAlive()).isTrue();
+		assertThat(subscription.getPatterns()).isEmpty();
 
-    @Test
-    void testPSubscribeCallsSubscriptionListener() {
-        MessageListener compositeListener = mock(MessageListener.class,
-                withSettings().extraInterfaces(SubscriptionListener.class));
+		Collection<byte[]> channels = subscription.getChannels();
+		assertThat(channels).hasSize(1);
+		assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
+	}
 
-        ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+	@Test
+	void testUnsubscribePatternWithChannelsSomeLeft() {
+		byte[][] pattern = new byte[][] { "a*".getBytes() };
 
-        sub.pSubscribe(new byte[][] { "pattern*".getBytes() });
+		subscription.pSubscribe("a*".getBytes(), "b*".getBytes());
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.pUnsubscribe(pattern);
 
-        verify((SubscriptionListener) compositeListener).onPatternSubscribed(eq("pattern*".getBytes()), anyLong());
-    }
+		assertThat(subscription.isAlive()).isTrue();
+
+		Collection<byte[]> channels = subscription.getChannels();
+		assertThat(channels).hasSize(1);
+		assertThat(channels.iterator().next()).isEqualTo("a".getBytes());
+
+		Collection<byte[]> patterns = subscription.getPatterns();
+		assertThat(patterns).hasSize(1);
+		assertThat(patterns.iterator().next()).isEqualTo("b*".getBytes());
+	}
+
+	@Test
+	void testPUnsubscribeAllNoPatterns() {
+		subscription.subscribe(new byte[][] { "s".getBytes() });
+		subscription.pUnsubscribe();
 
-    @Test
-    void testUnsubscribeCallsSubscriptionListener() {
-        MessageListener compositeListener = mock(MessageListener.class,
-                withSettings().extraInterfaces(SubscriptionListener.class));
+		assertThat(subscription.isAlive()).isTrue();
+		assertThat(subscription.getPatterns()).isEmpty();
 
-        ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+		Collection<byte[]> channels = subscription.getChannels();
+		assertThat(channels).hasSize(1);
+		assertThat(channels.iterator().next()).isEqualTo("s".getBytes());
+	}
 
-        sub.subscribe(new byte[][] { "channel1".getBytes(), "channel2".getBytes() });
-        sub.unsubscribe(new byte[][] { "channel1".getBytes() });
+	@Test
+	void testPUnsubscribeNotAlive() {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.unsubscribe();
 
-        verify((SubscriptionListener) compositeListener).onChannelUnsubscribed(eq("channel1".getBytes()), anyLong());
-    }
+		assertThat(subscription.isAlive()).isFalse();
 
-    @Test
-    void testDoCloseCallsSubscriptionListenerForChannels() {
-        MessageListener compositeListener = mock(MessageListener.class,
-                withSettings().extraInterfaces(SubscriptionListener.class));
+		// Calling pUnsubscribe when not alive should not throw
+		subscription.pUnsubscribe();
 
-        ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+		verify(pubSubListener).clearListener();
+	}
 
-        sub.subscribe(new byte[][] { "channel1".getBytes() });
-        sub.doClose();
+	@Test
+	void testPSubscribeNotAlive() {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.unsubscribe();
 
-        verify((SubscriptionListener) compositeListener).onChannelUnsubscribed(eq("channel1".getBytes()), anyLong());
-    }
+		assertThat(subscription.isAlive()).isFalse();
 
-    @Test
-    void testDoCloseCallsSubscriptionListenerForPatterns() {
-        MessageListener compositeListener = mock(MessageListener.class,
-                withSettings().extraInterfaces(SubscriptionListener.class));
+		assertThatExceptionOfType(ValkeyInvalidSubscriptionException.class)
+			.isThrownBy(() -> subscription.pSubscribe(new byte[][] { "s*".getBytes() }));
+	}
 
-        ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+	@Test
+	void testDoCloseNotSubscribed() {
+		subscription.doClose();
 
-        sub.pSubscribe(new byte[][] { "pattern*".getBytes() });
-        sub.doClose();
+		verify(pubSubListener).clearListener();
+	}
 
-        verify((SubscriptionListener) compositeListener).onPatternUnsubscribed(eq("pattern*".getBytes()), anyLong());
-    }
+	@Test
+	void testDoCloseSubscribedChannels() throws Exception {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.doClose();
 
-    @Test
-    void testNonSubscriptionListenerDoesNotFail() {
-        MessageListener plainListener = mock(MessageListener.class);
+		verify(pubSubListener).clearListener();
+		verify(client)
+			.customCommand(argThat(args -> args.length >= 2 && "UNSUBSCRIBE_BLOCKING".equals(args[0].getString())
+					&& "0".equals(args[args.length - 1].getString())));
+	}
 
-        ValkeyGlideSubscription sub = new ValkeyGlideSubscription(plainListener, client, pubSubListener);
+	@Test
+	void testDoCloseSubscribedPatterns() throws Exception {
+		subscription.pSubscribe(new byte[][] { "a*".getBytes() });
+		subscription.doClose();
 
-        sub.subscribe(new byte[][] { "channel1".getBytes() });
-        sub.pSubscribe(new byte[][] { "pattern*".getBytes() });
-        sub.unsubscribe(new byte[][] { "channel1".getBytes() });
-        sub.pUnsubscribe(new byte[][] { "pattern*".getBytes() });
-        sub.doClose();
+		verify(pubSubListener).clearListener();
+		verify(client)
+			.customCommand(argThat(args -> args.length >= 2 && "PUNSUBSCRIBE_BLOCKING".equals(args[0].getString())
+					&& "0".equals(args[args.length - 1].getString())));
+	}
 
-        assertThat(sub.isAlive()).isFalse();
-    }
+	@Test
+	void testDoCloseSubscribedChannelsAndPatterns() throws Exception {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+		subscription.pSubscribe(new byte[][] { "a*".getBytes() });
+		subscription.doClose();
 
-    @Test
-    void closeTwiceShouldNotFail() {
-        subscription.subscribe(new byte[][] { "a".getBytes() });
+		verify(pubSubListener).clearListener();
+	}
 
-        subscription.close();
-        subscription.close();
+	@Test
+	void testSubscribeCallsCustomCommand() throws Exception {
+		subscription.subscribe(new byte[][] { "channel1".getBytes() });
 
-        verify(pubSubListener, times(1)).clearListener();
-        assertThat(subscription.isAlive()).isFalse();
-    }
+		verify(client)
+			.customCommand(argThat(args -> args.length == 3 && "SUBSCRIBE_BLOCKING".equals(args[0].getString())
+					&& "channel1".equals(args[1].getString()) && "0".equals(args[2].getString())));
+	}
+
+	@Test
+	void testPSubscribeCallsCustomCommand() throws Exception {
+		subscription.pSubscribe(new byte[][] { "pattern*".getBytes() });
+
+		verify(client)
+			.customCommand(argThat(args -> args.length == 3 && "PSUBSCRIBE_BLOCKING".equals(args[0].getString())
+					&& "pattern*".equals(args[1].getString()) && "0".equals(args[2].getString())));
+	}
+
+	@Test
+	void testSubscribeCallsSubscriptionListener() {
+		MessageListener compositeListener = mock(MessageListener.class,
+				withSettings().extraInterfaces(SubscriptionListener.class));
+
+		ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+
+		sub.subscribe(new byte[][] { "channel1".getBytes() });
+
+		verify((SubscriptionListener) compositeListener).onChannelSubscribed(eq("channel1".getBytes()), anyLong());
+	}
+
+	@Test
+	void testSubscribeMultipleChannelsCallsSubscriptionListener() {
+		MessageListener compositeListener = mock(MessageListener.class,
+				withSettings().extraInterfaces(SubscriptionListener.class));
+
+		ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+
+		sub.subscribe(new byte[][] { "channel1".getBytes(), "channel2".getBytes() });
+
+		verify((SubscriptionListener) compositeListener).onChannelSubscribed(eq("channel1".getBytes()), anyLong());
+		verify((SubscriptionListener) compositeListener).onChannelSubscribed(eq("channel2".getBytes()), anyLong());
+	}
+
+	@Test
+	void testPSubscribeCallsSubscriptionListener() {
+		MessageListener compositeListener = mock(MessageListener.class,
+				withSettings().extraInterfaces(SubscriptionListener.class));
+
+		ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+
+		sub.pSubscribe(new byte[][] { "pattern*".getBytes() });
+
+		verify((SubscriptionListener) compositeListener).onPatternSubscribed(eq("pattern*".getBytes()), anyLong());
+	}
+
+	@Test
+	void testUnsubscribeCallsSubscriptionListener() {
+		MessageListener compositeListener = mock(MessageListener.class,
+				withSettings().extraInterfaces(SubscriptionListener.class));
+
+		ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+
+		sub.subscribe(new byte[][] { "channel1".getBytes(), "channel2".getBytes() });
+		sub.unsubscribe(new byte[][] { "channel1".getBytes() });
+
+		verify((SubscriptionListener) compositeListener).onChannelUnsubscribed(eq("channel1".getBytes()), anyLong());
+	}
+
+	@Test
+	void testDoCloseCallsSubscriptionListenerForChannels() {
+		MessageListener compositeListener = mock(MessageListener.class,
+				withSettings().extraInterfaces(SubscriptionListener.class));
+
+		ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+
+		sub.subscribe(new byte[][] { "channel1".getBytes() });
+		sub.doClose();
+
+		verify((SubscriptionListener) compositeListener).onChannelUnsubscribed(eq("channel1".getBytes()), anyLong());
+	}
+
+	@Test
+	void testDoCloseCallsSubscriptionListenerForPatterns() {
+		MessageListener compositeListener = mock(MessageListener.class,
+				withSettings().extraInterfaces(SubscriptionListener.class));
+
+		ValkeyGlideSubscription sub = new ValkeyGlideSubscription(compositeListener, client, pubSubListener);
+
+		sub.pSubscribe(new byte[][] { "pattern*".getBytes() });
+		sub.doClose();
+
+		verify((SubscriptionListener) compositeListener).onPatternUnsubscribed(eq("pattern*".getBytes()), anyLong());
+	}
+
+	@Test
+	void testNonSubscriptionListenerDoesNotFail() {
+		MessageListener plainListener = mock(MessageListener.class);
+
+		ValkeyGlideSubscription sub = new ValkeyGlideSubscription(plainListener, client, pubSubListener);
+
+		sub.subscribe(new byte[][] { "channel1".getBytes() });
+		sub.pSubscribe(new byte[][] { "pattern*".getBytes() });
+		sub.unsubscribe(new byte[][] { "channel1".getBytes() });
+		sub.pUnsubscribe(new byte[][] { "pattern*".getBytes() });
+		sub.doClose();
+
+		assertThat(sub.isAlive()).isFalse();
+	}
+
+	@Test
+	void closeTwiceShouldNotFail() {
+		subscription.subscribe(new byte[][] { "a".getBytes() });
+
+		subscription.close();
+		subscription.close();
+
+		verify(pubSubListener, times(1)).clearListener();
+		assertThat(subscription.isAlive()).isFalse();
+	}
+
 }

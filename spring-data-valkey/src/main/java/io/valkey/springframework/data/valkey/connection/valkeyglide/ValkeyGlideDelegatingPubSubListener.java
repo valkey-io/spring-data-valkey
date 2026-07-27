@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,47 +22,45 @@ import io.valkey.springframework.data.valkey.connection.DefaultMessage;
 import io.valkey.springframework.data.valkey.connection.MessageListener;
 
 /**
- * A delegating pub/sub listener that is configured at client creation time,
- * with the actual listener set later when subscribe() is called.
+ * A delegating pub/sub listener that is configured at client creation time, with the
+ * actual listener set later when subscribe() is called.
  */
 class DelegatingPubSubListener {
-    
-    private volatile MessageListener messageListener;
-    
-    /**
-     * Called by Glide when a pub/sub message arrives.
-     */
-    void onMessage(PubSubMessage msg, Object context) {
-        MessageListener listener = this.messageListener;
-        if (listener != null && msg != null) {
-            byte[] channel = msg.getChannel().getBytes();
-            byte[] body = msg.getMessage().getBytes();
-            byte[] pattern = msg.getPattern()
-                .map(GlideString::getBytes)
-                .orElse(null);
-            
-            listener.onMessage(new DefaultMessage(channel, body), pattern);
-            
-        }
 
-    }
-    
-    /**
-     * Set the actual listener when subscribe() is called.
-     */
-    void setListener(MessageListener listener) {
-        this.messageListener = listener;
-    }
-    
-    /**
-     * Clear the listener when subscription closes.
-     */
-    void clearListener() {
-        this.messageListener = null;
-    }
-    
-    
-    boolean hasListener() {
-        return messageListener != null;
-    }
+	private volatile MessageListener messageListener;
+
+	/**
+	 * Called by Glide when a pub/sub message arrives.
+	 */
+	void onMessage(PubSubMessage msg, Object context) {
+		MessageListener listener = this.messageListener;
+		if (listener != null && msg != null) {
+			byte[] channel = msg.getChannel().getBytes();
+			byte[] body = msg.getMessage().getBytes();
+			byte[] pattern = msg.getPattern().map(GlideString::getBytes).orElse(null);
+
+			listener.onMessage(new DefaultMessage(channel, body), pattern);
+
+		}
+
+	}
+
+	/**
+	 * Set the actual listener when subscribe() is called.
+	 */
+	void setListener(MessageListener listener) {
+		this.messageListener = listener;
+	}
+
+	/**
+	 * Clear the listener when subscription closes.
+	 */
+	void clearListener() {
+		this.messageListener = null;
+	}
+
+	boolean hasListener() {
+		return messageListener != null;
+	}
+
 }

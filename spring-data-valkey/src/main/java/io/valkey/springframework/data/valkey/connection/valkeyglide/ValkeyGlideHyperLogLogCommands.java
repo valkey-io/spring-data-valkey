@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,72 +27,74 @@ import org.springframework.util.Assert;
  */
 public class ValkeyGlideHyperLogLogCommands implements ValkeyHyperLogLogCommands {
 
-    private final ValkeyGlideConnection connection;
+	private final ValkeyGlideConnection connection;
 
-    /**
-     * Creates a new {@link ValkeyGlideHyperLogLogCommands}.
-     *
-     * @param connection must not be {@literal null}.
-     */
-    public ValkeyGlideHyperLogLogCommands(ValkeyGlideConnection connection) {
-        Assert.notNull(connection, "Connection must not be null!");
-        this.connection = connection;
-    }
+	/**
+	 * Creates a new {@link ValkeyGlideHyperLogLogCommands}.
+	 * @param connection must not be {@literal null}.
+	 */
+	public ValkeyGlideHyperLogLogCommands(ValkeyGlideConnection connection) {
+		Assert.notNull(connection, "Connection must not be null!");
+		this.connection = connection;
+	}
 
-    @Override
-    @Nullable
-    public Long pfAdd(byte[] key, byte[]... values) {
-        Assert.notNull(key, "Key must not be null");
-        Assert.notEmpty(values, "PFADD requires at least one non 'null' value");
-        Assert.noNullElements(values, "Values for PFADD must not contain 'null'");
-        
-        try {
-            Object[] args = new Object[1 + values.length];
-            args[0] = key;
-            System.arraycopy(values, 0, args, 1, values.length);
-            
-            return connection.execute("PFADD",
-                (Boolean glideResult) -> glideResult ? 1L : 0L,
-                args);
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+	@Override
+	@Nullable public Long pfAdd(byte[] key, byte[]... values) {
+		Assert.notNull(key, "Key must not be null");
+		Assert.notEmpty(values, "PFADD requires at least one non 'null' value");
+		Assert.noNullElements(values, "Values for PFADD must not contain 'null'");
 
-    @Override
-    @Nullable
-    public Long pfCount(byte[]... keys) {
-        Assert.notEmpty(keys, "PFCOUNT requires at least one non 'null' key");
-        Assert.noNullElements(keys, "Keys for PFCOUNT must not contain 'null'");
-        
-        try {
-            Object[] args = new Object[keys.length];
-            System.arraycopy(keys, 0, args, 0, keys.length);
-            
-            return connection.execute("PFCOUNT",
-                (Long glideResult) -> glideResult,
-                args);
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+		try {
+			Object[] args = new Object[1 + values.length];
+			args[0] = key;
+			System.arraycopy(values, 0, args, 1, values.length);
 
-    @Override
-    public void pfMerge(byte[] destinationKey, byte[]... sourceKeys) {
-        Assert.notNull(destinationKey, "Destination key must not be null");
-        Assert.notNull(sourceKeys, "Source keys must not be null");
-        Assert.noNullElements(sourceKeys, "Keys for PFMERGE must not contain 'null'");
-        
-        try {
-            Object[] args = new Object[1 + sourceKeys.length];
-            args[0] = destinationKey;
-            System.arraycopy(sourceKeys, 0, args, 1, sourceKeys.length);
-            
-            connection.execute("PFMERGE",
-                (String glideResult) -> glideResult, // Return the "OK" response for pipeline/transaction correlation
-                args);
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+			return connection.execute("PFADD", (Boolean glideResult) -> glideResult ? 1L : 0L, args);
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	@Nullable public Long pfCount(byte[]... keys) {
+		Assert.notEmpty(keys, "PFCOUNT requires at least one non 'null' key");
+		Assert.noNullElements(keys, "Keys for PFCOUNT must not contain 'null'");
+
+		try {
+			Object[] args = new Object[keys.length];
+			System.arraycopy(keys, 0, args, 0, keys.length);
+
+			return connection.execute("PFCOUNT", (Long glideResult) -> glideResult, args);
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public void pfMerge(byte[] destinationKey, byte[]... sourceKeys) {
+		Assert.notNull(destinationKey, "Destination key must not be null");
+		Assert.notNull(sourceKeys, "Source keys must not be null");
+		Assert.noNullElements(sourceKeys, "Keys for PFMERGE must not contain 'null'");
+
+		try {
+			Object[] args = new Object[1 + sourceKeys.length];
+			args[0] = destinationKey;
+			System.arraycopy(sourceKeys, 0, args, 1, sourceKeys.length);
+
+			connection.execute("PFMERGE", (String glideResult) -> glideResult, // Return
+																				// the
+																				// "OK"
+																				// response
+																				// for
+																				// pipeline/transaction
+																				// correlation
+					args);
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
 }

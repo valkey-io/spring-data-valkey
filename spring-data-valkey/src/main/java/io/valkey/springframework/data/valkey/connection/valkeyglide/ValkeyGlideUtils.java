@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,37 +26,36 @@ import org.springframework.util.Assert;
  */
 public abstract class ValkeyGlideUtils {
 
-    /**
-     * Convert a range min value to a string representation.
-     *
-     * @param range the range
-     * @return string representation of the range min value
-     */
-    public static String convertRangeMinValue(Range<?> range) {
-        Assert.notNull(range, "Range must not be null!");
-        
-        if (range.getLowerBound().isBounded()) {
-            Object value = range.getLowerBound().getValue();
-            return range.getLowerBound().isInclusive() ? String.valueOf(value) : "(" + String.valueOf(value);
-        }
-        
-        return "-inf";
-    }
+	/**
+	 * Convert a range min value to a string representation.
+	 * @param range the range
+	 * @return string representation of the range min value
+	 */
+	public static String convertRangeMinValue(Range<?> range) {
+		Assert.notNull(range, "Range must not be null!");
 
-    /**
-     * Convert a range max value to a string representation.
-     *
-     * @param range the range
-     * @return string representation of the range max value
-     */
-    public static String convertRangeMaxValue(Range<?> range) {
-        Assert.notNull(range, "Range must not be null!");
-        
-        if (range.getUpperBound().isBounded()) {
-            Object value = range.getUpperBound().getValue();
-            return range.getUpperBound().isInclusive() ? String.valueOf(value) : "(" + String.valueOf(value);
-        }
-        
-        return "+inf";
-    }
+		if (range.getLowerBound().isBounded()) {
+			Object value = range.getLowerBound().getValue();
+			return range.getLowerBound().isInclusive() ? String.valueOf(value) : "(" + String.valueOf(value);
+		}
+
+		return "-inf";
+	}
+
+	/**
+	 * Convert a range max value to a string representation.
+	 * @param range the range
+	 * @return string representation of the range max value
+	 */
+	public static String convertRangeMaxValue(Range<?> range) {
+		Assert.notNull(range, "Range must not be null!");
+
+		if (range.getUpperBound().isBounded()) {
+			Object value = range.getUpperBound().getValue();
+			return range.getUpperBound().isInclusive() ? String.valueOf(value) : "(" + String.valueOf(value);
+		}
+
+		return "+inf";
+	}
+
 }

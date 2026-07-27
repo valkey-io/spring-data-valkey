@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,8 @@ import io.valkey.springframework.data.valkey.connection.ValkeyZSetCommands;
  */
 public class ValkeyGlideZSetCommandsFactory {
 
-    public static ValkeyGlideZSetCommands create(ValkeyGlideConnection connection) {
-        return new ValkeyGlideZSetCommands(connection);
-    }
+	public static ValkeyGlideZSetCommands create(ValkeyGlideConnection connection) {
+		return new ValkeyGlideZSetCommands(connection);
+	}
+
 }

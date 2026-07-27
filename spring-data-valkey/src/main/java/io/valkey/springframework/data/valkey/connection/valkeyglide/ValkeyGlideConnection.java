@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,410 +54,440 @@ import glide.api.GlideClient;
 import glide.api.models.GlideString;
 
 /**
- * Connection to a Valkey server using Valkey-Glide client. The connection
- * adapts Valkey-Glide's asynchronous API to Spring Data Valkey's synchronous API.
+ * Connection to a Valkey server using Valkey-Glide client. The connection adapts
+ * Valkey-Glide's asynchronous API to Spring Data Valkey's synchronous API.
  *
  * @author Ilia Kolominsky
  */
 public class ValkeyGlideConnection extends AbstractValkeyConnection {
 
-    protected final UnifiedGlideClient unifiedClient;
-    protected final @Nullable ValkeyGlideConnectionFactory factory;
-    private final AtomicBoolean closed = new AtomicBoolean(false);
+	protected final UnifiedGlideClient unifiedClient;
 
-    private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
-    private final Set<byte[]> watchedKeys = new HashSet<>();
-    /** Tracks whether a WATCH command was issued via execute() directly, bypassing the watch() API */
-    private boolean watchCommandIssued = false;
-    private volatile @Nullable ValkeyGlideSubscription subscription;
+	protected final @Nullable ValkeyGlideConnectionFactory factory;
 
-    // Command interfaces
-    private ValkeyGlideKeyCommands keyCommands = null;
-    private ValkeyGlideStringCommands stringCommands = null;
-    private ValkeyGlideListCommands listCommands = null;
-    private ValkeyGlideSetCommands setCommands = null;
-    private ValkeyGlideZSetCommands zSetCommands = null;
-    private ValkeyGlideHashCommands hashCommands = null;
-    private ValkeyGlideGeoCommands geoCommands = null;
-    private ValkeyGlideHyperLogLogCommands hyperLogLogCommands = null;
-    private ValkeyGlideScriptingCommands scriptingCommands = null;
-    private ValkeyGlideServerCommands serverCommands = null;
-    private ValkeyGlideStreamCommands streamCommands = null;
+	private final AtomicBoolean closed = new AtomicBoolean(false);
 
-    /**
-     * Creates a new {@link ValkeyGlideConnection} with a unified client adapter.
-     * Each connection owns and manages its own client instance.
-     *
-     * @param unifiedClient unified client adapter (standalone or cluster)
-     * @param factory the connection factory (optional, for pooling support)
-     */
-    public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, @Nullable ValkeyGlideConnectionFactory factory) {
-        Assert.notNull(unifiedClient, "UnifiedClient must not be null");
-        
-        this.unifiedClient = unifiedClient;
-        this.factory = factory;
-    }
+	private final List<ResultMapper<?, ?>> batchCommandsConverters = new ArrayList<>();
 
-    /**
-     * Verifies that the connection is open.
-     *
-     * @throws InvalidDataAccessApiUsageException if the connection is closed
-     */
-    protected void verifyConnectionOpen() {
-        if (isClosed()) {
-            throw new InvalidDataAccessApiUsageException("Connection is closed");
-        }
-    }
+	private final Set<byte[]> watchedKeys = new HashSet<>();
 
-    @Override
-    public ValkeyGeoCommands geoCommands() {
-        ValkeyGlideGeoCommands cmds = this.geoCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideGeoCommands(this);
-            this.geoCommands = cmds;
-        }
-        return cmds;
-    }
+	/**
+	 * Tracks whether a WATCH command was issued via execute() directly, bypassing the
+	 * watch() API
+	 */
+	private boolean watchCommandIssued = false;
 
-    @Override
-    public ValkeyHashCommands hashCommands() {
-        ValkeyGlideHashCommands cmds = this.hashCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideHashCommands(this);
-            this.hashCommands = cmds;
-        }
-        return cmds;
-    }
+	private volatile @Nullable ValkeyGlideSubscription subscription;
 
-    @Override
-    public ValkeyHyperLogLogCommands hyperLogLogCommands() {
-        ValkeyGlideHyperLogLogCommands cmds = this.hyperLogLogCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideHyperLogLogCommands(this);
-            this.hyperLogLogCommands = cmds;
-        }
-        return cmds;
-    }
+	// Command interfaces
+	private ValkeyGlideKeyCommands keyCommands = null;
 
-    @Override
-    public ValkeyKeyCommands keyCommands() {
-        ValkeyGlideKeyCommands cmds = this.keyCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideKeyCommands(this);
-            this.keyCommands = cmds;
-        }
-        return cmds;
-    }
+	private ValkeyGlideStringCommands stringCommands = null;
 
-    @Override
-    public ValkeyListCommands listCommands() {
-        ValkeyGlideListCommands cmds = this.listCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideListCommands(this);
-            this.listCommands = cmds;
-        }
-        return cmds;
-    }
+	private ValkeyGlideListCommands listCommands = null;
 
-    @Override
-    public ValkeySetCommands setCommands() {
-        ValkeyGlideSetCommands cmds = this.setCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideSetCommands(this);
-            this.setCommands = cmds;
-        }
-        return cmds;
-    }
+	private ValkeyGlideSetCommands setCommands = null;
 
-    @Override
-    public ValkeyScriptingCommands scriptingCommands() {
-        ValkeyGlideScriptingCommands cmds = this.scriptingCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideScriptingCommands(this);
-            this.scriptingCommands = cmds;
-        }
-        return cmds;
-    }
+	private ValkeyGlideZSetCommands zSetCommands = null;
 
-    @Override
-    public ValkeyServerCommands serverCommands() {
-        ValkeyGlideServerCommands cmds = this.serverCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideServerCommands(this);
-            this.serverCommands = cmds;
-        }
-        return cmds;
-    }
+	private ValkeyGlideHashCommands hashCommands = null;
 
-    @Override
-    public ValkeyStreamCommands streamCommands() {
-        ValkeyGlideStreamCommands cmds = this.streamCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideStreamCommands(this);
-            this.streamCommands = cmds;
-        }
-        return cmds;
-    }
+	private ValkeyGlideGeoCommands geoCommands = null;
 
-    @Override
-    public ValkeyStringCommands stringCommands() {
-        ValkeyGlideStringCommands cmds = this.stringCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideStringCommands(this);
-            this.stringCommands = cmds;
-        }
-        return cmds;
-    }
+	private ValkeyGlideHyperLogLogCommands hyperLogLogCommands = null;
 
-    @Override
-    public ValkeyZSetCommands zSetCommands() {
-        ValkeyGlideZSetCommands cmds = this.zSetCommands;
-        if (cmds == null) {
-            cmds = new ValkeyGlideZSetCommands(this);
-            this.zSetCommands = cmds;
-        }
-        return cmds;
-    }
+	private ValkeyGlideScriptingCommands scriptingCommands = null;
 
-    @Override
-    public ValkeyCommands commands() {
-        return this;
-    }
+	private ValkeyGlideServerCommands serverCommands = null;
 
-    @Override
-    public void close() throws DataAccessException {
-        try {
-            if (closed.compareAndSet(false, true)) {
-                // Close subscription first
-                ValkeyGlideSubscription sub = this.subscription;
-                if (sub != null) {
-                    sub.close();
-                    this.subscription = null;
-                }
+	private ValkeyGlideStreamCommands streamCommands = null;
 
-                if (!watchedKeys.isEmpty() || watchCommandIssued) {
-                    sendUnwatch();
-                    watchedKeys.clear();
-                    watchCommandIssued = false;
-                }
+	/**
+	 * Creates a new {@link ValkeyGlideConnection} with a unified client adapter. Each
+	 * connection owns and manages its own client instance.
+	 * @param unifiedClient unified client adapter (standalone or cluster)
+	 * @param factory the connection factory (optional, for pooling support)
+	 */
+	public ValkeyGlideConnection(UnifiedGlideClient unifiedClient, @Nullable ValkeyGlideConnectionFactory factory) {
+		Assert.notNull(unifiedClient, "UnifiedClient must not be null");
 
-                // Reset adapter state and return to pool
-                if (factory != null) {
-                    unifiedClient.reset();
-                    factory.releaseAdapter(unifiedClient);
-                }
-            }
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+		this.unifiedClient = unifiedClient;
+		this.factory = factory;
+	}
 
-    protected void sendUnwatch() {
-        GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
-        try {
-            nativeClient.customCommand(new String[]{"UNWATCH"}).get();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("Interrupted UNWATCH command during connection cleanup", e);
-        } catch (ExecutionException e) {
-            throw new IllegalStateException("Failed to send UNWATCH command during connection cleanup", e);
-        }
-    }
+	/**
+	 * Verifies that the connection is open.
+	 * @throws InvalidDataAccessApiUsageException if the connection is closed
+	 */
+	protected void verifyConnectionOpen() {
+		if (isClosed()) {
+			throw new InvalidDataAccessApiUsageException("Connection is closed");
+		}
+	}
 
-    @Override
-    public boolean isClosed() {
-        return closed.get();
-    }
+	@Override
+	public ValkeyGeoCommands geoCommands() {
+		ValkeyGlideGeoCommands cmds = this.geoCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideGeoCommands(this);
+			this.geoCommands = cmds;
+		}
+		return cmds;
+	}
 
-    @Override
-    public Object getNativeConnection() {
-        verifyConnectionOpen();
-        return unifiedClient.getNativeClient();
-    }
+	@Override
+	public ValkeyHashCommands hashCommands() {
+		ValkeyGlideHashCommands cmds = this.hashCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideHashCommands(this);
+			this.hashCommands = cmds;
+		}
+		return cmds;
+	}
 
-    @Override
-    public boolean isQueueing() {
-        return unifiedClient.getBatchStatus() == UnifiedGlideClient.BatchStatus.Transaction;
-    }
+	@Override
+	public ValkeyHyperLogLogCommands hyperLogLogCommands() {
+		ValkeyGlideHyperLogLogCommands cmds = this.hyperLogLogCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideHyperLogLogCommands(this);
+			this.hyperLogLogCommands = cmds;
+		}
+		return cmds;
+	}
 
-    @Override
-    public boolean isPipelined() {
-        return unifiedClient.getBatchStatus() == UnifiedGlideClient.BatchStatus.Pipeline;
-    }
+	@Override
+	public ValkeyKeyCommands keyCommands() {
+		ValkeyGlideKeyCommands cmds = this.keyCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideKeyCommands(this);
+			this.keyCommands = cmds;
+		}
+		return cmds;
+	}
 
-    @Override
-    public void openPipeline() {
-        if (isQueueing()) {
+	@Override
+	public ValkeyListCommands listCommands() {
+		ValkeyGlideListCommands cmds = this.listCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideListCommands(this);
+			this.listCommands = cmds;
+		}
+		return cmds;
+	}
+
+	@Override
+	public ValkeySetCommands setCommands() {
+		ValkeyGlideSetCommands cmds = this.setCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideSetCommands(this);
+			this.setCommands = cmds;
+		}
+		return cmds;
+	}
+
+	@Override
+	public ValkeyScriptingCommands scriptingCommands() {
+		ValkeyGlideScriptingCommands cmds = this.scriptingCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideScriptingCommands(this);
+			this.scriptingCommands = cmds;
+		}
+		return cmds;
+	}
+
+	@Override
+	public ValkeyServerCommands serverCommands() {
+		ValkeyGlideServerCommands cmds = this.serverCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideServerCommands(this);
+			this.serverCommands = cmds;
+		}
+		return cmds;
+	}
+
+	@Override
+	public ValkeyStreamCommands streamCommands() {
+		ValkeyGlideStreamCommands cmds = this.streamCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideStreamCommands(this);
+			this.streamCommands = cmds;
+		}
+		return cmds;
+	}
+
+	@Override
+	public ValkeyStringCommands stringCommands() {
+		ValkeyGlideStringCommands cmds = this.stringCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideStringCommands(this);
+			this.stringCommands = cmds;
+		}
+		return cmds;
+	}
+
+	@Override
+	public ValkeyZSetCommands zSetCommands() {
+		ValkeyGlideZSetCommands cmds = this.zSetCommands;
+		if (cmds == null) {
+			cmds = new ValkeyGlideZSetCommands(this);
+			this.zSetCommands = cmds;
+		}
+		return cmds;
+	}
+
+	@Override
+	public ValkeyCommands commands() {
+		return this;
+	}
+
+	@Override
+	public void close() throws DataAccessException {
+		try {
+			if (closed.compareAndSet(false, true)) {
+				// Close subscription first
+				ValkeyGlideSubscription sub = this.subscription;
+				if (sub != null) {
+					sub.close();
+					this.subscription = null;
+				}
+
+				if (!watchedKeys.isEmpty() || watchCommandIssued) {
+					sendUnwatch();
+					watchedKeys.clear();
+					watchCommandIssued = false;
+				}
+
+				// Reset adapter state and return to pool
+				if (factory != null) {
+					unifiedClient.reset();
+					factory.releaseAdapter(unifiedClient);
+				}
+			}
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	protected void sendUnwatch() {
+		GlideClient nativeClient = (GlideClient) unifiedClient.getNativeClient();
+		try {
+			nativeClient.customCommand(new String[] { "UNWATCH" }).get();
+		}
+		catch (InterruptedException e) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException("Interrupted UNWATCH command during connection cleanup", e);
+		}
+		catch (ExecutionException e) {
+			throw new IllegalStateException("Failed to send UNWATCH command during connection cleanup", e);
+		}
+	}
+
+	@Override
+	public boolean isClosed() {
+		return closed.get();
+	}
+
+	@Override
+	public Object getNativeConnection() {
+		verifyConnectionOpen();
+		return unifiedClient.getNativeClient();
+	}
+
+	@Override
+	public boolean isQueueing() {
+		return unifiedClient.getBatchStatus() == UnifiedGlideClient.BatchStatus.Transaction;
+	}
+
+	@Override
+	public boolean isPipelined() {
+		return unifiedClient.getBatchStatus() == UnifiedGlideClient.BatchStatus.Pipeline;
+	}
+
+	@Override
+	public void openPipeline() {
+		if (isQueueing()) {
 			throw new InvalidDataAccessApiUsageException("Cannot use pipelining while a transaction is active");
 		}
-        if (!isPipelined()) {
-            unifiedClient.startNewBatch(false);
-        }
-    }
+		if (!isPipelined()) {
+			unifiedClient.startNewBatch(false);
+		}
+	}
 
-    @Override
-    public List<Object> closePipeline() {
-        if (!isPipelined()) {
-            return new ArrayList<>();
-        }
+	@Override
+	public List<Object> closePipeline() {
+		if (!isPipelined()) {
+			return new ArrayList<>();
+		}
 
-        try {
-            if (unifiedClient.getBatchCount() == 0) {
-                return new ArrayList<>();
-            }
+		try {
+			if (unifiedClient.getBatchCount() == 0) {
+				return new ArrayList<>();
+			}
 
-            Object[] results = unifiedClient.execBatch();
-            List<Object> resultList = new ArrayList<>(results.length);
-            for (int i = 0; i < results.length; i++) {
-                Object item = results[i];
-                if (item instanceof Exception) {
-                    // Convert exceptions in pipeline results
-                    resultList.add(new ValkeyGlideExceptionConverter().convert((Exception) item));
-                    continue;
-                }
-                @SuppressWarnings("unchecked")
-                ResultMapper<Object, ?> mapper = (ResultMapper<Object, ?>) batchCommandsConverters.get(i);
-                resultList.add(mapper.map(item));
-            }
-            return resultList;
-        } catch (Exception ex) {
-            throw new ValkeyPipelineException(ex);
-        } finally {
-            unifiedClient.discardBatch();
-            batchCommandsConverters.clear();
-        }
-    }
+			Object[] results = unifiedClient.execBatch();
+			List<Object> resultList = new ArrayList<>(results.length);
+			for (int i = 0; i < results.length; i++) {
+				Object item = results[i];
+				if (item instanceof Exception) {
+					// Convert exceptions in pipeline results
+					resultList.add(new ValkeyGlideExceptionConverter().convert((Exception) item));
+					continue;
+				}
+				@SuppressWarnings("unchecked")
+				ResultMapper<Object, ?> mapper = (ResultMapper<Object, ?>) batchCommandsConverters.get(i);
+				resultList.add(mapper.map(item));
+			}
+			return resultList;
+		}
+		catch (Exception ex) {
+			throw new ValkeyPipelineException(ex);
+		}
+		finally {
+			unifiedClient.discardBatch();
+			batchCommandsConverters.clear();
+		}
+	}
 
-    @Override
-    public void multi() {
-        if (isPipelined()) {
+	@Override
+	public void multi() {
+		if (isPipelined()) {
 			throw new InvalidDataAccessApiUsageException("Cannot use transaction while a pipeline is open");
 		}
-        
-        if (!isQueueing()) {
-            // Create atomic batch (transaction)
-            unifiedClient.startNewBatch(true);
-        }
-    }
 
-    @Override
-    public void discard() {
-        if (!isQueueing()) { 
-            throw new InvalidDataAccessApiUsageException("No ongoing transaction; Did you forget to call multi");
-        }
-        
-        // Clear the current batch and reset transaction state
-        unifiedClient.discardBatch();
-        batchCommandsConverters.clear();
-    }
+		if (!isQueueing()) {
+			// Create atomic batch (transaction)
+			unifiedClient.startNewBatch(true);
+		}
+	}
 
-    @Override
-    public List<Object> exec() {
-        if (!isQueueing()) {
-		    throw new InvalidDataAccessApiUsageException("No ongoing transaction; Did you forget to call multi");
-        }
-		
-        try {
-            if (unifiedClient.getBatchCount() == 0) {
-                return new ArrayList<>();
-            }
+	@Override
+	public void discard() {
+		if (!isQueueing()) {
+			throw new InvalidDataAccessApiUsageException("No ongoing transaction; Did you forget to call multi");
+		}
 
-            Object[] results = unifiedClient.execBatch();
-            
-            // Handle transaction abort cases - valkey-glide returns null for WATCH conflicts
-            if (results == null) {
-                // Return empty list for WATCH conflicts (matches Jedis behavior and Valkey specification)
-                return new ArrayList<>();
-            }
-            
-            List<Object> resultList = new ArrayList<>(results.length);
-            for (int i = 0; i < results.length; i++) {
-                Object item = results[i];
-                if (item instanceof Exception) {
-                    // Convert exceptions in pipeline results
-                    resultList.add(new ValkeyGlideExceptionConverter().convert((Exception) item));
-                    continue;
-                }
-                @SuppressWarnings("unchecked")
-                ResultMapper<Object, ?> mapper = (ResultMapper<Object, ?>) batchCommandsConverters.get(i);
-                resultList.add(mapper.map(item));
-            }
-            return resultList;
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        } finally {
-            // Clean up transaction state
-            unifiedClient.discardBatch();
-            batchCommandsConverters.clear();
-            // Watches are automatically cleared by the server after EXEC
-            watchedKeys.clear();
-            watchCommandIssued = false;
-        }
-    }
+		// Clear the current batch and reset transaction state
+		unifiedClient.discardBatch();
+		batchCommandsConverters.clear();
+	}
 
-    @Override
-    public void select(int dbIndex) {
-        Assert.isTrue(dbIndex >= 0, "DB index must be non-negative");
-        try {
-            byte[] dbArg = Integer.toString(dbIndex).getBytes(StandardCharsets.US_ASCII);
-            execute("SELECT", dbArg);
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+	@Override
+	public List<Object> exec() {
+		if (!isQueueing()) {
+			throw new InvalidDataAccessApiUsageException("No ongoing transaction; Did you forget to call multi");
+		}
 
-    @Override
-    public void unwatch() {
-        try {
-            if (watchedKeys.isEmpty() || !watchCommandIssued) {
-                return; // No keys to unwatch
-            }
-            execute("UNWATCH");
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        } finally {
-            watchedKeys.clear();
-        }
-    }
+		try {
+			if (unifiedClient.getBatchCount() == 0) {
+				return new ArrayList<>();
+			}
 
-    @Override
-    public void watch(byte[]... keys) {
-        Assert.notNull(keys, "Keys must not be null");
-        Assert.noNullElements(keys, "Keys must not contain null elements");
+			Object[] results = unifiedClient.execBatch();
 
-        if (isQueueing()) {
-            throw new InvalidDataAccessApiUsageException("WATCH is not allowed during MULTI");
-        }
+			// Handle transaction abort cases - valkey-glide returns null for WATCH
+			// conflicts
+			if (results == null) {
+				// Return empty list for WATCH conflicts (matches Jedis behavior and
+				// Valkey specification)
+				return new ArrayList<>();
+			}
 
-        try {
-            // Execute WATCH immediately to set up key monitoring at connection level
-            execute("WATCH", keys);
-            
-            // Track watched keys for cleanup
-            Collections.addAll(watchedKeys, keys);
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+			List<Object> resultList = new ArrayList<>(results.length);
+			for (int i = 0; i < results.length; i++) {
+				Object item = results[i];
+				if (item instanceof Exception) {
+					// Convert exceptions in pipeline results
+					resultList.add(new ValkeyGlideExceptionConverter().convert((Exception) item));
+					continue;
+				}
+				@SuppressWarnings("unchecked")
+				ResultMapper<Object, ?> mapper = (ResultMapper<Object, ?>) batchCommandsConverters.get(i);
+				resultList.add(mapper.map(item));
+			}
+			return resultList;
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+		finally {
+			// Clean up transaction state
+			unifiedClient.discardBatch();
+			batchCommandsConverters.clear();
+			// Watches are automatically cleared by the server after EXEC
+			watchedKeys.clear();
+			watchCommandIssued = false;
+		}
+	}
 
-    @Override
-    public Long publish(byte[] channel, byte[] message) {
-        Assert.notNull(channel, "Channel must not be null");
-        Assert.notNull(message, "Message must not be null");
+	@Override
+	public void select(int dbIndex) {
+		Assert.isTrue(dbIndex >= 0, "DB index must be non-negative");
+		try {
+			byte[] dbArg = Integer.toString(dbIndex).getBytes(StandardCharsets.US_ASCII);
+			execute("SELECT", dbArg);
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
 
-        try {
-            Object result = execute("PUBLISH", channel, message);
-            return (Long) result;
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+	@Override
+	public void unwatch() {
+		try {
+			if (watchedKeys.isEmpty() || !watchCommandIssued) {
+				return; // No keys to unwatch
+			}
+			execute("UNWATCH");
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+		finally {
+			watchedKeys.clear();
+		}
+	}
 
-    @Override
-    public void subscribe(MessageListener listener, byte[]... channels) {
-        Assert.notNull(listener, "MessageListener must not be null");
-        Assert.notNull(channels, "Channels must not be null");
-        Assert.noNullElements(channels, "Channels must not contain null elements");
+	@Override
+	public void watch(byte[]... keys) {
+		Assert.notNull(keys, "Keys must not be null");
+		Assert.noNullElements(keys, "Keys must not contain null elements");
+
+		if (isQueueing()) {
+			throw new InvalidDataAccessApiUsageException("WATCH is not allowed during MULTI");
+		}
+
+		try {
+			// Execute WATCH immediately to set up key monitoring at connection level
+			execute("WATCH", keys);
+
+			// Track watched keys for cleanup
+			Collections.addAll(watchedKeys, keys);
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public Long publish(byte[] channel, byte[] message) {
+		Assert.notNull(channel, "Channel must not be null");
+		Assert.notNull(message, "Message must not be null");
+
+		try {
+			Object result = execute("PUBLISH", channel, message);
+			return (Long) result;
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public void subscribe(MessageListener listener, byte[]... channels) {
+		Assert.notNull(listener, "MessageListener must not be null");
+		Assert.notNull(channels, "Channels must not be null");
+		Assert.noNullElements(channels, "Channels must not contain null elements");
 
 		if (isSubscribed()) {
 			throw new ValkeySubscribedConnectionException(
@@ -468,33 +498,34 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
 		}
 
-        if (unifiedClient.getDelegatingListener() == null) {
-            throw new InvalidDataAccessApiUsageException(
-                    "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
-        }
+		if (unifiedClient.getDelegatingListener() == null) {
+			throw new InvalidDataAccessApiUsageException(
+					"Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
+		}
 
-        try {
-            unifiedClient.getDelegatingListener().setListener(listener);
-            
-            ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
-                    listener, unifiedClient, unifiedClient.getDelegatingListener());
-            this.subscription = glideSubscription;
-            glideSubscription.subscribe(channels);
-            
-        } catch (Exception ex) {
-            if (unifiedClient.getDelegatingListener() != null) {
-                unifiedClient.getDelegatingListener().clearListener();
-            }
-            this.subscription = null;
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+		try {
+			unifiedClient.getDelegatingListener().setListener(listener);
 
-    @Override
-    public void pSubscribe(MessageListener listener, byte[]... patterns) {
-        Assert.notNull(listener, "MessageListener must not be null");
-        Assert.notNull(patterns, "Patterns must not be null");
-        Assert.noNullElements(patterns, "Patterns must not contain null elements");
+			ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(listener, unifiedClient,
+					unifiedClient.getDelegatingListener());
+			this.subscription = glideSubscription;
+			glideSubscription.subscribe(channels);
+
+		}
+		catch (Exception ex) {
+			if (unifiedClient.getDelegatingListener() != null) {
+				unifiedClient.getDelegatingListener().clearListener();
+			}
+			this.subscription = null;
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public void pSubscribe(MessageListener listener, byte[]... patterns) {
+		Assert.notNull(listener, "MessageListener must not be null");
+		Assert.notNull(patterns, "Patterns must not be null");
+		Assert.noNullElements(patterns, "Patterns must not contain null elements");
 
 		if (isSubscribed()) {
 			throw new ValkeySubscribedConnectionException(
@@ -504,172 +535,181 @@ public class ValkeyGlideConnection extends AbstractValkeyConnection {
 		if (isQueueing() || isPipelined()) {
 			throw new InvalidDataAccessApiUsageException("Cannot subscribe in pipeline / transaction mode");
 		}
-        
-        if (unifiedClient.getDelegatingListener() == null) {
-            throw new InvalidDataAccessApiUsageException(
-                    "Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
-        }
 
-        try {
-            unifiedClient.getDelegatingListener().setListener(listener);
-            
-            ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(
-                    listener, unifiedClient, unifiedClient.getDelegatingListener());
-            this.subscription = glideSubscription;
-            glideSubscription.pSubscribe(patterns);
-            
-        } catch (Exception ex) {
-            if (unifiedClient.getDelegatingListener() != null) {
-                unifiedClient.getDelegatingListener().clearListener();
-            }
-            this.subscription = null;
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+		if (unifiedClient.getDelegatingListener() == null) {
+			throw new InvalidDataAccessApiUsageException(
+					"Pub/Sub not configured. Ensure the connection factory was created with pub/sub callback support.");
+		}
 
-    @Override
-    public Subscription getSubscription() {
-        return subscription;
-    }
+		try {
+			unifiedClient.getDelegatingListener().setListener(listener);
 
-    @Override
-    public boolean isSubscribed() {
-        Subscription sub = this.subscription;
-        return sub != null && sub.isAlive();
-    }
+			ValkeyGlideSubscription glideSubscription = new ValkeyGlideSubscription(listener, unifiedClient,
+					unifiedClient.getDelegatingListener());
+			this.subscription = glideSubscription;
+			glideSubscription.pSubscribe(patterns);
 
-    /**
-     * Execute a Valkey command using string arguments.
-     * 
-     * @param command the command to execute
-     * @param args the command arguments
-     * @return the command result
-     */
+		}
+		catch (Exception ex) {
+			if (unifiedClient.getDelegatingListener() != null) {
+				unifiedClient.getDelegatingListener().clearListener();
+			}
+			this.subscription = null;
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
 
-    /**
-     * Executes a Valkey command with arguments and converts the raw driver result
-     * into a strongly typed value using the provided {@link ResultMapper}.
-     *
-     * <p>Behavior depends on whether pipelining/transaction is enabled:
-     * <ul>
-     *   <li><b>Immediate mode</b> – the command is sent directly to the driver,
-     *       and the raw result is synchronously converted via {@code mapper.map(raw)}.</li>
-     *   <li><b>Pipeline/Transaction mode</b> – the command and mapper are queued for later execution.
-     *       In this case, the method returns {@code null}. When
-     *       {@link #closePipeline()}/{@link #exec()} are called, all queued commands are flushed,
-     *       raw results are collected, and each queued {@code ResultMapper}
-     *       is applied in order.</li>
-     * </ul>
-     *
-     * <p>The caller (API layer) is responsible for providing the appropriate
-     * {@link ResultMapper} for the Valkey command being executed. This allows each
-     * high-level API method to encapsulate its own decoding logic.
-     *
-     * @param command The Valkey command name (e.g. "GET", "SMEMBERS").
-     * @param mapper  A function that knows how to convert the raw driver result
-     *                into a strongly typed value of type {@code R}.
-     * @param args    The command arguments, already encoded into driver-acceptable
-     *                representations (e.g. {@code byte[]} or primitives).
-     * @param <R>     The expected return type after mapping the driver result.
-     * @return        The mapped result in immediate mode, or {@code null} if
-     *                pipelining/transaction is active (result will be available after
-     *                {@link #closePipeline()} or {@link #exec()}).
-     */
-    @SuppressWarnings("unchecked")
-    @Nullable
-    public <I, R> R execute(String command, ResultMapper<I, R> mapper, Object... args) {
-        Assert.notNull(args, "Arguments must not be null");
-        Assert.notNull(mapper, "ResultMapper must not be null");
+	@Override
+	public Subscription getSubscription() {
+		return subscription;
+	}
 
-        verifyConnectionOpen();
+	@Override
+	public boolean isSubscribed() {
+		Subscription sub = this.subscription;
+		return sub != null && sub.isAlive();
+	}
 
-        // Track WATCH commands issued directly via execute() to ensure UNWATCH on close
-        if ("WATCH".equalsIgnoreCase(command)) {
-            watchCommandIssued = true;
-        }
+	/**
+	 * Execute a Valkey command using string arguments.
+	 * @param command the command to execute
+	 * @param args the command arguments
+	 * @return the command result
+	 */
 
-        try {
-            // Convert arguments to appropriate format for Glide
-            GlideString[] glideArgs = new GlideString[args.length + 1];
-            glideArgs[0] = GlideString.of(command);
-            for (int i = 0; i < args.length; i++) {
-                if (args[i] == null) {
-                    glideArgs[i + 1] = null;
-                } else if (args[i] instanceof byte[]) {
-                    glideArgs[i + 1] = GlideString.of((byte[]) args[i]);
-                } else if (args[i] instanceof String) {
-                    glideArgs[i + 1] = GlideString.of((String) args[i]);
-                } else {
-                    glideArgs[i + 1] = GlideString.of(args[i].toString());
-                }
-            }
-            // Handle pipeline/transaction mode - add command to batch instead of executing
-            if (isQueueing() || isPipelined()) {
-                // Store converter for later conversion
-                batchCommandsConverters.add(mapper);
-                // Add command to the current batch
-                unifiedClient.customCommand(glideArgs);
-                return null; // Return null for queued commands in transaction
-            }
-            
-            // Immediate execution mode
-            I result = (I) unifiedClient.customCommand(glideArgs);
-            return mapper.map(result);
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+	/**
+	 * Executes a Valkey command with arguments and converts the raw driver result into a
+	 * strongly typed value using the provided {@link ResultMapper}.
+	 *
+	 * <p>
+	 * Behavior depends on whether pipelining/transaction is enabled:
+	 * <ul>
+	 * <li><b>Immediate mode</b> – the command is sent directly to the driver, and the raw
+	 * result is synchronously converted via {@code mapper.map(raw)}.</li>
+	 * <li><b>Pipeline/Transaction mode</b> – the command and mapper are queued for later
+	 * execution. In this case, the method returns {@code null}. When
+	 * {@link #closePipeline()}/{@link #exec()} are called, all queued commands are
+	 * flushed, raw results are collected, and each queued {@code ResultMapper} is applied
+	 * in order.</li>
+	 * </ul>
+	 *
+	 * <p>
+	 * The caller (API layer) is responsible for providing the appropriate
+	 * {@link ResultMapper} for the Valkey command being executed. This allows each
+	 * high-level API method to encapsulate its own decoding logic.
+	 * @param command The Valkey command name (e.g. "GET", "SMEMBERS").
+	 * @param mapper A function that knows how to convert the raw driver result into a
+	 * strongly typed value of type {@code R}.
+	 * @param args The command arguments, already encoded into driver-acceptable
+	 * representations (e.g. {@code byte[]} or primitives).
+	 * @param <R> The expected return type after mapping the driver result.
+	 * @return The mapped result in immediate mode, or {@code null} if
+	 * pipelining/transaction is active (result will be available after
+	 * {@link #closePipeline()} or {@link #exec()}).
+	 */
+	@SuppressWarnings("unchecked")
+	@Nullable public <I, R> R execute(String command, ResultMapper<I, R> mapper, Object... args) {
+		Assert.notNull(args, "Arguments must not be null");
+		Assert.notNull(mapper, "ResultMapper must not be null");
 
-    @Override
-    public Object execute(String command, byte[]... args) {
-        Assert.notNull(command, "Command must not be null");
-        Assert.notNull(args, "Arguments must not be null");
-        Assert.noNullElements(args, "Arguments must not contain null elements");
-        try {
-            // Delegate to the generic execute method
-            return execute(command, rawResult -> {
-                return ValkeyGlideConverters.defaultFromGlideResult(rawResult);
-            },
-            (Object[]) args);
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+		verifyConnectionOpen();
 
-    @Override
-    protected boolean isActive(ValkeyNode node) {
-        Assert.notNull(node, "ValkeyNode must not be null");
-        // TODO: Create new valkey-glide GlideClient instance to test connection to the node
-        // connection params should be clonned from the current client except host/port
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
+		// Track WATCH commands issued directly via execute() to ensure UNWATCH on close
+		if ("WATCH".equalsIgnoreCase(command)) {
+			watchCommandIssued = true;
+		}
 
-    @Override
-    protected ValkeySentinelConnection getSentinelConnection(ValkeyNode sentinel) {
-        // TODO: Uncomment when sentinel support is added to valkey-glide
-        // and implement sentinel connection using a dedicated GlideClient instance
-        // Assert.notNull(sentinel, "Sentinel ValkeyNode must not be null");
-        throw new UnsupportedOperationException("Sentinel is not supported by this client.");
-    }
+		try {
+			// Convert arguments to appropriate format for Glide
+			GlideString[] glideArgs = new GlideString[args.length + 1];
+			glideArgs[0] = GlideString.of(command);
+			for (int i = 0; i < args.length; i++) {
+				if (args[i] == null) {
+					glideArgs[i + 1] = null;
+				}
+				else if (args[i] instanceof byte[]) {
+					glideArgs[i + 1] = GlideString.of((byte[]) args[i]);
+				}
+				else if (args[i] instanceof String) {
+					glideArgs[i + 1] = GlideString.of((String) args[i]);
+				}
+				else {
+					glideArgs[i + 1] = GlideString.of(args[i].toString());
+				}
+			}
+			// Handle pipeline/transaction mode - add command to batch instead of
+			// executing
+			if (isQueueing() || isPipelined()) {
+				// Store converter for later conversion
+				batchCommandsConverters.add(mapper);
+				// Add command to the current batch
+				unifiedClient.customCommand(glideArgs);
+				return null; // Return null for queued commands in transaction
+			}
 
-    @Override
-    public byte[] echo(byte[] message) {
-        Assert.notNull(message, "Message must not be null");
-        try {
-            Object result = execute("ECHO", message);
-            return result != null ? (byte[]) result : null;
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+			// Immediate execution mode
+			I result = (I) unifiedClient.customCommand(glideArgs);
+			return mapper.map(result);
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
 
-    @Override
-    public String ping() {
-        try {
-            Object result = execute("PING");
-            return result != null ? new String((byte[]) result, StandardCharsets.UTF_8) : null;
-        } catch (Exception ex) {
-            throw new ValkeyGlideExceptionConverter().convert(ex);
-        }
-    }
+	@Override
+	public Object execute(String command, byte[]... args) {
+		Assert.notNull(command, "Command must not be null");
+		Assert.notNull(args, "Arguments must not be null");
+		Assert.noNullElements(args, "Arguments must not contain null elements");
+		try {
+			// Delegate to the generic execute method
+			return execute(command, rawResult -> {
+				return ValkeyGlideConverters.defaultFromGlideResult(rawResult);
+			}, (Object[]) args);
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	protected boolean isActive(ValkeyNode node) {
+		Assert.notNull(node, "ValkeyNode must not be null");
+		// TODO: Create new valkey-glide GlideClient instance to test connection to the
+		// node
+		// connection params should be clonned from the current client except host/port
+		throw new UnsupportedOperationException("Not yet implemented");
+	}
+
+	@Override
+	protected ValkeySentinelConnection getSentinelConnection(ValkeyNode sentinel) {
+		// TODO: Uncomment when sentinel support is added to valkey-glide
+		// and implement sentinel connection using a dedicated GlideClient instance
+		// Assert.notNull(sentinel, "Sentinel ValkeyNode must not be null");
+		throw new UnsupportedOperationException("Sentinel is not supported by this client.");
+	}
+
+	@Override
+	public byte[] echo(byte[] message) {
+		Assert.notNull(message, "Message must not be null");
+		try {
+			Object result = execute("ECHO", message);
+			return result != null ? (byte[]) result : null;
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
+	@Override
+	public String ping() {
+		try {
+			Object result = execute("PING");
+			return result != null ? new String((byte[]) result, StandardCharsets.UTF_8) : null;
+		}
+		catch (Exception ex) {
+			throw new ValkeyGlideExceptionConverter().convert(ex);
+		}
+	}
+
 }

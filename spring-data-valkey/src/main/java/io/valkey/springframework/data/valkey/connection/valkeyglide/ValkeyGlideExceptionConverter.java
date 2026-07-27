@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-present the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,61 +31,62 @@ import org.jspecify.annotations.Nullable;
  */
 public class ValkeyGlideExceptionConverter {
 
-    /**
-     * Convert a Valkey-Glide exception to a Spring DataAccessException.
-     *
-     * @param ex The exception to convert
-     * @return The converted exception, or null if the exception could not be converted
-     */
-    @Nullable
-    public DataAccessException convert(Exception ex) {
-        // Currently, we don't have access to the actual Valkey-Glide exception classes
-        // So we have to rely on the exception message and class name for conversion
-        // In a real implementation, we would check the exception type using instanceof
-        
-        // This implementation is a placeholder and should be expanded with real exception types
-        // once the Valkey-Glide API is available
-        
-        String message = ex.getMessage();
-        if (message == null) {
-            message = ex.getClass().getSimpleName();
-        }
-        
-        // Check common Valkey error patterns in the message
-        if (message.contains("Connection") && (message.contains("refused") || 
-                message.contains("reset") || message.contains("closed") || 
-                message.contains("aborted") || message.contains("timeout"))) {
-            return new ValkeyConnectionFailureException(message, ex);
-        }
-        
-        if (message.contains("timeout") || message.contains("Timeout")) {
-            return new QueryTimeoutException(message, ex);
-        }
-        
-        if (message.contains("WRONGTYPE")) {
-            return new InvalidDataAccessApiUsageException(message, ex);
-        }
-        
-        // Handle NOSCRIPT errors - these are API usage errors (script doesn't exist)
-        // Valkey-Glide returns "NoScriptError" but Spring's ScriptUtils looks for "NOSCRIPT"
-        // We need to normalize the message so the fallback mechanism works
-        if (message.contains("NOSCRIPT") || message.contains("NoScriptError") || message.contains("No matching script")) {
-            // Convert "NoScriptError" to "NOSCRIPT" for Spring Data Valkey compatibility
-            String normalizedMessage = message.replace("NoScriptError", "NOSCRIPT");
-            return new InvalidDataAccessApiUsageException(normalizedMessage, ex);
-        }
-        
-        if (message.contains("NOAUTH") || message.contains("Authentication")) {
-            return new InvalidDataAccessResourceUsageException(message, ex);
-        }
-        
-        if (message.contains("BUSY") || message.contains("LOADING")) {
-            return new ValkeySystemException(message, ex);
-        }
-        
-        // For other exceptions, we need more context
-        // This implementation can be expanded based on real error patterns observed
-        
-        return new ValkeySystemException(message, ex);
-    }
+	/**
+	 * Convert a Valkey-Glide exception to a Spring DataAccessException.
+	 * @param ex The exception to convert
+	 * @return The converted exception, or null if the exception could not be converted
+	 */
+	@Nullable public DataAccessException convert(Exception ex) {
+		// Currently, we don't have access to the actual Valkey-Glide exception classes
+		// So we have to rely on the exception message and class name for conversion
+		// In a real implementation, we would check the exception type using instanceof
+
+		// This implementation is a placeholder and should be expanded with real exception
+		// types
+		// once the Valkey-Glide API is available
+
+		String message = ex.getMessage();
+		if (message == null) {
+			message = ex.getClass().getSimpleName();
+		}
+
+		// Check common Valkey error patterns in the message
+		if (message.contains("Connection") && (message.contains("refused") || message.contains("reset")
+				|| message.contains("closed") || message.contains("aborted") || message.contains("timeout"))) {
+			return new ValkeyConnectionFailureException(message, ex);
+		}
+
+		if (message.contains("timeout") || message.contains("Timeout")) {
+			return new QueryTimeoutException(message, ex);
+		}
+
+		if (message.contains("WRONGTYPE")) {
+			return new InvalidDataAccessApiUsageException(message, ex);
+		}
+
+		// Handle NOSCRIPT errors - these are API usage errors (script doesn't exist)
+		// Valkey-Glide returns "NoScriptError" but Spring's ScriptUtils looks for
+		// "NOSCRIPT"
+		// We need to normalize the message so the fallback mechanism works
+		if (message.contains("NOSCRIPT") || message.contains("NoScriptError")
+				|| message.contains("No matching script")) {
+			// Convert "NoScriptError" to "NOSCRIPT" for Spring Data Valkey compatibility
+			String normalizedMessage = message.replace("NoScriptError", "NOSCRIPT");
+			return new InvalidDataAccessApiUsageException(normalizedMessage, ex);
+		}
+
+		if (message.contains("NOAUTH") || message.contains("Authentication")) {
+			return new InvalidDataAccessResourceUsageException(message, ex);
+		}
+
+		if (message.contains("BUSY") || message.contains("LOADING")) {
+			return new ValkeySystemException(message, ex);
+		}
+
+		// For other exceptions, we need more context
+		// This implementation can be expanded based on real error patterns observed
+
+		return new ValkeySystemException(message, ex);
+	}
+
 }

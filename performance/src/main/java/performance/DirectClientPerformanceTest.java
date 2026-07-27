@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 the original author or authors.
+ * Copyright 2025-present the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,11 +31,12 @@ import redis.clients.jedis.Jedis;
 public class DirectClientPerformanceTest {
 
 	private static final int OPERATIONS = 10000;
+
 	private static final String KEY_PREFIX = "direct:test:";
 
 	public static void main(String[] args) throws Exception {
 		String clientType = System.getProperty("client", "valkeyglide");
-		
+
 		System.out.println("Running Direct Client Performance Test");
 		System.out.println("Client: " + clientType);
 		System.out.println("Operations: " + OPERATIONS);
@@ -53,7 +54,7 @@ public class DirectClientPerformanceTest {
 		GlideClientConfiguration config = GlideClientConfiguration.builder()
 			.address(NodeAddress.builder().host("localhost").port(6379).build())
 			.build();
-		
+
 		try (GlideClient client = GlideClient.createClient(config).get()) {
 			// SET operations
 			long start = System.nanoTime();
@@ -74,7 +75,7 @@ public class DirectClientPerformanceTest {
 			// DELETE operations
 			start = System.nanoTime();
 			for (int i = 0; i < OPERATIONS; i++) {
-				client.del(new GlideString[]{GlideString.of(KEY_PREFIX + i)}).get();
+				client.del(new GlideString[] { GlideString.of(KEY_PREFIX + i) }).get();
 			}
 			long deleteTime = System.nanoTime() - start;
 			printResult("DELETE", deleteTime);
@@ -83,10 +84,10 @@ public class DirectClientPerformanceTest {
 
 	private static void testLettuce() {
 		RedisClient client = RedisClient.create(RedisURI.create("redis://localhost:6379"));
-		
+
 		try (StatefulRedisConnection<String, String> connection = client.connect()) {
 			RedisCommands<String, String> commands = connection.sync();
-			
+
 			// SET operations
 			long start = System.nanoTime();
 			for (int i = 0; i < OPERATIONS; i++) {
@@ -110,7 +111,8 @@ public class DirectClientPerformanceTest {
 			}
 			long deleteTime = System.nanoTime() - start;
 			printResult("DELETE", deleteTime);
-		} finally {
+		}
+		finally {
 			client.shutdown();
 		}
 	}
@@ -145,7 +147,8 @@ public class DirectClientPerformanceTest {
 
 	private static void printResult(String operation, long durationNanos) {
 		long durationMs = durationNanos / 1_000_000;
-		System.out.printf("%s:    %,d ops/sec (%.2f ms total)%n", 
-			operation, (long) (OPERATIONS * 1000.0 / durationMs), durationMs / 1.0);
+		System.out.printf("%s:    %,d ops/sec (%.2f ms total)%n", operation, (long) (OPERATIONS * 1000.0 / durationMs),
+				durationMs / 1.0);
 	}
+
 }
