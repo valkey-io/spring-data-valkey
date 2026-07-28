@@ -19,8 +19,8 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 import javax.net.ssl.SSLParameters;
 
 import org.apache.commons.pool2.impl.GenericObjectPool;
+import redis.clients.jedis.ConnectionPoolConfig;
 import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPoolConfig;
 
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -151,11 +151,11 @@ class JedisConnectionConfiguration extends ValkeyConnectionConfiguration {
 
 	private void applyPooling(ValkeyProperties.Pool pool,
 			JedisClientConfiguration.JedisClientConfigurationBuilder builder) {
-		builder.usePooling().poolConfig(jedisPoolConfig(pool));
+		builder.usePooling().poolConfig(poolConfig(pool));
 	}
 
-	private JedisPoolConfig jedisPoolConfig(ValkeyProperties.Pool pool) {
-		JedisPoolConfig config = new JedisPoolConfig();
+	private ConnectionPoolConfig poolConfig(ValkeyProperties.Pool pool) {
+		ConnectionPoolConfig config = new ConnectionPoolConfig();
 		config.setMaxTotal(pool.getMaxActive());
 		config.setMaxIdle(pool.getMaxIdle());
 		config.setMinIdle(pool.getMinIdle());

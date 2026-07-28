@@ -4,7 +4,7 @@ A Spring Boot starter that provides auto-configuration for Valkey, enabling seam
 
 This starter simplifies the setup and configuration of Valkey in Spring Boot applications by providing auto-configuration for Valkey connections and Spring Data integration.
 
-The project is a fork of Spring Boot Starter Data Redis 4.0.7 (part of the [Spring Boot](https://github.com/spring-projects/spring-boot) repository).
+The project is a fork of Spring Boot Starter Data Redis 4.1.0 (part of the [Spring Boot](https://github.com/spring-projects/spring-boot) repository).
 
 ## Features
 

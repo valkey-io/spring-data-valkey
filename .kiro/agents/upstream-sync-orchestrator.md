@@ -16,7 +16,7 @@ You are the orchestrator for syncing spring-data-valkey with upstream Spring Dat
 
 You will be given:
 - **Source version**: The current upstream version (default: `3.5.1`)
-- **Target version**: The upstream version to upgrade to (default: `4.1.0` for spring-data-redis, `4.0.7` for spring-boot)
+- **Target version**: The upstream version to upgrade to (default: `4.1.0` for spring-data-redis, `4.1.0` for spring-boot)
 - **Upstream repo paths**:
   - spring-data-redis: `/workspace/amazon/spring-data-redis`
   - spring-boot: `/workspace/amazon/spring-boot`

@@ -263,17 +263,6 @@ class ValkeyAutoConfigurationTests {
 	}
 
 	@Test
-	void testValkeyConfigurationWithClusterAdaptiveRefresh() {
-		this.contextRunner
-			.withPropertyValues("spring.data.valkey.cluster.nodes=127.0.0.1:27379,127.0.0.1:27380",
-					"spring.data.valkey.valkeyglide.cluster.refresh.adaptive=true")
-			.run((context) -> {
-				ValkeyProperties properties = context.getBean(ValkeyProperties.class);
-				assertThat(properties.getValkeyGlide().getCluster().getRefresh().isAdaptive()).isTrue();
-			});
-	}
-
-	@Test
 	void testValkeyConfigurationWithClusterRefreshPeriodHasNoEffectWithNonClusteredConfiguration() {
 		this.contextRunner.withPropertyValues("spring.data.valkey.cluster.refresh.period=30s")
 			.run(assertClientOptions((config) -> {

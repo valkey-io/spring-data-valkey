@@ -8,7 +8,7 @@ Spring Data Valkey is a Spring Data module providing first-class Valkey/Redis in
 
 **Primary Language:** Java 17+
 **Build System:** Maven (use `./mvnw` wrapper)
-**Framework:** Spring Data 4.1.x, Spring Boot 4.0.x
+**Framework:** Spring Data 4.1.x, Spring Boot 4.1.x
 **Origin:** Synced with Spring Data Redis 4.1.0 — class and package renames follow the pattern `*Redis*` → `*Valkey*`, `*redis*` → `*valkey*` (see [MIGRATION.md](./MIGRATION.md) for full mapping, [DEVELOPER.md](./DEVELOPER.md) for source alignment and detailed build/release info)
 
 **Key Components:**

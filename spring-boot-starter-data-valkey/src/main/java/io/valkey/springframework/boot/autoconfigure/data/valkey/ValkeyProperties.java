@@ -577,12 +577,6 @@ public class ValkeyProperties {
 				 */
 				private @Nullable Duration period;
 
-				/**
-				 * Whether adaptive topology refreshing using all available refresh
-				 * triggers should be used.
-				 */
-				private boolean adaptive;
-
 				public boolean isDynamicRefreshSources() {
 					return this.dynamicRefreshSources;
 				}
@@ -597,14 +591,6 @@ public class ValkeyProperties {
 
 				public void setPeriod(@Nullable Duration period) {
 					this.period = period;
-				}
-
-				public boolean isAdaptive() {
-					return this.adaptive;
-				}
-
-				public void setAdaptive(boolean adaptive) {
-					this.adaptive = adaptive;
 				}
 
 			}
@@ -720,7 +706,6 @@ public class ValkeyProperties {
 
 				private boolean dynamicRefreshSources = true;
 				private Duration period;
-				private boolean adaptive;
 
 				public boolean isDynamicRefreshSources() {
 					return this.dynamicRefreshSources;
@@ -736,14 +721,6 @@ public class ValkeyProperties {
 
 				public void setPeriod(Duration period) {
 					this.period = period;
-				}
-
-				public boolean isAdaptive() {
-					return this.adaptive;
-				}
-
-				public void setAdaptive(boolean adaptive) {
-					this.adaptive = adaptive;
 				}
 			}
 		}

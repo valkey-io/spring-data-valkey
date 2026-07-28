@@ -18,7 +18,6 @@ package io.valkey.springframework.boot.autoconfigure.data.valkey;
 
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
@@ -31,7 +30,6 @@ import io.lettuce.core.ReadFrom;
 import io.lettuce.core.ReadFrom.Nodes;
 import io.lettuce.core.RedisURI;
 import io.lettuce.core.cluster.ClusterClientOptions;
-import io.lettuce.core.cluster.ClusterTopologyRefreshOptions.RefreshTrigger;
 import io.lettuce.core.cluster.models.partitions.RedisClusterNode;
 import io.lettuce.core.models.role.RedisNodeDescription;
 import io.lettuce.core.resource.DefaultClientResources;
@@ -569,16 +567,6 @@ class ValkeyAutoConfigurationLettuceTests {
 					"spring.data.valkey.lettuce.cluster.refresh.period=30s")
 			.run(assertClientOptions(ClusterClientOptions.class,
 					(options) -> assertThat(options.getTopologyRefreshOptions().getRefreshPeriod()).hasSeconds(30)));
-	}
-
-	@Test
-	void testValkeyConfigurationWithClusterAdaptiveRefresh() {
-		this.contextRunner
-			.withPropertyValues("spring.data.valkey.cluster.nodes=127.0.0.1:27379,127.0.0.1:27380",
-					"spring.data.valkey.lettuce.cluster.refresh.adaptive=true")
-			.run(assertClientOptions(ClusterClientOptions.class,
-					(options) -> assertThat(options.getTopologyRefreshOptions().getAdaptiveRefreshTriggers())
-						.isEqualTo(EnumSet.allOf(RefreshTrigger.class))));
 	}
 
 	@Test

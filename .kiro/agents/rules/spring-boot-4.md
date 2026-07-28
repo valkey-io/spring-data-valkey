@@ -4,7 +4,7 @@
 
 | Dependency | Version |
 |-----------|---------|
-| Spring Boot | 4.0.7 |
+| Spring Boot | 4.1.0 |
 | Spring Data Parent | 4.1.0 |
 | Lettuce | 7.5.2.RELEASE |
 | Jedis | 7.4.1 |
