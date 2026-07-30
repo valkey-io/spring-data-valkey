@@ -136,6 +136,10 @@ jobs:
             --query SecretString --output text)
           OSSRH_USERNAME=$(echo "$SECRET" | jq -r '.["maven-central-username"]')
           OSSRH_PASSWORD=$(echo "$SECRET" | jq -r '.["maven-central-password"]')
+          if [ -z "$OSSRH_USERNAME" ] || [ "$OSSRH_USERNAME" = "null" ] || [ -z "$OSSRH_PASSWORD" ] || [ "$OSSRH_PASSWORD" = "null" ]; then
+            echo "ERROR: Failed to extract Maven credentials from secret"
+            exit 1
+          fi
           echo "::add-mask::$OSSRH_USERNAME"
           echo "::add-mask::$OSSRH_PASSWORD"
           echo "OSSRH_USERNAME=$OSSRH_USERNAME" >> $GITHUB_ENV
@@ -147,6 +151,10 @@ jobs:
             --secret-id GPGPassword \
             --query SecretString --output text)
           GPG_PASSPHRASE=$(echo "$SECRET" | jq -r '.["GPG Password"]')
+          if [ -z "$GPG_PASSPHRASE" ] || [ "$GPG_PASSPHRASE" = "null" ]; then
+            echo "ERROR: Failed to extract GPG passphrase from secret"
+            exit 1
+          fi
           echo "::add-mask::$GPG_PASSPHRASE"
           echo "GPG_PASSPHRASE=$GPG_PASSPHRASE" >> $GITHUB_ENV
 
@@ -157,9 +165,14 @@ jobs:
             --query SecretString --output text)
           echo "$SECRET" | jq -r '.PGP_SECRET_KEY' | tr ' ' '\n' | base64 -d | gpg --batch --import
           GPG_KEYNAME=$(gpg --list-secret-keys --keyid-format short 2>/dev/null | grep 'sec' | head -1 | sed 's/.*\///' | awk '{print $1}')
+          if [ -z "$GPG_KEYNAME" ]; then
+            echo "ERROR: Failed to determine GPG key ID after import"
+            exit 1
+          fi
           echo "GPG_KEYNAME=$GPG_KEYNAME" >> $GITHUB_ENV
 
-      - name: Deploy to Maven Central (staging)
+      - name: Deploy and release to Maven Central
+        id: deploy
         run: |
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
@@ -167,4 +180,24 @@ jobs:
             deploy -DskipTests \
             -pl spring-data-valkey,spring-boot-starter-data-valkey \
             -Dmaven.deploy.skip=false \
+            -DautoReleaseAfterClose=true \
             -U -B
+
+      - name: Drop staging repository on failure
+        if: failure() && steps.deploy.outcome == 'failure'
+        run: |
+          echo "Deploy failed - attempting to drop staging repository..."
+          AUTH_HEADER="Bearer $(echo -n "${OSSRH_USERNAME}:${OSSRH_PASSWORD}" | base64)"
+          # Find any open repositories for our namespace
+          REPOS=$(curl -s --header "Authorization: ${AUTH_HEADER}" \
+            "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=io.valkey.springframework&state=open")
+          REPO_KEY=$(echo "$REPOS" | jq -r '.repositories[0].key // empty')
+          if [ -n "$REPO_KEY" ]; then
+            echo "Dropping repository: $REPO_KEY"
+            curl --fail --request DELETE \
+              --header "Authorization: ${AUTH_HEADER}" \
+              "https://ossrh-staging-api.central.sonatype.com/manual/drop/repository/${REPO_KEY}"
+            echo "Staging repository dropped - safe to retry"
+          else
+            echo "No open staging repository found - nothing to clean up"
+          fi
