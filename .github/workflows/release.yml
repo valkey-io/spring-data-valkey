@@ -101,6 +101,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up JDK
         uses: actions/setup-java@v4
@@ -194,13 +196,17 @@ jobs:
           AUTH_HEADER="Bearer $(echo -n "${OSSRH_USERNAME}:${OSSRH_PASSWORD}" | base64)"
           REPOS=$(curl -s --header "Authorization: ${AUTH_HEADER}" \
             "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=io.valkey.springframework&state=open")
-          REPO_KEY=$(echo "$REPOS" | jq -r '.repositories[0].key // empty')
-          if [ -n "$REPO_KEY" ]; then
+          REPO_COUNT=$(echo "$REPOS" | jq '.repositories | length')
+          if [ "$REPO_COUNT" = "1" ]; then
+            REPO_KEY=$(echo "$REPOS" | jq -r '.repositories[0].key')
             echo "Dropping repository: $REPO_KEY"
             curl --fail --request DELETE \
               --header "Authorization: ${AUTH_HEADER}" \
               "https://ossrh-staging-api.central.sonatype.com/manual/drop/repository/${REPO_KEY}"
             echo "Staging repository dropped - safe to retry"
-          else
+          elif [ "$REPO_COUNT" = "0" ]; then
             echo "No open staging repository found - nothing to clean up"
+          else
+            echo "Multiple open staging repositories found ($REPO_COUNT) - skipping automatic cleanup to avoid dropping wrong repo"
+            echo "$REPOS" | jq '.repositories'
           fi
