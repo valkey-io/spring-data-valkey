@@ -129,47 +129,51 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
           aws-region: us-east-1
 
-      - name: Fetch Maven Central credentials
+      - name: Fetch release credentials
         run: |
           SECRET=$(aws secretsmanager get-secret-value \
             --secret-id spring-data-valkey-maven-token \
             --query SecretString --output text)
           OSSRH_USERNAME=$(echo "$SECRET" | jq -r '.["maven-central-username"]')
           OSSRH_PASSWORD=$(echo "$SECRET" | jq -r '.["maven-central-password"]')
+          GPG_PASSPHRASE=$(echo "$SECRET" | jq -r '.["gpg-passphrase"]')
+          GPG_KEYNAME=$(echo "$SECRET" | jq -r '.["gpg-key-id"]')
           if [ -z "$OSSRH_USERNAME" ] || [ "$OSSRH_USERNAME" = "null" ] || [ -z "$OSSRH_PASSWORD" ] || [ "$OSSRH_PASSWORD" = "null" ]; then
             echo "ERROR: Failed to extract Maven credentials from secret"
             exit 1
           fi
-          echo "::add-mask::$OSSRH_USERNAME"
-          echo "::add-mask::$OSSRH_PASSWORD"
-          echo "OSSRH_USERNAME=$OSSRH_USERNAME" >> $GITHUB_ENV
-          echo "OSSRH_PASSWORD=$OSSRH_PASSWORD" >> $GITHUB_ENV
-
-      - name: Fetch GPG passphrase
-        run: |
-          SECRET=$(aws secretsmanager get-secret-value \
-            --secret-id GPGPassword \
-            --query SecretString --output text)
-          GPG_PASSPHRASE=$(echo "$SECRET" | jq -r '.["GPG Password"]')
           if [ -z "$GPG_PASSPHRASE" ] || [ "$GPG_PASSPHRASE" = "null" ]; then
             echo "ERROR: Failed to extract GPG passphrase from secret"
             exit 1
           fi
+          if [ -z "$GPG_KEYNAME" ] || [ "$GPG_KEYNAME" = "null" ]; then
+            echo "ERROR: Failed to extract GPG key ID from secret"
+            exit 1
+          fi
+          echo "::add-mask::$OSSRH_USERNAME"
+          echo "::add-mask::$OSSRH_PASSWORD"
           echo "::add-mask::$GPG_PASSPHRASE"
+          echo "OSSRH_USERNAME=$OSSRH_USERNAME" >> $GITHUB_ENV
+          echo "OSSRH_PASSWORD=$OSSRH_PASSWORD" >> $GITHUB_ENV
           echo "GPG_PASSPHRASE=$GPG_PASSPHRASE" >> $GITHUB_ENV
+          echo "GPG_KEYNAME=$GPG_KEYNAME" >> $GITHUB_ENV
 
       - name: Import GPG private key
         run: |
           SECRET=$(aws secretsmanager get-secret-value \
-            --secret-id PGPPrivateKey \
+            --secret-id spring-data-valkey-maven-token \
             --query SecretString --output text)
-          echo "$SECRET" | jq -r '.PGP_SECRET_KEY' | tr ' ' '\n' | base64 -d | gpg --batch --import
-          GPG_KEYNAME=$(gpg --list-secret-keys --keyid-format short 2>/dev/null | grep 'sec' | head -1 | sed 's/.*\///' | awk '{print $1}')
-          if [ -z "$GPG_KEYNAME" ]; then
-            echo "ERROR: Failed to determine GPG key ID after import"
+          GPG_KEY=$(echo "$SECRET" | jq -r '.["gpg-private-key"]')
+          if [ -z "$GPG_KEY" ] || [ "$GPG_KEY" = "null" ]; then
+            echo "ERROR: Failed to extract GPG private key from secret"
             exit 1
           fi
-          echo "GPG_KEYNAME=$GPG_KEYNAME" >> $GITHUB_ENV
+          echo "::add-mask::$GPG_KEY"
+          echo "$GPG_KEY" | tr ' ' '\n' | base64 -d | gpg --batch --import
+          if ! gpg --list-secret-keys --keyid-format short 2>/dev/null | grep -q 'sec'; then
+            echo "ERROR: GPG key import failed"
+            exit 1
+          fi
 
       - name: Deploy and release to Maven Central
         id: deploy
