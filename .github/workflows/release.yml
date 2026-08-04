@@ -175,33 +175,52 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy and release to Maven Central
-        id: deploy
+      # TODO: Remove dry-run step and uncomment deploy steps below once verified
+      - name: Verify credentials and GPG signing (dry run)
         run: |
-          ./mvnw -s settings.xml \
-            -Ddevelocity.storage.directory=$HOME/.develocity-root \
-            -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
-            deploy -DskipTests \
-            -pl spring-data-valkey,spring-boot-starter-data-valkey \
-            -Dmaven.deploy.skip=false \
-            -DautoReleaseAfterClose=true \
-            -U -B
-
-      - name: Drop staging repository on failure
-        if: failure() && steps.deploy.outcome == 'failure'
-        run: |
-          echo "Deploy failed - attempting to drop staging repository..."
+          [ -n "$OSSRH_USERNAME" ] && echo "OSSRH_USERNAME set" || echo "OSSRH_USERNAME missing"
+          [ -n "$OSSRH_PASSWORD" ] && echo "OSSRH_PASSWORD set" || echo "OSSRH_PASSWORD missing"
+          [ -n "$GPG_PASSPHRASE" ] && echo "GPG_PASSPHRASE set" || echo "GPG_PASSPHRASE missing"
+          [ -n "$GPG_KEYNAME" ] && echo "GPG_KEYNAME set ($GPG_KEYNAME)" || echo "GPG_KEYNAME missing"
+          gpg --list-secret-keys --keyid-format short
+          echo "test" | gpg --batch --yes --passphrase "$GPG_PASSPHRASE" --pinentry-mode loopback --clearsign
           AUTH_HEADER="Bearer $(echo -n "${OSSRH_USERNAME}:${OSSRH_PASSWORD}" | base64)"
-          # Find any open repositories for our namespace
-          REPOS=$(curl -s --header "Authorization: ${AUTH_HEADER}" \
-            "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=io.valkey.springframework&state=open")
-          REPO_KEY=$(echo "$REPOS" | jq -r '.repositories[0].key // empty')
-          if [ -n "$REPO_KEY" ]; then
-            echo "Dropping repository: $REPO_KEY"
-            curl --fail --request DELETE \
-              --header "Authorization: ${AUTH_HEADER}" \
-              "https://ossrh-staging-api.central.sonatype.com/manual/drop/repository/${REPO_KEY}"
-            echo "Staging repository dropped - safe to retry"
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            --header "Authorization: ${AUTH_HEADER}" \
+            "https://central.sonatype.com/api/v1/publisher/deployments")
+          if [ "$HTTP_STATUS" = "200" ]; then
+            echo "Maven Central authentication successful"
           else
-            echo "No open staging repository found - nothing to clean up"
+            echo "Maven Central authentication failed (HTTP $HTTP_STATUS)"
+            exit 1
           fi
+
+      # - name: Deploy and release to Maven Central
+      #   id: deploy
+      #   run: |
+      #     ./mvnw -s settings.xml \
+      #       -Ddevelocity.storage.directory=$HOME/.develocity-root \
+      #       -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
+      #       deploy -DskipTests \
+      #       -pl spring-data-valkey,spring-boot-starter-data-valkey \
+      #       -Dmaven.deploy.skip=false \
+      #       -DautoReleaseAfterClose=true \
+      #       -U -B
+      #
+      # - name: Drop staging repository on failure
+      #   if: failure() && steps.deploy.outcome == 'failure'
+      #   run: |
+      #     echo "Deploy failed - attempting to drop staging repository..."
+      #     AUTH_HEADER="Bearer $(echo -n "${OSSRH_USERNAME}:${OSSRH_PASSWORD}" | base64)"
+      #     REPOS=$(curl -s --header "Authorization: ${AUTH_HEADER}" \
+      #       "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=io.valkey.springframework&state=open")
+      #     REPO_KEY=$(echo "$REPOS" | jq -r '.repositories[0].key // empty')
+      #     if [ -n "$REPO_KEY" ]; then
+      #       echo "Dropping repository: $REPO_KEY"
+      #       curl --fail --request DELETE \
+      #         --header "Authorization: ${AUTH_HEADER}" \
+      #         "https://ossrh-staging-api.central.sonatype.com/manual/drop/repository/${REPO_KEY}"
+      #       echo "Staging repository dropped - safe to retry"
+      #     else
+      #       echo "No open staging repository found - nothing to clean up"
+      #     fi
