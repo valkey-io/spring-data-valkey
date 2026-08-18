@@ -141,7 +141,7 @@ jobs:
           fi
           echo "✓ Hardware validated: $CPU_MODEL, stepping $CPU_STEPPING, $CPU_COUNT vCPUs"
 
-      - uses: actions/checkout@v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
 
@@ -422,13 +422,13 @@ jobs:
 
       - name: Cache Valkey server binary
         id: cache-valkey
-        uses: actions/cache@v4.3.0
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: resp-bench/work/valkey
           key: valkey-server-${{ steps.resp-bench.outputs.valkey_version }}
 
       - name: Cache Maven repository
-        uses: actions/cache@v4.3.0
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.m2/repository
           key: maven-bench-${{ steps.resp-bench.outputs.commit }}
@@ -438,7 +438,7 @@ jobs:
       - name: Restore SDV build from cache
         if: steps.driver-info.outputs.build_sdv == 'true'
         id: cache-sdv
-        uses: actions/cache@v4.3.0
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.m2/repository/io/valkey/springframework
           key: sdv-build-${{ steps.versions.outputs.primary_version }}
@@ -446,7 +446,7 @@ jobs:
       - name: Restore glide build from cache
         if: steps.driver-info.outputs.build_glide == 'true'
         id: cache-glide
-        uses: actions/cache@v4.3.0
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.m2/repository/io/valkey/valkey-glide
           key: glide-build-${{ steps.driver-info.outputs.glide_commit }}
@@ -835,7 +835,7 @@ jobs:
 
       - name: Upload benchmark results
         if: always()
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: benchmark-results-${{ steps.validate.outputs.driver }}-${{ steps.validate.outputs.workload }}
           path: |
