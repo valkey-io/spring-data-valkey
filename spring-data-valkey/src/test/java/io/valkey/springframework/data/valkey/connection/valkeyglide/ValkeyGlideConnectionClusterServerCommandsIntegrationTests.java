@@ -478,7 +478,8 @@ public class ValkeyGlideConnectionClusterServerCommandsIntegrationTests
 	@EnabledOnValkeyVersion("7.2")
 	void testClientLibNameReported() {
 		List<ValkeyClientInfo> clientList = clusterConnection.serverCommands().getClientList();
-		assertThat(clientList).anyMatch(client -> "GlideSpringDataValkey".equals(client.get("lib-name")));
+		assertThat(clientList).anyMatch(
+				client -> client.get("lib-name") != null && client.get("lib-name").contains("(SpringDataValkey)"));
 	}
 
 	// ==================== Cluster-Wide Routing and Aggregation Verification

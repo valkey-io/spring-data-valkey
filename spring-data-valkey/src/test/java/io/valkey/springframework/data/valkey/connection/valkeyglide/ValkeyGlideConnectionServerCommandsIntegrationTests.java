@@ -481,7 +481,8 @@ public class ValkeyGlideConnectionServerCommandsIntegrationTests extends Abstrac
 	@EnabledOnValkeyVersion("7.2")
 	void testClientLibNameReported() {
 		List<ValkeyClientInfo> clientList = connection.serverCommands().getClientList();
-		assertThat(clientList).anyMatch(client -> "GlideSpringDataValkey".equals(client.get("lib-name")));
+		assertThat(clientList).anyMatch(
+				client -> client.get("lib-name") != null && client.get("lib-name").contains("(SpringDataValkey)"));
 	}
 
 	@Test
