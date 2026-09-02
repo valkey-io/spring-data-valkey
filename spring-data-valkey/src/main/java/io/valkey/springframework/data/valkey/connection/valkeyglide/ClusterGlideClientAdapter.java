@@ -415,8 +415,11 @@ class ClusterGlideClientAdapter implements UnifiedGlideClient {
 			ClusterValue<?> clusterValue = nextCommandRoute == null ? glideClusterClient.customCommand(args).get()
 					: glideClusterClient.customCommand(args, nextCommandRoute).get();
 
-			// Case 1: Explicit multi-node route - return multiValue for aggregation
-			if (needToAggregateResult(nextCommandRoute)) {
+			// Case 1: Explicit multi-node route - return multiValue for aggregation.
+			// Guard with hasMultiData(): some commands routed to all primaries (e.g. SAVE)
+			// return a single value rather than a per-node map, in which case we fall
+			// through to single-value handling instead of failing.
+			if (needToAggregateResult(nextCommandRoute) && clusterValue.hasMultiData()) {
 				return clusterValue.getMultiValue();
 			}
 
