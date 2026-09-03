@@ -73,7 +73,7 @@ The following overview explains features that are supported by the individual Va
   <dependency>
     <groupId>io.valkey</groupId>
     <artifactId>valkey-glide</artifactId>
-    <version>2.4.0</version>
+    <version>${version}</version>
   </dependency>
 </dependencies>
 ```
@@ -136,7 +136,7 @@ For more detailed client configuration options, see `io.valkey.springframework.d
   <dependency>
     <groupId>io.lettuce</groupId>
     <artifactId>lettuce-core</artifactId>
-    <version>6.3.2.RELEASE</version>
+    <version>${version}</version>
   </dependency>
 
 </dependencies>
@@ -212,7 +212,7 @@ Netty currently supports the epoll (Linux) and kqueue (BSD/macOS) interfaces for
   <dependency>
     <groupId>valkey.clients</groupId>
     <artifactId>jedis</artifactId>
-    <version>5.1.2</version>
+    <version>${version}</version>
   </dependency>
 
 </dependencies>

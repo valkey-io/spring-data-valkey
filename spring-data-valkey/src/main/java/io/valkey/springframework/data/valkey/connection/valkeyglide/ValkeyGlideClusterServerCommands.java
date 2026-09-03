@@ -58,17 +58,14 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
 
 	@Override
 	public void bgReWriteAof() {
-		// valkey-glide default route is bogus - by first key, so we specify ALL_PRIMARIES.
-		// The response is discarded; accept Object since 2.5.x may return a single value
-		// rather than a per-node map for these admin commands.
-		connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "BGREWRITEAOF", (Object rawResult) -> null);
+		// valkey-glide default route is bogus - by first key, so we specify ALL_PRIMARIES
+		connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "BGREWRITEAOF", (Map<String, ?> rawResult) -> null);
 	}
 
 	@Override
 	public void bgSave() {
-		// valkey-glide default route is - random, so we specify ALL_PRIMARIES.
-		// The response is discarded; accept Object (single value or per-node map).
-		connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "BGSAVE", (Object rawResult) -> null);
+		// valkey-glide default route is - random, so we specify ALL_PRIMARIES
+		connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "BGSAVE", (Map<String, ?> rawResult) -> null);
 	}
 
 	@Override
@@ -81,7 +78,8 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
 
 	public void save() {
 		// valkey-glide default route is "random", so we specify ALL_PRIMARIES.
-		// The response is discarded; accept Object (single value or per-node map).
+		// GLIDE 2.5.x aggregates SAVE to a single value (rather than a per-node map);
+		// the response is discarded, so accept Object.
 		connection.execute(SimpleMultiNodeRoute.ALL_PRIMARIES, "SAVE", (Object rawResult) -> null);
 	}
 
