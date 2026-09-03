@@ -164,7 +164,7 @@ class StandaloneGlideClientAdapter implements UnifiedGlideClient {
 		configBuilder.subscriptionConfiguration(subConfigBuilder.build());
 
 		// Report as GlideJava(SpringDataValkey), preserving the underlying driver identity.
-		configBuilder.clientInfoTag("SpringDataValkey");
+		configBuilder.clientInfoTag(CLIENT_INFO_TAG);
 
 		// Build and create client
 		GlideClientConfiguration config = configBuilder.build();

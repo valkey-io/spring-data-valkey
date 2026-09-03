@@ -29,6 +29,12 @@ import org.jspecify.annotations.Nullable;
  */
 interface UnifiedGlideClient extends AutoCloseable {
 
+	/**
+	 * Client information tag reported to the server via GLIDE's {@code clientInfoTag}, producing a
+	 * lib-name of {@code GlideJava(SpringDataValkey)} for server-side identification.
+	 */
+	String CLIENT_INFO_TAG = "SpringDataValkey";
+
 	public enum BatchStatus {
 
 		None, Pipeline, Transaction,

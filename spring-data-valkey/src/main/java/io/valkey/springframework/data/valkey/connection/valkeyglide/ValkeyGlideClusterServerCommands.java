@@ -76,6 +76,7 @@ public class ValkeyGlideClusterServerCommands implements ValkeyClusterServerComm
 				(Map<String, Long> rawResult) -> rawResult.isEmpty() ? null : Collections.max(rawResult.values()));
 	}
 
+	@Override
 	public void save() {
 		// valkey-glide default route is "random", so we specify ALL_PRIMARIES.
 		// GLIDE 2.5.x aggregates SAVE to a single value (rather than a per-node map);
