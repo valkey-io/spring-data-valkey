@@ -95,7 +95,7 @@ jobs:
   publish:
     needs: release
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     environment: maven-publish
     permissions:
       id-token: write
@@ -180,36 +180,94 @@ jobs:
             exit 1
           fi
 
-      - name: Deploy and release to Maven Central
-        id: deploy
+      - name: Build and sign artifacts
+        id: build
         run: |
+          # Build + GPG-sign the publishable modules locally (no deploy to staging).
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
-            deploy -DskipTests \
-            -pl spring-data-valkey,spring-boot-starter-data-valkey \
-            -Dmaven.deploy.skip=false \
-            -DautoReleaseAfterClose=true \
+            clean install javadoc:jar -DskipTests \
+            -pl spring-data-valkey,spring-boot-starter-data-valkey -am \
             -U -B
 
-      - name: Drop staging repository on failure
-        if: failure() && steps.deploy.outcome == 'failure'
+      - name: Assemble Central bundle
+        id: bundle
         run: |
-          echo "Deploy failed - attempting to drop staging repository..."
-          AUTH_HEADER="Bearer $(echo -n "${OSSRH_USERNAME}:${OSSRH_PASSWORD}" | base64)"
-          REPOS=$(curl -s --header "Authorization: ${AUTH_HEADER}" \
-            "https://ossrh-staging-api.central.sonatype.com/manual/search/repositories?profile_id=io.valkey.springframework&state=open")
-          REPO_COUNT=$(echo "$REPOS" | jq '.repositories | length')
-          if [ "$REPO_COUNT" = "1" ]; then
-            REPO_KEY=$(echo "$REPOS" | jq -r '.repositories[0].key')
-            echo "Dropping repository: $REPO_KEY"
-            curl --fail --request DELETE \
-              --header "Authorization: ${AUTH_HEADER}" \
-              "https://ossrh-staging-api.central.sonatype.com/manual/drop/repository/${REPO_KEY}"
-            echo "Staging repository dropped - safe to retry"
-          elif [ "$REPO_COUNT" = "0" ]; then
-            echo "No open staging repository found - nothing to clean up"
-          else
-            echo "Multiple open staging repositories found ($REPO_COUNT) - skipping automatic cleanup to avoid dropping wrong repo"
-            echo "$REPOS" | jq '.repositories'
+          set -euo pipefail
+          VERSION="$(./mvnw -s settings.xml help:evaluate -Dexpression=project.version -q -DforceStdout -N)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+          # module_dir|group_path|artifact_id
+          MODULES=(
+            "spring-data-valkey|io/valkey/springframework/data|spring-data-valkey"
+            "spring-boot-starter-data-valkey|io/valkey/springframework/boot|spring-boot-starter-data-valkey"
+          )
+
+          rm -rf bundle bundle.zip
+          for entry in "${MODULES[@]}"; do
+            IFS='|' read -r DIR GROUP ARTIFACT <<< "$entry"
+            OUT="bundle/${GROUP}/${ARTIFACT}/${VERSION}"
+            mkdir -p "$OUT"
+
+            # Published POM = the flattened pom.
+            cp "${DIR}/.flattened-pom.xml" "${OUT}/${ARTIFACT}-${VERSION}.pom"
+
+            for f in "${ARTIFACT}-${VERSION}.jar" "${ARTIFACT}-${VERSION}-sources.jar" "${ARTIFACT}-${VERSION}-javadoc.jar"; do
+              cp "${DIR}/target/${f}" "${OUT}/"
+              cp "${DIR}/target/${f}.asc" "${OUT}/"   # signatures from maven-gpg-plugin
+            done
+
+            # Sign the (flattened) POM, which target/*.asc does not cover.
+            gpg --batch --yes --pinentry-mode loopback --passphrase "${GPG_PASSPHRASE}" \
+              -u "${GPG_KEYNAME}" --armor --detach-sign "${OUT}/${ARTIFACT}-${VERSION}.pom"
+
+            ( cd "$OUT"
+              for file in *.jar *.pom; do
+                md5sum "$file" | cut -d' ' -f1 > "${file}.md5"
+                sha1sum "$file" | cut -d' ' -f1 > "${file}.sha1"
+              done )
+          done
+
+          ( cd bundle && zip -qr ../bundle.zip . )
+          echo "Bundle contents:"; unzip -l bundle.zip
+
+      - name: Upload and release to Maven Central
+        id: release
+        run: |
+          set -euo pipefail
+          PORTAL="https://central.sonatype.com/api/v1/publisher"
+          AUTH="Bearer $(printf '%s:%s' "$OSSRH_USERNAME" "$OSSRH_PASSWORD" | base64 | tr -d '\n')"
+
+          # Upload the bundle; AUTOMATIC releases to Central after validation passes.
+          # Upload returns 201 with the deployment id as the plain-text body.
+          RESP="$(curl -s --fail-with-body -H "Authorization: $AUTH" \
+            --form bundle=@bundle.zip "${PORTAL}/upload?publishingType=AUTOMATIC")"
+          DEPLOYMENT_ID="$(echo "$RESP" | tail -n1)"
+          echo "Deployment: $DEPLOYMENT_ID"
+          # Guard against a malformed upload response (empty, whitespace, or an error
+          # body) rather than assuming a specific id format. The status poll below is
+          # the real validator of the id.
+          if [ -z "${DEPLOYMENT_ID// }" ] || echo "$DEPLOYMENT_ID" | grep -q '[[:space:]<]'; then
+            echo "ERROR: upload did not return a usable deployment id. Response was:"
+            echo "$RESP"
+            exit 1
           fi
+
+          # Confirm it reaches PUBLISHED. Fail fast on FAILED; tolerate transient
+          # unknown states but give up if they persist (likely a bad id or API outage).
+          unknown=0
+          for i in $(seq 1 40); do
+            STATE="$(curl -s -X POST -H "Authorization: $AUTH" "${PORTAL}/status?id=${DEPLOYMENT_ID}" | jq -r '.deploymentState')"
+            echo "  [$i] $STATE"
+            case "$STATE" in
+              PUBLISHED) echo "Released to Maven Central."; exit 0 ;;
+              FAILED) echo "ERROR: deployment FAILED."; exit 1 ;;
+              PENDING|VALIDATING|VALIDATED|PUBLISHING) unknown=0 ;;
+              *) unknown=$((unknown+1));
+                 [ "$unknown" -ge 3 ] && { echo "ERROR: repeated unexpected state '$STATE' (bad id or API error)."; exit 1; } ;;
+            esac
+            sleep 20
+          done
+          echo "ERROR: timed out (last: $STATE)."
+          exit 1
