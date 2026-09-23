@@ -422,7 +422,11 @@ public class ValkeyGlideSetCommands implements ValkeySetCommands {
 				}
 
 				connection.execute("SSCAN", (Object[] glideResult) -> {
-					if (glideResult == null) {
+					if (glideResult == null || glideResult.length < 2) {
+						// No cursor to advance on; end the scan rather than looping forever.
+						finished = true;
+						members.clear();
+						currentIndex = 0;
 						return null;
 					}
 

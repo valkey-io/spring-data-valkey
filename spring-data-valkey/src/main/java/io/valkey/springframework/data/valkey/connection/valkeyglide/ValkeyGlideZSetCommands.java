@@ -1575,6 +1575,12 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
 						}
 					}
 				}
+				else {
+					// No cursor to advance on; end the scan rather than looping forever.
+					finished = true;
+					tuples.clear();
+					currentIndex = 0;
+				}
 			}
 			catch (Exception ex) {
 				finished = true;

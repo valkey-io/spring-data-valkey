@@ -271,6 +271,12 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
 					args.add(scanOptions.getCount());
 				}
 
+				if (scanOptions instanceof io.valkey.springframework.data.valkey.core.KeyScanOptions kso
+						&& kso.getType() != null) {
+					args.add("TYPE");
+					args.add(kso.getType());
+				}
+
 				Object[] scanResult = connection.execute("SCAN", (Object[] glideResult) -> glideResult, args.toArray());
 
 				if (scanResult != null && scanResult.length >= 2) {
@@ -295,6 +301,12 @@ public class ValkeyGlideKeyCommands implements ValkeyKeyCommands {
 					// Convert keys result
 					List<byte[]> keys = ValkeyGlideConverters.toBytesList(keysResult);
 					currentBatch = keys.iterator();
+				}
+				else {
+					// Null or short reply carries no cursor to advance; end the scan
+					// instead of letting hasNext() loop forever waiting for progress.
+					finished = true;
+					currentBatch = java.util.Collections.emptyIterator();
 				}
 			}
 			catch (Exception ex) {

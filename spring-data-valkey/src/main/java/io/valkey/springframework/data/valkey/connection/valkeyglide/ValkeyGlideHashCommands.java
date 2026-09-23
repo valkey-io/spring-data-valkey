@@ -375,7 +375,11 @@ public class ValkeyGlideHashCommands implements ValkeyHashCommands {
 				}
 
 				connection.execute("HSCAN", (Object[] glideResult) -> {
-					if (glideResult == null) {
+					if (glideResult == null || glideResult.length < 2) {
+						// No cursor to advance on; end the scan rather than looping forever.
+						finished = true;
+						entries.clear();
+						currentIndex = 0;
 						return null;
 					}
 

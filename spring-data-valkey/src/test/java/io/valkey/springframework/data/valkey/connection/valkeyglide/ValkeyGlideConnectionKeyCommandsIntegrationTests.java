@@ -31,6 +31,7 @@ import io.valkey.springframework.data.valkey.connection.DefaultSortParameters;
 import io.valkey.springframework.data.valkey.connection.SortParameters;
 import io.valkey.springframework.data.valkey.connection.ValueEncoding;
 import io.valkey.springframework.data.valkey.core.Cursor;
+import io.valkey.springframework.data.valkey.core.KeyScanOptions;
 import io.valkey.springframework.data.valkey.core.ScanOptions;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnCommand;
 import io.valkey.springframework.data.valkey.test.condition.EnabledOnValkeyVersion;
@@ -56,7 +57,8 @@ public class ValkeyGlideConnectionKeyCommandsIntegrationTests extends AbstractVa
 				"test:key:type:list", "test:key:type:hash", "test:key:touch:key1", "test:key:touch:key2",
 				"test:key:touch:key3", "test:key:keys:abc", "test:key:keys:def", "test:key:keys:xyz",
 				"test:other:pattern", "test:key:random:key1", "test:key:random:key2", "test:key:scan:item1",
-				"test:key:scan:item2", "test:key:scan:other1", "test:key:rename:old", "test:key:rename:new",
+				"test:key:scan:item2", "test:key:scan:other1", "test:key:scantype:str1", "test:key:scantype:str2",
+				"test:key:scantype:list1", "test:key:scantype:hash1", "test:key:rename:old", "test:key:rename:new",
 				"test:key:renamenx:old", "test:key:renamenx:new", "test:key:renamenx:existing", "test:key:expire",
 				"test:key:pexpire", "test:key:expireat", "test:key:pexpireat", "test:key:persist", "test:key:ttl",
 				"test:key:pttl", "test:key:sort:list", "test:key:sort:store", "test:key:dump", "test:key:restore",
@@ -382,6 +384,45 @@ public class ValkeyGlideConnectionKeyCommandsIntegrationTests extends AbstractVa
 			cleanupKey(key1);
 			cleanupKey(key2);
 			cleanupKey(key3);
+		}
+	}
+
+	@Test
+	void testScanByType() {
+		String basePattern = "test:key:scantype:";
+		String str1 = basePattern + "str1";
+		String str2 = basePattern + "str2";
+		String listKey = basePattern + "list1";
+		String hashKey = basePattern + "hash1";
+
+		try {
+			// Set up keys of different types under the same pattern
+			connection.stringCommands().set(str1.getBytes(), "v".getBytes());
+			connection.stringCommands().set(str2.getBytes(), "v".getBytes());
+			connection.listCommands().rPush(listKey.getBytes(), "e".getBytes());
+			connection.hashCommands().hSet(hashKey.getBytes(), "f".getBytes(), "v".getBytes());
+
+			// Scan restricted to STRING keys only
+			ScanOptions options = KeyScanOptions.scanOptions(DataType.STRING).match(basePattern + "*").build();
+			Cursor<byte[]> cursor = connection.keyCommands().scan(options);
+
+			java.util.List<String> scannedKeys = new java.util.ArrayList<>();
+			while (cursor.hasNext()) {
+				scannedKeys.add(new String(cursor.next()));
+			}
+			cursor.close();
+
+			// Only the two string keys must come back; the list and hash keys must be
+			// filtered out server-side. Before the TYPE arg was forwarded, all four
+			// returned.
+			assertThat(scannedKeys).containsExactlyInAnyOrder(str1, str2);
+			assertThat(scannedKeys).doesNotContain(listKey, hashKey);
+		}
+		finally {
+			cleanupKey(str1);
+			cleanupKey(str2);
+			cleanupKey(listKey);
+			cleanupKey(hashKey);
 		}
 	}
 
