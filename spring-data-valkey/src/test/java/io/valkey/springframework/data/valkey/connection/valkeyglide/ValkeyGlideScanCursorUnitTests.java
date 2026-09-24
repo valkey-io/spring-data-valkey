@@ -16,12 +16,14 @@
 package io.valkey.springframework.data.valkey.connection.valkeyglide;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
 import java.util.Map;
 
 import glide.api.models.GlideString;
@@ -40,6 +42,8 @@ import io.valkey.springframework.data.valkey.core.ScanOptions;
  * @author Mantas Aleknavičius
  */
 class ValkeyGlideScanCursorUnitTests {
+
+	private static final Duration TERMINATION_TIMEOUT = Duration.ofSeconds(5);
 
 	@Test // GH-108
 	void sScanContinuesAfterEmptyIntermediateBatch() throws Exception {
@@ -139,6 +143,83 @@ class ValkeyGlideScanCursorUnitTests {
 
 		verify(client, times(3)).customCommand(any(GlideString[].class));
 		verify(client, times(3)).setOneShotRouteForNextCommand(route);
+	}
+
+	// A malformed reply (null, or fewer than 2 elements) carries no cursor to advance.
+	// Since hasNext() loops while (!finished), the cursor must set finished on such a
+	// reply rather than spin forever waiting for progress. assertTimeoutPreemptively
+	// turns a regression (the pre-fix hang) into a fast failure instead of a stuck suite.
+
+	@Test // GH-111
+	void keyScanTerminatesOnMalformedReply() {
+
+		assertTimeoutPreemptively(TERMINATION_TIMEOUT, () -> {
+			assertKeyScanTerminates((Object[]) null);
+			assertKeyScanTerminates(new Object[] { GlideString.of("17") });
+		});
+	}
+
+	@Test // GH-111
+	void sScanTerminatesOnMalformedReply() {
+
+		assertTimeoutPreemptively(TERMINATION_TIMEOUT, () -> {
+			assertSScanTerminates((Object[]) null);
+			assertSScanTerminates(new Object[] { GlideString.of("17") });
+		});
+	}
+
+	@Test // GH-111
+	void hScanTerminatesOnMalformedReply() {
+
+		assertTimeoutPreemptively(TERMINATION_TIMEOUT, () -> {
+			assertHScanTerminates((Object[]) null);
+			assertHScanTerminates(new Object[] { GlideString.of("17") });
+		});
+	}
+
+	@Test // GH-111
+	void zScanTerminatesOnMalformedReply() {
+
+		assertTimeoutPreemptively(TERMINATION_TIMEOUT, () -> {
+			assertZScanTerminates((Object[]) null);
+			assertZScanTerminates(new Object[] { GlideString.of("17") });
+		});
+	}
+
+	private static void assertKeyScanTerminates(Object[] reply) throws Exception {
+		UnifiedGlideClient client = mock(UnifiedGlideClient.class);
+		when(client.customCommand(any(GlideString[].class))).thenReturn(reply);
+		ValkeyGlideKeyCommands commands = new ValkeyGlideKeyCommands(new ValkeyGlideConnection(client, null));
+		try (Cursor<byte[]> cursor = commands.scan(scanOptions())) {
+			assertThat(cursor.hasNext()).isFalse();
+		}
+	}
+
+	private static void assertSScanTerminates(Object[] reply) throws Exception {
+		UnifiedGlideClient client = mock(UnifiedGlideClient.class);
+		when(client.customCommand(any(GlideString[].class))).thenReturn(reply);
+		ValkeyGlideSetCommands commands = new ValkeyGlideSetCommands(new ValkeyGlideConnection(client, null));
+		try (Cursor<byte[]> cursor = commands.sScan("set".getBytes(), scanOptions())) {
+			assertThat(cursor.hasNext()).isFalse();
+		}
+	}
+
+	private static void assertHScanTerminates(Object[] reply) throws Exception {
+		UnifiedGlideClient client = mock(UnifiedGlideClient.class);
+		when(client.customCommand(any(GlideString[].class))).thenReturn(reply);
+		ValkeyGlideHashCommands commands = new ValkeyGlideHashCommands(new ValkeyGlideConnection(client, null));
+		try (Cursor<Map.Entry<byte[], byte[]>> cursor = commands.hScan("hash".getBytes(), scanOptions())) {
+			assertThat(cursor.hasNext()).isFalse();
+		}
+	}
+
+	private static void assertZScanTerminates(Object[] reply) throws Exception {
+		UnifiedGlideClient client = mock(UnifiedGlideClient.class);
+		when(client.customCommand(any(GlideString[].class))).thenReturn(reply);
+		ValkeyGlideZSetCommands commands = new ValkeyGlideZSetCommands(new ValkeyGlideConnection(client, null));
+		try (Cursor<Tuple> cursor = commands.zScan("zset".getBytes(), scanOptions())) {
+			assertThat(cursor.hasNext()).isFalse();
+		}
 	}
 
 	private static ScanOptions scanOptions() {
