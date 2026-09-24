@@ -187,7 +187,7 @@ jobs:
           ./mvnw -s settings.xml \
             -Ddevelocity.storage.directory=$HOME/.develocity-root \
             -Dmaven.repo.local=$HOME/.m2/spring-data-valkey \
-            clean install javadoc:jar -DskipTests \
+            clean install -DskipTests \
             -pl spring-data-valkey,spring-boot-starter-data-valkey -am \
             -U -B
 
