@@ -95,7 +95,7 @@ jobs:
   publish:
     needs: release
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: maven-publish
     permissions:
       id-token: write
@@ -256,8 +256,11 @@ jobs:
 
           # Confirm it reaches PUBLISHED. Fail fast on FAILED; tolerate transient
           # unknown states but give up if they persist (likely a bad id or API outage).
+          # PUBLISHING has no documented time bound (usually <15 min, seen just past 20);
+          # 90 x 20s = 30 min. A timeout while still PUBLISHING likely still published --
+          # poll the id manually, don't re-release.
           unknown=0
-          for i in $(seq 1 40); do
+          for i in $(seq 1 90); do
             STATE="$(curl -s -X POST -H "Authorization: $AUTH" "${PORTAL}/status?id=${DEPLOYMENT_ID}" | jq -r '.deploymentState')"
             echo "  [$i] $STATE"
             case "$STATE" in
