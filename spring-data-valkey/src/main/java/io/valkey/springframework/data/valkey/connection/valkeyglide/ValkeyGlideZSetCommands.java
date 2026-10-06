@@ -40,6 +40,7 @@ import glide.api.models.GlideString;
  * Implementation of {@link ValkeyZSetCommands} for Valkey-Glide.
  *
  * @author Ilia Kolominsky
+ * @author Mantas Aleknavičius
  * @since 2.0
  */
 public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
@@ -1486,6 +1487,8 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
 
 		private boolean finished = false;
 
+		private boolean closed = false;
+
 		public ValkeyGlideZSetScanCursor(byte[] key, ScanOptions options, ValkeyGlideConnection connection) {
 			this.key = key;
 			this.options = options;
@@ -1495,6 +1498,9 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
 
 		@Override
 		public boolean hasNext() {
+			if (closed) {
+				return false;
+			}
 			while (!finished && currentIndex >= tuples.size()) {
 				scanNext();
 			}
@@ -1590,7 +1596,9 @@ public class ValkeyGlideZSetCommands implements ValkeyZSetCommands {
 
 		@Override
 		public void close() {
+			closed = true;
 			finished = true;
+			tuples.clear();
 		}
 
 		@Override

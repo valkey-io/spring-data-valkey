@@ -226,6 +226,26 @@ class ValkeyGlideScanCursorUnitTests {
 		assertThat(cursor.getPosition()).isEqualTo(1);
 	}
 
+	@Test // GH-111
+	void closeStopsZSetScanPaging() throws Exception {
+
+		UnifiedGlideClient client = mock(UnifiedGlideClient.class);
+		when(client.customCommand(any(GlideString[].class))).thenReturn(
+				new Object[] { GlideString.of("17"), new Object[] { GlideString.of("member:1"), 1.0 } });
+		ValkeyGlideZSetCommands commands = new ValkeyGlideZSetCommands(new ValkeyGlideConnection(client, null));
+
+		Cursor<Tuple> cursor = commands.zScan("zset".getBytes(), scanOptions());
+		assertThat(cursor.next().getValue()).isEqualTo("member:1".getBytes());
+
+		cursor.close();
+
+		// close() must stop hasNext() paging, even with a tuple still buffered
+		assertThat(cursor.hasNext()).isFalse();
+		verify(client, times(1)).customCommand(any(GlideString[].class));
+		// close() must not rewind the reported position
+		assertThat(cursor.getPosition()).isEqualTo(1);
+	}
+
 	private static void assertKeyScanTerminates(Object[] reply) throws Exception {
 		UnifiedGlideClient client = mock(UnifiedGlideClient.class);
 		when(client.customCommand(any(GlideString[].class))).thenReturn(reply);
