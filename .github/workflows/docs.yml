@@ -49,7 +49,8 @@ jobs:
         working-directory: ./docs
 
       - name: Build Astro docs
-        run: npm run build
+        # Also add copies of the search index for other Valkey sites to consume.
+        run: npm run build && ./scripts/index-copies.sh build
         working-directory: ./docs
 
       - name: Generate JavaDocs

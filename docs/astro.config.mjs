@@ -15,6 +15,7 @@ export default defineConfig({
 		starlight({
 			components: {
 				Hero: './src/components/Hero.astro',
+				Search: './src/components/Search.astro',
 			},
 			title: 'Spring Data Valkey',
 			logo: {

@@ -1,0 +1,5 @@
+{
+	"label": "Spring Data Valkey",
+	"otherSites": ["https://valkey.io/pagefind/", "https://glide.valkey.io/pagefind/", "https://valkey-admin.valkey.io/pagefind/"],
+	"otherSitesIndexWeight": 0.1
+}
